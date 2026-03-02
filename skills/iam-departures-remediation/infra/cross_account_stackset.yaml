@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Cross-account IAM remediation role — deployed to all member accounts
+  via StackSets. Trusts only the Security OU Lambda roles.
+
+Parameters:
+  SecurityAccountId:
+    Type: String
+    Description: AWS account ID of the Security OU management account
+    AllowedPattern: '^[0-9]{12}$'
+  OrgId:
+    Type: String
+    Description: AWS Organizations ID
+    AllowedPattern: '^o-[a-z0-9]{10,32}$'
+  RoleName:
+    Type: String
+    Default: iam-remediation-role
+    Description: Name for the cross-account remediation role
+
+Resources:
+  RemediationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${SecurityAccountId}:root'
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:PrincipalOrgID: !Ref OrgId
+              ArnLike:
+                aws:PrincipalArn:
+                  - !Sub 'arn:aws:iam::${SecurityAccountId}:role/iam-departures-parser-role'
+                  - !Sub 'arn:aws:iam::${SecurityAccountId}:role/iam-departures-worker-role'
+      Policies:
+        - PolicyName: IAMRemediation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: IAMReadWrite
+                Effect: Allow
+                Action:
+                  - iam:GetUser
+                  - iam:DeleteUser
+                  - iam:TagUser
+                  - iam:ListAccessKeys
+                  - iam:UpdateAccessKey
+                  - iam:DeleteAccessKey
+                  - iam:DeleteLoginProfile
+                  - iam:ListGroupsForUser
+                  - iam:RemoveUserFromGroup
+                  - iam:ListAttachedUserPolicies
+                  - iam:DetachUserPolicy
+                  - iam:ListUserPolicies
+                  - iam:DeleteUserPolicy
+                  - iam:ListMFADevices
+                  - iam:DeactivateMFADevice
+                  - iam:DeleteVirtualMFADevice
+                  - iam:ListSigningCertificates
+                  - iam:DeleteSigningCertificate
+                  - iam:ListSSHPublicKeys
+                  - iam:DeleteSSHPublicKey
+                  - iam:ListServiceSpecificCredentials
+                  - iam:DeleteServiceSpecificCredential
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:user/*'
+              - Sid: DenyProtectedUsers
+                Effect: Deny
+                Action: iam:*
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:user/root'
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:user/break-glass-*'
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:user/emergency-*'
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+        - Key: ManagedBy
+          Value: stacksets
+
+Outputs:
+  RemediationRoleArn:
+    Description: Cross-account remediation role ARN
+    Value: !GetAtt RemediationRole.Arn

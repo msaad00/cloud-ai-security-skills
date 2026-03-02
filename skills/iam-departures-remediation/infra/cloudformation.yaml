@@ -1,0 +1,547 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  IAM Departures Remediation — Full stack deployment for Security OU.
+  Creates S3 bucket, KMS key, DynamoDB audit table, Lambda functions,
+  Step Function, EventBridge rule, and all IAM roles with least privilege.
+
+Parameters:
+  RemediationBucket:
+    Type: String
+    Description: S3 bucket name for manifests and audit logs
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
+  KmsKeyArn:
+    Type: String
+    Description: KMS key ARN for S3 encryption
+    AllowedPattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]+$'
+  OrgId:
+    Type: String
+    Description: AWS Organizations ID (e.g., o-abc123def4)
+    AllowedPattern: '^o-[a-z0-9]{10,32}$'
+  CrossAccountRoleName:
+    Type: String
+    Default: iam-remediation-role
+    Description: Name of the cross-account role deployed to target accounts
+  AuditDynamoDBTable:
+    Type: String
+    Default: iam-remediation-audit
+    Description: DynamoDB table name for audit records
+  GracePeriodDays:
+    Type: Number
+    Default: 7
+    MinValue: 0
+    MaxValue: 90
+    Description: Days after termination before remediation fires
+  ParserCodeS3Key:
+    Type: String
+    Default: lambda/iam-departures-parser.zip
+    Description: S3 key for Lambda parser deployment package
+  WorkerCodeS3Key:
+    Type: String
+    Default: lambda/iam-departures-worker.zip
+    Description: S3 key for Lambda worker deployment package
+
+Resources:
+  # ── S3 Bucket ────────────────────────────────────────────────
+  RemediationS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref RemediationBucket
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref KmsKeyArn
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveAuditLogs
+            Prefix: departures/audit/
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 90
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+        - Key: ManagedBy
+          Value: cloudformation
+
+  RemediationBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref RemediationS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyUnencryptedUploads
+            Effect: Deny
+            Principal: '*'
+            Action: s3:PutObject
+            Resource: !Sub 'arn:aws:s3:::${RemediationBucket}/*'
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: aws:kms
+          - Sid: DenyNonSSL
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !Sub 'arn:aws:s3:::${RemediationBucket}'
+              - !Sub 'arn:aws:s3:::${RemediationBucket}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # ── DynamoDB Audit Table ─────────────────────────────────────
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref AuditDynamoDBTable
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: iam_username
+          AttributeType: S
+        - AttributeName: remediated_at
+          AttributeType: S
+        - AttributeName: target_account_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: iam_username
+          KeyType: HASH
+        - AttributeName: remediated_at
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: by-account
+          KeySchema:
+            - AttributeName: target_account_id
+              KeyType: HASH
+            - AttributeName: remediated_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  # ── IAM Roles ────────────────────────────────────────────────
+
+  ParserExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: iam-departures-parser-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ParserPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadManifestFromS3
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${RemediationBucket}/departures/*'
+              - Sid: AssumeRoleInTargetAccounts
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !Sub 'arn:aws:iam::*:role/${CrossAccountRoleName}'
+                Condition:
+                  StringEquals:
+                    aws:PrincipalOrgID: !Ref OrgId
+              - Sid: ValidateIAMUserExists
+                Effect: Allow
+                Action:
+                  - iam:GetUser
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:PrincipalOrgID: !Ref OrgId
+              - Sid: KMSDecrypt
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource: !Ref KmsKeyArn
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/iam-departures-parser*'
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  WorkerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: iam-departures-worker-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WorkerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AssumeRoleInTargetAccounts
+                Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !Sub 'arn:aws:iam::*:role/${CrossAccountRoleName}'
+                Condition:
+                  StringEquals:
+                    aws:PrincipalOrgID: !Ref OrgId
+              - Sid: IAMRemediationActions
+                Effect: Allow
+                Action:
+                  - iam:GetUser
+                  - iam:DeleteUser
+                  - iam:ListAccessKeys
+                  - iam:UpdateAccessKey
+                  - iam:DeleteAccessKey
+                  - iam:DeleteLoginProfile
+                  - iam:ListGroupsForUser
+                  - iam:RemoveUserFromGroup
+                  - iam:ListAttachedUserPolicies
+                  - iam:DetachUserPolicy
+                  - iam:ListUserPolicies
+                  - iam:DeleteUserPolicy
+                  - iam:ListMFADevices
+                  - iam:DeactivateMFADevice
+                  - iam:DeleteVirtualMFADevice
+                  - iam:ListSigningCertificates
+                  - iam:DeleteSigningCertificate
+                  - iam:ListSSHPublicKeys
+                  - iam:DeleteSSHPublicKey
+                  - iam:ListServiceSpecificCredentials
+                  - iam:DeleteServiceSpecificCredential
+                  - iam:TagUser
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:PrincipalOrgID: !Ref OrgId
+              - Sid: DenyProtectedUsers
+                Effect: Deny
+                Action: iam:*
+                Resource:
+                  - 'arn:aws:iam::*:user/root'
+                  - 'arn:aws:iam::*:user/break-glass-*'
+                  - 'arn:aws:iam::*:user/emergency-*'
+                  - 'arn:aws:iam::*:role/*'
+              - Sid: WriteAuditToDynamoDB
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !GetAtt AuditTable.Arn
+              - Sid: WriteAuditToS3
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub 'arn:aws:s3:::${RemediationBucket}/departures/audit/*'
+              - Sid: KMSForEncryption
+                Effect: Allow
+                Action:
+                  - kms:GenerateDataKey
+                  - kms:Decrypt
+                Resource: !Ref KmsKeyArn
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub 's3.${AWS::Region}.amazonaws.com'
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/iam-departures-worker*'
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  StepFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: iam-departures-sfn-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: StepFunctionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: InvokeLambdas
+                Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !GetAtt ParserFunction.Arn
+                  - !GetAtt WorkerFunction.Arn
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: '*'
+              - Sid: XRayTracing
+                Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: '*'
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: iam-departures-events-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EventBridgePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: StartStepFunction
+                Effect: Allow
+                Action: states:StartExecution
+                Resource: !Ref DeparturesPipeline
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  # ── Lambda Functions ─────────────────────────────────────────
+
+  ParserFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: iam-departures-parser
+      Runtime: python3.11
+      Handler: handler.lambda_handler
+      Code:
+        S3Bucket: !Ref RemediationBucket
+        S3Key: !Ref ParserCodeS3Key
+      Role: !GetAtt ParserExecutionRole.Arn
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          IAM_REMEDIATION_BUCKET: !Ref RemediationBucket
+          IAM_GRACE_PERIOD_DAYS: !Ref GracePeriodDays
+          IAM_CROSS_ACCOUNT_ROLE: !Ref CrossAccountRoleName
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  WorkerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: iam-departures-worker
+      Runtime: python3.11
+      Handler: handler.lambda_handler
+      Code:
+        S3Bucket: !Ref RemediationBucket
+        S3Key: !Ref WorkerCodeS3Key
+      Role: !GetAtt WorkerExecutionRole.Arn
+      Timeout: 900
+      MemorySize: 256
+      Environment:
+        Variables:
+          IAM_REMEDIATION_BUCKET: !Ref RemediationBucket
+          IAM_AUDIT_DYNAMODB_TABLE: !Ref AuditDynamoDBTable
+          IAM_CROSS_ACCOUNT_ROLE: !Ref CrossAccountRoleName
+          KMS_KEY_ARN: !Ref KmsKeyArn
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  # ── Step Function ────────────────────────────────────────────
+
+  DeparturesPipeline:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: iam-departures-pipeline
+      RoleArn: !GetAtt StepFunctionRole.Arn
+      TracingConfiguration:
+        Enabled: true
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StepFunctionLogGroup.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "IAM Departures Remediation Pipeline",
+          "StartAt": "ParseManifest",
+          "States": {
+            "ParseManifest": {
+              "Type": "Task",
+              "Resource": "${ParserFunction.Arn}",
+              "ResultPath": "$.parsed",
+              "Next": "CheckValidatedEntries",
+              "Retry": [{"ErrorEquals": ["States.TaskFailed"], "MaxAttempts": 2, "IntervalSeconds": 5}],
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "ParseFailed", "ResultPath": "$.error"}]
+            },
+            "CheckValidatedEntries": {
+              "Type": "Choice",
+              "Choices": [{
+                "Variable": "$.parsed.validated_count",
+                "NumericGreaterThan": 0,
+                "Next": "RemediateUsers"
+              }],
+              "Default": "NoUsersToRemediate"
+            },
+            "RemediateUsers": {
+              "Type": "Map",
+              "ItemsPath": "$.parsed.validated_entries",
+              "MaxConcurrency": 10,
+              "Iterator": {
+                "StartAt": "RemediateSingleUser",
+                "States": {
+                  "RemediateSingleUser": {
+                    "Type": "Task",
+                    "Resource": "${WorkerFunction.Arn}",
+                    "End": true,
+                    "Retry": [{"ErrorEquals": ["States.TaskFailed"], "MaxAttempts": 1, "IntervalSeconds": 10}],
+                    "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "UserRemediationFailed", "ResultPath": "$.error"}]
+                  },
+                  "UserRemediationFailed": {
+                    "Type": "Pass",
+                    "Result": "FAILED",
+                    "ResultPath": "$.remediation_status",
+                    "End": true
+                  }
+                }
+              },
+              "Next": "GenerateSummary"
+            },
+            "GenerateSummary": {
+              "Type": "Pass",
+              "Parameters": {
+                "status": "COMPLETED",
+                "timestamp.$": "$$.State.EnteredTime"
+              },
+              "End": true
+            },
+            "NoUsersToRemediate": {
+              "Type": "Pass",
+              "Result": {"status": "NO_ACTION", "reason": "No validated entries to remediate"},
+              "End": true
+            },
+            "ParseFailed": {
+              "Type": "Fail",
+              "Cause": "Manifest parsing failed",
+              "Error": "ParseError"
+            }
+          }
+        }
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  StepFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/states/iam-departures-pipeline
+      RetentionInDays: 365
+
+  # ── EventBridge Rule ─────────────────────────────────────────
+
+  S3EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: iam-departures-s3-trigger
+      Description: Trigger Step Function when new manifest is uploaded to S3
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref RemediationBucket
+          object:
+            key:
+              - prefix: departures/
+              - suffix: .json
+      Targets:
+        - Id: StepFunction
+          Arn: !Ref DeparturesPipeline
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+Outputs:
+  ParserRoleArn:
+    Description: Lambda Parser execution role ARN
+    Value: !GetAtt ParserExecutionRole.Arn
+  WorkerRoleArn:
+    Description: Lambda Worker execution role ARN
+    Value: !GetAtt WorkerExecutionRole.Arn
+  StepFunctionRoleArn:
+    Description: Step Function execution role ARN
+    Value: !GetAtt StepFunctionRole.Arn
+  EventBridgeRoleArn:
+    Description: EventBridge rule role ARN
+    Value: !GetAtt EventBridgeRole.Arn
+  StepFunctionArn:
+    Description: Step Function state machine ARN
+    Value: !Ref DeparturesPipeline
+  S3BucketArn:
+    Description: Remediation S3 bucket ARN
+    Value: !GetAtt RemediationS3Bucket.Arn
+  AuditTableArn:
+    Description: DynamoDB audit table ARN
+    Value: !GetAtt AuditTable.Arn
