@@ -1,41 +1,25 @@
 ---
 name: iam-departures-remediation
-description: >-
-  Auto-remediate AWS IAM users belonging to departed employees. Reconciles HR
-  termination data (Workday via Snowflake, Databricks, ClickHouse, or direct API)
-  against IAM, exports change-detected manifests to S3, and triggers a Step Function
-  pipeline that safely deletes IAM users with all dependencies. Use when the user
-  mentions departed employees, IAM cleanup, termination remediation, offboarding
-  automation, or stale credential removal.
+description: Auto-remediate IAM users for departed employees across AWS, Azure, GCP, Snowflake, and Databricks.
+version: 0.3.0
 license: Apache-2.0
-compatibility: >-
-  Requires AWS CLI, Python 3.11+, and boto3. Lambdas deploy to AWS. HR data
-  source requires one of: Snowflake connector, Databricks SQL connector,
-  clickhouse-connect, or httpx (Workday API).
-metadata:
-  author: msaad00
-  version: 0.2.0
-  frameworks:
-    - MITRE ATT&CK
-    - NIST CSF 2.0
-    - CIS Controls v8
-    - SOC 2
-  cloud: aws
-  cross_cloud_planned:
-    - azure
-    - gcp
-    - snowflake
-    - databricks
+author: msaad00
+cloud: [aws, azure, gcp, snowflake, databricks]
+compatibility: Python 3.11+, boto3, AWS CLI
+frameworks: [MITRE ATT&CK, NIST CSF 2.0, CIS v8, SOC 2]
+tests: 84
 ---
 
 # IAM Departures Remediation
 
 Automated IAM cleanup for departed employees with rehire-safe logic, change-driven
-exports, and a 2-Lambda Step Function remediation pipeline.
+exports, and a Step Function remediation pipeline.
 
-Read [reference.md](reference.md) for detailed architecture, framework mappings,
-IAM role ARN definitions, and security model. Read [examples.md](examples.md)
-for deployment walkthroughs and usage scenarios.
+> **Invoke when:** departed employees, IAM cleanup, termination remediation,
+> offboarding automation, stale credential removal
+
+**Docs:** [reference.md](reference.md) (architecture, IAM policies, framework mappings) ·
+[examples.md](examples.md) (deployment walkthroughs)
 
 ## When to Use
 
@@ -48,24 +32,44 @@ for deployment walkthroughs and usage scenarios.
 ## Pipeline Overview
 
 ```
-HR Source (Workday/Snowflake/DBX/CH)
-        │
-        ▼
-   Reconciler ──── change detected? ──no──→ EXIT
-        │ yes
-        ▼
-   S3 Manifest (KMS encrypted)
-        │ PutObject
-        ▼
-   EventBridge Rule
-        │
-        ▼
-   Step Function
-   ├── Lambda 1 (Parser): validate, grace period, rehire filter
-   └── Lambda 2 (Worker): 13-step IAM cleanup → delete user
-        │
-        ▼
-   Audit: DynamoDB + S3 + warehouse ingest-back
+  ╔═══════════════════════════════════════════════════════════════╗
+  ║  HR Source                                                    ║
+  ║  Workday API │ Snowflake │ Databricks │ ClickHouse           ║
+  ╚══════════╦════════════════════════════════════════════════════╝
+             ║
+             ▼
+  ┌──────────────────────┐     ┌─────────┐
+  │   Reconciler         │────▶│  EXIT   │  no changes
+  │   SHA-256 row diff   │     └─────────┘
+  │   + rehire safety    │
+  └──────────┬───────────┘
+             │ change detected
+             ▼
+  ┌──────────────────────┐
+  │   S3 Manifest        │  KMS-SSE encrypted
+  │   (JSON)             │  versioned + lifecycle
+  └──────────┬───────────┘
+             │ PutObject → EventBridge
+             ▼
+  ┌──────────────────────────────────────────┐
+  │         Step Function                     │
+  │  ┌────────────────────────────────────┐  │
+  │  │  Lambda 1 — Parser                 │  │
+  │  │  validate · grace period · rehire  │  │
+  │  └───────────────┬────────────────────┘  │
+  │                  │                        │
+  │  ┌───────────────▼────────────────────┐  │
+  │  │  Lambda 2 — Worker                 │  │
+  │  │  AWS 13-step │ Azure 6 │ GCP 4+2  │  │
+  │  │  Snowflake 6 │ Databricks 4       │  │
+  │  └───────────────┬────────────────────┘  │
+  └──────────────────┼───────────────────────┘
+                     │
+                     ▼
+  ┌──────────────────────────────────────────┐
+  │  Audit Trail                              │
+  │  DynamoDB + S3 + warehouse ingest-back   │
+  └──────────────────────────────────────────┘
 ```
 
 ## Rehire Safety
@@ -81,39 +85,30 @@ The pipeline handles 8 rehire scenarios. Key rules:
 See `src/reconciler/sources.py:DepartureRecord.should_remediate()` for the
 complete decision tree.
 
-## IAM Deletion Order
+## Cross-Cloud Remediation
 
-AWS requires all dependencies removed before `iam:DeleteUser`. The worker
-Lambda executes 13 steps in strict order:
+| Cloud | Steps | SDK | Deletion Order |
+|:------|:-----:|:----|:---------------|
+| **AWS** | 13 | boto3 | Keys → Login → Groups → Policies → MFA → Certs → SSH → Tag → Delete |
+| **Azure** | 6 | msgraph-sdk | Sessions → Groups → AppRoles → OAuth → Disable → Delete |
+| **GCP** | 4+2 | google-cloud-iam | Disable SA → Keys → IAM Bindings → Delete |
+| **Snowflake** | 6 | snowflake-connector | Queries → Disable → Roles → Ownership → Drop → Verify |
+| **Databricks** | 4 | databricks-sdk | PATs → Workspace → Account → Delete |
 
-1. Deactivate access keys
-2. Delete access keys
-3. Delete login profile (console access)
-4. Remove from all groups
-5. Detach all managed policies
-6. Delete all inline policies
-7. Deactivate MFA devices
-8. Delete virtual MFA devices
-9. Delete signing certificates
-10. Delete SSH public keys
-11. Delete service-specific credentials
-12. Tag user with audit metadata
-13. **Delete IAM user**
+See [reference.md](reference.md) for full deletion procedures and cloud-specific gotchas.
 
-## AWS IAM Roles Required
-
-Every component needs an IAM execution role. See [reference.md](reference.md)
-for full policy documents and [infra/cloudformation.yaml](infra/cloudformation.yaml)
-for deployable templates.
+## IAM Roles
 
 | Component | Role | Key Permissions |
-|-----------|------|-----------------|
+|:----------|:-----|:----------------|
 | Lambda 1 (Parser) | `iam-departures-parser-role` | `s3:GetObject`, `sts:AssumeRole`, `iam:GetUser` |
 | Lambda 2 (Worker) | `iam-departures-worker-role` | Full IAM remediation, DynamoDB, S3, KMS |
 | Step Function | `iam-departures-sfn-role` | `lambda:InvokeFunction` on both Lambdas |
 | EventBridge | `iam-departures-events-role` | `states:StartExecution` on the Step Function |
-| S3 Bucket | Bucket policy | Restrict to Security OU account only |
-| Cross-Account | `iam-remediation-role` | IAM read/write in target accounts (StackSets) |
+| Cross-Account | `iam-remediation-role` | IAM read/write in targets (StackSets) |
+
+Full policy documents: [reference.md](reference.md) ·
+Deployable templates: [infra/cloudformation.yaml](infra/cloudformation.yaml)
 
 ## Data Sources
 
@@ -127,44 +122,46 @@ Configure one HR data source via environment variables:
 | ClickHouse | `CLICKHOUSE_HOST`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD` |
 | Workday API | `WORKDAY_API_URL`, `WORKDAY_CLIENT_ID`, `WORKDAY_CLIENT_SECRET` |
 
-## Security Principles
+## Security
 
-- **Least privilege**: Each role has only the permissions it needs
-- **Defense in depth**: Deny policies on protected users (root, break-glass-*, emergency-*)
-- **Zero trust**: Cross-account access scoped by `aws:PrincipalOrgID`
-- **Encryption**: S3 KMS, DynamoDB encryption at rest, Lambda env var encryption
-- **Audit trail**: Dual-write to DynamoDB + S3, ingest-back to source warehouse
-- **Deployment**: All infra in Organization Security OU management account
+> Zero trust · Defense in depth · Least privilege · Parameterized queries
+
+| Principle | Implementation |
+|:----------|:---------------|
+| **Least privilege** | Each Lambda/SFN/EventBridge role scoped to exactly needed actions |
+| **Defense in depth** | Explicit DENY on protected users: `root`, `break-glass-*`, `emergency-*` |
+| **Zero trust** | Cross-account STS scoped by `aws:PrincipalOrgID` condition |
+| **Encryption** | S3 KMS-SSE + deny unencrypted · DynamoDB at rest · Lambda env KMS |
+| **Input validation** | IAM usernames `^[\w+=,.@-]{1,64}$` · Account IDs `^[0-9]{12}$` |
+| **Audit trail** | Dual-write: DynamoDB + S3 JSON logs + warehouse ingest-back |
+| **Rehire safety** | 8 scenarios with grace period (7d default) and activity checks |
 
 ## Project Structure
 
 ```
 skills/iam-departures-remediation/
-├── SKILL.md                    # This file (skill definition)
-├── reference.md                # Detailed architecture + framework mappings
-├── examples.md                 # Deployment walkthroughs
+├── SKILL.md                        # Skill definition (Agent Skills standard)
+├── reference.md                    # Architecture, IAM policies, framework mappings
+├── examples.md                     # Deployment walkthroughs
 ├── src/
-│   ├── reconciler/
-│   │   ├── sources.py          # Multi-source HR ingestion
-│   │   ├── change_detect.py    # SHA-256 row-level diff
-│   │   └── export.py           # S3 manifest export (KMS)
-│   ├── lambda_parser/
-│   │   └── handler.py          # Lambda 1: validate + filter
-│   └── lambda_worker/
-│       ├── handler.py          # Lambda 2: AWS 13-step cleanup
-│       └── clouds/             # Cross-cloud workers
-│           ├── azure_entra.py  # Entra ID: 6-step (msgraph-sdk)
-│           ├── gcp_iam.py      # GCP: SA 4-step + Workspace 2-step
-│           ├── snowflake_user.py # Snowflake: 6-step (SQL DDL)
-│           └── databricks_scim.py # Databricks: 4-step (SCIM API)
+│   ├── reconciler/                 # HR data ingestion + change detection
+│   │   ├── sources.py              #   Multi-source: Snowflake/DBX/CH/Workday
+│   │   ├── change_detect.py        #   SHA-256 row-level diff
+│   │   └── export.py               #   S3 manifest export (KMS)
+│   ├── lambda_parser/              # Lambda 1: validate + filter
+│   │   └── handler.py
+│   └── lambda_worker/              # Lambda 2: remediation engine
+│       ├── handler.py              #   AWS 13-step cleanup
+│       └── clouds/                 #   Cross-cloud workers
+│           ├── azure_entra.py      #     Entra ID (msgraph-sdk)
+│           ├── gcp_iam.py          #     GCP SA + Workspace
+│           ├── snowflake_user.py   #     Snowflake SQL DDL
+│           └── databricks_scim.py  #     Databricks SCIM API
 ├── infra/
-│   ├── cloudformation.yaml     # Full stack (roles, Lambda, SFN, S3, DDB)
-│   ├── cross_account_stackset.yaml # Org-wide role via StackSets
-│   ├── step_function.asl.json  # ASL definition
-│   ├── eventbridge_rule.json   # S3 trigger
-│   ├── snowflake_integration.sql
-│   └── iam_policies/           # Individual policy documents
-└── tests/                      # 59 unit tests
+│   ├── cloudformation.yaml         # Full deployable stack
+│   ├── cross_account_stackset.yaml # Org-wide StackSets role
+│   └── snowflake_integration.sql   # Storage integration + tasks
+└── tests/                          # 84 unit tests
 ```
 
 ## MITRE ATT&CK Coverage
