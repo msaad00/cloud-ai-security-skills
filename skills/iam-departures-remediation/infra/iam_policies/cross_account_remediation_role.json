@@ -1,0 +1,78 @@
+{
+  "Comment": "Cross-account role deployed to EVERY target account in the org. Trusted by the Security OU management account only. This role is what the Lambdas assume via STS.",
+  "RoleName": "${IAM_CROSS_ACCOUNT_ROLE}",
+  "AssumeRolePolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "TrustSecurityOULambdas",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::${SECURITY_OU_ACCOUNT_ID}:root"
+        },
+        "Action": "sts:AssumeRole",
+        "Condition": {
+          "StringEquals": {
+            "aws:PrincipalOrgID": "${AWS_ORG_ID}"
+          },
+          "ArnLike": {
+            "aws:PrincipalArn": [
+              "arn:aws:iam::${SECURITY_OU_ACCOUNT_ID}:role/iam-departures-parser-role",
+              "arn:aws:iam::${SECURITY_OU_ACCOUNT_ID}:role/iam-departures-worker-role"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "PermissionPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "IAMReadAndRemediate",
+        "Effect": "Allow",
+        "Action": [
+          "iam:GetUser",
+          "iam:DeleteUser",
+          "iam:ListAccessKeys",
+          "iam:UpdateAccessKey",
+          "iam:DeleteAccessKey",
+          "iam:DeleteLoginProfile",
+          "iam:ListGroupsForUser",
+          "iam:RemoveUserFromGroup",
+          "iam:ListAttachedUserPolicies",
+          "iam:DetachUserPolicy",
+          "iam:ListUserPolicies",
+          "iam:DeleteUserPolicy",
+          "iam:ListMFADevices",
+          "iam:DeactivateMFADevice",
+          "iam:DeleteVirtualMFADevice",
+          "iam:ListSigningCertificates",
+          "iam:DeleteSigningCertificate",
+          "iam:ListSSHPublicKeys",
+          "iam:DeleteSSHPublicKey",
+          "iam:ListServiceSpecificCredentials",
+          "iam:DeleteServiceSpecificCredential",
+          "iam:TagUser"
+        ],
+        "Resource": "arn:aws:iam::${TARGET_ACCOUNT_ID}:user/*"
+      },
+      {
+        "Sid": "DenyProtectedUsers",
+        "Effect": "Deny",
+        "Action": "iam:*",
+        "Resource": [
+          "arn:aws:iam::${TARGET_ACCOUNT_ID}:user/root",
+          "arn:aws:iam::${TARGET_ACCOUNT_ID}:user/break-glass-*",
+          "arn:aws:iam::${TARGET_ACCOUNT_ID}:user/emergency-*",
+          "arn:aws:iam::${TARGET_ACCOUNT_ID}:role/*"
+        ]
+      }
+    ]
+  },
+  "_deployment_notes": {
+    "method": "Deploy via AWS CloudFormation StackSets from the Org management account",
+    "target": "All accounts in the Organization (or specific OUs)",
+    "command": "aws cloudformation create-stack-set --stack-set-name iam-remediation-role --template-body file://cross_account_role_cfn.yaml --permission-model SERVICE_MANAGED --auto-deployment Enabled=true,RetainStacksOnAccountRemoval=false"
+  }
+}

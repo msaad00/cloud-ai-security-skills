@@ -1,0 +1,38 @@
+{
+  "Comment": "Trigger Step Function when a new departures manifest lands in S3",
+  "Source": ["aws.s3"],
+  "DetailType": ["Object Created"],
+  "Detail": {
+    "bucket": {
+      "name": ["${IAM_REMEDIATION_BUCKET}"]
+    },
+    "object": {
+      "key": [{
+        "prefix": "departures/"
+      }, {
+        "suffix": ".json"
+      }]
+    }
+  },
+  "Targets": [
+    {
+      "Arn": "${StepFunctionArn}",
+      "RoleArn": "${EventBridgeExecutionRoleArn}",
+      "Id": "iam-departures-remediation",
+      "InputTransformer": {
+        "InputPathsMap": {
+          "bucket": "$.detail.bucket.name",
+          "key": "$.detail.object.key"
+        },
+        "InputTemplate": "{\"detail\": {\"bucket\": {\"name\": \"<bucket>\"}, \"object\": {\"key\": \"<key>\"}}}"
+      }
+    }
+  ],
+  "_notes": {
+    "prerequisites": [
+      "S3 bucket must have EventBridge notifications enabled",
+      "aws s3api put-bucket-notification-configuration --bucket ${IAM_REMEDIATION_BUCKET} --notification-configuration '{\"EventBridgeConfiguration\": {}}'",
+      "The .last_hash file is excluded by the suffix filter (.json only)"
+    ]
+  }
+}

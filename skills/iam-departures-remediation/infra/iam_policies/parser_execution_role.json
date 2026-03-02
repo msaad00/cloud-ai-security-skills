@@ -1,0 +1,56 @@
+{
+  "Comment": "Lambda 1 (Parser) execution role — least privilege",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadManifestFromS3",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::${IAM_REMEDIATION_BUCKET}/departures/*"
+    },
+    {
+      "Sid": "ReadChangeDetectionHash",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::${IAM_REMEDIATION_BUCKET}/departures/.last_hash"
+    },
+    {
+      "Sid": "AssumeRoleInTargetAccounts",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::*:role/${IAM_CROSS_ACCOUNT_ROLE}",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalOrgID": "${AWS_ORG_ID}"
+        }
+      }
+    },
+    {
+      "Sid": "ValidateIAMUserExists",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalOrgID": "${AWS_ORG_ID}"
+        }
+      }
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/iam-departures-parser*"
+    }
+  ]
+}

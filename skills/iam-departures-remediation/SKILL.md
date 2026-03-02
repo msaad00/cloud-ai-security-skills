@@ -22,6 +22,9 @@ metadata:
       - WORKDAY_API_URL
       - WORKDAY_CLIENT_ID
       - WORKDAY_CLIENT_SECRET
+      - IAM_GRACE_PERIOD_DAYS
+      - IAM_CROSS_ACCOUNT_ROLE
+      - IAM_AUDIT_DYNAMODB_TABLE
     emoji: "\U0001F6AA"
     homepage: https://github.com/msaad00/cloud-security
     source: https://github.com/msaad00/cloud-security
@@ -32,6 +35,7 @@ metadata:
     file_reads: []
     file_writes:
       - "s3://${IAM_REMEDIATION_BUCKET}/departures/*.json"
+      - "s3://${IAM_REMEDIATION_BUCKET}/departures/audit/*.json"
     network_endpoints:
       - url: "https://*.snowflakecomputing.com"
         purpose: "Query employee termination data from Workday tables replicated into Snowflake"
@@ -43,10 +47,16 @@ metadata:
         purpose: "Query employee termination data from ClickHouse"
         auth: true
       - url: "https://iam.amazonaws.com"
-        purpose: "List and disable IAM users in target AWS accounts"
+        purpose: "Enumerate and delete IAM users in target AWS accounts"
+        auth: true
+      - url: "https://sts.amazonaws.com"
+        purpose: "AssumeRole into target accounts in the organization"
         auth: true
       - url: "https://s3.amazonaws.com"
-        purpose: "Export change-detected remediation manifests"
+        purpose: "Export change-detected remediation manifests and audit logs"
+        auth: true
+      - url: "https://dynamodb.amazonaws.com"
+        purpose: "Write remediation audit records for compliance"
         auth: true
     telemetry: false
     persistence: true
@@ -60,261 +70,316 @@ metadata:
 Reconciles HR termination data against IAM users daily, exports change-detected manifests to S3, and triggers Step Function remediation pipelines via EventBridge.
 
 - **Multi-source HR ingestion** — Workday direct, Snowflake, Databricks, ClickHouse (wherever your HR data lands)
-- **Rehire-safe** — Employees who return are automatically excluded from remediation
+- **Rehire-safe** — Same-IAM reuse detected via last-activity timestamps; orphaned IAMs from rehires with new credentials are cleaned up
 - **Already-deleted detection** — Skips IAM users that were manually removed, no false positives
-- **Change-driven export** — Only pushes to S3 when the remediation table actually changes (row-level diff)
-- **EventBridge + Step Functions** — S3 PutObject triggers a 2-Lambda pipeline: validate → remediate
+- **Change-driven export** — Only pushes to S3 when the remediation table actually changes (SHA-256 row-level diff)
+- **EventBridge + Step Functions** — S3 PutObject triggers a 2-Lambda pipeline: validate → remediate (Map state, 10 concurrent)
+- **Full IAM dependency cleanup** — Keys, login profile, groups, policies, MFA, SSH keys, signing certs — then delete
+- **Dual-write audit** — DynamoDB (operational queries) + S3 (immutable compliance archive) + warehouse ingest-back
+
+## Threat Framework Mappings
+
+This skill addresses identity persistence and credential lifecycle threats mapped across multiple security frameworks.
+
+### MITRE ATT&CK
+
+| Technique | ID | Relevance | Skill Coverage |
+|-----------|-----|-----------|---------------|
+| Valid Accounts: Cloud Accounts | [T1078.004](https://attack.mitre.org/techniques/T1078/004/) | Departed employees retain active IAM credentials | Daily reconciliation detects and remediates |
+| Account Manipulation: Additional Cloud Credentials | [T1098.001](https://attack.mitre.org/techniques/T1098/001/) | Orphaned access keys persist after termination | All keys deactivated + deleted before user removal |
+| Account Discovery: Cloud Account | [T1087.004](https://attack.mitre.org/techniques/T1087/004/) | Enumeration of IAM users across org accounts | Cross-account STS AssumeRole validates existence |
+| Account Access Removal | [T1531](https://attack.mitre.org/techniques/T1531/) | Remediation action: removing unauthorized access | Full IAM dependency cleanup pipeline |
+| Unsecured Credentials | [T1552](https://attack.mitre.org/techniques/T1552/) | Dormant credentials exploitable by adversaries | Proactive cleanup within grace period |
+
+### NIST Cybersecurity Framework (CSF 2.0)
+
+| Function | Category | ID | Coverage |
+|----------|----------|-----|---------|
+| Protect | Identity Management & Access Control | PR.AC-1 | Credentials revoked upon termination |
+| Protect | Access Control | PR.AC-4 | Permissions removed (groups, policies) |
+| Detect | Continuous Monitoring | DE.CM-3 | Daily reconciliation detects stale IAM |
+| Respond | Mitigation | RS.MI-2 | Automated remediation pipeline |
+
+### CIS Controls v8
+
+| Control | Description | Coverage |
+|---------|-------------|---------|
+| 5.3 | Disable Dormant Accounts | Core function — departed employees |
+| 6.1 | Establish an Access Granting Process | Rehire detection prevents false revocation |
+| 6.2 | Establish an Access Revoking Process | Automated revocation pipeline |
+| 6.5 | Require MFA for Administrative Access | MFA devices cleaned up during remediation |
+
+### SOC 2 (Trust Services Criteria)
+
+| Criteria | Description | Coverage |
+|----------|-------------|---------|
+| CC6.1 | Logical and Physical Access Controls | IAM user lifecycle management |
+| CC6.2 | Prior to Issuing System Credentials | Rehire detection validates before remediation |
+| CC6.3 | Registration and Authorization | Deprovisioning on termination |
+
+### OWASP Agentic Security
+
+| Risk | Coverage |
+|------|---------|
+| Excessive Permissions | Removes all policies + group memberships |
+| Credential Leakage | Deactivates + deletes all access keys |
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                        Data Sources (Daily Refresh)                  │
-│                                                                      │
-│  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────────────┐  │
-│  │ Workday  │  │ Snowflake │  │ Databricks │  │ ClickHouse       │  │
-│  │  (API)   │  │ (table)   │  │ (table)    │  │ (table)          │  │
-│  └────┬─────┘  └─────┬─────┘  └─────┬──────┘  └───────┬──────────┘  │
-│       │              │              │                  │              │
-│       └──────────────┴──────┬───────┴──────────────────┘              │
-│                             ▼                                        │
-│              ┌──────────────────────────────┐                        │
-│              │  Unified Departures Table     │                        │
-│              │  (daily materialized view)    │                        │
-│              │                              │                        │
-│              │  email | account_id | iam_user│                        │
-│              │  created_at | terminated_at  │                        │
-│              │  is_rehire | iam_deleted     │                        │
-│              └──────────────┬───────────────┘                        │
-│                             │                                        │
-│                    ┌────────▼────────┐                                │
-│                    │  Change Detect  │                                │
-│                    │  (row-level     │                                │
-│                    │   hash diff)    │                                │
-│                    └────────┬────────┘                                │
-│                             │ only if changed                        │
-│                             ▼                                        │
-│              ┌──────────────────────────────┐                        │
-│              │  S3 Export                    │                        │
-│              │  s3://bucket/departures/     │                        │
-│              │    YYYY-MM-DD.json           │                        │
-│              └──────────────┬───────────────┘                        │
-│                             │ PutObject event                        │
-│                             ▼                                        │
-│              ┌──────────────────────────────┐                        │
-│              │  EventBridge Rule            │                        │
-│              │  (ObjectCreated filter)      │                        │
-│              └──────────────┬───────────────┘                        │
-│                             │                                        │
-│                             ▼                                        │
-│              ┌──────────────────────────────┐                        │
-│              │  Step Function               │                        │
-│              │                              │                        │
-│              │  ┌────────────────────────┐  │                        │
-│              │  │ Lambda 1: Validate     │  │                        │
-│              │  │ - Parse manifest       │  │                        │
-│              │  │ - Confirm IAM exists   │  │                        │
-│              │  │ - Check rehire status  │  │                        │
-│              │  │ - Check deletion grace  │  │                        │
-│              │  └──────────┬─────────────┘  │                        │
-│              │             ▼                │                        │
-│              │  ┌────────────────────────┐  │                        │
-│              │  │ Lambda 2: Remediate    │  │                        │
-│              │  │ - Disable IAM user     │  │                        │
-│              │  │ - Revoke access keys   │  │                        │
-│              │  │ - Remove from groups   │  │                        │
-│              │  │ - Tag with ticket ref  │  │                        │
-│              │  │ - Log to audit table   │  │                        │
-│              │  └────────────────────────┘  │                        │
-│              └──────────────────────────────┘                        │
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     AWS Organization — Security OU                      │
+│                                                                         │
+│  ┌──────────────────────── Data Sources (Daily) ──────────────────────┐ │
+│  │                                                                     │ │
+│  │  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌────────────────┐  │ │
+│  │  │ Workday  │  │ Snowflake │  │ Databricks │  │ ClickHouse     │  │ │
+│  │  │  (API)   │  │ (table)   │  │ (table)    │  │ (table)        │  │ │
+│  │  └────┬─────┘  └─────┬─────┘  └─────┬──────┘  └───────┬────────┘  │ │
+│  │       └──────────────┴───────┬───────┴─────────────────┘           │ │
+│  └──────────────────────────────┼─────────────────────────────────────┘ │
+│                                 ▼                                       │
+│  ┌──────────────────────────────────────────────────────────┐           │
+│  │  Reconciler  (src/reconciler/)                           │           │
+│  │                                                          │           │
+│  │  sources.py → DepartureRecord[] → change_detect.py       │           │
+│  │                                    SHA-256 hash diff      │           │
+│  │                                         │                │           │
+│  │                                    changed? ──no──→ EXIT │           │
+│  │                                         │ yes            │           │
+│  │                                    export.py             │           │
+│  └─────────────────────────────────────┬────────────────────┘           │
+│                                        ▼                                │
+│  ┌──────────────────────────────────────────────────────────┐           │
+│  │  S3 Bucket (KMS encrypted)                               │           │
+│  │  s3://${IAM_REMEDIATION_BUCKET}/                         │           │
+│  │    departures/YYYY-MM-DD.json     ← manifest             │           │
+│  │    departures/.last_hash          ← change detection      │           │
+│  │    departures/audit/*.json        ← remediation logs      │           │
+│  └─────────────────────┬────────────────────────────────────┘           │
+│                        │ PutObject (EventBridge notification ON)         │
+│                        ▼                                                │
+│  ┌──────────────────────────────────────────────────────────┐           │
+│  │  EventBridge Rule  (infra/eventbridge_rule.json)         │           │
+│  │  Filter: source=aws.s3, prefix=departures/, suffix=.json │           │
+│  └─────────────────────┬────────────────────────────────────┘           │
+│                        ▼                                                │
+│  ┌──────────────────────────────────────────────────────────┐           │
+│  │  Step Function  (infra/step_function.asl.json)           │           │
+│  │                                                          │           │
+│  │  ┌────────────────────────────────────────────────────┐  │           │
+│  │  │ ParseManifest  (Lambda 1: lambda_parser/)          │  │           │
+│  │  │                                                    │  │           │
+│  │  │  1. Read S3 manifest                               │  │           │
+│  │  │  2. Validate required fields                       │  │           │
+│  │  │  3. Check grace period (default 7d)                │  │           │
+│  │  │  4. Filter rehires (same-IAM vs orphaned)          │  │           │
+│  │  │  5. Filter already-deleted IAMs                    │  │           │
+│  │  │  6. STS AssumeRole → iam:GetUser (exists?)         │  │           │
+│  │  │  7. Output: validated_entries[]                     │  │           │
+│  │  └────────────────────┬───────────────────────────────┘  │           │
+│  │                       ▼                                  │           │
+│  │  ┌─────────── Map State (max 10 concurrent) ──────────┐  │           │
+│  │  │                                                     │  │           │
+│  │  │  ┌──────────────────────────────────────────────┐   │  │           │
+│  │  │  │ RemediateSingleUser (Lambda 2: lambda_worker/)│   │  │           │
+│  │  │  │                                              │   │  │           │
+│  │  │  │  Per IAM user (order matters):               │   │  │  ┌──────┐│
+│  │  │  │  1. Deactivate all access keys               │   │  │  │Target││
+│  │  │  │  2. Delete all access keys                   │   │  │◄─┤ AWS  ││
+│  │  │  │  3. Delete login profile (console)           │   │  │  │Accts ││
+│  │  │  │  4. Remove from all groups                   │   │  │  └──────┘│
+│  │  │  │  5. Detach all managed policies              │   │  │           │
+│  │  │  │  6. Delete all inline policies               │   │  │           │
+│  │  │  │  7. Deactivate + delete MFA devices          │   │  │           │
+│  │  │  │  8. Delete signing certificates              │   │  │           │
+│  │  │  │  9. Delete SSH public keys                   │   │  │           │
+│  │  │  │  10. Delete service-specific credentials     │   │  │           │
+│  │  │  │  11. Tag user (audit metadata)               │   │  │           │
+│  │  │  │  12. DELETE IAM user                         │   │  │           │
+│  │  │  │  13. Write audit → DynamoDB + S3             │   │  │           │
+│  │  │  └──────────────────────────────────────────────┘   │  │           │
+│  │  └─────────────────────────────────────────────────────┘  │           │
+│  │                       ▼                                  │           │
+│  │            GenerateSummary (Pass state)                   │           │
+│  └──────────────────────────────────────────────────────────┘           │
+│                        │                                                │
+│                        ▼                                                │
+│  ┌──────────────────────────────────────────────────────────┐           │
+│  │  Audit Ingest-Back (ETL)                                 │           │
+│  │  DynamoDB/S3 audit → Snowflake/Databricks/ClickHouse     │           │
+│  │  Updates remediation_status column, closes the loop       │           │
+│  └──────────────────────────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Unified Departures Table Schema
+## Project Structure
 
-The skill builds a materialized table from whichever HR source is available. All sources are normalized to this schema:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `email` | STRING | Employee email (primary key for matching) |
-| `recipient_account_id` | STRING | AWS account ID where the IAM user was created |
-| `iam_username` | STRING | The IAM user name in the target account |
-| `iam_created_at` | TIMESTAMP | When the IAM user was provisioned |
-| `terminated_at` | TIMESTAMP | Employee termination date from HR system |
-| `termination_source` | STRING | Origin system: `workday`, `snowflake`, `databricks`, `clickhouse` |
-| `is_rehire` | BOOLEAN | `true` if employee was rehired after termination (skip remediation) |
-| `rehire_date` | TIMESTAMP | Date of rehire (NULL if not rehired) |
-| `iam_deleted` | BOOLEAN | `true` if IAM user was already manually deleted |
-| `iam_deleted_at` | TIMESTAMP | When the IAM user was deleted (NULL if still active) |
-| `last_checked_at` | TIMESTAMP | Last time this row was reconciled |
-| `remediation_status` | STRING | `pending`, `validated`, `remediated`, `skipped`, `error` |
-
-### Source-Specific Queries
-
-**Workday data in Snowflake:**
-```sql
-SELECT
-    w.email_address         AS email,
-    i.account_id            AS recipient_account_id,
-    i.iam_username,
-    i.created_at            AS iam_created_at,
-    w.termination_date      AS terminated_at,
-    'snowflake'             AS termination_source,
-    CASE WHEN w.rehire_date IS NOT NULL AND w.rehire_date > w.termination_date
-         THEN TRUE ELSE FALSE END AS is_rehire,
-    w.rehire_date
-FROM hr_db.workday.employees w
-JOIN security_db.iam.users i ON LOWER(w.email_address) = LOWER(i.email)
-WHERE w.termination_date IS NOT NULL
-  AND w.termination_date <= CURRENT_DATE()
+```
+skills/iam-departures-remediation/
+├── SKILL.md                                    # This file
+├── src/
+│   ├── reconciler/
+│   │   ├── __init__.py                         # Module exports
+│   │   ├── sources.py                          # Multi-source HR ingestion (Snowflake, DBX, CH, Workday)
+│   │   ├── change_detect.py                    # SHA-256 row-level diff against S3 .last_hash
+│   │   └── export.py                           # S3 manifest export with KMS encryption
+│   ├── lambda_parser/
+│   │   ├── __init__.py
+│   │   └── handler.py                          # Lambda 1: validate, filter rehires, check IAM exists
+│   └── lambda_worker/
+│       ├── __init__.py
+│       └── handler.py                          # Lambda 2: full IAM cleanup + delete + audit
+├── infra/
+│   ├── step_function.asl.json                  # ASL definition (ParseManifest → Map → Summary)
+│   ├── eventbridge_rule.json                   # S3 ObjectCreated trigger
+│   └── iam_policies/
+│       ├── parser_execution_role.json          # Least-privilege for Lambda 1
+│       ├── worker_execution_role.json          # Least-privilege for Lambda 2 (with Deny on protected users)
+│       └── cross_account_remediation_role.json # Deployed to all target accounts via StackSets
+└── tests/
+    ├── test_reconciler.py                      # 15 tests: DepartureRecord, change detect, export
+    ├── test_parser_lambda.py                   # 11 tests: validation, grace period, rehires
+    └── test_worker_lambda.py                   # 8 tests: remediation steps, error handling
 ```
 
-**Workday data in Databricks:**
-```sql
-SELECT
-    w.email_address         AS email,
-    i.account_id            AS recipient_account_id,
-    i.iam_username,
-    i.created_at            AS iam_created_at,
-    w.termination_date      AS terminated_at,
-    'databricks'            AS termination_source,
-    CASE WHEN w.rehire_date IS NOT NULL AND w.rehire_date > w.termination_date
-         THEN true ELSE false END AS is_rehire,
-    w.rehire_date
-FROM hr_catalog.workday.employees w
-JOIN security_catalog.iam.users i ON LOWER(w.email_address) = LOWER(i.email)
-WHERE w.termination_date IS NOT NULL
-  AND w.termination_date <= current_date()
+## Rehire Handling — All Caveats
+
+The rehire logic operates at multiple levels (reconciler → parser → worker) with these scenarios:
+
+| # | Scenario | Detection | Action |
+|---|----------|-----------|--------|
+| 1 | Employee terminated, not rehired | `is_rehire = false` | **REMEDIATE** — standard flow |
+| 2 | Employee terminated, IAM already deleted by admin | `iam_deleted = true` | **SKIP** — log as already handled |
+| 3 | Employee terminated → rehired → uses SAME IAM | `iam_last_used_at > rehire_date` | **SKIP** — active employee, same IAM still in use |
+| 4 | Employee terminated → rehired → got NEW IAM, old IAM idle | `iam_last_used_at < rehire_date` AND `iam_created_at < rehire_date` | **REMEDIATE OLD IAM** — orphaned, employee has a new one |
+| 5 | Employee terminated → rehired → new IAM record | `iam_created_at > rehire_date` | **SKIP** — this IS the employee's current IAM |
+| 6 | Employee terminated → rehired → terminated AGAIN | Latest termination has `is_rehire = false` | **REMEDIATE** — they're gone again |
+| 7 | Termination reversed within grace period | `terminated_at` within `IAM_GRACE_PERIOD_DAYS` | **SKIP** — wait for HR data to stabilize |
+| 8 | Rehired but no IAM usage data available | `iam_last_used_at = NULL`, `iam_created_at < rehire_date` | **REMEDIATE** — conservative: assume orphaned |
+
+Key implementation in `src/reconciler/sources.py:DepartureRecord.should_remediate()`:
+
+```python
+def should_remediate(self) -> bool:
+    if self.iam_deleted:
+        return False
+    if self.terminated_at is None:
+        return False
+    if self.is_rehire and self.rehire_date:
+        # Same IAM still in use after rehire → skip
+        if self.iam_last_used_at and self.iam_last_used_at > self.rehire_date:
+            return False
+        # IAM created after rehire → this is their new IAM → skip
+        if self.iam_created_at and self.iam_created_at > self.rehire_date:
+            return False
+        # Old IAM not used after rehire → orphaned → remediate
+        return True
+    return True
 ```
 
-**Workday data in ClickHouse:**
-```sql
-SELECT
-    w.email_address         AS email,
-    i.account_id            AS recipient_account_id,
-    i.iam_username,
-    i.created_at            AS iam_created_at,
-    w.termination_date      AS terminated_at,
-    'clickhouse'            AS termination_source,
-    if(w.rehire_date IS NOT NULL AND w.rehire_date > w.termination_date, 1, 0) AS is_rehire,
-    w.rehire_date
-FROM hr.workday_employees w
-JOIN security.iam_users i ON lower(w.email_address) = lower(i.email)
-WHERE w.termination_date IS NOT NULL
-  AND w.termination_date <= today()
+## IAM Deletion Order (AWS Requirement)
+
+AWS will reject `iam:DeleteUser` unless ALL dependencies are removed first. The worker Lambda executes these in strict order:
+
+```
+1. Deactivate access keys  → iam:UpdateAccessKey (Status=Inactive)
+2. Delete access keys      → iam:DeleteAccessKey
+3. Delete login profile    → iam:DeleteLoginProfile
+4. Remove from groups      → iam:RemoveUserFromGroup (all groups)
+5. Detach managed policies → iam:DetachUserPolicy (all attached)
+6. Delete inline policies  → iam:DeleteUserPolicy (all inline)
+7. Deactivate MFA devices  → iam:DeactivateMFADevice
+8. Delete virtual MFA      → iam:DeleteVirtualMFADevice
+9. Delete signing certs    → iam:DeleteSigningCertificate
+10. Delete SSH public keys → iam:DeleteSSHPublicKey
+11. Delete service creds   → iam:DeleteServiceSpecificCredential
+12. Tag user (audit trail) → iam:TagUser
+13. DELETE user            → iam:DeleteUser
 ```
 
 ## Change Detection
 
-The skill computes a SHA-256 hash of the full result set (sorted, deterministic). Export to S3 only triggers when the hash differs from the previous run.
+The reconciler computes a SHA-256 hash of the full result set (sorted deterministically). Export to S3 only fires when the hash differs from the previous run.
 
+Implementation in `src/reconciler/change_detect.py`:
+
+```python
+class ChangeDetector:
+    HASH_KEY = "departures/.last_hash"
+
+    def has_changed(self, records: list[DepartureRecord]) -> tuple[bool, str]:
+        current_hash = self.compute_hash(records)  # SHA-256 of sorted JSON
+        previous_hash = self.get_previous_hash()   # Read from S3
+        return (current_hash != previous_hash, current_hash)
 ```
-current_hash  = SHA256(sorted rows as JSON)
-previous_hash = read from s3://bucket/departures/.last_hash
 
-if current_hash != previous_hash:
-    export rows → s3://bucket/departures/YYYY-MM-DD.json
-    write current_hash → s3://bucket/departures/.last_hash
-else:
-    log "No changes detected, skipping export"
-```
+This prevents:
+- Unnecessary Step Function executions (cost savings)
+- Duplicate remediations (safety)
+- EventBridge event storms (operational hygiene)
 
-This prevents unnecessary Step Function executions and avoids re-processing unchanged data.
+## Security Model
 
-## S3 Manifest Format
+### Deployment: Organization Security OU
 
-Each export writes a single JSON file:
+All infrastructure (Lambdas, Step Function, S3 bucket, DynamoDB table) runs in the **Security OU management account**. Cross-account access uses STS AssumeRole with org-scoped conditions.
+
+### Least Privilege IAM Policies
+
+Three IAM policies in `infra/iam_policies/`:
+
+| Policy | Scope | Key Permissions |
+|--------|-------|-----------------|
+| `parser_execution_role.json` | Lambda 1 | `s3:GetObject`, `sts:AssumeRole`, `iam:GetUser` |
+| `worker_execution_role.json` | Lambda 2 | Full IAM remediation + DynamoDB + S3 audit write |
+| `cross_account_remediation_role.json` | Target accounts | IAM read/write scoped to `user/*`, explicit Deny on protected users |
+
+### Protected User Deny
+
+The worker role explicitly denies operations on protected accounts:
 
 ```json
 {
-  "export_timestamp": "2026-03-01T00:00:00Z",
-  "source": "snowflake",
-  "row_count": 42,
-  "hash": "a1b2c3d4...",
-  "entries": [
-    {
-      "email": "jane.doe@company.com",
-      "recipient_account_id": "123456789012",
-      "iam_username": "jane.doe",
-      "iam_created_at": "2024-06-15T09:00:00Z",
-      "terminated_at": "2026-02-28T00:00:00Z",
-      "termination_source": "snowflake",
-      "is_rehire": false,
-      "rehire_date": null,
-      "iam_deleted": false,
-      "iam_deleted_at": null,
-      "remediation_status": "pending"
-    }
+  "Sid": "DenyProtectedUsers",
+  "Effect": "Deny",
+  "Action": "iam:*",
+  "Resource": [
+    "arn:aws:iam::*:user/root",
+    "arn:aws:iam::*:user/break-glass-*",
+    "arn:aws:iam::*:user/emergency-*",
+    "arn:aws:iam::*:role/*"
   ]
 }
 ```
 
-## EventBridge + Step Function Pipeline
+### Organization-Scoped Trust
 
-### EventBridge Rule
+Cross-account role assumption is constrained by `aws:PrincipalOrgID` and `ArnLike` conditions — only the parser and worker Lambda roles in the Security OU account can assume the remediation role.
 
-Triggers on `s3:ObjectCreated:*` for the departures prefix:
+### Encryption
 
-```json
-{
-  "source": ["aws.s3"],
-  "detail-type": ["Object Created"],
-  "detail": {
-    "bucket": { "name": ["${IAM_REMEDIATION_BUCKET}"] },
-    "object": { "key": [{ "prefix": "departures/" }] }
-  }
-}
-```
+- S3 objects: `ServerSideEncryption: aws:kms`
+- DynamoDB: Encryption at rest (AWS managed)
+- All credentials in environment variables (Lambda encrypted at rest via KMS)
 
-### Lambda 1: Validate
+### Audit Trail (Dual-Write)
 
-Reads the S3 manifest and performs pre-remediation checks:
+Every remediation action writes to:
+1. **DynamoDB** — fast operational queries (who was deleted, when, by which Lambda invocation)
+2. **S3** — immutable compliance archive (per-user JSON in `departures/audit/`)
+3. **Ingest-back** — ETL pushes audit records back to the source warehouse, updating `remediation_status`
 
-1. **Parse manifest** — load JSON, validate schema
-2. **Filter rehires** — remove entries where `is_rehire = true`
-3. **Filter already-deleted** — remove entries where `iam_deleted = true`
-4. **Confirm IAM user exists** — call `iam:GetUser` for each entry, mark missing users as `skipped`
-5. **Grace period check** — skip users terminated within the last N days (configurable, default 7) to allow for HR data corrections
-6. **Cross-account assume** — use `sts:AssumeRole` into `recipient_account_id` for multi-account validation
-7. **Output** — validated manifest (only actionable entries) passed to Lambda 2
+## Environment Variables
 
-### Lambda 2: Remediate
+### Required
 
-Executes remediation actions on validated entries:
+| Variable | Description |
+|----------|-------------|
+| `AWS_ACCOUNT_ID` | Security OU account ID (where Lambdas run) |
+| `IAM_REMEDIATION_BUCKET` | S3 bucket for manifests + audit logs |
 
-1. **Disable login profile** — `iam:DeleteLoginProfile` (revoke console access)
-2. **Deactivate access keys** — `iam:UpdateAccessKey` → Status=Inactive for all keys
-3. **Remove from groups** — `iam:RemoveUserFromGroup` for all group memberships
-4. **Detach policies** — `iam:DetachUserPolicy` for all attached managed policies, `iam:DeleteUserPolicy` for inline policies
-5. **Tag IAM user** — add `remediation-ticket`, `remediated-at`, `terminated-at` tags for audit trail
-6. **Write audit record** — log action to DynamoDB or the source data warehouse
-7. **Do NOT delete the user** — disable only, preserve for audit (deletion is a separate manual approval)
-
-## Rehire Handling
-
-The skill handles rehires at multiple levels:
-
-| Scenario | Behavior |
-|----------|----------|
-| Employee terminated, not rehired | Normal remediation flow |
-| Employee terminated then rehired (rehire_date > terminated_at) | `is_rehire = true` → skipped at table level |
-| Employee terminated, rehired, terminated again | Uses latest termination_date, `is_rehire = false` |
-| IAM user already deleted by admin | `iam_deleted = true` → skipped, no action needed |
-| IAM user recreated after deletion | New IAM created_at > old deleted_at → treated as new user, not remediated unless new termination |
-| Termination reversed within grace period | Grace period (7d default) catches HR corrections before remediation |
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `AWS_ACCOUNT_ID` | Yes | Management account ID for cross-account assume |
-| `IAM_REMEDIATION_BUCKET` | Yes | S3 bucket for change-detected exports |
-| `IAM_GRACE_PERIOD_DAYS` | No | Days after termination before remediation (default: 7) |
-| `IAM_CROSS_ACCOUNT_ROLE` | No | Role name to assume in target accounts (default: `iam-remediation-role`) |
-
-### Data Source Configuration (one required)
+### Data Source (one required)
 
 | Variable | Description |
 |----------|-------------|
@@ -323,39 +388,34 @@ The skill handles rehires at multiple levels:
 | `CLICKHOUSE_HOST` + `CLICKHOUSE_USER` + `CLICKHOUSE_PASSWORD` | ClickHouse with Workday tables |
 | `WORKDAY_API_URL` + `WORKDAY_CLIENT_ID` + `WORKDAY_CLIENT_SECRET` | Workday direct API |
 
-## Example Workflow
+### Optional
 
-### 1. Daily reconciliation (runs via cron/scheduler)
-```
-iam_departures_reconcile(source="snowflake")
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IAM_GRACE_PERIOD_DAYS` | `7` | Days after termination before remediation fires |
+| `IAM_CROSS_ACCOUNT_ROLE` | `iam-remediation-role` | Role name in target accounts |
+| `IAM_AUDIT_DYNAMODB_TABLE` | `iam-remediation-audit` | DynamoDB table for audit records |
+| `SNOWFLAKE_HR_DATABASE` | `hr_db` | Snowflake database containing Workday data |
+| `SNOWFLAKE_IAM_DATABASE` | `security_db` | Snowflake database containing IAM inventory |
 
-### 2. Check current departures table
-```
-iam_departures_list(status="pending", limit=50)
-```
+## Cross-Cloud (Future)
 
-### 3. Force export (bypass change detection)
-```
-iam_departures_export(force=true)
-```
+The current implementation is AWS-focused. The architecture is designed for cross-cloud extension:
 
-### 4. Check remediation audit trail
-```
-iam_departures_audit(email="jane.doe@company.com")
-```
+| Cloud | IAM Equivalent | Planned Support |
+|-------|---------------|-----------------|
+| AWS | IAM Users + Access Keys | **Implemented** |
+| Azure | Entra ID (Azure AD) Users + Service Principals | Planned — Graph API |
+| GCP | IAM Service Accounts + Keys | Planned — `iam.googleapis.com` |
+| Snowflake | Users + Roles | Planned — `SHOW USERS` + `DROP USER` |
+| Databricks | SCIM Users + PATs | Planned — Accounts API |
 
-## Security Considerations
-
-- **Least privilege** — Cross-account role should only have `iam:GetUser`, `iam:DeleteLoginProfile`, `iam:UpdateAccessKey`, `iam:ListAccessKeys`, `iam:RemoveUserFromGroup`, `iam:ListGroupsForUser`, `iam:DetachUserPolicy`, `iam:ListAttachedUserPolicies`, `iam:DeleteUserPolicy`, `iam:ListUserPolicies`, `iam:TagUser`
-- **No user deletion** — Users are disabled, not deleted. Deletion requires separate manual approval.
-- **Grace period** — Configurable delay prevents acting on HR data corrections
-- **Audit trail** — Every action is logged with timestamp, actor, and ticket reference
-- **Change detection** — Prevents re-processing unchanged data and duplicate remediations
-- **Rehire safety** — Multiple layers of rehire detection prevent disabling returning employees
+The reconciler `HRSource` abstraction and `DepartureRecord` schema are cloud-agnostic — only the worker Lambda needs cloud-specific implementations.
 
 ## Source & Verification
 
 - **Source code**: https://github.com/msaad00/cloud-security (Apache-2.0)
+- **Tests**: 34 unit tests covering all rehire scenarios, change detection, and remediation steps
 - **No telemetry**: `telemetry: false` — zero tracking
-- **Self-contained**: All logic runs in your AWS account, no external dependencies beyond HR data source
+- **Self-contained**: All logic runs in your AWS Organization, no external dependencies beyond HR data source
+- **Auditable**: Every action logged to DynamoDB + S3 with full action trace

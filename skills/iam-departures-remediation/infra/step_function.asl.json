@@ -1,0 +1,121 @@
+{
+  "Comment": "IAM Departures Remediation — Parse manifest then remediate each IAM user in parallel",
+  "StartAt": "ParseManifest",
+  "States": {
+    "ParseManifest": {
+      "Type": "Task",
+      "Comment": "Lambda 1: Read S3 manifest, validate entries, filter rehires/deleted",
+      "Resource": "${ParserLambdaArn}",
+      "Parameters": {
+        "bucket.$": "$.detail.bucket.name",
+        "key.$": "$.detail.object.key"
+      },
+      "ResultPath": "$.parseResult",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ParseFailed",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "CheckValidatedEntries"
+    },
+
+    "CheckValidatedEntries": {
+      "Type": "Choice",
+      "Comment": "Skip remediation if no actionable entries",
+      "Choices": [
+        {
+          "Variable": "$.parseResult.validated_entries[0]",
+          "IsPresent": true,
+          "Next": "RemediateUsers"
+        }
+      ],
+      "Default": "NoActionNeeded"
+    },
+
+    "RemediateUsers": {
+      "Type": "Map",
+      "Comment": "Lambda 2: Process each IAM user in parallel (max 10 concurrent)",
+      "ItemsPath": "$.parseResult.validated_entries",
+      "MaxConcurrency": 10,
+      "Parameters": {
+        "entry.$": "$$.Map.Item.Value",
+        "source_bucket.$": "$.parseResult.source_bucket",
+        "source_key.$": "$.parseResult.source_key"
+      },
+      "Iterator": {
+        "StartAt": "RemediateSingleUser",
+        "States": {
+          "RemediateSingleUser": {
+            "Type": "Task",
+            "Resource": "${WorkerLambdaArn}",
+            "Retry": [
+              {
+                "ErrorEquals": ["Lambda.ServiceException"],
+                "IntervalSeconds": 10,
+                "MaxAttempts": 1,
+                "BackoffRate": 2.0
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "Next": "UserRemediationFailed",
+                "ResultPath": "$.error"
+              }
+            ],
+            "End": true
+          },
+          "UserRemediationFailed": {
+            "Type": "Pass",
+            "Comment": "Capture error but don't fail the entire Map — other users should still be processed",
+            "Parameters": {
+              "email.$": "$.entry.email",
+              "iam_username.$": "$.entry.iam_username",
+              "account_id.$": "$.entry.recipient_account_id",
+              "status": "error",
+              "error.$": "$.error.Cause"
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": "$.remediationResults",
+      "Next": "GenerateSummary"
+    },
+
+    "GenerateSummary": {
+      "Type": "Pass",
+      "Comment": "Aggregate remediation results for notification",
+      "Parameters": {
+        "execution_id.$": "$$.Execution.Id",
+        "started_at.$": "$$.Execution.StartTime",
+        "completed_at.$": "$$.State.EnteredTime",
+        "validation_summary.$": "$.parseResult.validation_summary",
+        "remediation_results.$": "$.remediationResults",
+        "status": "completed"
+      },
+      "End": true
+    },
+
+    "NoActionNeeded": {
+      "Type": "Succeed",
+      "Comment": "All entries were filtered (rehires, already deleted, grace period)"
+    },
+
+    "ParseFailed": {
+      "Type": "Fail",
+      "Cause": "Manifest parsing or validation failed",
+      "Error": "ParseError"
+    }
+  }
+}

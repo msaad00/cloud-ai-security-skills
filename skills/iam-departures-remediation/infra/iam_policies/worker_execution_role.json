@@ -1,0 +1,102 @@
+{
+  "Comment": "Lambda 2 (Worker) execution role — full IAM remediation permissions, least privilege",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumeRoleInTargetAccounts",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::*:role/${IAM_CROSS_ACCOUNT_ROLE}",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalOrgID": "${AWS_ORG_ID}"
+        }
+      }
+    },
+    {
+      "Sid": "IAMRemediationActions",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:DeleteUser",
+        "iam:ListAccessKeys",
+        "iam:UpdateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:DeleteLoginProfile",
+        "iam:ListGroupsForUser",
+        "iam:RemoveUserFromGroup",
+        "iam:ListAttachedUserPolicies",
+        "iam:DetachUserPolicy",
+        "iam:ListUserPolicies",
+        "iam:DeleteUserPolicy",
+        "iam:ListMFADevices",
+        "iam:DeactivateMFADevice",
+        "iam:DeleteVirtualMFADevice",
+        "iam:ListSigningCertificates",
+        "iam:DeleteSigningCertificate",
+        "iam:ListSSHPublicKeys",
+        "iam:DeleteSSHPublicKey",
+        "iam:ListServiceSpecificCredentials",
+        "iam:DeleteServiceSpecificCredential",
+        "iam:TagUser"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalOrgID": "${AWS_ORG_ID}"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRemediationOfProtectedUsers",
+      "Effect": "Deny",
+      "Action": "iam:*",
+      "Resource": [
+        "arn:aws:iam::*:user/root",
+        "arn:aws:iam::*:user/break-glass-*",
+        "arn:aws:iam::*:user/emergency-*",
+        "arn:aws:iam::*:role/*"
+      ]
+    },
+    {
+      "Sid": "WriteAuditToDynamoDB",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem"
+      ],
+      "Resource": "arn:aws:dynamodb:*:*:table/${IAM_AUDIT_DYNAMODB_TABLE}"
+    },
+    {
+      "Sid": "WriteAuditToS3",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::${IAM_REMEDIATION_BUCKET}/departures/audit/*"
+    },
+    {
+      "Sid": "KMSForS3Encryption",
+      "Effect": "Allow",
+      "Action": [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+      ],
+      "Resource": "${KMS_KEY_ARN}",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "s3.${AWS_REGION}.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/iam-departures-worker*"
+    }
+  ]
+}
