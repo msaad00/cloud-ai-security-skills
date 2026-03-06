@@ -167,6 +167,30 @@ skills/iam-departures-remediation/
 └── tests/                      # 59 unit tests
 ```
 
+## Deployment Options
+
+Deploy with CloudFormation or Terraform — both produce identical infrastructure:
+
+```bash
+# CloudFormation
+aws cloudformation deploy \
+  --template-file infra/cloudformation.yaml \
+  --stack-name iam-departures-remediation \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides OrgId=o-abc123def4 ...
+
+# Terraform
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars  # edit with your values
+terraform init && terraform plan && terraform apply
+```
+
+| IaC | Path | Resources |
+|-----|------|-----------|
+| CloudFormation | `infra/cloudformation.yaml` | Full stack (S3, KMS, DDB, Lambda, SFN, EventBridge, 4 IAM roles) |
+| Terraform | `infra/terraform/main.tf` | Same resources, HCL format |
+| StackSets | `infra/cross_account_stackset.yaml` | Org-wide cross-account remediation role |
+
 ## MITRE ATT&CK Coverage
 
 | Technique | ID | How This Skill Addresses It |
@@ -176,3 +200,18 @@ skills/iam-departures-remediation/
 | Cloud Account Discovery | T1087.004 | Cross-account STS validates IAM existence |
 | Account Access Removal | T1531 | Full dependency cleanup pipeline |
 | Unsecured Credentials | T1552 | Proactive cleanup within grace period |
+
+## CIS Benchmark Cross-Reference
+
+This skill directly remediates findings flagged by CIS benchmarks:
+
+| CIS Control | Benchmark | What This Skill Remediates |
+|------------|-----------|---------------------------|
+| 1.3 — Credentials unused 45+ days | CIS AWS v3.0 | Deletes departed-employee access keys + console access |
+| 1.4 — Access keys rotated 90 days | CIS AWS v3.0 | Removes keys entirely (stronger than rotation) |
+| 5.3 — Disable/remove unused accounts | CIS Controls v8 | Full 13-step cleanup + deletion |
+| 6.1 — Establish access granting process | CIS Controls v8 | Automated deprovisioning tied to HR data |
+| 6.2 — Establish access revoking process | CIS Controls v8 | Event-driven pipeline, < 24h from termination |
+| 6.5 — Require MFA | CIS Controls v8 | Deactivates + deletes orphaned MFA devices |
+
+> **Workflow**: Run `cspm-aws-cis-benchmark` to identify stale credentials → this skill automatically remediates them. The two skills work together — detection + response.

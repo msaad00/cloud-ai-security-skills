@@ -61,7 +61,9 @@ plus Vertex AI security controls. Each check mapped to NIST CSF 2.0.
                           JSON / Console
 ```
 
-## Controls — CIS GCP Foundations v3.0
+## Controls — CIS GCP Foundations v3.0 (key controls)
+
+> The full CIS GCP Foundations Benchmark v3.0 has 80+ controls. This skill automates 20 high-impact checks plus 5 Vertex AI security controls not covered by CIS.
 
 ### Section 1 — IAM (7 checks)
 

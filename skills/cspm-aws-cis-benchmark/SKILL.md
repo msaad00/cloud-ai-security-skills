@@ -66,7 +66,9 @@ Automated assessment of AWS accounts against the CIS AWS Foundations Benchmark v
         └──────────┘    └──────────┘       └──────────┘
 ```
 
-## Controls — CIS AWS Foundations v3.0
+## Controls — CIS AWS Foundations v3.0 (key controls)
+
+> The full CIS AWS Foundations Benchmark v3.0 has 60+ controls. This skill automates the 18 most impactful checks — the ones most frequently flagged in audits and with the highest blast radius if misconfigured.
 
 ### Section 1 — IAM (7 checks)
 
