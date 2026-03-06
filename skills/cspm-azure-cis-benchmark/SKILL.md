@@ -61,7 +61,9 @@ v2.1, plus Azure AI Foundry security controls. Each check mapped to NIST CSF 2.0
                           JSON / Console
 ```
 
-## Controls — CIS Azure Foundations v2.1
+## Controls — CIS Azure Foundations v2.1 (key controls)
+
+> The full CIS Azure Foundations Benchmark v2.1 has 90+ controls. This skill automates 19 high-impact checks plus 5 Azure AI Foundry security controls not covered by CIS.
 
 ### Section 1 — Identity & Access (7 checks)
 
