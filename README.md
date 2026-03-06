@@ -10,6 +10,7 @@ Production-ready cloud security automations — deployable code, CIS benchmark a
 | [cspm-aws-cis-benchmark](skills/cspm-aws-cis-benchmark/) | AWS | Production | CIS AWS Foundations v3.0 — 18 automated checks across IAM, Storage, Logging, Networking |
 | [cspm-gcp-cis-benchmark](skills/cspm-gcp-cis-benchmark/) | GCP | Production | CIS GCP Foundations v3.0 — 20 controls + 5 Vertex AI security checks |
 | [cspm-azure-cis-benchmark](skills/cspm-azure-cis-benchmark/) | Azure | Production | CIS Azure Foundations v2.1 — 19 controls + 5 AI Foundry security checks |
+| [vuln-remediation-pipeline](skills/vuln-remediation-pipeline/) | AWS | Production | Auto-remediate supply chain vulns — EPSS triage, dependency PRs, credential rotation, MCP quarantine |
 
 ## Architecture — IAM Departures Remediation
 
