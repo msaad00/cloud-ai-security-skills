@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install boto3 moto pytest
-      - run: pytest skills/iam-departures-remediation/tests/ -v
+      - run: cd skills/iam-departures-remediation && pytest tests/ -v
 
   validate-cloudformation:
     runs-on: ubuntu-latest
