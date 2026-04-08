@@ -22,7 +22,6 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -557,7 +556,7 @@ def print_summary(findings: list[Finding]) -> None:
     total = len(findings)
 
     print(f"\n{'='*60}")
-    print(f"  CIS AWS Foundations v3.0 — Assessment Results")
+    print("  CIS AWS Foundations v3.0 — Assessment Results")
     print(f"{'='*60}\n")
 
     current_section = ""

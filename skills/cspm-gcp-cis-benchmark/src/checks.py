@@ -19,7 +19,6 @@ import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -274,11 +273,10 @@ def run_assessment(project_id: str, section: str | None = None) -> list[Finding]
 
 def print_summary(findings: list[Finding]) -> None:
     passed = sum(1 for f in findings if f.status == "PASS")
-    failed = sum(1 for f in findings if f.status == "FAIL")
     total = len(findings)
 
     print(f"\n{'='*60}")
-    print(f"  CIS GCP Foundations v3.0 — Assessment Results")
+    print("  CIS GCP Foundations v3.0 — Assessment Results")
     print(f"{'='*60}\n")
 
     current_section = ""

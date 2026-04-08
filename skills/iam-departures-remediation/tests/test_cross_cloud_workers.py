@@ -11,17 +11,14 @@ Each cloud worker is tested with mocked SDKs to verify:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from src.lambda_worker.clouds import (
     CloudProvider,
     RemediationResult,
     RemediationStatus,
     RemediationStep,
 )
-
 
 # ── Shared fixtures ──────────────────────────────────────────────
 

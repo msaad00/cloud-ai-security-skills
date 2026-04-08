@@ -11,7 +11,7 @@ line-length = 140
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = ["E501"]
+ignore = ["E501"]  # Existing code uses long lines for audit log strings
 
 [tool.ruff.format]
 quote-style = "double"

@@ -18,7 +18,6 @@ import json
 import sys
 from dataclasses import asdict, dataclass, field
 
-
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -222,7 +221,7 @@ def print_summary(findings: list[Finding]) -> None:
     total = len(findings)
 
     print(f"\n{'='*60}")
-    print(f"  CIS Azure Foundations v2.1 — Assessment Results")
+    print("  CIS Azure Foundations v2.1 — Assessment Results")
     print(f"{'='*60}\n")
 
     current_section = ""

@@ -32,7 +32,7 @@ def load_findings(path: str | Path) -> dict[str, Any]:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Findings file not found: {path}")
-    if not path.suffix.lower() in (".json", ".sarif"):
+    if path.suffix.lower() not in (".json", ".sarif"):
         raise ValueError(f"Unsupported file format: {path.suffix}")
 
     with open(path) as f:

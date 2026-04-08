@@ -3,26 +3,25 @@
 from __future__ import annotations
 
 import json
+import os
+
+# We test the source code directly by adding the src dir to path
+import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# We test the source code directly by adding the src dir to path
-import sys
-import os
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from reconciler.change_detect import ChangeDetector
+from reconciler.export import S3Exporter
 from reconciler.sources import (
     DepartureRecord,
     RemediationStatus,
     TerminationSource,
     get_source,
 )
-from reconciler.change_detect import ChangeDetector
-from reconciler.export import S3Exporter
-
 
 # ── Fixtures ────────────────────────────────────────────────────────
 

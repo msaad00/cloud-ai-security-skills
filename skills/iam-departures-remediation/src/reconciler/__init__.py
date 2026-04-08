@@ -10,6 +10,8 @@ MITRE ATT&CK coverage:
     T1087.004  Account Discovery: Cloud Account — enumerates IAM users per account
 """
 
+from reconciler.change_detect import ChangeDetector
+from reconciler.export import S3Exporter
 from reconciler.sources import (
     ClickHouseSource,
     DatabricksSource,
@@ -17,8 +19,6 @@ from reconciler.sources import (
     SnowflakeSource,
     WorkdayAPISource,
 )
-from reconciler.change_detect import ChangeDetector
-from reconciler.export import S3Exporter
 
 __all__ = [
     "HRSource",

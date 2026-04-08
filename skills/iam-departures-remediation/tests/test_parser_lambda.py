@@ -8,11 +8,9 @@ import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lambda_parser.handler import handler, _validate_entry
+from lambda_parser.handler import _validate_entry, handler
 
 
 def _now_iso() -> str:

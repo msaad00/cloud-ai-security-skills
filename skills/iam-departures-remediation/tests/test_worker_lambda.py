@@ -4,21 +4,18 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch, call
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lambda_worker.handler import (
-    handler,
     _deactivate_access_keys,
-    _delete_login_profile,
-    _remove_from_groups,
-    _detach_managed_policies,
     _delete_inline_policies,
+    _delete_login_profile,
     _delete_mfa_devices,
+    _detach_managed_policies,
+    _remove_from_groups,
+    handler,
 )
 
 

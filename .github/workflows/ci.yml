@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install ruff
-      - run: ruff check skills/ --select E,F,W,I
+      - run: ruff check skills/ --config pyproject.toml
       - run: ruff format --check skills/
 
   test-iam-departures:
