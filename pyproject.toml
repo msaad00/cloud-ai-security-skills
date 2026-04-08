@@ -1,0 +1,27 @@
+[project]
+name = "cloud-security-skills"
+version = "0.2.0"
+description = "Cloud security skills collection — reusable security automation for AI agents"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 140
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]
+
+[tool.pytest.ini_options]
+testpaths = ["skills"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
