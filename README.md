@@ -3,9 +3,7 @@
 [![CI](https://github.com/msaad00/cloud-security/actions/workflows/ci.yml/badge.svg)](https://github.com/msaad00/cloud-security/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Scanned by agent-bom](https://img.shields.io/badge/scanned%20by-agent--bom-10b981)](https://github.com/msaad00/agent-bom)
-
-Production-grade cloud security benchmarks and automation — CIS checks for AWS/GCP/Azure, model serving security, GPU cluster hardening, IAM remediation, and vulnerability response pipelines. Each skill is compliance-mapped, tested, and ready to deploy.
+Production-grade cloud security benchmarks and automation — CIS checks for AWS/GCP/Azure, Kubernetes and container hardening, model serving security, GPU cluster security, IAM remediation, and vulnerability response pipelines. Each skill is compliance-mapped, tested, and ready to deploy.
 
 ## Skills
 
@@ -16,6 +14,8 @@ Production-grade cloud security benchmarks and automation — CIS checks for AWS
 | [cspm-azure-cis-benchmark](skills/cspm-azure-cis-benchmark/) | Azure | 24 | CIS Azure Foundations v2.1 + AI Foundry security |
 | [model-serving-security](skills/model-serving-security/) | Any | 16 | Model endpoint auth, rate limiting, data egress, safety layers |
 | [gpu-cluster-security](skills/gpu-cluster-security/) | Any | 13 | GPU runtime isolation, driver CVEs, InfiniBand, tenant isolation |
+| [k8s-security-benchmark](skills/k8s-security-benchmark/) | Any | 10 | Pod security, RBAC, network policies, secrets, image pinning |
+| [container-security](skills/container-security/) | Any | 8 | Dockerfile best practices, image security, runtime isolation |
 | [discover-environment](skills/discover-environment/) | Multi-cloud | — | Map cloud resources to security graph with MITRE ATT&CK/ATLAS overlays |
 | [iam-departures-remediation](skills/iam-departures-remediation/) | Multi-cloud | — | Auto-remediate IAM for departed employees across 5 clouds |
 | [vuln-remediation-pipeline](skills/vuln-remediation-pipeline/) | AWS | — | Auto-remediate supply chain vulns with EPSS triage |
@@ -155,16 +155,10 @@ flowchart LR
 
 ## CI/CD Pipeline
 
-This repo is scanned by [agent-bom](https://github.com/msaad00/agent-bom) in CI — dogfooding the scanner against its own security skills.
-
 | CI Job | What |
 |--------|------|
 | Lint | ruff check + format |
-| Test (IAM) | pytest — parser + worker Lambdas |
-| Test (Model Serving) | pytest — 31 checks |
-| Test (GPU Cluster) | pytest — 31 checks |
-| **agent-bom scan** | **SAST + secret detection → SARIF → GitHub Security tab** |
-| **agent-bom skills audit** | **SKILL.md security review → SARIF → GitHub Security tab** |
+| Tests | pytest per skill (IAM, model-serving, GPU, K8s, container, discover) |
 | CloudFormation | cfn-lint validation |
 | Terraform | terraform validate |
 | Security | bandit + hardcoded secret grep |
@@ -179,34 +173,25 @@ cd cloud-security
 pip install boto3
 python skills/cspm-aws-cis-benchmark/src/checks.py --region us-east-1
 
-# Model serving security audit
-python skills/model-serving-security/src/checks.py serving-config.json
+# Model serving security (with example config)
+python skills/model-serving-security/src/checks.py skills/model-serving-security/examples/insecure-serving.json
 
-# GPU cluster security audit
-python skills/gpu-cluster-security/src/checks.py cluster-config.json
+# GPU cluster security (with example config)
+python skills/gpu-cluster-security/src/checks.py skills/gpu-cluster-security/examples/insecure-cluster.json
+
+# K8s security benchmark
+python skills/k8s-security-benchmark/src/checks.py skills/k8s-security-benchmark/examples/secure-cluster.json
+
+# Container security
+python skills/container-security/src/checks.py skills/container-security/examples/secure-image.json
 
 # Run tests
 pip install pytest boto3 moto
-cd skills/iam-departures-remediation && pytest tests/test_parser_lambda.py tests/test_worker_lambda.py -v
-
-# Scan with agent-bom
-pip install agent-bom
-agent-bom skills scan skills/
-agent-bom code skills/
+pytest skills/model-serving-security/tests/ -v -o "testpaths=tests"
+pytest skills/gpu-cluster-security/tests/ -v -o "testpaths=tests"
+pytest skills/k8s-security-benchmark/tests/ -v -o "testpaths=tests"
+pytest skills/container-security/tests/ -v -o "testpaths=tests"
 ```
-
-## Integration with agent-bom
-
-This repo provides the automations. [agent-bom](https://github.com/msaad00/agent-bom) provides continuous scanning:
-
-| agent-bom Feature | Use Case |
-|--------------------|----------|
-| `cis_benchmark` | Built-in CIS for AWS/GCP/Azure/Snowflake |
-| `code` | SAST scan of Lambda/skill source code |
-| `skills scan` | Audit SKILL.md for security risks |
-| `blast_radius` | Map impact of orphaned credentials |
-| `compliance` | 15-framework compliance posture |
-| `graph` | Visualize dependencies + attack paths |
 
 ## Contributing
 

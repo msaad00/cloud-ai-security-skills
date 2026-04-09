@@ -1,0 +1,61 @@
+{
+  "_comment": "Example: well-configured model serving infrastructure — all 16 checks pass",
+  "endpoints": [
+    {
+      "name": "inference-api",
+      "url": "https://model.internal:8443/v1/completions",
+      "auth": {
+        "type": "oauth2",
+        "enabled": true,
+        "roles": ["admin", "inference-user", "read-only"]
+      },
+      "rate_limit": {
+        "enabled": true,
+        "rpm": 100,
+        "rpd": 10000
+      },
+      "limits": {
+        "max_tokens": 4096,
+        "max_input_size": 1048576
+      },
+      "tls": {
+        "enabled": true,
+        "min_version": "1.2"
+      },
+      "network": {
+        "vpc": true,
+        "private": true
+      }
+    }
+  ],
+  "containers": [
+    {
+      "name": "model-server",
+      "security_context": {
+        "privileged": false,
+        "readOnlyRootFilesystem": true,
+        "runAsNonRoot": true,
+        "runAsUser": 1000
+      }
+    }
+  ],
+  "safety": {
+    "prompt_injection": true,
+    "content_classification": true,
+    "output_filter": true,
+    "categories": ["violence", "hate", "self-harm", "sexual"]
+  },
+  "privacy": {
+    "memorization_guard": true
+  },
+  "logging": {
+    "log_requests": true,
+    "redact_pii": true
+  },
+  "models": [
+    {
+      "name": "claude-3.5-sonnet",
+      "version": "20241022"
+    }
+  ]
+}

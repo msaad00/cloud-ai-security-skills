@@ -1,0 +1,19 @@
+{
+  "_comment": "Example: hardened container — all 8 checks pass",
+  "images": [
+    {
+      "name": "myapp",
+      "base_image": "python:3.11-alpine",
+      "user": "1000",
+      "healthcheck": {"test": ["CMD", "curl", "-f", "http://localhost:8080/health"]},
+      "env": ["NODE_ENV=production", "LOG_LEVEL=info"]
+    }
+  ],
+  "containers": [
+    {
+      "name": "myapp",
+      "security_context": {"readOnlyRootFilesystem": true},
+      "resources": {"limits": {"cpu": "500m", "memory": "256Mi"}}
+    }
+  ]
+}

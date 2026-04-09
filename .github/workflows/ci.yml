@@ -71,6 +71,30 @@ jobs:
       - working-directory: skills/discover-environment
         run: pytest tests/ -v -o "testpaths=tests"
 
+  test-k8s-security:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/k8s-security-benchmark
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-container-security:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/container-security
+        run: pytest tests/ -v -o "testpaths=tests"
+
   agent-bom:
     runs-on: ubuntu-latest
     needs: lint

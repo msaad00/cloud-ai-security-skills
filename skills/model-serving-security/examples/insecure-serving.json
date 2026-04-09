@@ -1,0 +1,31 @@
+{
+  "_comment": "Example: misconfigured model serving — multiple checks will fail",
+  "endpoints": [
+    {
+      "name": "inference-api",
+      "url": "http://model.public:8080/v1/completions",
+      "auth": {
+        "type": "none"
+      },
+      "visibility": "public",
+      "network": {
+        "public": true
+      }
+    }
+  ],
+  "containers": [
+    {
+      "name": "model-server",
+      "security_context": {
+        "privileged": true,
+        "runAsUser": 0
+      }
+    }
+  ],
+  "models": [
+    {
+      "name": "my-model",
+      "version": "latest"
+    }
+  ]
+}

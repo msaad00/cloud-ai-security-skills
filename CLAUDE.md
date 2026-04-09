@@ -12,6 +12,8 @@ skills/
   cspm-azure-cis-benchmark/     — CIS Azure Foundations v2.1 (19 checks + 5 AI Foundry)
   model-serving-security/       — Model serving security benchmark (16 checks)
   gpu-cluster-security/         — GPU cluster security benchmark (13 checks)
+  k8s-security-benchmark/       — Kubernetes security benchmark (10 checks)
+  container-security/           — Container image + runtime security (8 checks)
   discover-environment/         — Cloud environment discovery with MITRE ATT&CK/ATLAS overlay
   vuln-remediation-pipeline/    — Auto-remediate supply chain vulnerabilities
 ```

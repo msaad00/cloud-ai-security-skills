@@ -1,0 +1,30 @@
+{
+  "_comment": "Example: hardened K8s cluster — all 10 checks pass",
+  "pods": [
+    {
+      "name": "api-server",
+      "containers": [
+        {
+          "name": "api",
+          "image": "myapp:v2.3.1-alpine",
+          "securityContext": {
+            "privileged": false,
+            "runAsNonRoot": true,
+            "readOnlyRootFilesystem": true,
+            "capabilities": {"drop": ["ALL"]}
+          },
+          "resources": {"limits": {"cpu": "500m", "memory": "256Mi"}}
+        }
+      ]
+    }
+  ],
+  "namespaces": [
+    {"name": "production", "network_policies": [{"name": "default-deny-ingress"}]},
+    {"name": "staging", "network_policies": [{"name": "default-deny-all"}]}
+  ],
+  "cluster_role_bindings": [],
+  "cluster_roles": [
+    {"name": "app-reader", "rules": [{"verbs": ["get", "list"], "resources": ["pods", "services"]}]}
+  ],
+  "api_server": {"encryption_config": "/etc/kubernetes/enc/enc.yaml"}
+}

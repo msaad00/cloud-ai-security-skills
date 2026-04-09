@@ -1,0 +1,93 @@
+{
+  "_comment": "Example: well-configured GPU cluster — all 13 checks pass",
+  "pods": [
+    {
+      "name": "training-a100-8gpu",
+      "security_context": {
+        "privileged": false,
+        "runAsNonRoot": true,
+        "runAsUser": 1000,
+        "readOnlyRootFilesystem": true
+      },
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": 8,
+          "memory": "512Gi",
+          "cpu": "64"
+        }
+      },
+      "volumes": [
+        {
+          "name": "dshm",
+          "emptyDir": {
+            "medium": "Memory",
+            "sizeLimit": "16Gi"
+          }
+        },
+        {
+          "name": "model-weights",
+          "persistentVolumeClaim": {
+            "claimName": "model-pvc"
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "gpu-node-01",
+      "driver_version": "550.90.07",
+      "cuda_version": "12.6"
+    },
+    {
+      "name": "gpu-node-02",
+      "driver_version": "550.90.07",
+      "cuda_version": "12.6"
+    }
+  ],
+  "network": {
+    "infiniband": {
+      "partitions": ["tenant-a-pkey", "tenant-b-pkey", "management-pkey"],
+      "tenant_isolation": true
+    }
+  },
+  "namespaces": [
+    {
+      "name": "tenant-a-training",
+      "network_policies": [
+        {"name": "default-deny-ingress"},
+        {"name": "allow-nccl-intra-namespace"}
+      ],
+      "resource_quota": {
+        "nvidia.com/gpu": 16,
+        "memory": "1Ti"
+      }
+    },
+    {
+      "name": "tenant-b-inference",
+      "network_policies": [
+        {"name": "default-deny-ingress"},
+        {"name": "allow-inference-gateway"}
+      ],
+      "resource_quota": {
+        "nvidia.com/gpu": 4,
+        "memory": "128Gi"
+      }
+    }
+  ],
+  "storage": {
+    "encryption_at_rest": true,
+    "volumes": [
+      {"name": "model-weights-a", "encrypted": true},
+      {"name": "model-weights-b", "encrypted": true}
+    ]
+  },
+  "monitoring": {
+    "dcgm": true,
+    "prometheus_gpu_exporter": true
+  },
+  "logging": {
+    "gpu_workloads": true,
+    "audit_level": "RequestResponse"
+  }
+}

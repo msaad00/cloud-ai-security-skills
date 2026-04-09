@@ -1,0 +1,49 @@
+{
+  "_comment": "Example: misconfigured GPU cluster — multiple checks will fail",
+  "pods": [
+    {
+      "name": "training-gpu",
+      "security_context": {
+        "privileged": true,
+        "runAsUser": 0
+      },
+      "spec": {
+        "hostIPC": true
+      },
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": 8
+        }
+      },
+      "volumes": [
+        {
+          "hostPath": {"path": "/dev/nvidia0"}
+        },
+        {
+          "name": "dshm",
+          "emptyDir": {"medium": "Memory"}
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "gpu-node-old",
+      "driver_version": "535.129.03",
+      "cuda_version": "11.8"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "shared-gpu",
+      "shared": true,
+      "network_policies": [],
+      "resource_quota": {}
+    }
+  ],
+  "storage": {
+    "volumes": [
+      {"name": "model-weights", "encrypted": false}
+    ]
+  }
+}
