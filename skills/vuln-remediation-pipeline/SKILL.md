@@ -83,8 +83,8 @@ flowchart TD
     PATCH --> AUDIT --> VERIFY
 
     style SFN fill:#172554,stroke:#3b82f6,color:#e2e8f0
-    style FIX fill:#14532d,stroke:#22c55e,color:#e2e8f0
-    style P0 fill:#7f1d1d,stroke:#ef4444,color:#e2e8f0
+    style FIX fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
+    style P0 fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
 ```
 
 ## Security Guardrails

@@ -71,7 +71,7 @@ flowchart TD
     L2 --> AUDIT
 
     style SFN fill:#172554,stroke:#3b82f6,color:#e2e8f0
-    style REC fill:#7f1d1d,stroke:#ef4444,color:#e2e8f0
+    style REC fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
 ```
 
 ## Security Guardrails

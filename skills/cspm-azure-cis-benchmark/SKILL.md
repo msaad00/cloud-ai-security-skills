@@ -59,7 +59,7 @@ flowchart TD
 
     style AZ fill:#1e293b,stroke:#475569,color:#e2e8f0
     style CHK fill:#172554,stroke:#3b82f6,color:#e2e8f0
-    style AIF fill:#14532d,stroke:#22c55e,color:#e2e8f0
+    style AIF fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
 ```
 
 ## Security Guardrails
