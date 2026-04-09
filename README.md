@@ -3,7 +3,11 @@
 [![CI](https://github.com/msaad00/cloud-security/actions/workflows/ci.yml/badge.svg)](https://github.com/msaad00/cloud-security/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-Production-grade cloud security benchmarks and automation — CIS checks for AWS/GCP/Azure, Kubernetes and container hardening, model serving security, GPU cluster security, IAM remediation, and vulnerability response pipelines. Each skill is compliance-mapped, tested, and ready to deploy.
+[![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
+
+Production-grade cloud security benchmarks and automation — 10 skills, 159 tests, compliance-mapped to MITRE ATT&CK, NIST CSF, CIS, ISO 27001, and SOC 2.
+
+Each skill is a standalone Python script with its own checks, tests, examples, and SKILL.md definition following [Anthropic's skill spec](https://docs.anthropic.com). Skills can be used directly from the CLI, integrated into CI/CD pipelines, or referenced by AI agents that read SKILL.md files (Claude Desktop, Cortex Code, etc.).
 
 ## Skills
 
