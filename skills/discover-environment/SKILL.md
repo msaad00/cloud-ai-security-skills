@@ -14,12 +14,17 @@ compatibility: >-
   Read-only — uses only viewer/audit permissions. No write access.
 metadata:
   author: msaad00
+  homepage: https://github.com/msaad00/cloud-security
+  source: https://github.com/msaad00/cloud-security/tree/main/skills/discover-environment
   version: 0.1.0
   frameworks:
     - MITRE ATT&CK
     - MITRE ATLAS
     - NIST CSF 2.0
   cloud: multi
+  optional_bins:
+    - docker
+    - kubectl
 ---
 
 # Cloud Environment Discovery

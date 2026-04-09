@@ -15,6 +15,8 @@ compatibility: >-
   config write access.
 metadata:
   author: msaad00
+  homepage: https://github.com/msaad00/cloud-security
+  source: https://github.com/msaad00/cloud-security/tree/main/skills/vuln-remediation-pipeline
   version: 0.1.0
   frameworks:
     - MITRE ATT&CK

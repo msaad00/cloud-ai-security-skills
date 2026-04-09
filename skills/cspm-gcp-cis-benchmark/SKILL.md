@@ -12,6 +12,8 @@ compatibility: >-
   No write permissions — assessment only.
 metadata:
   author: msaad00
+  homepage: https://github.com/msaad00/cloud-security
+  source: https://github.com/msaad00/cloud-security/tree/main/skills/cspm-gcp-cis-benchmark
   version: 0.1.0
   frameworks:
     - CIS GCP Foundations v3.0

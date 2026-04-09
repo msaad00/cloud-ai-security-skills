@@ -32,8 +32,10 @@ aws cloudformation create-stack-set \
 # Set Snowflake credentials
 export SNOWFLAKE_ACCOUNT=myorg-myaccount
 export SNOWFLAKE_USER=svc_iam_reconciler
-export SNOWFLAKE_PASSWORD="$(aws secretsmanager get-secret-value \
-  --secret-id iam-reconciler/snowflake --query SecretString --output text)"
+# Retrieve password from your secrets manager (Secrets Manager, Vault, etc.)
+# Do NOT hardcode credentials. Example using AWS Secrets Manager CLI:
+#   aws secretsmanager get-secret-value --secret-id iam-reconciler/snowflake
+export SNOWFLAKE_PASSWORD="<from-secrets-manager>"
 
 # Set AWS config
 export AWS_ACCOUNT_ID=111111111111
