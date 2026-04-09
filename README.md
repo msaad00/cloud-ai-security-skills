@@ -29,10 +29,10 @@ Each skill is a standalone Python script with its own checks, tests, examples, a
 ```mermaid
 flowchart LR
     HR["HR Sources\nWorkday · Snowflake\nDatabricks · ClickHouse"]
-    REC["Reconciler\nSHA-256 diff"]
-    SFN["Step Function\nParser → Worker"]
-    TGT["IAM Cleanup\n13 steps · 5 clouds"]
-    AUDIT["Audit\nDDB + S3"]
+    REC["Reconciler\nSHA-256 row diff\nchange detect → S3 manifest\nKMS encrypted"]
+    SFN["Step Function\nParser: validate · grace period · rehire\nWorker: 13-step IAM cleanup"]
+    TGT["5 Cloud Targets\nAWS IAM · Azure Entra\nGCP IAM · Snowflake · Databricks"]
+    AUDIT["Audit Trail\nDynamoDB + S3\nwarehouse ingest-back"]
 
     HR --> REC --> SFN --> TGT --> AUDIT
 
