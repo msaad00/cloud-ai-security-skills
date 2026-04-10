@@ -21,11 +21,11 @@ skills/
 │   └── vuln-remediation-pipeline/  (EPSS/KEV triage + auto-PR)
 │
 ├── detection-engineering/         # "What does an attack look like on this surface?"
-│   ├── README.md + OCSF_CONTRACT.md  (category contract — OCSF 1.3 wire format)
+│   ├── README.md + OCSF_CONTRACT.md  (category contract — OCSF 1.8 wire format)
 │   ├── golden/                        (frozen OCSF fixtures — contract tests)
 │   ├── analytics/                     (stub for ClickHouse + Grafana follow-up)
 │   ├── ingest-mcp-proxy-ocsf/         (raw MCP proxy → OCSF Application Activity 6002)
-│   └── detect-mcp-tool-drift/         (OCSF → OCSF Security Finding 2001 + MITRE T1195.001)
+│   └── detect-mcp-tool-drift/         (OCSF → OCSF Detection Finding 2004 + MITRE T1195.001)
 │
 └── ai-infra-security/             # "AI-native surfaces: models, agents, GPU, topology"
     ├── model-serving-security/    (16 checks)

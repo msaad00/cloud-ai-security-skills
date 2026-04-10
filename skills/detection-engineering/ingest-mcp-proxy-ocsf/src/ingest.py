@@ -1,7 +1,7 @@
-"""Convert raw MCP proxy logs to OCSF 1.3 Application Activity (class 6002).
+"""Convert raw MCP proxy logs to OCSF 1.8 Application Activity (class 6002).
 
 Input:  JSONL as emitted by `agent-bom proxy --log-format jsonl`
-Output: JSONL of OCSF 1.3 Application Activity events with the
+Output: JSONL of OCSF 1.8 Application Activity events with the
         cloud_security_mcp custom profile.
 
 Contract: see ../OCSF_CONTRACT.md
@@ -17,16 +17,16 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 SKILL_NAME = "ingest-mcp-proxy-ocsf"
-OCSF_VERSION = "1.3.0"
+OCSF_VERSION = "1.8.0"
 MCP_PROFILE = "cloud_security_mcp"
 
-# OCSF Application Activity (6002)
+# OCSF 1.8 Application Activity (6002) — unchanged from 1.3 for this class.
 CLASS_UID = 6002
 CLASS_NAME = "Application Activity"
 CATEGORY_UID = 6
 CATEGORY_NAME = "Application Activity"
 
-# Activity enum (OCSF 1.3 Application Activity)
+# Activity enum (OCSF 1.8 Application Activity)
 ACTIVITY_CREATE = 1  # a new record (e.g. tools/list response)
 ACTIVITY_READ = 2  # a read-style call (e.g. tools/call request)
 ACTIVITY_UNKNOWN = 0
@@ -194,7 +194,7 @@ def ingest(lines: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert raw MCP proxy JSONL to OCSF 1.3 Application Activity JSONL.")
+    parser = argparse.ArgumentParser(description="Convert raw MCP proxy JSONL to OCSF 1.8 Application Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
     args = parser.parse_args(argv)

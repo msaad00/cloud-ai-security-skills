@@ -1,8 +1,8 @@
-"""Detect MCP tool schema drift mid-session (OCSF input → OCSF Security Finding).
+"""Detect MCP tool schema drift mid-session (OCSF input → OCSF Detection Finding).
 
-Reads OCSF 1.3 Application Activity events (class 6002) produced by the sibling
+Reads OCSF 1.8 Application Activity events (class 6002) produced by the sibling
 ingest-mcp-proxy-ocsf skill, tracks tool fingerprints per (session, tool name),
-and emits one OCSF Security Finding (class 2001) per drift event.
+and emits one OCSF Detection Finding (class 2004) per drift event.
 
 Contract: see ../OCSF_CONTRACT.md
 """
@@ -16,14 +16,15 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 SKILL_NAME = "detect-mcp-tool-drift"
-OCSF_VERSION = "1.3.0"
+OCSF_VERSION = "1.8.0"
 
-# Security Finding (2001)
-FINDING_CLASS_UID = 2001
-FINDING_CLASS_NAME = "Security Finding"
+# Detection Finding (2004) — the replacement for the deprecated
+# Security Finding (2001) since OCSF 1.1.0.
+FINDING_CLASS_UID = 2004
+FINDING_CLASS_NAME = "Detection Finding"
 FINDING_CATEGORY_UID = 2
 FINDING_CATEGORY_NAME = "Findings"
-FINDING_ACTIVITY_CREATE = 1
+FINDING_ACTIVITY_CREATE = 1  # 1 Create · 2 Update · 3 Close · 99 Other (OCSF 1.8)
 FINDING_TYPE_UID = FINDING_CLASS_UID * 100 + FINDING_ACTIVITY_CREATE
 
 # Severity: High — drift is a strong signal and actionable immediately.
@@ -68,7 +69,14 @@ def _build_finding(
     before_event: dict[str, Any],
     after_event: dict[str, Any],
 ) -> dict[str, Any]:
-    """Produce one OCSF Security Finding describing a single drift."""
+    """Produce one OCSF 1.8 Detection Finding (class 2004) describing a single drift.
+
+    Field layout follows OCSF 1.8:
+      - attacks[] lives INSIDE finding_info (not at event root — that was the
+        pre-1.1 Security Finding layout).
+      - status_id is recommended, not required.
+      - type_uid = class_uid * 100 + activity_id  (200401).
+    """
     before_tool = before_event["mcp"]["tool"]
     after_tool = after_event["mcp"]["tool"]
     before_fp = before_tool["fingerprint"]
@@ -93,7 +101,7 @@ def _build_finding(
         "class_name": FINDING_CLASS_NAME,
         "type_uid": FINDING_TYPE_UID,
         "severity_id": SEVERITY_HIGH,
-        "status_id": 1,  # Success — the detection ran cleanly
+        "status_id": 1,  # 1 Success — recommended field, the detector ran cleanly
         "time": after_event.get("time") or _now_ms(),
         "metadata": {
             "version": OCSF_VERSION,
@@ -104,18 +112,21 @@ def _build_finding(
             },
             "labels": ["detection-engineering", "mcp", "supply-chain", "tool-drift"],
         },
-        "finding": {
+        "finding_info": {
             "uid": uid,
             "title": title,
             "desc": desc,
+            "types": ["mcp-tool-drift"],
+            "first_seen_time": before_event.get("time"),
+            "last_seen_time": after_event.get("time"),
+            "attacks": [
+                {
+                    "version": MITRE_VERSION,
+                    "tactic": {"name": MITRE_TACTIC_NAME, "uid": MITRE_TACTIC_UID},
+                    "technique": {"name": MITRE_TECHNIQUE_NAME, "uid": MITRE_TECHNIQUE_UID},
+                }
+            ],
         },
-        "attacks": [
-            {
-                "version": MITRE_VERSION,
-                "tactic": {"name": MITRE_TACTIC_NAME, "uid": MITRE_TACTIC_UID},
-                "technique": {"name": MITRE_TECHNIQUE_NAME, "uid": MITRE_TECHNIQUE_UID},
-            }
-        ],
         "observables": [
             {"name": "session.uid", "type": "Other", "value": session_uid},
             {"name": "tool.name", "type": "Other", "value": tool_name},
@@ -196,7 +207,7 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Detect MCP tool schema drift from OCSF events.")
     parser.add_argument("input", nargs="?", help="OCSF JSONL input. Defaults to stdin.")
-    parser.add_argument("--output", "-o", help="OCSF Security Finding JSONL output. Defaults to stdout.")
+    parser.add_argument("--output", "-o", help="OCSF Detection Finding JSONL output. Defaults to stdout.")
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
