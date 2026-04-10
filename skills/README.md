@@ -30,7 +30,6 @@ Active fix workflows — gated by grace periods, deny lists, protected-package l
 | Skill | Scope |
 |---|---|
 | [`iam-departures-remediation`](remediation/iam-departures-remediation/) | Multi-cloud (AWS, Azure Entra, GCP, Snowflake, Databricks) IAM cleanup for departed employees |
-| [`vuln-remediation-pipeline`](remediation/vuln-remediation-pipeline/) | AWS supply-chain vulnerability triage + auto-PR |
 
 ## detection-engineering/ 🆕
 

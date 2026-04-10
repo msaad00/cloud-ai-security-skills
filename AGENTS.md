@@ -18,7 +18,6 @@ Skills are organised into four functional categories. See [`skills/README.md`](s
 
 **`remediation/`** (active fix workflows, HITL-gated, dual-audited)
 - `iam-departures-remediation` — event-driven multi-cloud IAM cleanup
-- `vuln-remediation-pipeline` — EPSS/KEV triage + auto-PR
 
 **`detection-engineering/`** 🆕 (OCSF 1.8 wire format, MITRE ATT&CK inside `finding_info.attacks[]`)
 - `ingest-mcp-proxy-ocsf` — raw MCP proxy JSONL → OCSF Application Activity (6002)
@@ -37,7 +36,7 @@ These rules are enforced in code, IAM, and infra. They are not optional:
 3. **Respect the deny list.** The IAM worker's role denies `iam:*` on `root`, `break-glass-*`, `emergency-*`, and any `:role/*` ARN. Do not propose workarounds.
 4. **Respect the grace period.** The IAM departures grace period is a *human-in-the-loop* mechanism, not a delay. Do not set it to 0 or skip it without an authorisation document.
 5. **Never bypass EventBridge.** All Step Function executions go through the `S3 Object Created → EventBridge → SFN` path. Do not call `states:StartExecution` directly — that bypasses the audit trail.
-6. **Never write to the audit table by hand.** The `iam-remediation-audit` and `vuln-remediation-audit` DynamoDB tables are written exclusively by the worker Lambdas. Manual writes break the closed-loop verification.
+6. **Never write to the audit table by hand.** The `iam-remediation-audit` DynamoDB table is written exclusively by the worker Lambdas. Manual writes break the closed-loop verification.
 7. **No new IAM grants.** Do not edit `iam_policies/` or any role policy to broaden permissions. Each role is least-privilege by design.
 8. **No telemetry.** Nothing in this repo phones home. Do not add SDK clients to external services unless the user explicitly asks for them, and even then keep the egress inside the customer's VPC.
 

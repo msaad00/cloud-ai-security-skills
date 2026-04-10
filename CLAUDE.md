@@ -17,8 +17,7 @@ skills/
 │   └── container-security/        (8 CIS Docker checks)
 │
 ├── remediation/                   # "Something is wrong — fix it, gated and audited"
-│   ├── iam-departures-remediation/ (event-driven, DLQ + SNS, dual audit)
-│   └── vuln-remediation-pipeline/  (EPSS/KEV triage + auto-PR)
+│   └── iam-departures-remediation/ (event-driven, DLQ + SNS, dual audit)
 │
 ├── detection-engineering/         # "What does an attack look like on this surface?"
 │   ├── README.md + OCSF_CONTRACT.md  (category contract — OCSF 1.8 wire format)
@@ -53,9 +52,6 @@ to attempt them.
   `roles/viewer`, `iam.securityReviewer`, and Azure `Reader`. They have **zero**
   write permissions to any cloud account. Never wrap them in code that mutates
   state — that would be outside the skill contract.
-- **`vuln-remediation-pipeline` triage Lambda** is read-only against findings.
-  Only the patcher Lambda mutates state, and it's gated by SLA + protected-package
-  list (see below).
 - **`iam-departures-remediation` reconciler** is read-only against HR sources
   and only *writes a manifest* to S3. The Step Function is the only thing that
   touches IAM.
@@ -70,14 +66,6 @@ at three layers:
 | **Grace period** | 7-day default window before remediation runs (configurable per env) | HR can revert termination during the grace period and the manifest will reflect it |
 | **Deny policies** | Explicit IAM `Deny` on `root`, `break-glass-*`, `emergency-*` and all `:role/*` ARNs in `WorkerExecutionRole` | None — these can never be remediated by this pipeline |
 | **Rehire filter** | Parser Lambda checks 8 rehire scenarios before generating the work item | None — handled in code (`should_remediate()`) |
-
-For the `vuln-remediation-pipeline`:
-
-| Layer | Mechanism |
-|-------|-----------|
-| **Protected packages** | SSM Parameter Store list (`/vuln-remediation/protected-packages`) — these become `Tier.SKIP` even if KEV/CVSS 9.8 |
-| **No-fix-available** | Findings without a `fixed_version` are skipped, never auto-quarantined |
-| **Idempotency** | DynamoDB `vuln-remediation-audit` table — re-running on the same finding is a no-op |
 
 ### 3. Dry-run is supported everywhere
 
@@ -168,7 +156,6 @@ python skills/compliance-cis-mitre/cspm-azure-cis-benchmark/src/checks.py --subs
 
 # remediation/ (dry-run)
 python skills/remediation/iam-departures-remediation/src/lambda_parser/handler.py --dry-run examples/manifest.json
-python skills/remediation/vuln-remediation-pipeline/src/lambda_triage/handler.py < scan-findings.sarif
 
 # detection-engineering/ — end-to-end pipe
 python skills/detection-engineering/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
@@ -181,7 +168,6 @@ pytest skills/compliance-cis-mitre/cspm-aws-cis-benchmark/tests/     -o "testpat
 pytest skills/compliance-cis-mitre/cspm-gcp-cis-benchmark/tests/     -o "testpaths=tests"
 pytest skills/compliance-cis-mitre/cspm-azure-cis-benchmark/tests/   -o "testpaths=tests"
 pytest skills/remediation/iam-departures-remediation/tests/          -o "testpaths=tests"
-pytest skills/remediation/vuln-remediation-pipeline/tests/           -o "testpaths=tests"
 pytest skills/detection-engineering/ingest-mcp-proxy-ocsf/tests/     -o "testpaths=tests"
 pytest skills/detection-engineering/detect-mcp-tool-drift/tests/     -o "testpaths=tests"
 ```
