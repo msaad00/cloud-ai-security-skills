@@ -165,9 +165,12 @@ flowchart LR
 |--------|------|
 | Lint | ruff check + format |
 | Tests | pytest per skill |
-| CloudFormation | cfn-lint validation |
-| Terraform | terraform validate |
-| Security | bandit + hardcoded secret grep on `skills/*/src/` |
+| CloudFormation | `cfn-lint` validation on all `infra/*.yaml` |
+| Terraform | `terraform validate` on `infra/terraform/` |
+| Security | `bandit` + hardcoded-secret grep on `skills/*/src/` |
+| **agent-bom** | `code` (AI components) · `skills scan` (skill audit) · `fs` (packages + CVEs) · **`iac` (CloudFormation + Terraform)** with SARIF upload to the GitHub Security tab |
+
+The "Scanned by agent-bom" badge above is backed by that last row — every push to `main` runs all four agent-bom scans against the repo, and the IaC findings land in GitHub code scanning.
 
 ## Quick Start
 

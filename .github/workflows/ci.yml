@@ -111,12 +111,64 @@ jobs:
         run: agent-bom skills scan skills/ -f json -o skills-audit.json --verbose || true
       - name: Scan filesystem for packages and CVEs
         run: agent-bom fs skills/ -f json -o fs-scan.json || true
+      - name: Scan IaC (CloudFormation + Terraform)
+        run: |
+          agent-bom iac \
+            skills/iam-departures-remediation/infra/cloudformation.yaml \
+            skills/iam-departures-remediation/infra/cross_account_stackset.yaml \
+            skills/iam-departures-remediation/infra/terraform/main.tf \
+            -f json -o iac-scan.json || true
+      - name: Scan IaC (SARIF for code scanning)
+        run: |
+          agent-bom iac \
+            skills/iam-departures-remediation/infra/cloudformation.yaml \
+            skills/iam-departures-remediation/infra/cross_account_stackset.yaml \
+            skills/iam-departures-remediation/infra/terraform/main.tf \
+            -f sarif -o iac-scan.sarif || true
+      - name: Normalise SARIF (handle agent-bom empty-result quirk)
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+          path = "iac-scan.sarif"
+          stub = {
+              "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+              "version": "2.1.0",
+              "runs": [{
+                  "tool": {"driver": {"name": "agent-bom-iac", "version": "0.76.2", "informationUri": "https://github.com/msaad00/agent-bom"}},
+                  "results": []
+              }]
+          }
+          if not os.path.exists(path):
+              json.dump(stub, open(path, "w"))
+              print("wrote stub SARIF (file missing)")
+          else:
+              try:
+                  doc = json.load(open(path))
+              except Exception as e:
+                  json.dump(stub, open(path, "w"))
+                  print(f"wrote stub SARIF (json parse failed: {e})")
+              else:
+                  if not (isinstance(doc, dict) and "runs" in doc):
+                      json.dump(stub, open(path, "w"))
+                      print("wrote stub SARIF (not SARIF-shaped)")
+                  else:
+                      print(f"SARIF ok: {len(doc.get('runs', []))} runs")
+          PY
+      - name: Upload IaC SARIF to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: iac-scan.sarif
+          category: agent-bom-iac
+        continue-on-error: true
       - name: Print results summary
         if: always()
         run: |
-          echo "=== Code Scan ===" && cat code-scan.json 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
+          echo "=== Code Scan ==="    && cat code-scan.json    2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
           echo "=== Skills Audit ===" && cat skills-audit.json 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
-          echo "=== FS Scan ===" && cat fs-scan.json 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
+          echo "=== FS Scan ==="      && cat fs-scan.json      2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
+          echo "=== IaC Scan ==="     && cat iac-scan.json     2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
       - name: Upload scan artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,6 +178,8 @@ jobs:
             code-scan.json
             skills-audit.json
             fs-scan.json
+            iac-scan.json
+            iac-scan.sarif
           if-no-files-found: ignore
 
   validate-cloudformation:
