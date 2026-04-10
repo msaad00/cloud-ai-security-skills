@@ -36,7 +36,6 @@ See [`skills/README.md`](skills/README.md) for the full category index. The cate
 | Skill | Scope | Description |
 |-------|-------|-------------|
 | [iam-departures-remediation](skills/remediation/iam-departures-remediation/) | Multi-cloud | Event-driven IAM cleanup for departed employees (HITL grace period, deny list, DLQ + SNS alerts) |
-| [vuln-remediation-pipeline](skills/remediation/vuln-remediation-pipeline/) | AWS | Auto-remediate supply-chain vulns with EPSS/KEV triage (protected-package gate, idempotency) |
 
 ### detection-engineering/ 🆕
 
@@ -155,14 +154,13 @@ flowchart LR
 | **CIS AWS Foundations v3.0** | 18 controls | cspm-aws |
 | **CIS GCP Foundations v3.0** | 7 controls (subset) | cspm-gcp |
 | **CIS Azure Foundations v2.1** | 6 controls (subset) | cspm-azure |
-| **MITRE ATT&CK** | T1078, T1098, T1087, T1195, T1530, T1599 | iam-departures, vuln-remediation |
+| **MITRE ATT&CK** | T1078, T1098, T1087, T1195.001, T1530, T1599 | iam-departures, detect-mcp-tool-drift |
 | **NIST CSF 2.0** | PR.AC, PR.DS, DE.CM, DE.AE, RS.MI, ID.RA | All skills |
-| **CIS Controls v8** | 5.3, 6.1, 6.2, 6.5, 7.1–7.4, 13.1, 16.1 | iam-departures, vuln-remediation |
-| **SOC 2 TSC** | CC6.1–CC6.3, CC7.1 | iam-departures, vuln-remediation |
+| **CIS Controls v8** | 5.3, 6.1, 6.2, 6.5, 7.1–7.4, 13.1, 16.1 | iam-departures |
+| **SOC 2 TSC** | CC6.1–CC6.3, CC7.1 | iam-departures |
 | **ISO 27001:2022** | A.5.15–A.8.24 | cspm-aws, cspm-gcp, cspm-azure |
 | **PCI DSS 4.0** | 2.2, 7.1, 8.3, 10.1 | cspm skills |
-| **OWASP LLM Top 10** | LLM-05, LLM-07, LLM-08 | vuln-remediation |
-| **OWASP MCP Top 10** | MCP-04 | vuln-remediation |
+| **OWASP MCP Top 10** | MCP-04 (supply chain compromise) | detect-mcp-tool-drift |
 
 > CIS GCP and CIS Azure currently automate a curated subset of high-impact controls. The full benchmark coverage is tracked in each skill's `SKILL.md`. PRs that add controls are welcome — keep one check per function and one finding row per control.
 
@@ -193,10 +191,11 @@ python skills/compliance-cis-mitre/cspm-azure-cis-benchmark/src/checks.py --subs
 
 # remediation — dry-run mode (no mutations)
 python skills/remediation/iam-departures-remediation/src/lambda_parser/handler.py --dry-run examples/manifest.json
-python skills/remediation/vuln-remediation-pipeline/src/lambda_triage/handler.py < scan-findings.sarif
 
-# detection-engineering — MCP tool drift detection on proxy logs
-python skills/detection-engineering/mcp-tool-drift-detection/src/detect.py mcp-proxy.jsonl
+# detection-engineering — end-to-end pipe: raw MCP proxy → OCSF → Detection Finding
+python skills/detection-engineering/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+  | python skills/detection-engineering/detect-mcp-tool-drift/src/detect.py \
+  > findings.ocsf.jsonl
 
 # Run all real-skill tests
 pip install pytest boto3 moto
@@ -204,8 +203,8 @@ pytest skills/compliance-cis-mitre/cspm-aws-cis-benchmark/tests/     -v -o "test
 pytest skills/compliance-cis-mitre/cspm-gcp-cis-benchmark/tests/     -v -o "testpaths=tests"
 pytest skills/compliance-cis-mitre/cspm-azure-cis-benchmark/tests/   -v -o "testpaths=tests"
 pytest skills/remediation/iam-departures-remediation/tests/          -v -o "testpaths=tests"
-pytest skills/remediation/vuln-remediation-pipeline/tests/           -v -o "testpaths=tests"
-pytest skills/detection-engineering/mcp-tool-drift-detection/tests/  -v -o "testpaths=tests"
+pytest skills/detection-engineering/ingest-mcp-proxy-ocsf/tests/     -v -o "testpaths=tests"
+pytest skills/detection-engineering/detect-mcp-tool-drift/tests/     -v -o "testpaths=tests"
 ```
 
 ## Contributing

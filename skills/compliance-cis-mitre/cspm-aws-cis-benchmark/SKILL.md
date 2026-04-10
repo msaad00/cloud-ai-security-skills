@@ -7,7 +7,8 @@ description: >-
   benchmark, cloud security posture, IAM hygiene audit, S3 public access check, or
   CloudTrail validation. Do NOT use for GCP, Azure, or on-prem; do NOT use this skill
   to remediate findings (it is assessment-only and has zero write permissions) — pair
-  with iam-departures-remediation or vuln-remediation-pipeline for fixes.
+  with iam-departures-remediation for IAM cleanup, or open a ticket in your remediation
+  workflow for other findings.
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+, boto3, and AWS credentials with SecurityAudit managed policy
