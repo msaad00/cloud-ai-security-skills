@@ -56,44 +56,45 @@ A new category for detection rules, threat hunts, and runtime monitors specific 
 
 ## Architecture — IAM Departures Remediation
 
-Closed-loop, event-driven pipeline. HR change → S3 manifest → EventBridge → Step Function → cloud deactivation → dual-write audit → ingest back into the source warehouse so the next reconciler run *verifies* the previous run actually closed.
+Three deployment domains, one forward path, one drift loop.
 
 ```mermaid
 flowchart LR
-    HR["HR Sources\nWorkday · Snowflake\nDatabricks · ClickHouse"]
-    REC["Reconciler\nSHA-256 row diff\nchange detect\nKMS encrypted"]
-    S3["S3 Manifest\nKMS · versioned\nEventBridge enabled"]
-    EB["EventBridge Rule\nObject Created\nprefix: departures/\nsuffix: .json"]
-    SFN["Step Function\nParser: validate · grace · rehire\nWorker: 13-step IAM cleanup\nMap concurrency 10"]
-    TGT["5 Cloud Targets\nAWS IAM · Azure Entra\nGCP IAM · Snowflake · Databricks"]
-    AUDIT["Audit Trail\nDynamoDB + S3\nKMS encrypted"]
-    WH["Warehouse Ingest-Back\nremediation_log table\nSnowflake / Databricks"]
-    VERIFY["Next Reconciler Run\nverify state == closed\nflag drift / partial cleanup"]
-    DLQ["DLQ + SNS Alerts\nLambda async failures\nSFN ExecutionFailed\nEventBridge → on-call"]
+    subgraph CORP["AWS Corporate · Security OU"]
+        direction LR
+        REC["Reconciler<br/>HR → S3 manifest<br/>SHA-256 diff"]
+        EB["EventBridge<br/>Object Created"]
+        REC --> EB
+    end
 
-    HR --> REC --> S3 --> EB --> SFN --> TGT --> AUDIT --> WH --> VERIFY
-    VERIFY -. drift detected .-> REC
-    SFN -. failure .-> DLQ
-    DLQ -. replay .-> EB
+    subgraph VPC["VPC-isolated Step Function"]
+        direction LR
+        L1["Parser<br/>validate · grace · rehire"]
+        L2["Worker<br/>13-step cleanup"]
+        L1 --> L2
+    end
 
-    style HR fill:#1e293b,stroke:#475569,color:#e2e8f0
+    TGT["5 cloud targets<br/>— revoke credentials<br/>— strip permissions<br/>— quarantine + delete"]
+    AUDIT["Audit trail<br/>DynamoDB + S3<br/>warehouse ingest-back"]
+
+    EB --> L1
+    L2 --> TGT --> AUDIT
+    AUDIT -. drift detected .-> REC
+
+    style CORP fill:#0f172a,stroke:#475569,color:#e2e8f0
+    style VPC fill:#0f172a,stroke:#475569,color:#e2e8f0
     style REC fill:#164e63,stroke:#22d3ee,color:#e2e8f0
-    style S3 fill:#1e293b,stroke:#475569,color:#e2e8f0
     style EB fill:#172554,stroke:#3b82f6,color:#e2e8f0
-    style SFN fill:#164e63,stroke:#22d3ee,color:#e2e8f0
+    style L1 fill:#164e63,stroke:#22d3ee,color:#e2e8f0
+    style L2 fill:#164e63,stroke:#22d3ee,color:#e2e8f0
     style TGT fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
     style AUDIT fill:#1e1b4b,stroke:#a78bfa,color:#e2e8f0
-    style WH fill:#1e1b4b,stroke:#a78bfa,color:#e2e8f0
-    style VERIFY fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
-    style DLQ fill:#3f1d1d,stroke:#f87171,color:#fecaca
 ```
 
-**Why event-driven and closed-loop, not fire-and-forget:**
-- *Decoupling:* Reconciler is stateless — it only writes the manifest. Failed runs are replayed by re-emitting the S3 event, no HR re-pull needed.
-- *Single trigger surface:* EventBridge is the only path to the Step Function. Manual replays, out-of-band uploads, and scheduled syncs all hit the same audit point.
-- *Verification:* DynamoDB + S3 audit rows are ingested back into the source warehouse, so the next reconciler diff *cross-checks* the previous remediation actually landed. Drift becomes a finding, not a silent failure.
-- *Failure path:* Lambda async failures land in an SQS DLQ. Step Function `ExecutionFailed` events page on-call via SNS. DLQ messages can be re-driven through EventBridge — the loop closes even on errors.
-- *Extensible:* Adding a SIEM forwarder, Slack notifier, or secondary region is a new EventBridge target — no Lambda or reconciler change.
+**What's *not* in the diagram** (intentionally, to keep it readable):
+- **Failure path:** Lambda async failures → SQS DLQ (`iam-departures-dlq`); Step Function `FAILED`/`TIMED_OUT`/`ABORTED` → EventBridge → SNS (`iam-departures-alerts`). See [`SKILL.md`](skills/remediation/iam-departures-remediation/SKILL.md).
+- **DLQ replay:** stuck executions re-drive through the same EventBridge rule that triggered the original run. The pipeline is idempotent.
+- **Extensibility:** new consumers (SIEM forwarder, Slack, secondary region) are additional EventBridge targets — no reconciler or Lambda changes.
 
 ## Architecture — CSPM CIS Benchmarks
 

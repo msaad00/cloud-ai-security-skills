@@ -8,7 +8,7 @@ Detection rules, threat hunts, and runtime monitors for AI infrastructure and tr
 
 ### 1. OCSF is the wire format between skills
 
-Every skill in this category reads and writes **OCSF 1.3+ JSONL** ([Open Cybersecurity Schema Framework](https://schema.ocsf.io/)). Skills do **not** import from each other — they compose via stdin/stdout pipes like Unix tools:
+Every skill in this category reads and writes **OCSF 1.8 JSONL** ([Open Cybersecurity Schema Framework](https://schema.ocsf.io/)). Skills do **not** import from each other — they compose via stdin/stdout pipes like Unix tools:
 
 ```bash
 cat cloudtrail.json                                              \
@@ -24,29 +24,33 @@ This keeps every skill self-contained (per the Anthropic skills spec, which requ
 | Shape | Prefix | Input | Output | Example |
 |---|---|---|---|---|
 | **ingest** | `ingest-` | raw log (JSONL / JSON / NDJSON) from one source | OCSF event of the right class | `ingest-mcp-proxy-ocsf` |
-| **detect** | `detect-` | OCSF events (any class) | **OCSF Security Finding** (class 2001) | `detect-mcp-tool-drift` |
-| **convert** | under `convert/` | OCSF Security Finding | format for downstream tool | `convert/ocsf-to-sarif` |
+| **detect** | `detect-` | OCSF events (any class) | **OCSF Detection Finding** (class 2004) | `detect-mcp-tool-drift` |
+| **convert** | under `convert/` | OCSF Detection Finding | format for downstream tool | `convert/ocsf-to-sarif` |
 
 A new log source = a new `ingest-*` skill. A new attack pattern = a new `detect-*` skill. A new downstream tool = a new `convert/*` skill. None of them need to know about the others beyond the OCSF contract.
 
 ### 3. MITRE ATT&CK lives inside OCSF, not alongside it
 
-OCSF Security Finding has a first-class `attacks[]` field. Every detection must populate it with the appropriate tactic / technique / sub-technique. That's the pivot point for analytics later — you don't need a parallel MITRE mapping table because the mapping *is* the finding.
+OCSF 1.8 Detection Finding has a first-class `attacks[]` field **inside `finding_info`** (the deprecated Security Finding layout put it at the event root — don't do that). Every detection must populate it with the appropriate tactic / technique / sub-technique. That's the pivot point for analytics later — you don't need a parallel MITRE mapping table because the mapping *is* the finding.
 
 ```json
 {
-  "class_uid": 2001,
-  "attacks": [{
-    "version": "v14",
-    "tactic": {"name": "Initial Access", "uid": "TA0001"},
-    "technique": {"name": "Supply Chain Compromise: Compromise Software Supply Chain", "uid": "T1195.001"}
-  }]
+  "class_uid": 2004,
+  "class_name": "Detection Finding",
+  "finding_info": {
+    "uid": "det-mcp-drift-...",
+    "attacks": [{
+      "version": "v14",
+      "tactic": {"name": "Initial Access", "uid": "TA0001"},
+      "technique": {"name": "Supply Chain Compromise: Compromise Software Supply Chain", "uid": "T1195.001"}
+    }]
+  }
 }
 ```
 
 ### 4. Golden fixtures, not mocks
 
-Every detection skill tests against a **frozen OCSF fixture** in [`golden/`](golden/). When you add a new detection, the first thing you add is the input fixture (what the attack looks like on the wire) and the expected OCSF Security Finding output. The test becomes a contract: *"given these events, this rule MUST produce this finding."* That's what makes detections refactorable without silent regressions.
+Every detection skill tests against a **frozen OCSF fixture** in [`golden/`](golden/). When you add a new detection, the first thing you add is the input fixture (what the attack looks like on the wire) and the expected OCSF Detection Finding output. The test becomes a contract: *"given these events, this rule MUST produce this finding."* That's what makes detections refactorable without silent regressions.
 
 ### 5. Closed loop, same as every other category
 
@@ -61,7 +65,7 @@ Detection engineering closes the loop by being *checkable*: a finding is either 
 
 ## Roadmap
 
-The category is intentionally opinionated about what comes next. Every row below is a single skill with a single OCSF class as input and OCSF Security Finding as output.
+The category is intentionally opinionated about what comes next. Every row below is a single skill with a single OCSF class as input and OCSF Detection Finding as output.
 
 ### Ingestion (`ingest-*`)
 
@@ -92,9 +96,9 @@ The category is intentionally opinionated about what comes next. Every row below
 
 | Skill | From | To |
 |---|---|---|
-| `convert/ocsf-to-sarif` | OCSF Security Finding | SARIF 2.1.0 (GitHub code scanning) |
-| `convert/ocsf-to-sigma` | OCSF Security Finding | Sigma rule (Splunk, Elastic, Sentinel) |
-| `convert/ocsf-to-mermaid` | OCSF Security Finding | Mermaid attack-flow diagram for PR comments |
+| `convert/ocsf-to-sarif` | OCSF Detection Finding | SARIF 2.1.0 (GitHub code scanning) |
+| `convert/ocsf-to-sigma` | OCSF Detection Finding | Sigma rule (Splunk, Elastic, Sentinel) |
+| `convert/ocsf-to-mermaid` | OCSF Detection Finding | Mermaid attack-flow diagram for PR comments |
 
 ## Analytics and visualization
 

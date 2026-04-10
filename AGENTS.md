@@ -20,9 +20,9 @@ Skills are organised into four functional categories. See [`skills/README.md`](s
 - `iam-departures-remediation` — event-driven multi-cloud IAM cleanup
 - `vuln-remediation-pipeline` — EPSS/KEV triage + auto-PR
 
-**`detection-engineering/`** 🆕 (OCSF 1.3 wire format, MITRE ATT&CK inside the finding)
+**`detection-engineering/`** 🆕 (OCSF 1.8 wire format, MITRE ATT&CK inside `finding_info.attacks[]`)
 - `ingest-mcp-proxy-ocsf` — raw MCP proxy JSONL → OCSF Application Activity (6002)
-- `detect-mcp-tool-drift` — OCSF → OCSF Security Finding (2001) + MITRE T1195.001
+- `detect-mcp-tool-drift` — OCSF → OCSF Detection Finding (2004) + MITRE T1195.001
 - Compose via stdin/stdout pipes. See [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
 
 **`ai-infra-security/`** (model serving, GPU clusters, environment discovery)

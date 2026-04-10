@@ -6,7 +6,7 @@ Skills are grouped by **what kind of work they do**, not which cloud they run in
 |---|---|---|
 | [`compliance-cis-mitre/`](compliance-cis-mitre/) | "Is this config aligned with a published benchmark?" | Pass/fail per control, JSON + console |
 | [`remediation/`](remediation/) | "Something is wrong — go fix it, gated and audited." | Audit row (DynamoDB + S3) + closed-loop verification |
-| [`detection-engineering/`](detection-engineering/) | "What does an attack look like on this surface?" | **OCSF Security Finding (class 2001)** + MITRE ATT&CK |
+| [`detection-engineering/`](detection-engineering/) | "What does an attack look like on this surface?" | **OCSF Detection Finding (class 2004)** + MITRE ATT&CK |
 | [`ai-infra-security/`](ai-infra-security/) | "AI-native surfaces: models, agents, GPU, topology." | Config audit, graph overlay, runtime checks |
 
 Every skill in every category is a **closed loop** (detect → act → audit → re-verify) and follows the [Anthropic skills spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md` at the skill root with `name`, `description`, `license`, and a `Do NOT use…` clause in the description so agents route correctly.
@@ -34,7 +34,7 @@ Active fix workflows — gated by grace periods, deny lists, protected-package l
 
 ## detection-engineering/ 🆕
 
-Detection rules, threat hunts, and runtime monitors for AI infrastructure (MCP, agents, models) and traditional cloud surfaces. Every skill speaks the **OCSF 1.3+ wire format** so ingestion, detection, and analytics compose via Unix-style pipes.
+Detection rules, threat hunts, and runtime monitors for AI infrastructure (MCP, agents, models) and traditional cloud surfaces. Every skill speaks the **OCSF 1.8 wire format** (current stable — `Detection Finding` class 2004, not the deprecated `Security Finding` 2001) so ingestion, detection, and analytics compose via Unix-style pipes.
 
 See [`detection-engineering/README.md`](detection-engineering/README.md) for the full category contract and [`detection-engineering/OCSF_CONTRACT.md`](detection-engineering/OCSF_CONTRACT.md) for field-level pinning.
 

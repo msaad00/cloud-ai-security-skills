@@ -2,17 +2,18 @@
 name: detect-mcp-tool-drift
 description: >-
   Detect MCP tool schema drift mid-session — the MCP tool-poisoning / rug-pull
-  attack pattern. Reads OCSF 1.3 Application Activity (class 6002) events produced
+  attack pattern. Reads OCSF 1.8 Application Activity (class 6002) events produced
   by ingest-mcp-proxy-ocsf, groups them by session, and flags any tool whose
   fingerprint (sha256 over name + description + inputSchema + annotations) changes
-  between tools/list responses in the same session. Emits OCSF Security Finding
-  (class 2001) with MITRE ATT&CK T1195.001 (Compromise Software Supply Chain). Use
-  when the user mentions MCP security, tool drift, tool poisoning, prompt
-  injection via tool schema, or supply chain compromise of an MCP server. Do NOT
-  use on raw MCP proxy logs — feed them through ingest-mcp-proxy-ocsf first. Do
-  NOT use for cross-session drift (same tool, different sessions) — that is a
-  legitimate MCP server update, not an attack; a separate detector will cover it.
-  Do NOT use as a compliance check; this is an active detection skill.
+  between tools/list responses in the same session. Emits OCSF 1.8 Detection
+  Finding (class 2004) with MITRE ATT&CK T1195.001 (Compromise Software Supply
+  Chain) inside finding_info.attacks. Use when the user mentions MCP security,
+  tool drift, tool poisoning, prompt injection via tool schema, or supply chain
+  compromise of an MCP server. Do NOT use on raw MCP proxy logs — feed them
+  through ingest-mcp-proxy-ocsf first. Do NOT use for cross-session drift (same
+  tool, different sessions) — that is a legitimate MCP server update, not an
+  attack; a separate detector will cover it. Do NOT use as a compliance check;
+  this is an active detection skill.
 license: Apache-2.0
 ---
 
@@ -26,7 +27,7 @@ This is the **MCP tool-poisoning** / **rug-pull** pattern. It maps to MITRE ATT&
 
 ## Detection logic
 
-Walk OCSF Application Activity events (emitted by `ingest-mcp-proxy-ocsf`) in timestamp order. For each session and tool name, track the last-seen fingerprint. If a later `tools/list` entry for the same `(session, tool name)` has a different fingerprint, emit **one** Security Finding per drift event.
+Walk OCSF Application Activity events (emitted by `ingest-mcp-proxy-ocsf`) in timestamp order. For each session and tool name, track the last-seen fingerprint. If a later `tools/list` entry for the same `(session, tool name)` has a different fingerprint, emit **one** Detection Finding per drift event.
 
 ```
 state[(session_uid, tool_name)] = last_fingerprint
@@ -38,14 +39,16 @@ state[(session_uid, tool_name)] = last_fingerprint
 
 ## Output contract
 
-One OCSF Security Finding (class `2001`) per drift event. Populates:
+One OCSF 1.8 Detection Finding (class `2004`) per drift event. Populates:
 
-- `attacks[]`: MITRE ATT&CK v14, tactic TA0001 (Initial Access), technique T1195.001 (Compromise Software Supply Chain).
+- `finding_info.attacks[]`: MITRE ATT&CK v14, tactic TA0001 (Initial Access), technique T1195.001 (Compromise Software Supply Chain).
+- `finding_info.types[]`: `["mcp-tool-drift"]` for downstream filtering.
+- `finding_info.first_seen_time` / `finding_info.last_seen_time`: timestamps of the two `tools/list` events that triggered the finding.
+- `finding_info.uid`: deterministic (`det-mcp-drift-<session>-<tool>-<before-8>-<after-8>`) so re-running on the same fixture is idempotent.
 - `observables[]`: session uid, tool name, before/after fingerprints.
-- `evidence`: counts and pointers to the two `tools/list` events that triggered the finding.
-- `finding.uid`: deterministic (`det-mcp-drift-<session>-<tool>-<before-8>-<after-8>`) so re-running on the same fixture is idempotent.
+- `evidence`: event counts and pointers to the raw `tools/list` records.
 
-See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the full Security Finding contract.
+See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the full Detection Finding contract.
 
 ## Usage
 

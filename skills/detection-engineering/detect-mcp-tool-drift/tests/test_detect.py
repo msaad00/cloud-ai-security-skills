@@ -6,7 +6,7 @@ Uses the frozen OCSF golden fixture from ingest-mcp-proxy-ocsf and verifies:
   3. Deterministic finding UID (re-runs are idempotent)
   4. Stable-fingerprint tools (read_file) do NOT fire
   5. Single-occurrence tools (sess-xyz / read_file) do NOT fire
-  6. The full OCSF Security Finding matches the frozen golden fixture exactly
+  6. The full OCSF Detection Finding matches the frozen golden fixture exactly
 """
 
 from __future__ import annotations
@@ -122,7 +122,9 @@ class TestDetect:
         assert f["severity_id"] == SEVERITY_HIGH
         assert f["metadata"]["product"]["feature"]["name"] == SKILL_NAME
 
-    def test_mitre_populated(self):
+    def test_mitre_populated_inside_finding_info(self):
+        # OCSF 1.8 Detection Finding — attacks[] lives inside finding_info,
+        # not at the event root (that was the deprecated Security Finding layout).
         findings = list(
             detect(
                 [
@@ -131,7 +133,8 @@ class TestDetect:
                 ]
             )
         )
-        attacks = findings[0]["attacks"]
+        assert "attacks" not in findings[0], "attacks[] must NOT be at event root in OCSF 1.8"
+        attacks = findings[0]["finding_info"]["attacks"]
         assert len(attacks) == 1
         assert attacks[0]["tactic"]["uid"] == MITRE_TACTIC_UID
         assert attacks[0]["technique"]["uid"] == MITRE_TECHNIQUE_UID
@@ -155,8 +158,8 @@ class TestDetect:
             _ev("s1", "t1", "sha256:aaaa1111", 100),
             _ev("s1", "t1", "sha256:bbbb2222", 200),
         ]
-        a = list(detect(events))[0]["finding"]["uid"]
-        b = list(detect(events))[0]["finding"]["uid"]
+        a = list(detect(events))[0]["finding_info"]["uid"]
+        b = list(detect(events))[0]["finding_info"]["uid"]
         assert a == b
         assert "aaaa1111"[:8] in a
         assert "bbbb2222"[:8] in a

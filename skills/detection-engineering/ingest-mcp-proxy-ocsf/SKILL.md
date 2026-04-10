@@ -2,7 +2,7 @@
 name: ingest-mcp-proxy-ocsf
 description: >-
   Convert raw MCP proxy logs (from agent-bom proxy or any MCP JSON-RPC middleware)
-  into OCSF 1.3 Application Activity events (class 6002) with the cloud_security_mcp
+  into OCSF 1.8 Application Activity events (class 6002) with the cloud_security_mcp
   custom profile. Every event carries session_uid, JSON-RPC method, direction, and
   a stable tool fingerprint (sha256 of name + description + inputSchema + annotations)
   so downstream detection skills can spot schema drift. Use when the user mentions
@@ -16,7 +16,7 @@ license: Apache-2.0
 
 # ingest-mcp-proxy-ocsf
 
-Thin, single-purpose ingestion skill: raw MCP proxy JSONL in → OCSF 1.3 Application Activity JSONL out. No detection logic, no side effects, no external calls.
+Thin, single-purpose ingestion skill: raw MCP proxy JSONL in → OCSF 1.8 Application Activity JSONL out. No detection logic, no side effects, no external calls.
 
 ## Wire contract
 
@@ -32,7 +32,7 @@ Reads the format emitted by the `agent-bom proxy` command:
 }
 ```
 
-Writes OCSF 1.3 Application Activity (class 6002) with the `cloud_security_mcp` custom profile. See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning.
+Writes OCSF 1.8 Application Activity (class 6002) with the `cloud_security_mcp` custom profile. See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning.
 
 ## Usage
 
