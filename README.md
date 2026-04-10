@@ -56,45 +56,16 @@ A new category for detection rules, threat hunts, and runtime monitors specific 
 
 ## Architecture — IAM Departures Remediation
 
-Three deployment domains, one forward path, one drift loop.
+Six numbered stations across two deployment domains, one forward path, one dashed drift loop. Every destructive step happens inside the VPC-isolated Step Function; the reconciler stays stateless outside it.
 
-```mermaid
-flowchart LR
-    subgraph CORP["AWS Corporate · Security OU"]
-        direction LR
-        REC["Reconciler<br/>HR → S3 manifest<br/>SHA-256 diff"]
-        EB["EventBridge<br/>Object Created"]
-        REC --> EB
-    end
+<p align="center">
+  <img src="docs/images/iam-departures-architecture.svg" alt="IAM Departures Remediation architecture: HR sources and Reconciler in the AWS Corporate Security OU; Parser and Worker Lambdas in a VPC-isolated Step Function; five cloud targets; dual-write audit trail; dashed verification loop back to the reconciler." width="100%"/>
+</p>
 
-    subgraph VPC["VPC-isolated Step Function"]
-        direction LR
-        L1["Parser<br/>validate · grace · rehire"]
-        L2["Worker<br/>13-step cleanup"]
-        L1 --> L2
-    end
-
-    TGT["5 cloud targets<br/>— revoke credentials<br/>— strip permissions<br/>— quarantine + delete"]
-    AUDIT["Audit trail<br/>DynamoDB + S3<br/>warehouse ingest-back"]
-
-    EB --> L1
-    L2 --> TGT --> AUDIT
-    AUDIT -. drift detected .-> REC
-
-    style CORP fill:#0f172a,stroke:#475569,color:#e2e8f0
-    style VPC fill:#0f172a,stroke:#475569,color:#e2e8f0
-    style REC fill:#164e63,stroke:#22d3ee,color:#e2e8f0
-    style EB fill:#172554,stroke:#3b82f6,color:#e2e8f0
-    style L1 fill:#164e63,stroke:#22d3ee,color:#e2e8f0
-    style L2 fill:#164e63,stroke:#22d3ee,color:#e2e8f0
-    style TGT fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
-    style AUDIT fill:#1e1b4b,stroke:#a78bfa,color:#e2e8f0
-```
-
-**What's *not* in the diagram** (intentionally, to keep it readable):
-- **Failure path:** Lambda async failures → SQS DLQ (`iam-departures-dlq`); Step Function `FAILED`/`TIMED_OUT`/`ABORTED` → EventBridge → SNS (`iam-departures-alerts`). See [`SKILL.md`](skills/remediation/iam-departures-remediation/SKILL.md).
-- **DLQ replay:** stuck executions re-drive through the same EventBridge rule that triggered the original run. The pipeline is idempotent.
-- **Extensibility:** new consumers (SIEM forwarder, Slack, secondary region) are additional EventBridge targets — no reconciler or Lambda changes.
+**What's intentionally not shown** (to keep the diagram legible):
+- **Failure path** — Lambda async failures → SQS DLQ (`iam-departures-dlq`); Step Function `FAILED`/`TIMED_OUT`/`ABORTED` → EventBridge → SNS (`iam-departures-alerts`). See [`SKILL.md`](skills/remediation/iam-departures-remediation/SKILL.md).
+- **DLQ replay** — stuck executions re-drive through the same EventBridge rule. The pipeline is idempotent.
+- **Extensibility** — new consumers (SIEM forwarder, Slack, secondary region) are additional EventBridge targets. No reconciler or Lambda changes.
 
 ## Architecture — CSPM CIS Benchmarks
 

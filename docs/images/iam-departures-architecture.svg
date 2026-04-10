@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 520" role="img" aria-label="IAM Departures Remediation — closed-loop, event-driven pipeline architecture">
+  <title>IAM Departures Remediation — closed-loop event-driven pipeline</title>
+  <desc>Six numbered stages across two deployment domains: HR sources and Reconciler inside the AWS Corporate Security OU, Parser and Worker Lambdas inside a VPC-isolated Step Function, then five cloud targets and a dual-write audit trail. A dashed verification loop runs from the audit back to the reconciler for drift detection.</desc>
+
+  <defs>
+    <!-- Canvas background -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#0b1120"/>
+      <stop offset="1"   stop-color="#050814"/>
+    </linearGradient>
+
+    <!-- Box gradients by subsystem -->
+    <linearGradient id="gCorp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#155e75"/>
+      <stop offset="1" stop-color="#0c3947"/>
+    </linearGradient>
+    <linearGradient id="gVpc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#0f1f4d"/>
+    </linearGradient>
+    <linearGradient id="gTgt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a5f"/>
+      <stop offset="1" stop-color="#0e1f3a"/>
+    </linearGradient>
+    <linearGradient id="gAudit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4338ca"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+
+    <!-- Arrow markers -->
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrowDrift" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#22d3ee"/>
+    </marker>
+
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="3" result="blur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.55"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Reusable text styles via class selectors live in a style block -->
+    <style>
+      .ttl    { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
+      .h1     { font-size: 22px; font-weight: 700; fill: #e2e8f0; }
+      .h2     { font-size: 13px; fill: #94a3b8; }
+      .group  { font-size: 11px; font-weight: 600; fill: #94a3b8; letter-spacing: 1.8px; }
+      .box-t  { font-size: 15px; font-weight: 600; fill: #e2e8f0; }
+      .box-b  { font-size: 11px; fill: #cbd5e1; }
+      .box-i  { font-size: 10px; fill: #64748b; font-style: italic; }
+      .step-n { font-size: 11px; font-weight: 700; text-anchor: middle; }
+      .drift  { font-size: 11px; fill: #22d3ee; font-style: italic; }
+      .foot   { font-size: 10px; fill: #475569; }
+    </style>
+  </defs>
+
+  <!-- ─── Background ───────────────────────────────────────── -->
+  <rect width="1240" height="520" fill="url(#bg)"/>
+
+  <!-- ─── Title ────────────────────────────────────────────── -->
+  <g class="ttl">
+    <text x="620" y="42" text-anchor="middle" class="h1">IAM Departures Remediation</text>
+    <text x="620" y="68" text-anchor="middle" class="h2">Closed-loop, event-driven pipeline — HR change → cloud deactivation → audit → verify</text>
+  </g>
+
+  <!-- ─── Subsystem groups (drawn behind boxes) ───────────── -->
+  <g class="ttl">
+    <rect x="20"  y="100" width="400" height="260" rx="14" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <text x="220" y="126" text-anchor="middle" class="group">AWS CORPORATE  ·  SECURITY OU</text>
+
+    <rect x="440" y="100" width="400" height="260" rx="14" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <text x="640" y="126" text-anchor="middle" class="group">VPC-ISOLATED  ·  STEP FUNCTION</text>
+  </g>
+
+  <!-- ─── Station 1 : HR sources ──────────────────────────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="40" y="160" width="160" height="140" rx="10" fill="url(#gCorp)" stroke="#22d3ee" stroke-width="1.5"/>
+    <circle cx="62" cy="180" r="14" fill="#0b1120" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="62" y="184" class="step-n" fill="#22d3ee">1</text>
+    <text x="86" y="186" class="box-t">HR sources</text>
+    <text x="58" y="216" class="box-b">Workday · Snowflake</text>
+    <text x="58" y="234" class="box-b">Databricks · ClickHouse</text>
+    <text x="58" y="282" class="box-i">pull on schedule</text>
+  </g>
+
+  <!-- ─── Station 2 : Reconciler ──────────────────────────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="240" y="160" width="160" height="140" rx="10" fill="url(#gCorp)" stroke="#22d3ee" stroke-width="1.5"/>
+    <circle cx="262" cy="180" r="14" fill="#0b1120" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="262" y="184" class="step-n" fill="#22d3ee">2</text>
+    <text x="286" y="186" class="box-t">Reconciler</text>
+    <text x="258" y="216" class="box-b">SHA-256 row diff</text>
+    <text x="258" y="234" class="box-b">→ S3 manifest (KMS)</text>
+    <text x="258" y="282" class="box-i">→ EventBridge rule</text>
+  </g>
+
+  <!-- ─── Station 3 : Parser Lambda ───────────────────────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="460" y="160" width="160" height="140" rx="10" fill="url(#gVpc)" stroke="#3b82f6" stroke-width="1.5"/>
+    <circle cx="482" cy="180" r="14" fill="#0b1120" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="482" y="184" class="step-n" fill="#60a5fa">3</text>
+    <text x="506" y="186" class="box-t">Parser λ</text>
+    <text x="478" y="216" class="box-b">validate · grace</text>
+    <text x="478" y="234" class="box-b">rehire filter</text>
+    <text x="478" y="282" class="box-i">read-only</text>
+  </g>
+
+  <!-- ─── Station 4 : Worker Lambda ───────────────────────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="660" y="160" width="160" height="140" rx="10" fill="url(#gVpc)" stroke="#3b82f6" stroke-width="1.5"/>
+    <circle cx="682" cy="180" r="14" fill="#0b1120" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="682" y="184" class="step-n" fill="#60a5fa">4</text>
+    <text x="706" y="186" class="box-t">Worker λ</text>
+    <text x="678" y="216" class="box-b">13-step IAM cleanup</text>
+    <text x="678" y="234" class="box-b">map · parallel 10</text>
+    <text x="678" y="282" class="box-i">scoped write</text>
+  </g>
+
+  <!-- ─── Station 5 : Cloud targets ───────────────────────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="860" y="160" width="160" height="140" rx="10" fill="url(#gTgt)" stroke="#60a5fa" stroke-width="1.5"/>
+    <circle cx="882" cy="180" r="14" fill="#0b1120" stroke="#60a5fa" stroke-width="1.5"/>
+    <text x="882" y="184" class="step-n" fill="#60a5fa">5</text>
+    <text x="906" y="186" class="box-t">5 targets</text>
+    <text x="878" y="214" class="box-b">AWS IAM · Entra</text>
+    <text x="878" y="232" class="box-b">GCP · Snowflake</text>
+    <text x="878" y="250" class="box-b">Databricks</text>
+    <text x="878" y="282" class="box-i">STS OrgID-scoped</text>
+  </g>
+
+  <!-- ─── Station 6 : Audit trail ─────────────────────────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="1040" y="160" width="160" height="140" rx="10" fill="url(#gAudit)" stroke="#a78bfa" stroke-width="1.5"/>
+    <circle cx="1062" cy="180" r="14" fill="#0b1120" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1062" y="184" class="step-n" fill="#a78bfa">6</text>
+    <text x="1086" y="186" class="box-t">Audit</text>
+    <text x="1058" y="216" class="box-b">DynamoDB + S3</text>
+    <text x="1058" y="234" class="box-b">warehouse ingest</text>
+    <text x="1058" y="282" class="box-i">KMS · PITR</text>
+  </g>
+
+  <!-- ─── Forward flow arrows ─────────────────────────────── -->
+  <g>
+    <line x1="203" y1="230" x2="237" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <line x1="403" y1="230" x2="457" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <line x1="623" y1="230" x2="657" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <line x1="823" y1="230" x2="857" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <line x1="1023" y1="230" x2="1037" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ─── Drift verification loop ─────────────────────────── -->
+  <!-- Start at Audit bottom-center (1120, 300), curve down-left, end at Reconciler bottom-center (320, 300) -->
+  <path d="M 1120 300 C 1120 430, 320 430, 320 300"
+        fill="none" stroke="#22d3ee" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrowDrift)"/>
+
+  <!-- Drift loop label (sits on the curve's lowest point ~y=397) -->
+  <g class="ttl">
+    <rect x="620" y="390" width="200" height="24" rx="12" fill="#0b1120" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="720" y="407" text-anchor="middle" class="drift">drift detected → re-run</text>
+  </g>
+
+  <!-- ─── Footer note ─────────────────────────────────────── -->
+  <g class="ttl">
+    <text x="620" y="480" text-anchor="middle" class="foot">Failure path (DLQ → SNS → on-call) and replay semantics documented in SKILL.md — omitted here for clarity</text>
+  </g>
+</svg>
