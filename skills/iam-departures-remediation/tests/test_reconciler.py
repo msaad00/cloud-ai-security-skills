@@ -25,20 +25,30 @@ from reconciler.sources import (
 
 # ── Fixtures ────────────────────────────────────────────────────────
 
+# Frozen reference time so record_hash is deterministic across calls.
+# (Using datetime.now() inside the fixture made identical calls produce
+# different hashes, which broke test_record_hash_deterministic.)
+_FROZEN_NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return _FROZEN_NOW
 
 
 def _days_ago(n: int) -> datetime:
     return _now() - timedelta(days=n)
 
 
+# Sentinel so callers can pass terminated_at=None explicitly without the
+# fallback turning it into "30 days ago".
+_UNSET = object()
+
+
 def _make_record(
     email: str = "jane.doe@company.com",
     account_id: str = "123456789012",
     iam_username: str = "jane.doe",
-    terminated_at: datetime | None = None,
+    terminated_at=_UNSET,
     is_rehire: bool = False,
     rehire_date: datetime | None = None,
     iam_deleted: bool = False,
@@ -46,12 +56,16 @@ def _make_record(
     iam_created_at: datetime | None = None,
     status: RemediationStatus = RemediationStatus.PENDING,
 ) -> DepartureRecord:
+    if terminated_at is _UNSET:
+        terminated_at = _days_ago(30)
+    if iam_created_at is None:
+        iam_created_at = _days_ago(365)
     return DepartureRecord(
         email=email,
         recipient_account_id=account_id,
         iam_username=iam_username,
-        iam_created_at=iam_created_at or _days_ago(365),
-        terminated_at=terminated_at or _days_ago(30),
+        iam_created_at=iam_created_at,
+        terminated_at=terminated_at,
         termination_source=TerminationSource.SNOWFLAKE,
         is_rehire=is_rehire,
         rehire_date=rehire_date,

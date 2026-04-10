@@ -54,15 +54,18 @@ flowchart TD
     HR["HR Source<br/>Workday / Snowflake / Databricks / ClickHouse"]
     REC{"Reconciler<br/>SHA-256 change detect"}
     EXIT["EXIT — no changes"]
-    S3["S3 Manifest<br/>KMS encrypted"]
-    EB["EventBridge Rule<br/>S3 PutObject trigger"]
+    S3["S3 Manifest<br/>KMS · versioned<br/>EventBridge enabled"]
+    EB["EventBridge Rule<br/>Object Created<br/>prefix departures/"]
 
     subgraph SFN["Step Function — VPC isolated"]
         L1["Lambda 1 — Parser<br/>validate, grace period,<br/>rehire filter"]
         L2["Lambda 2 — Worker<br/>13-step IAM cleanup"]
     end
 
-    AUDIT["Audit Trail<br/>DynamoDB + S3 + warehouse"]
+    AUDIT["Audit Trail<br/>DynamoDB + S3"]
+    WH["Warehouse Ingest-Back<br/>remediation_log table"]
+    VERIFY["Next Reconciler Run<br/>verify state == closed<br/>flag drift"]
+    DLQ["DLQ + SNS<br/>Lambda async failures<br/>SFN ExecutionFailed"]
 
     HR --> REC
     REC -->|no change| EXIT
@@ -71,9 +74,17 @@ flowchart TD
     EB --> L1
     L1 --> L2
     L2 --> AUDIT
+    AUDIT --> WH
+    WH --> VERIFY
+    VERIFY -. drift .-> REC
+    SFN -. failure .-> DLQ
+    DLQ -. replay .-> EB
 
     style SFN fill:#172554,stroke:#3b82f6,color:#e2e8f0
     style REC fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
+    style EB fill:#172554,stroke:#3b82f6,color:#e2e8f0
+    style VERIFY fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
+    style DLQ fill:#3f1d1d,stroke:#f87171,color:#fecaca
 ```
 
 ## Security Guardrails
@@ -132,6 +143,8 @@ for deployable templates.
 | EventBridge | `iam-departures-events-role` | `states:StartExecution` on the Step Function |
 | S3 Bucket | Bucket policy | Restrict to Security OU account only |
 | Cross-Account | `iam-remediation-role` | IAM read/write in target accounts (StackSets) |
+| DLQ | `iam-departures-dlq` (SQS) | Captures Lambda async failures for replay (KMS encrypted) |
+| Alerts | `iam-departures-alerts` (SNS) | EventBridge fires on `Step Functions Execution Status Change` for `FAILED` / `TIMED_OUT` / `ABORTED` |
 
 ## Data Sources
 
@@ -205,7 +218,7 @@ terraform init && terraform plan && terraform apply
 
 | IaC | Path | Resources |
 |-----|------|-----------|
-| CloudFormation | `infra/cloudformation.yaml` | Full stack (S3, KMS, DDB, Lambda, SFN, EventBridge, 4 IAM roles) |
+| CloudFormation | `infra/cloudformation.yaml` | Full stack (S3, KMS, DDB, Lambda, SFN, EventBridge, DLQ, SNS alerts, 4 IAM roles) |
 | Terraform | `infra/terraform/main.tf` | Same resources, HCL format |
 | StackSets | `infra/cross_account_stackset.yaml` | Org-wide cross-account remediation role |
 

@@ -90,6 +90,18 @@ variable "tags" {
   }
 }
 
+variable "alert_email" {
+  description = "Optional email subscribed to failure alerts. Empty = topic only, no subscription."
+  type        = string
+  default     = ""
+}
+
+variable "dlq_retention_seconds" {
+  description = "SQS DLQ message retention. Default 14 days (max)."
+  type        = number
+  default     = 1209600
+}
+
 # ── Data Sources ───────────────────────────────────────────────
 
 data "aws_caller_identity" "current" {}
@@ -460,6 +472,97 @@ resource "aws_iam_role_policy" "eventbridge" {
   })
 }
 
+# ── Failure Path: DLQ + SNS + EventBridge alert rule ──────────
+# Closed-loop guarantee: nothing fails silently. Async Lambda
+# failures land in the DLQ for replay; Step Function failures
+# raise an SNS alert so on-call sees them in real time.
+
+resource "aws_sqs_queue" "pipeline_failures" {
+  name                              = "iam-departures-dlq"
+  message_retention_seconds         = var.dlq_retention_seconds
+  kms_master_key_id                 = var.kms_key_arn
+  kms_data_key_reuse_period_seconds = 300
+  tags                              = var.tags
+}
+
+resource "aws_sns_topic" "pipeline_alerts" {
+  name              = "iam-departures-alerts"
+  display_name      = "IAM Departures Remediation Alerts"
+  kms_master_key_id = var.kms_key_arn
+  tags              = var.tags
+}
+
+resource "aws_sns_topic_subscription" "pipeline_alerts_email" {
+  count     = var.alert_email == "" ? 0 : 1
+  topic_arn = aws_sns_topic.pipeline_alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+}
+
+resource "aws_sns_topic_policy" "pipeline_alerts" {
+  arn = aws_sns_topic.pipeline_alerts.arn
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowEventBridgePublish"
+      Effect    = "Allow"
+      Principal = { Service = "events.amazonaws.com" }
+      Action    = "sns:Publish"
+      Resource  = aws_sns_topic.pipeline_alerts.arn
+      Condition = {
+        StringEquals = {
+          "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "parser_dlq_write" {
+  name = "ParserDlqWrite"
+  role = aws_iam_role.parser.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["sqs:SendMessage"]
+      Resource = aws_sqs_queue.pipeline_failures.arn
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "worker_dlq_write" {
+  name = "WorkerDlqWrite"
+  role = aws_iam_role.worker.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["sqs:SendMessage"]
+      Resource = aws_sqs_queue.pipeline_failures.arn
+    }]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "sfn_failure" {
+  name        = "iam-departures-sfn-failure"
+  description = "Page on-call when the IAM departures Step Function fails or times out"
+  event_pattern = jsonencode({
+    source      = ["aws.states"]
+    detail-type = ["Step Functions Execution Status Change"]
+    detail = {
+      status          = ["FAILED", "TIMED_OUT", "ABORTED"]
+      stateMachineArn = [aws_sfn_state_machine.pipeline.arn]
+    }
+  })
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "sfn_failure_to_sns" {
+  rule = aws_cloudwatch_event_rule.sfn_failure.name
+  arn  = aws_sns_topic.pipeline_alerts.arn
+}
+
 # ── Lambda Functions ───────────────────────────────────────────
 
 resource "aws_lambda_function" "parser" {
@@ -471,6 +574,10 @@ resource "aws_lambda_function" "parser" {
   role          = aws_iam_role.parser.arn
   timeout       = 300
   memory_size   = 256
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.pipeline_failures.arn
+  }
 
   environment {
     variables = {
@@ -496,6 +603,10 @@ resource "aws_lambda_function" "worker" {
   role          = aws_iam_role.worker.arn
   timeout       = 900
   memory_size   = 256
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.pipeline_failures.arn
+  }
 
   environment {
     variables = {
@@ -652,4 +763,14 @@ output "s3_bucket_arn" {
 output "audit_table_arn" {
   description = "DynamoDB audit table ARN"
   value       = aws_dynamodb_table.audit.arn
+}
+
+output "pipeline_failure_dlq_arn" {
+  description = "SQS DLQ for failed Lambda async invocations (replay source)"
+  value       = aws_sqs_queue.pipeline_failures.arn
+}
+
+output "pipeline_alerts_topic_arn" {
+  description = "SNS topic that fires on Step Function failure / timeout / abort"
+  value       = aws_sns_topic.pipeline_alerts.arn
 }

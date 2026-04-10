@@ -1,15 +1,13 @@
 ---
 name: cspm-azure-cis-benchmark
 description: >-
-  Assess Azure subscriptions against CIS Azure Foundations Benchmark v2.1 plus
-  AI Foundry security controls. Runs automated checks across Identity, Storage,
-  Logging, Networking, and AI services. Use when the user mentions Azure CIS
-  benchmark, Azure security posture, Entra ID audit, storage account security,
-  or Azure AI Foundry review.
+  Assess Azure subscriptions against a curated subset of CIS Azure Foundations
+  Benchmark v2.1. Automates 6 high-impact checks across Storage and Networking.
+  Use when the user mentions Azure CIS benchmark, Azure storage security, or
+  unrestricted SSH/RDP detection in NSGs.
 license: Apache-2.0
 compatibility: >-
-  Requires Python 3.11+, azure-identity, azure-mgmt-authorization,
-  azure-mgmt-storage, azure-mgmt-monitor, azure-mgmt-network.
+  Requires Python 3.11+, azure-identity, azure-mgmt-storage, azure-mgmt-network.
   Service principal needs Reader role. No write permissions — assessment only.
 metadata:
   author: msaad00
@@ -17,16 +15,23 @@ metadata:
   source: https://github.com/msaad00/cloud-security/tree/main/skills/cspm-azure-cis-benchmark
   version: 0.1.0
   frameworks:
-    - CIS Azure Foundations v2.1
+    - CIS Azure Foundations v2.1 (subset)
     - NIST CSF 2.0
     - ISO 27001:2022
   cloud: azure
 ---
 
-# CSPM — Azure CIS Foundations Benchmark v2.1
+# CSPM — Azure CIS Foundations Benchmark v2.1 (subset)
 
-Automated assessment of Azure subscriptions against CIS Azure Foundations Benchmark
-v2.1, plus Azure AI Foundry security controls. Each check mapped to NIST CSF 2.0.
+Automated assessment of Azure subscriptions against a curated subset of CIS
+Azure Foundations Benchmark v2.1. The full benchmark has 90+ controls; this
+skill implements **6 high-impact checks** that cover the most common findings
+on real subscriptions. Each check is mapped to NIST CSF 2.0.
+
+> **Honest scope:** the table below lists *only* what `src/checks.py` actually
+> implements. See the **Roadmap** at the bottom for documented controls that
+> are not yet automated. PRs welcome — one check per function, one finding row
+> per control.
 
 ## When to Use
 
@@ -38,30 +43,28 @@ v2.1, plus Azure AI Foundry security controls. Each check mapped to NIST CSF 2.0
 
 ## Architecture
 
+Closed loop: scan → finding → fix (PR or CLI) → re-scan to verify the same `control_id` is now `pass`.
+
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph AZ["Azure Subscription — read-only"]
-        ENTRA["Entra ID + RBAC<br/>7 checks"]
-        STOR["Storage Accounts<br/>4 checks"]
-        MON["Monitor / Activity<br/>4 checks"]
-        NSG["NSG / VNet<br/>4 checks"]
-        AIF["AI Foundry<br/>5 checks"]
+        STOR["Storage Accounts<br/>3 checks"]
+        NSG["NSG / VNet<br/>3 checks"]
     end
 
-    CHK["checks.py<br/>19 CIS v2.1 + 5 AI Foundry<br/>Reader role only"]
+    CHK["checks.py<br/>6 CIS v2.1 controls<br/>Reader role only"]
+    OUT["Findings<br/>JSON · Console"]
+    FIX["Remediation<br/>az CLI · Bicep PR<br/>or exception with TTL"]
+    VERIFY["Re-scan<br/>control_id == pass"]
 
-    ENTRA --> CHK
-    STOR --> CHK
-    MON --> CHK
-    NSG --> CHK
-    AIF --> CHK
-
-    CHK --> JSON["JSON"]
-    CHK --> CON["Console summary"]
+    STOR & NSG --> CHK --> OUT --> FIX --> VERIFY
+    VERIFY -. drift detected .-> CHK
 
     style AZ fill:#1e293b,stroke:#475569,color:#e2e8f0
     style CHK fill:#172554,stroke:#3b82f6,color:#e2e8f0
-    style AIF fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
+    style OUT fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
+    style FIX fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
+    style VERIFY fill:#164e63,stroke:#22d3ee,color:#e2e8f0
 ```
 
 ## Security Guardrails
@@ -72,58 +75,37 @@ flowchart TD
 - **AI Foundry safe**: Checks managed identity, private endpoints, CMK — does not access model endpoints or data.
 - **Idempotent**: Run as often as needed with no side effects.
 
-## Controls — CIS Azure Foundations v2.1 (key controls)
+## Implemented Controls (6)
 
-> The full CIS Azure Foundations Benchmark v2.1 has 90+ controls. This skill automates 19 high-impact checks plus 5 Azure AI Foundry security controls not covered by CIS.
+Each row maps to one function in `src/checks.py`. If it's not in this table, it's not implemented.
 
-### Section 1 — Identity & Access (7 checks)
+### Section 2 — Storage (3 checks)
 
-| # | CIS Control | Severity | NIST CSF 2.0 |
-|---|------------|----------|--------------|
-| 1.1 | MFA for all users | CRITICAL | PR.AC-1 |
-| 1.2 | Conditional Access policies enforced | HIGH | PR.AC-1 |
-| 1.3 | No guest users with privileged roles | HIGH | PR.AC-4 |
-| 1.4 | Custom subscription owner roles restricted | MEDIUM | PR.AC-4 |
-| 1.5 | No legacy authentication protocols | HIGH | PR.AC-1 |
-| 1.6 | Password expiration policy configured | MEDIUM | PR.AC-1 |
-| 1.7 | PIM (Privileged Identity Management) enabled | HIGH | PR.AC-4 |
+| # | CIS Control | Function | Severity | NIST CSF 2.0 |
+|---|------------|----------|----------|--------------|
+| 2.2 | Storage account HTTPS-only | `check_2_2_https_only` | HIGH | PR.DS-2 |
+| 2.3 | No public blob access | `check_2_3_no_public_blob` | CRITICAL | PR.AC-3 |
+| 2.4 | Storage account network rules (deny by default) | `check_2_4_network_rules` | HIGH | PR.AC-5 |
 
-### Section 2 — Storage (4 checks)
+### Section 4 — Networking (3 checks)
 
-| # | CIS Control | Severity | NIST CSF 2.0 |
-|---|------------|----------|--------------|
-| 2.1 | Storage account encryption (CMK where required) | HIGH | PR.DS-1 |
-| 2.2 | Storage account HTTPS-only | HIGH | PR.DS-2 |
-| 2.3 | No public blob access | CRITICAL | PR.AC-3 |
-| 2.4 | Storage account network rules (deny by default) | HIGH | PR.AC-5 |
+| # | CIS Control | Function | Severity | NIST CSF 2.0 |
+|---|------------|----------|----------|--------------|
+| 4.1 | No unrestricted SSH (0.0.0.0/0:22) in NSGs | `check_4_1_no_unrestricted_ssh` | HIGH | PR.AC-5 |
+| 4.2 | No unrestricted RDP (0.0.0.0/0:3389) in NSGs | `check_4_2_no_unrestricted_rdp` | HIGH | PR.AC-5 |
+| 4.3 | NSG flow logs enabled | `check_4_3_nsg_flow_logs` | MEDIUM | DE.CM-1 |
 
-### Section 3 — Logging & Monitoring (4 checks)
+## Roadmap — Documented but Not Yet Automated
 
-| # | CIS Control | Severity | NIST CSF 2.0 |
-|---|------------|----------|--------------|
-| 3.1 | Activity log retention >= 365 days | MEDIUM | DE.AE-3 |
-| 3.2 | Diagnostic settings for all subscriptions | HIGH | DE.AE-3 |
-| 3.3 | Activity log alerts for policy/RBAC changes | MEDIUM | DE.CM-1 |
-| 3.4 | Azure Monitor log profile covers all regions | MEDIUM | DE.CM-1 |
+These controls are part of the CIS Azure Foundations v2.1 benchmark but are *not* implemented in `checks.py` yet. PRs welcome.
 
-### Section 4 — Networking (4 checks)
-
-| # | CIS Control | Severity | NIST CSF 2.0 |
-|---|------------|----------|--------------|
-| 4.1 | No unrestricted SSH (0.0.0.0/0:22) in NSGs | HIGH | PR.AC-5 |
-| 4.2 | No unrestricted RDP (0.0.0.0/0:3389) in NSGs | HIGH | PR.AC-5 |
-| 4.3 | NSG flow logs enabled | MEDIUM | DE.CM-1 |
-| 4.4 | Network Watcher enabled in all regions | MEDIUM | DE.CM-1 |
-
-### Azure AI Foundry Controls (Azure-Specific)
-
-| # | Control | Severity | Rationale |
-|---|---------|----------|-----------|
-| A.1 | AI Foundry endpoints require managed identity auth | CRITICAL | Key-based auth = credential leak risk |
-| A.2 | Private endpoints for AI services | HIGH | Public endpoints = attack surface |
-| A.3 | CMK for AI model storage | MEDIUM | Protect training data + model weights |
-| A.4 | Content Safety filters enabled | HIGH | Prevent harmful output in production |
-| A.5 | Diagnostic logging on AI deployments | MEDIUM | Audit prompt/completion activity |
+| Section | Controls | Why it matters |
+|---------|---------|----------------|
+| 1.x — Identity | MFA, Conditional Access, guest roles, legacy auth, PIM | Requires Microsoft Graph API + Entra ID licensing checks |
+| 2.1 | Storage account CMK encryption | KMS key resolution per account |
+| 3.x — Logging | Activity log retention, diagnostic settings, log alerts | `azure-mgmt-monitor` enumeration |
+| 4.4 | Network Watcher in all regions | Region enumeration + Network Watcher API |
+| AI Foundry | Managed identity, private endpoints, CMK, content safety, diagnostic logging | `azure-mgmt-cognitiveservices` |
 
 ## Usage
 

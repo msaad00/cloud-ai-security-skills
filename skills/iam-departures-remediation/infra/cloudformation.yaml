@@ -39,6 +39,21 @@ Parameters:
     Type: String
     Default: lambda/iam-departures-worker.zip
     Description: S3 key for Lambda worker deployment package
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: >-
+      Optional email address subscribed to failure alerts. Leave blank
+      to skip email subscription (SNS topic is still created).
+  DlqRetentionSeconds:
+    Type: Number
+    Default: 1209600
+    MinValue: 60
+    MaxValue: 1209600
+    Description: SQS DLQ message retention (default 14 days, the maximum)
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
 
 Resources:
   # ── S3 Bucket ────────────────────────────────────────────────
@@ -357,6 +372,108 @@ Resources:
         - Key: Project
           Value: iam-departures-remediation
 
+  # ── Failure Path: DLQ + SNS + EventBridge alert rule ─────────
+  # Closed-loop guarantee: nothing fails silently. Async Lambda
+  # failures land in the DLQ for replay; Step Function failures
+  # raise an SNS alert so on-call sees them in real time.
+
+  PipelineFailureDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: iam-departures-dlq
+      MessageRetentionPeriod: !Ref DlqRetentionSeconds
+      KmsMasterKeyId: !Ref KmsKeyArn
+      KmsDataKeyReusePeriodSeconds: 300
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  PipelineAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: iam-departures-alerts
+      DisplayName: IAM Departures Remediation Alerts
+      KmsMasterKeyId: !Ref KmsKeyArn
+      Tags:
+        - Key: Project
+          Value: iam-departures-remediation
+
+  PipelineAlertsEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+      TopicArn: !Ref PipelineAlertsTopic
+
+  PipelineAlertsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref PipelineAlertsTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgePublish
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref PipelineAlertsTopic
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  StepFunctionFailureRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: iam-departures-sfn-failure
+      Description: Page on-call when the IAM departures Step Function fails or times out
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.states
+        detail-type:
+          - Step Functions Execution Status Change
+        detail:
+          status:
+            - FAILED
+            - TIMED_OUT
+            - ABORTED
+          stateMachineArn:
+            - !Ref DeparturesPipeline
+      Targets:
+        - Id: AlertsTopic
+          Arn: !Ref PipelineAlertsTopic
+
+  ParserDlqWritePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ParserDlqWrite
+      Roles:
+        - !Ref ParserExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt PipelineFailureDlq.Arn
+
+  WorkerDlqWritePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: WorkerDlqWrite
+      Roles:
+        - !Ref WorkerExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt PipelineFailureDlq.Arn
+
   # ── Lambda Functions ─────────────────────────────────────────
 
   ParserFunction:
@@ -371,6 +488,8 @@ Resources:
       Role: !GetAtt ParserExecutionRole.Arn
       Timeout: 300
       MemorySize: 256
+      DeadLetterConfig:
+        TargetArn: !GetAtt PipelineFailureDlq.Arn
       Environment:
         Variables:
           IAM_REMEDIATION_BUCKET: !Ref RemediationBucket
@@ -394,6 +513,8 @@ Resources:
       Role: !GetAtt WorkerExecutionRole.Arn
       Timeout: 900
       MemorySize: 256
+      DeadLetterConfig:
+        TargetArn: !GetAtt PipelineFailureDlq.Arn
       Environment:
         Variables:
           IAM_REMEDIATION_BUCKET: !Ref RemediationBucket
@@ -545,3 +666,12 @@ Outputs:
   AuditTableArn:
     Description: DynamoDB audit table ARN
     Value: !GetAtt AuditTable.Arn
+  PipelineFailureDlqArn:
+    Description: SQS DLQ for failed Lambda async invocations (replay source)
+    Value: !GetAtt PipelineFailureDlq.Arn
+  PipelineFailureDlqUrl:
+    Description: SQS DLQ URL
+    Value: !Ref PipelineFailureDlq
+  PipelineAlertsTopicArn:
+    Description: SNS topic that fires on Step Function failure / timeout / abort
+    Value: !Ref PipelineAlertsTopic
