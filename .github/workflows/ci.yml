@@ -11,6 +11,7 @@ permissions:
   security-events: write
 
 jobs:
+  # ── Lint ─────────────────────────────────────────────────────────
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -19,213 +20,147 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install ruff
-      - run: ruff check skills/ --config pyproject.toml
-      - run: ruff format --check skills/
+      - run: ruff check skills/ tests/ --config pyproject.toml
+      - run: ruff format --check skills/ tests/
 
   # ── compliance-cis-mitre/ ────────────────────────────────────────
-
-  test-cspm-aws:
+  # One matrix job per skill, grouped under one logical check so the
+  # PR page shows "test-compliance-cis-mitre" as a single row with a
+  # dropdown to see each skill's result.
+  test-compliance-cis-mitre:
     runs-on: ubuntu-latest
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - cspm-aws-cis-benchmark
+          - cspm-gcp-cis-benchmark
+          - cspm-azure-cis-benchmark
+          - k8s-security-benchmark
+          - container-security
+    name: test-compliance (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install boto3 moto pytest
-      - working-directory: skills/compliance-cis-mitre/cspm-aws-cis-benchmark
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-cspm-gcp:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/compliance-cis-mitre/cspm-gcp-cis-benchmark
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-cspm-azure:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/compliance-cis-mitre/cspm-azure-cis-benchmark
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-k8s-security:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/compliance-cis-mitre/k8s-security-benchmark
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-container-security:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/compliance-cis-mitre/container-security
+      - working-directory: skills/compliance-cis-mitre/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
   # ── remediation/ ─────────────────────────────────────────────────
-
-  test-iam-departures:
+  test-remediation:
     runs-on: ubuntu-latest
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - iam-departures-remediation
+    name: test-remediation (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install boto3 moto pytest
-      - working-directory: skills/remediation/iam-departures-remediation
+      - working-directory: skills/remediation/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  # ── detection-engineering/ ───────────────────────────────────────
-  # One job per skill so each can fail/succeed independently and the
-  # GitHub UI shows granular status. Duplicate test_ingest.py module
-  # names across skills mean they CANNOT be collected in one pytest run.
-
-  test-ingest-cloudtrail-ocsf:
+  # ── detection-engineering — ingestion skills ─────────────────────
+  # One matrix cell per ingest skill. Per-skill isolation is required
+  # because every `ingest-*-ocsf/tests/test_ingest.py` shares the same
+  # module name and pytest cannot collect them in a single run.
+  test-detection-engineering-ingest:
     runs-on: ubuntu-latest
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - ingest-cloudtrail-ocsf
+          - ingest-gcp-audit-ocsf
+          - ingest-azure-activity-ocsf
+          - ingest-k8s-audit-ocsf
+          - ingest-mcp-proxy-ocsf
+    name: test-de-ingest (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install pytest
-      - working-directory: skills/detection-engineering/ingest-cloudtrail-ocsf
+      - working-directory: skills/detection-engineering/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  test-ingest-gcp-audit-ocsf:
+  # ── detection-engineering — detectors ────────────────────────────
+  test-detection-engineering-detect:
     runs-on: ubuntu-latest
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - detect-mcp-tool-drift
+          - detect-privilege-escalation-k8s
+          - detect-sensitive-secret-read-k8s
+    name: test-de-detect (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install pytest
-      - working-directory: skills/detection-engineering/ingest-gcp-audit-ocsf
+      - working-directory: skills/detection-engineering/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  test-ingest-azure-activity-ocsf:
+  # ── detection-engineering — view-layer convert skills ───────────
+  test-detection-engineering-convert:
     runs-on: ubuntu-latest
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - convert-ocsf-to-sarif
+          - convert-ocsf-to-mermaid-attack-flow
+    name: test-de-convert (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install pytest
-      - working-directory: skills/detection-engineering/ingest-azure-activity-ocsf
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-ingest-k8s-audit-ocsf:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/ingest-k8s-audit-ocsf
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-ingest-mcp-proxy-ocsf:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/ingest-mcp-proxy-ocsf
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-detect-mcp-tool-drift:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/detect-mcp-tool-drift
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-detect-privilege-escalation-k8s:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/detect-privilege-escalation-k8s
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-detect-sensitive-secret-read-k8s:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/detect-sensitive-secret-read-k8s
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-convert-ocsf-to-sarif:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/convert-ocsf-to-sarif
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  test-convert-ocsf-to-mermaid-attack-flow:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/convert-ocsf-to-mermaid-attack-flow
+      - working-directory: skills/detection-engineering/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
   # ── ai-infra-security/ ───────────────────────────────────────────
+  test-ai-infra-security:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - model-serving-security
+          - gpu-cluster-security
+          - discover-environment
+    name: test-ai-infra (${{ matrix.skill }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/ai-infra-security/${{ matrix.skill }}
+        run: pytest tests/ -v -o "testpaths=tests"
 
-  test-model-serving:
+  # ── Integration tests ───────────────────────────────────────────
+  # End-to-end pipes across skill boundaries, plus cross-skill OCSF
+  # wire-contract assertions. One check, runs the entire integration
+  # test directory.
+  test-integration:
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -234,10 +169,10 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install pytest
-      - working-directory: skills/ai-infra-security/model-serving-security
-        run: pytest tests/ -v -o "testpaths=tests"
+      - run: pytest tests/integration/ -v -o "testpaths=tests"
 
-  test-gpu-cluster:
+  # ── IaC validation ──────────────────────────────────────────────
+  validate-cloudformation:
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -245,11 +180,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/ai-infra-security/gpu-cluster-security
-        run: pytest tests/ -v -o "testpaths=tests"
+      - run: pip install cfn-lint
+      - run: cfn-lint skills/remediation/iam-departures-remediation/infra/cloudformation.yaml
+      - run: cfn-lint skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml
 
-  test-discover-environment:
+  validate-terraform:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12.0"
+      - run: cd skills/remediation/iam-departures-remediation/infra/terraform && terraform init -backend=false && terraform validate
+
+  # ── Security scan (bandit + hardcoded secret grep) ──────────────
+  security-scan:
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -257,12 +203,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/ai-infra-security/discover-environment
-        run: pytest tests/ -v -o "testpaths=tests"
+      - run: pip install bandit
+      - run: bandit -r skills/ -c pyproject.toml --severity-level medium || true
+      - name: Check for hardcoded secrets
+        run: |
+          ! grep -rn "AKIA[A-Z0-9]\{16\}" skills/*/*/src/ --include="*.py" || exit 1
+          ! grep -rn "sk-[a-zA-Z0-9]\{20,\}" skills/*/*/src/ --include="*.py" || exit 1
+          ! grep -rn "ghp_[a-zA-Z0-9]\{36\}" skills/*/*/src/ --include="*.py" || exit 1
+          echo "No hardcoded secrets found in source code"
 
-  # ── agent-bom scans ──────────────────────────────────────────────
-
+  # ── agent-bom scans (code + skills + fs + IaC with SARIF upload) ─
   agent-bom:
     runs-on: ubuntu-latest
     needs: lint
@@ -349,44 +299,3 @@ jobs:
             iac-scan.json
             iac-scan.sarif
           if-no-files-found: ignore
-
-  # ── IaC validation ───────────────────────────────────────────────
-
-  validate-cloudformation:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install cfn-lint
-      - run: cfn-lint skills/remediation/iam-departures-remediation/infra/cloudformation.yaml
-      - run: cfn-lint skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml
-
-  validate-terraform:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.12.0"
-      - run: cd skills/remediation/iam-departures-remediation/infra/terraform && terraform init -backend=false && terraform validate
-
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install bandit
-      - run: bandit -r skills/ -c pyproject.toml --severity-level medium || true
-      - name: Check for hardcoded secrets
-        run: |
-          ! grep -rn "AKIA[A-Z0-9]\{16\}" skills/*/*/src/ --include="*.py" || exit 1
-          ! grep -rn "sk-[a-zA-Z0-9]\{20,\}" skills/*/*/src/ --include="*.py" || exit 1
-          ! grep -rn "ghp_[a-zA-Z0-9]\{36\}" skills/*/*/src/ --include="*.py" || exit 1
-          echo "No hardcoded secrets found in source code"
