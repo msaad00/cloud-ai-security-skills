@@ -88,9 +88,16 @@
     <circle cx="62" cy="180" r="14" fill="#0b1120" stroke="#22d3ee" stroke-width="1.5"/>
     <text x="62" y="184" class="step-n" fill="#22d3ee">1</text>
     <text x="86" y="186" class="box-t">HR sources</text>
-    <text x="58" y="216" class="box-b">Workday · Snowflake</text>
-    <text x="58" y="234" class="box-b">Databricks · ClickHouse</text>
-    <text x="58" y="282" class="box-i">pull on schedule</text>
+    <!-- vendor chips: small rounded squares filled with each vendor's published brand colour -->
+    <rect x="55" y="206" width="10" height="10" rx="2" fill="#F38B00"/>
+    <text x="71" y="216" class="box-b">Workday</text>
+    <rect x="55" y="222" width="10" height="10" rx="2" fill="#29B5E8"/>
+    <text x="71" y="232" class="box-b">Snowflake</text>
+    <rect x="55" y="238" width="10" height="10" rx="2" fill="#FF3621"/>
+    <text x="71" y="248" class="box-b">Databricks</text>
+    <rect x="55" y="254" width="10" height="10" rx="2" fill="#FAFF69"/>
+    <text x="71" y="264" class="box-b">ClickHouse</text>
+    <text x="58" y="288" class="box-i">pull on schedule</text>
   </g>
 
   <!-- ─── Station 2 : Reconciler ──────────────────────────── -->
@@ -132,10 +139,18 @@
     <circle cx="882" cy="180" r="14" fill="#0b1120" stroke="#60a5fa" stroke-width="1.5"/>
     <text x="882" y="184" class="step-n" fill="#60a5fa">5</text>
     <text x="906" y="186" class="box-t">5 targets</text>
-    <text x="878" y="214" class="box-b">AWS IAM · Entra</text>
-    <text x="878" y="232" class="box-b">GCP · Snowflake</text>
-    <text x="878" y="250" class="box-b">Databricks</text>
-    <text x="878" y="282" class="box-i">STS OrgID-scoped</text>
+    <!-- vendor chips: small rounded squares filled with each vendor's published brand colour -->
+    <rect x="875" y="206" width="10" height="10" rx="2" fill="#FF9900"/>
+    <text x="891" y="216" class="box-b">AWS IAM</text>
+    <rect x="875" y="222" width="10" height="10" rx="2" fill="#00A4EF"/>
+    <text x="891" y="232" class="box-b">Entra ID</text>
+    <rect x="875" y="238" width="10" height="10" rx="2" fill="#4285F4"/>
+    <text x="891" y="248" class="box-b">GCP IAM</text>
+    <rect x="875" y="254" width="10" height="10" rx="2" fill="#29B5E8"/>
+    <text x="891" y="264" class="box-b">Snowflake</text>
+    <rect x="875" y="270" width="10" height="10" rx="2" fill="#FF3621"/>
+    <text x="891" y="280" class="box-b">Databricks</text>
+    <text x="878" y="294" class="box-i">STS OrgID-scoped</text>
   </g>
 
   <!-- ─── Station 6 : Audit trail ─────────────────────────── -->
