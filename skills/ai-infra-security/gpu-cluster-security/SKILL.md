@@ -1,13 +1,17 @@
 ---
 name: gpu-cluster-security
 description: >-
-  Audit the security posture of GPU compute clusters. Checks container runtime
-  isolation, GPU driver CVEs, InfiniBand network segmentation, CUDA compliance,
-  shared memory exposure, model weight encryption, tenant namespace isolation,
-  and GPU monitoring. Works with Kubernetes GPU clusters, Docker GPU workloads,
-  or bare-metal configs. Use when the user mentions GPU security, NVIDIA driver
-  CVE, CUDA audit, GPU cluster hardening, InfiniBand segmentation, GPU tenant
-  isolation, or DCGM monitoring.
+  Audit the security posture of GPU compute clusters. Runs 13 read-only checks
+  covering container runtime isolation, GPU driver CVEs, InfiniBand network
+  segmentation, CUDA compliance, shared memory exposure, model weight encryption,
+  tenant namespace isolation, and DCGM monitoring. Works with Kubernetes GPU
+  clusters, Docker GPU workloads, or bare-metal configs (JSON / YAML input).
+  Use when the user mentions GPU security, NVIDIA driver CVE, CUDA audit, GPU
+  cluster hardening, InfiniBand segmentation, GPU tenant isolation, or DCGM
+  monitoring. Do NOT use to mutate cluster state, query NVIDIA APIs, or trigger
+  driver upgrades — this skill is assessment-only, no network calls. Do NOT use
+  for general K8s posture (use k8s-security-benchmark) or model serving endpoint
+  hardening (use model-serving-security).
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files

@@ -1,11 +1,16 @@
 ---
 name: k8s-security-benchmark
 description: >-
-  Audit Kubernetes cluster and workload security. Checks pod security standards,
-  RBAC hygiene, network policies, secrets management, and image pinning. Works
-  with exported K8s resource JSON or live kubectl output. Use when the user
-  mentions Kubernetes security, pod security, RBAC audit, network policy check,
-  K8s hardening, or CIS Kubernetes benchmark.
+  Audit Kubernetes cluster and workload security against the CIS Kubernetes
+  Benchmark. Runs 10 read-only checks covering pod security standards, RBAC
+  hygiene, network policies, secrets management, and image pinning. Works with
+  exported K8s resource JSON or live kubectl output. Use when the user mentions
+  Kubernetes security, pod security, RBAC audit, network policy check, K8s
+  hardening, or CIS Kubernetes benchmark. Do NOT use for container runtime
+  hardening (use container-security), GPU workload isolation (use
+  gpu-cluster-security), or to mutate cluster state (this skill is assessment-only
+  and never calls write APIs). Do NOT use against a cluster you do not own or
+  have explicit authorisation to scan.
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with exported JSON/YAML.

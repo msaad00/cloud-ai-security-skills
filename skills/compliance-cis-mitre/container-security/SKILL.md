@@ -1,11 +1,15 @@
 ---
 name: container-security
 description: >-
-  Audit container image and runtime security. Checks Dockerfile best practices,
-  image configuration, secrets exposure, base image selection, and runtime
-  isolation. Works with Dockerfile analysis, image config JSON, or runtime
-  dumps. Use when the user mentions container security, Docker hardening,
-  image scanning, Dockerfile audit, or CIS Docker benchmark.
+  Audit container image and runtime security against the CIS Docker Benchmark.
+  Runs 8 read-only checks covering Dockerfile best practices, image
+  configuration, secrets exposure, base image selection, and runtime isolation.
+  Works with Dockerfile text, image config JSON, or runtime dumps. Use when the
+  user mentions container security, Docker hardening, image scanning, Dockerfile
+  audit, or CIS Docker benchmark. Do NOT use to pull, run, or mutate images
+  (this skill only reads configs, it never touches a Docker daemon). Do NOT use
+  for Kubernetes cluster posture (use k8s-security-benchmark) or GPU runtime
+  isolation (use gpu-cluster-security).
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. No Docker daemon needed — works with config files.

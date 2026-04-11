@@ -4,9 +4,13 @@ description: >-
   Discover cloud infrastructure and map it to a security graph with MITRE ATT&CK
   and ATLAS technique overlays. Outputs graph JSON with nodes (resources, IAM,
   services, network) and edges (relationships, attack vectors). Supports AWS,
-  GCP, Azure, or static config input. Use when the user mentions environment
-  discovery, cloud inventory, infrastructure mapping, attack surface mapping,
-  cloud resource graph, or MITRE technique mapping.
+  GCP, Azure, or static config input via the appropriate read-only SDK. Use
+  when the user mentions environment discovery, cloud inventory, infrastructure
+  mapping, attack surface mapping, cloud resource graph, or MITRE technique
+  mapping. Do NOT use for posture assessment against a published benchmark
+  (use cspm-aws/gcp/azure-cis-benchmark) or to drive remediation directly —
+  this skill produces a graph, not findings, and never mutates cloud state.
+  Do NOT use as a real-time monitor; the graph is a point-in-time snapshot.
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Cloud discovery needs respective SDKs (boto3 for AWS,

@@ -1,12 +1,17 @@
 ---
 name: model-serving-security
 description: >-
-  Audit the security posture of AI model serving infrastructure. Checks authentication,
-  rate limiting, data egress controls, prompt injection surface, container isolation,
-  TLS enforcement, and safety layer configuration. Works with any serving config
-  (JSON/YAML) — API gateways, Kubernetes deployments, cloud-native serving. Use when
-  the user mentions model endpoint security, serving infrastructure audit, API gateway
-  security, prompt injection protection, model deployment review, or content safety check.
+  Audit the security posture of AI model serving infrastructure. Runs 16 read-only
+  checks covering authentication, rate limiting, data egress controls, prompt
+  injection surface, container isolation, TLS enforcement, and safety-layer
+  configuration. Works with any serving config (JSON / YAML) — API gateways,
+  Kubernetes deployments, cloud-native serving. Use when the user mentions model
+  endpoint security, serving infrastructure audit, API gateway security, prompt
+  injection protection, model deployment review, or content safety check. Do NOT
+  use to send live inference requests, mutate serving configs, or interact with
+  the model — this skill only reads YAML/JSON. Do NOT use for runtime detection
+  of prompt injection inside live traffic (a future detect-prompt-injection skill
+  will cover that). Do NOT use for GPU cluster posture (use gpu-cluster-security).
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files.
