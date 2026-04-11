@@ -10,10 +10,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from convert import (  # type: ignore[import-not-found]
-    DETECTION_FINDING_CLASS_UID,
     SARIF_SCHEMA,
     SARIF_VERSION,
-    SKILL_NAME,
     convert,
     load_jsonl,
     severity_to_sarif_level,

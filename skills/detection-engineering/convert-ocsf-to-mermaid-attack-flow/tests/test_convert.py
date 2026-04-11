@@ -10,8 +10,6 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from convert import (  # type: ignore[import-not-found]
-    DETECTION_FINDING_CLASS_UID,
-    SKILL_NAME,
     extract_actor,
     extract_attack,
     extract_target,
