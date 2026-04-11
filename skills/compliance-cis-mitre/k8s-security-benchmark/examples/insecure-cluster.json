@@ -1,0 +1,60 @@
+{
+  "_comment": "Deliberately misconfigured K8s cluster export — exercises every check in src/checks.py. Run with `python src/checks.py examples/insecure-cluster.json`. The all-PASS reference is the sibling secure-cluster.json.",
+  "kind": "List",
+  "apiVersion": "v1",
+  "items": [
+    {
+      "kind": "Pod",
+      "apiVersion": "v1",
+      "metadata": {"name": "vulnerable-app", "namespace": "default", "labels": {"app": "vulnerable-app"}},
+      "spec": {
+        "serviceAccountName": "default",
+        "hostNetwork": true,
+        "hostPID": true,
+        "hostIPC": true,
+        "containers": [
+          {
+            "name": "app",
+            "image": "ubuntu:latest",
+            "securityContext": {
+              "privileged": true,
+              "runAsUser": 0,
+              "allowPrivilegeEscalation": true,
+              "capabilities": {"add": ["SYS_ADMIN", "NET_ADMIN"]}
+            },
+            "env": [
+              {"name": "DB_PASSWORD", "value": "hunter2"},
+              {"name": "API_KEY", "value": "sk-fake-key-do-not-use"}
+            ],
+            "ports": [{"containerPort": 80, "hostPort": 80}]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "ClusterRoleBinding",
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "metadata": {"name": "everyone-is-cluster-admin"},
+      "roleRef": {"apiGroup": "rbac.authorization.k8s.io", "kind": "ClusterRole", "name": "cluster-admin"},
+      "subjects": [
+        {"kind": "Group", "name": "system:authenticated", "apiGroup": "rbac.authorization.k8s.io"}
+      ]
+    },
+    {
+      "kind": "Namespace",
+      "apiVersion": "v1",
+      "metadata": {"name": "default"}
+    }
+  ],
+  "_intentional_violations": [
+    "image uses :latest tag (not pinned)",
+    "container runs as root (runAsUser: 0)",
+    "privileged: true",
+    "allowPrivilegeEscalation: true",
+    "capabilities SYS_ADMIN + NET_ADMIN added",
+    "hostNetwork / hostPID / hostIPC all true",
+    "secrets passed as env vars",
+    "no NetworkPolicy in default namespace",
+    "ClusterRoleBinding grants cluster-admin to system:authenticated"
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "_comment": "Sample graph output produced by `python src/discover.py --provider aws --account 111122223333`. The graph has three node kinds (resource, identity, network) and edges that carry MITRE ATT&CK technique IDs where the relationship represents a known attack vector.",
+  "scan_metadata": {
+    "skill": "discover-environment",
+    "skill_version": "0.1.0",
+    "provider": "aws",
+    "account_id": "111122223333",
+    "region": "us-east-1",
+    "scanned_at": "2026-04-10T05:00:00Z"
+  },
+  "nodes": [
+    {
+      "id": "iam:role:111122223333:Admin",
+      "kind": "identity",
+      "type": "iam_role",
+      "name": "Admin",
+      "attributes": {
+        "trust_policy_principals": ["arn:aws:iam::111122223333:root"],
+        "attached_policies": ["arn:aws:iam::aws:policy/AdministratorAccess"],
+        "max_session_duration_seconds": 3600
+      }
+    },
+    {
+      "id": "iam:role:111122223333:DeployRole",
+      "kind": "identity",
+      "type": "iam_role",
+      "name": "DeployRole",
+      "attributes": {
+        "trust_policy_principals": ["arn:aws:iam::111122223333:user/jenkins"],
+        "attached_policies": ["arn:aws:iam::111122223333:policy/DeployPolicy"]
+      }
+    },
+    {
+      "id": "ec2:instance:i-0a1b2c3d4e5f6g7h8",
+      "kind": "resource",
+      "type": "ec2_instance",
+      "name": "web-prod-01",
+      "attributes": {
+        "instance_type": "t3.medium",
+        "vpc_id": "vpc-abcdef00",
+        "subnet_id": "subnet-public-1a",
+        "public_ip": "203.0.113.42",
+        "instance_profile": "arn:aws:iam::111122223333:instance-profile/web-server-profile"
+      }
+    },
+    {
+      "id": "s3:bucket:acme-prod-data",
+      "kind": "resource",
+      "type": "s3_bucket",
+      "name": "acme-prod-data",
+      "attributes": {
+        "encryption": "aws:kms",
+        "block_public_access": true,
+        "versioning": "Enabled"
+      }
+    },
+    {
+      "id": "vpc:vpc-abcdef00",
+      "kind": "network",
+      "type": "vpc",
+      "name": "prod-vpc",
+      "attributes": {"cidr": "10.0.0.0/16"}
+    }
+  ],
+  "edges": [
+    {
+      "from": "iam:role:111122223333:DeployRole",
+      "to": "iam:role:111122223333:Admin",
+      "relation": "can_assume",
+      "attack_techniques": ["T1098", "T1078.004"],
+      "_note": "DeployRole can sts:AssumeRole into Admin — privilege escalation path"
+    },
+    {
+      "from": "ec2:instance:i-0a1b2c3d4e5f6g7h8",
+      "to": "iam:role:111122223333:DeployRole",
+      "relation": "uses_instance_profile",
+      "attack_techniques": ["T1078.004"]
+    },
+    {
+      "from": "ec2:instance:i-0a1b2c3d4e5f6g7h8",
+      "to": "vpc:vpc-abcdef00",
+      "relation": "in_network",
+      "attack_techniques": []
+    },
+    {
+      "from": "iam:role:111122223333:Admin",
+      "to": "s3:bucket:acme-prod-data",
+      "relation": "can_read",
+      "attack_techniques": ["T1530"]
+    }
+  ],
+  "stats": {
+    "node_count": 5,
+    "edge_count": 4,
+    "attack_paths_found": 1,
+    "_attack_path_note": "Public-IP EC2 instance → DeployRole → Admin → acme-prod-data S3 bucket. Instance profile assume-role chain creates a one-hop path to S3 read."
+  }
+}

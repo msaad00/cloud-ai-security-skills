@@ -1,0 +1,60 @@
+{
+  "_comment": "Sample HR departure manifest produced by the reconciler and consumed by the Parser Lambda. The Parser validates each entry, applies grace-period and rehire filters, and emits validated_entries[] for the Worker Lambda's Map state. Use with `python src/lambda_parser/handler.py --dry-run examples/manifest.json` to see the parser's filter decisions without firing the Step Function.",
+  "manifest_version": "1.0",
+  "source": "snowflake://acme-prod/hr_warehouse/v_terminations",
+  "exported_at": "2026-04-10T05:00:00Z",
+  "row_hash": "sha256:0e72ac3a4b9c5d6e7f8091a2b3c4d5e6f7081929a3b4c5d6e7f8091a2b3c4d5e6",
+  "departures": [
+    {
+      "email": "former-employee-1@acme.example",
+      "iam_username": "former-employee-1",
+      "recipient_account_id": "111122223333",
+      "iam_created_at": "2024-06-15T00:00:00Z",
+      "terminated_at": "2026-04-01T17:00:00Z",
+      "termination_source": "snowflake",
+      "is_rehire": false,
+      "rehire_date": null,
+      "iam_deleted": false,
+      "iam_last_used_at": "2026-04-01T16:30:00Z"
+    },
+    {
+      "email": "former-employee-2@acme.example",
+      "iam_username": "former-employee-2",
+      "recipient_account_id": "111122223333",
+      "iam_created_at": "2023-01-10T00:00:00Z",
+      "terminated_at": "2026-04-08T17:00:00Z",
+      "termination_source": "snowflake",
+      "is_rehire": false,
+      "rehire_date": null,
+      "iam_deleted": false,
+      "iam_last_used_at": "2026-04-08T15:20:00Z",
+      "_grace_period_note": "Within 7-day default grace window — Parser will SKIP this entry until 2026-04-15."
+    },
+    {
+      "email": "rehired-1@acme.example",
+      "iam_username": "rehired-1",
+      "recipient_account_id": "111122223333",
+      "iam_created_at": "2022-03-22T00:00:00Z",
+      "terminated_at": "2025-12-15T17:00:00Z",
+      "termination_source": "snowflake",
+      "is_rehire": true,
+      "rehire_date": "2026-03-01T00:00:00Z",
+      "iam_deleted": false,
+      "iam_last_used_at": "2026-04-09T14:00:00Z",
+      "_rehire_note": "Active employee using same IAM — Parser will SKIP per rehire filter."
+    },
+    {
+      "email": "former-employee-3@acme.example",
+      "iam_username": "former-employee-3",
+      "recipient_account_id": "444455556666",
+      "iam_created_at": "2024-09-01T00:00:00Z",
+      "terminated_at": "2026-03-20T17:00:00Z",
+      "termination_source": "snowflake",
+      "is_rehire": false,
+      "rehire_date": null,
+      "iam_deleted": true,
+      "iam_last_used_at": "2026-03-20T16:00:00Z",
+      "_already_deleted_note": "IAM already deleted by admin — Parser will SKIP no-op."
+    }
+  ]
+}

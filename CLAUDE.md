@@ -38,6 +38,8 @@ skills/
 ```
 
 Every skill in every category is a closed loop: **detect → act → audit → re-verify**.
+
+The full layered architecture (Sources → Ingestion → OCSF → Detection / Evaluation → View → Remediation) is documented in [`ARCHITECTURE.md`](ARCHITECTURE.md). The eleven-principle security contract is in [`SECURITY_BAR.md`](SECURITY_BAR.md). Per-skill official references and IAM policies live in each skill's `REFERENCES.md`.
 The CSPM skills are detection-only and re-verify the same `control_id` on the next run.
 The remediation skills (IAM departures, vuln pipeline) write back to a dual audit
 trail (DynamoDB + S3) and ingest results into the source warehouse so the next

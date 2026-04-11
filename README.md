@@ -5,11 +5,13 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
 
-**Event-based detection, response, and evaluation for cloud and AI infrastructure.** Heavy focus on clusters, containers, Kubernetes, GPUs, model serving, and the AI supply chain — and traditional VMs and cloud control planes alongside.
+**OCSF-native detection engineering and posture for cloud and AI infrastructure.** Heavy focus on clusters, containers, Kubernetes, GPUs, model serving, and the AI supply chain — and traditional VMs and cloud control planes alongside.
 
-Every skill is **read-only by default, agentless, least-privilege, and closed-loop** (detect → act → audit → re-verify). Detection-engineering skills speak **OCSF 1.8** on the wire so they compose like Unix pipes — ingest from any cloud, run any detector, emit OCSF Detection Findings (class 2004) with MITRE ATT&CK populated inside `finding_info.attacks[]`. Posture skills emit per-control pass/fail mapped to CIS, NIST CSF, and ISO 27001.
+Architecture is layered: per-source ingestion skills normalise raw logs to **OCSF 1.8** on the wire, then detection skills emit OCSF Detection Findings (class 2004) with MITRE ATT&CK inside `finding_info.attacks[]`, and evaluation skills produce OCSF Compliance Findings (class 2003) mapped to CIS, NIST CSF, ISO 27001, and SOC 2. Skills compose via stdin/stdout pipes — no shared library, no single mega-skill, no vendor connectors. Each layer is independently testable, independently deployable, and independently scoped to least-privilege IAM.
 
-Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide) — `SKILL.md` with trigger phrases and a `Do NOT use…` clause, `src/`, `tests/`, golden fixtures. Skills run from the CLI, in CI, or via any agent that reads `SKILL.md` (Claude Desktop, Cursor, Codex, Cortex, Windsurf).
+Every skill is built to the same eleven-principle [Security Bar](SECURITY_BAR.md): read-only by default, agentless, least-privilege, defense in depth, closed-loop, secure by design, secure code, secure secrets, no telemetry, human-in-the-loop for destructive actions, and explicit guardrails against rogue or self-escalating skill behaviour.
+
+Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide) — `SKILL.md` with trigger phrases and a `Do NOT use…` clause, `src/`, `tests/`, golden fixtures, `REFERENCES.md` pointing at the official source documentation. Skills run from the CLI, in CI, or via any agent that reads `SKILL.md` (Claude Desktop, Cursor, Codex, Cortex, Windsurf).
 
 ```bash
 # Detection pipeline (OCSF on the wire, Unix-style composition)
@@ -17,6 +19,33 @@ python skills/detection-engineering/ingest-k8s-audit-ocsf/src/ingest.py audit.lo
   | python skills/detection-engineering/detect-privilege-escalation-k8s/src/detect.py \
   > findings.ocsf.jsonl
 ```
+
+## Security & trust
+
+This is a security tool. Trustworthiness is the first feature, not an afterthought. The repo is held to the [SECURITY_BAR.md](SECURITY_BAR.md) — eleven principles, every skill graded against every principle in a per-skill matrix.
+
+| | What this means |
+|---|---|
+| **Read-only by default** | Posture and detection skills NEVER call write APIs. Remediation skills isolate the write path behind explicit IAM grants and require dry-run as the default. |
+| **Agentless** | No daemons, no in-cluster sidecars, no continuously running processes. Skills are short-lived Python scripts that read what is already there. |
+| **Least privilege** | Each skill documents the EXACT IAM / RBAC permissions it needs in `REFERENCES.md`. The set is minimised to what the skill cannot operate without. |
+| **Defense in depth** | A single failed control never owns the whole story. Posture, detection, remediation, audit, and verification all run in parallel and back each other up. |
+| **Closed loop** | Every workflow has a verification step: detect → finding → action → audit row → re-verify. Drift is itself a detection. |
+| **OCSF on the wire** | All ingest and detect skills speak OCSF 1.8 JSONL. No bespoke shapes. MITRE ATT&CK lives inside `finding_info.attacks[]`. |
+| **Secure by design** | Security is a first-class input to the skill's architecture, not a bolt-on. Read-only is the default, write paths are opt-in, every IAM grant is scoped, every input is parsed defensively, every output is validated against a schema. |
+| **Secure code** | Defensive parsing on every input boundary. No `eval`/`exec`/`pickle.loads` on untrusted data. SQL via parameterised queries only. `bandit` runs in CI. |
+| **Secure secrets, tokens, env vars** | No hardcoded credentials anywhere. Secrets come from cloud secret stores. Tokens are short-lived. Logs scrub credentials before emitting. CI greps for AKIA / `sk-` / `ghp_` patterns. |
+| **No telemetry** | No skill phones home. No SDK clients to external services beyond what the cloud-native APIs the skill scans require. Findings stay local unless the operator explicitly forwards them. |
+| **HITL, no rogue behaviour** | A skill never escalates its own privileges, never adds itself to allow-lists, never asks the agent to bypass a guardrail, never invokes a sibling skill it wasn't explicitly composed with. Destructive actions require a human-approved trigger and a HITL gate (grace periods, deny lists, dry-run defaults). |
+
+**Validation & verification:**
+- Every detection skill is tested against frozen OCSF golden fixtures so a refactor that loses coverage fails CI
+- Every ingest skill emits exactly the OCSF wire shape pinned in [`OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md)
+- An end-to-end integration test in [`tests/integration/`](tests/integration/) pipes raw logs through the full ingest → detect chain and asserts the output matches the frozen golden findings
+- `ruff check` + `ruff format --check` + `bandit` + hardcoded-secret grep all run on every PR
+- Every skill has a [`REFERENCES.md`](skills/) listing the official documentation, schemas, and IAM policies it relies on — no opaque dependencies, no fabricated APIs
+
+See [SECURITY.md](SECURITY.md) for the disclosure policy, [SECURITY_BAR.md](SECURITY_BAR.md) for the per-principle verification matrix, and [ARCHITECTURE.md](ARCHITECTURE.md) for the layered architecture diagram (Sources → Ingestion → OCSF → Detection / Evaluation → View → Remediation).
 
 ## Skills taxonomy
 

@@ -1,0 +1,86 @@
+{
+  "_comment": "Sample output produced by `python src/checks.py --region us-east-1 --output json`. Each entry is a Finding dataclass instance — see src/checks.py for the canonical shape. Use this as a contract for downstream tooling that consumes the JSON output.",
+  "scan_metadata": {
+    "skill": "cspm-aws-cis-benchmark",
+    "skill_version": "0.1.0",
+    "benchmark": "CIS AWS Foundations v3.0",
+    "region": "us-east-1",
+    "account_id": "123456789012",
+    "scan_started_at": "2026-04-10T05:00:00Z",
+    "scan_completed_at": "2026-04-10T05:01:14Z"
+  },
+  "findings": [
+    {
+      "control_id": "1.4",
+      "title": "Ensure no root user access key exists",
+      "section": "iam",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "detail": "Root account has no active access keys.",
+      "nist_csf": "PR.AC-1",
+      "iso_27001": "A.5.16",
+      "resources": []
+    },
+    {
+      "control_id": "1.10",
+      "title": "Ensure MFA is enabled for all IAM users with console password",
+      "section": "iam",
+      "severity": "HIGH",
+      "status": "FAIL",
+      "detail": "2 IAM users have console access without MFA: alice, dev-bob",
+      "nist_csf": "PR.AC-1",
+      "iso_27001": "A.5.17",
+      "resources": ["arn:aws:iam::123456789012:user/alice", "arn:aws:iam::123456789012:user/dev-bob"]
+    },
+    {
+      "control_id": "2.1.1",
+      "title": "Ensure S3 buckets are encrypted at rest",
+      "section": "storage",
+      "severity": "HIGH",
+      "status": "PASS",
+      "detail": "All 14 S3 buckets in this region have server-side encryption enabled.",
+      "nist_csf": "PR.DS-1",
+      "iso_27001": "A.8.24",
+      "resources": []
+    },
+    {
+      "control_id": "2.1.5",
+      "title": "Ensure S3 Block Public Access is enabled at the account level",
+      "section": "storage",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "detail": "Account-level public-access block is enabled for all four settings.",
+      "nist_csf": "PR.AC-3",
+      "iso_27001": "A.8.3",
+      "resources": []
+    },
+    {
+      "control_id": "3.1",
+      "title": "Ensure CloudTrail is enabled in all regions",
+      "section": "logging",
+      "severity": "HIGH",
+      "status": "FAIL",
+      "detail": "1 trail exists but is single-region (us-east-1 only). Multi-region trail is required.",
+      "nist_csf": "DE.AE-3",
+      "iso_27001": "A.8.15",
+      "resources": ["arn:aws:cloudtrail:us-east-1:123456789012:trail/single-region-trail"]
+    },
+    {
+      "control_id": "5.2",
+      "title": "Ensure no security group allows ingress from 0.0.0.0/0 to remote admin ports",
+      "section": "networking",
+      "severity": "HIGH",
+      "status": "FAIL",
+      "detail": "1 security group allows 0.0.0.0/0 on port 22 (SSH).",
+      "nist_csf": "PR.AC-5",
+      "iso_27001": "A.8.20",
+      "resources": ["sg-0123456789abcdef0"]
+    }
+  ],
+  "summary": {
+    "total": 18,
+    "passed": 15,
+    "failed": 3,
+    "errored": 0
+  }
+}

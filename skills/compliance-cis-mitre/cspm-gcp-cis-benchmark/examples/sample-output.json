@@ -1,0 +1,89 @@
+{
+  "_comment": "Sample output produced by `python src/checks.py --project my-project --output json`. Each entry is the Finding dataclass shape from src/checks.py.",
+  "scan_metadata": {
+    "skill": "cspm-gcp-cis-benchmark",
+    "skill_version": "0.1.0",
+    "benchmark": "CIS GCP Foundations v3.0 (subset of 7 controls)",
+    "project_id": "my-project",
+    "scan_started_at": "2026-04-10T05:00:00Z",
+    "scan_completed_at": "2026-04-10T05:00:42Z"
+  },
+  "findings": [
+    {
+      "control_id": "1.1",
+      "title": "Corporate credentials only (no personal Gmail)",
+      "section": "iam",
+      "severity": "HIGH",
+      "status": "PASS",
+      "detail": "No personal Gmail principals found in project IAM policy.",
+      "nist_csf": "PR.AC-1",
+      "resources": []
+    },
+    {
+      "control_id": "1.3",
+      "title": "No user-managed service account keys",
+      "section": "iam",
+      "severity": "HIGH",
+      "status": "FAIL",
+      "detail": "1 service account has user-managed keys: deploy-sa@my-project.iam.gserviceaccount.com",
+      "nist_csf": "PR.AC-1",
+      "resources": ["projects/-/serviceAccounts/deploy-sa@my-project.iam.gserviceaccount.com/keys/abc123"]
+    },
+    {
+      "control_id": "1.4",
+      "title": "Service account key rotation (90 days)",
+      "section": "iam",
+      "severity": "MEDIUM",
+      "status": "PASS",
+      "detail": "All service account keys are within the 90-day rotation window.",
+      "nist_csf": "PR.AC-1",
+      "resources": []
+    },
+    {
+      "control_id": "2.1",
+      "title": "Uniform bucket-level access (no legacy ACL)",
+      "section": "storage",
+      "severity": "HIGH",
+      "status": "FAIL",
+      "detail": "1 bucket has uniform bucket-level access disabled: legacy-uploads",
+      "nist_csf": "PR.AC-3",
+      "resources": ["projects/_/buckets/legacy-uploads"]
+    },
+    {
+      "control_id": "2.3",
+      "title": "No public buckets (allUsers / allAuthenticatedUsers)",
+      "section": "storage",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "detail": "No buckets grant access to allUsers or allAuthenticatedUsers.",
+      "nist_csf": "PR.AC-3",
+      "resources": []
+    },
+    {
+      "control_id": "4.2",
+      "title": "No unrestricted SSH/RDP (0.0.0.0/0 on 22/3389)",
+      "section": "networking",
+      "severity": "HIGH",
+      "status": "PASS",
+      "detail": "No firewall rules allow SSH/RDP from 0.0.0.0/0.",
+      "nist_csf": "PR.AC-5",
+      "resources": []
+    },
+    {
+      "control_id": "4.3",
+      "title": "VPC flow logs on all subnets",
+      "section": "networking",
+      "severity": "MEDIUM",
+      "status": "PASS",
+      "detail": "All 5 subnets have VPC flow logs enabled.",
+      "nist_csf": "DE.CM-1",
+      "resources": []
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 5,
+    "failed": 2,
+    "errored": 0
+  }
+}

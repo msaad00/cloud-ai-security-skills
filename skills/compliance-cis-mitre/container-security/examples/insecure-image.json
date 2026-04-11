@@ -1,0 +1,36 @@
+{
+  "_comment": "Example: a deliberately misconfigured container image config — exercises every check in src/checks.py. Run with `python src/checks.py examples/insecure-image.json` to see all 8 checks fire FAIL. Compare with secure-image.json (sibling) which is the all-PASS reference.",
+  "image_name": "acme-vulnerable-app",
+  "image_tag": "latest",
+  "image_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "dockerfile": [
+    "FROM ubuntu:latest",
+    "ENV DB_PASSWORD=hunter2",
+    "ENV API_KEY=sk-fake-key-do-not-use",
+    "RUN apt-get update && apt-get install -y curl",
+    "COPY . /app",
+    "WORKDIR /app",
+    "CMD [\"python\", \"app.py\"]"
+  ],
+  "config": {
+    "User": "",
+    "WorkingDir": "/app",
+    "Env": [
+      "DB_PASSWORD=hunter2",
+      "API_KEY=sk-fake-key-do-not-use",
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "Cmd": ["python", "app.py"],
+    "Entrypoint": null,
+    "Healthcheck": null,
+    "Labels": {}
+  },
+  "host_config": {
+    "Privileged": true,
+    "ReadonlyRootfs": false,
+    "CapDrop": [],
+    "CapAdd": ["SYS_ADMIN", "NET_ADMIN"],
+    "SecurityOpt": [],
+    "NetworkMode": "host"
+  }
+}
