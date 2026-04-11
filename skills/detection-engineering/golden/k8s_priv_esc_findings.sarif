@@ -1,0 +1,271 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cloud-security-detection-engineering",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/msaad00/cloud-security",
+          "rules": [
+            {
+              "id": "T1552",
+              "name": "Unsecured Credentials",
+              "shortDescription": {
+                "text": "Unsecured Credentials"
+              },
+              "fullDescription": {
+                "text": "MITRE ATT&CK tactic: Credential Access (TA0006) \u00b7 Technique: Unsecured Credentials (T1552) \u00b7 Reference: https://attack.mitre.org/techniques/T1552/"
+              },
+              "properties": {
+                "tags": [
+                  "mitre/attack/credential-access/TA0006",
+                  "mitre/attack/technique/T1552",
+                  "mitre/attack/sub-technique/T1552.007"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "T1611",
+              "name": "Escape to Host",
+              "shortDescription": {
+                "text": "Escape to Host"
+              },
+              "fullDescription": {
+                "text": "MITRE ATT&CK tactic: Privilege Escalation (TA0004) \u00b7 Technique: Escape to Host (T1611) \u00b7 Reference: https://attack.mitre.org/techniques/T1611/"
+              },
+              "properties": {
+                "tags": [
+                  "mitre/attack/privilege-escalation/TA0004",
+                  "mitre/attack/technique/T1611"
+                ],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "T1098",
+              "name": "Account Manipulation",
+              "shortDescription": {
+                "text": "Account Manipulation"
+              },
+              "fullDescription": {
+                "text": "MITRE ATT&CK tactic: Persistence (TA0003) \u00b7 Technique: Account Manipulation (T1098) \u00b7 Reference: https://attack.mitre.org/techniques/T1098/"
+              },
+              "properties": {
+                "tags": [
+                  "mitre/attack/persistence/TA0003",
+                  "mitre/attack/technique/T1098"
+                ],
+                "precision": "high"
+              }
+            }
+          ],
+          "properties": {
+            "detectors": [
+              "detect-privilege-escalation-k8s"
+            ]
+          }
+        }
+      },
+      "results": [
+        {
+          "ruleId": "T1552",
+          "level": "error",
+          "message": {
+            "text": "Service account enumerated and read a Kubernetes secret\n\nService account 'system:serviceaccount:default:builder' performed `list` on secrets in namespace 'default' and then `get` on secret 'db-password' within the 300-second correlation window. Workloads that need secret data should mount secrets as files, not call the K8s API for them \u2014 this pattern is a strong signal of a compromised pod searching for credentials. (MITRE T1552.007)"
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "name": "detect-privilege-escalation-k8s",
+                  "fullyQualifiedName": "detect-privilege-escalation-k8s/det-k8s-r1-secret-enum-8af26d6d-c7203b19",
+                  "kind": "module"
+                }
+              ]
+            }
+          ],
+          "guid": "det-k8s-r1-secret-enum-8af26d6d-c7203b19",
+          "partialFingerprints": {
+            "primaryLocationLineHash": "det-k8s-r1-secret-enum-8af26d6d-c7203b19"
+          },
+          "properties": {
+            "detector": "detect-privilege-escalation-k8s",
+            "detected_at_ms": 1775797230000,
+            "ocsf_class_uid": 2004,
+            "ocsf_severity_id": 4,
+            "tags": [
+              "mitre/attack/credential-access/TA0006",
+              "mitre/attack/technique/T1552",
+              "mitre/attack/sub-technique/T1552.007"
+            ],
+            "observables": [
+              {
+                "name": "actor.name",
+                "type": "Other",
+                "value": "system:serviceaccount:default:builder"
+              },
+              {
+                "name": "namespace",
+                "type": "Other",
+                "value": "default"
+              },
+              {
+                "name": "secret.name",
+                "type": "Other",
+                "value": "db-password"
+              },
+              {
+                "name": "rule",
+                "type": "Other",
+                "value": "r1-secret-enum"
+              }
+            ],
+            "evidence": {
+              "events_observed": 2,
+              "first_seen_time": 1775797200000,
+              "last_seen_time": 1775797230000,
+              "raw_events": []
+            },
+            "finding_types": [
+              "k8s-r1-secret-enum"
+            ]
+          }
+        },
+        {
+          "ruleId": "T1611",
+          "level": "error",
+          "message": {
+            "text": "Service account executed a shell inside a pod\n\nService account 'system:serviceaccount:default:builder' called `create` on pods/exec for pod 'web-xyz' in namespace 'default'. Workloads (as opposed to human operators) should never exec into other pods \u2014 this is the precursor to container escape. (MITRE T1611)"
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "name": "detect-privilege-escalation-k8s",
+                  "fullyQualifiedName": "detect-privilege-escalation-k8s/det-k8s-r2-pod-exec-8af26d6d-59d9c001",
+                  "kind": "module"
+                }
+              ]
+            }
+          ],
+          "guid": "det-k8s-r2-pod-exec-8af26d6d-59d9c001",
+          "partialFingerprints": {
+            "primaryLocationLineHash": "det-k8s-r2-pod-exec-8af26d6d-59d9c001"
+          },
+          "properties": {
+            "detector": "detect-privilege-escalation-k8s",
+            "detected_at_ms": 1775797260000,
+            "ocsf_class_uid": 2004,
+            "ocsf_severity_id": 5,
+            "tags": [
+              "mitre/attack/privilege-escalation/TA0004",
+              "mitre/attack/technique/T1611"
+            ],
+            "observables": [
+              {
+                "name": "actor.name",
+                "type": "Other",
+                "value": "system:serviceaccount:default:builder"
+              },
+              {
+                "name": "pod.name",
+                "type": "Other",
+                "value": "web-xyz"
+              },
+              {
+                "name": "namespace",
+                "type": "Other",
+                "value": "default"
+              },
+              {
+                "name": "rule",
+                "type": "Other",
+                "value": "r2-pod-exec"
+              }
+            ],
+            "evidence": {
+              "events_observed": 1,
+              "first_seen_time": 1775797260000,
+              "last_seen_time": 1775797260000,
+              "raw_events": []
+            },
+            "finding_types": [
+              "k8s-r2-pod-exec"
+            ]
+          }
+        },
+        {
+          "ruleId": "T1098",
+          "level": "error",
+          "message": {
+            "text": "Non-admin principal created a clusterrolebinding\n\nPrincipal 'system:serviceaccount:default:builder' created clusterrolebinding 'attacker-cluster-admin'. This principal is not in system:masters and is not a recognised admin user \u2014 creating a binding is the canonical K8s privilege-escalation move after initial compromise. (MITRE T1098)"
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "name": "detect-privilege-escalation-k8s",
+                  "fullyQualifiedName": "detect-privilege-escalation-k8s/det-k8s-r3-rbac-self-grant-8af26d6d-773c3208",
+                  "kind": "module"
+                }
+              ]
+            }
+          ],
+          "guid": "det-k8s-r3-rbac-self-grant-8af26d6d-773c3208",
+          "partialFingerprints": {
+            "primaryLocationLineHash": "det-k8s-r3-rbac-self-grant-8af26d6d-773c3208"
+          },
+          "properties": {
+            "detector": "detect-privilege-escalation-k8s",
+            "detected_at_ms": 1775797290000,
+            "ocsf_class_uid": 2004,
+            "ocsf_severity_id": 5,
+            "tags": [
+              "mitre/attack/persistence/TA0003",
+              "mitre/attack/technique/T1098"
+            ],
+            "observables": [
+              {
+                "name": "actor.name",
+                "type": "Other",
+                "value": "system:serviceaccount:default:builder"
+              },
+              {
+                "name": "binding.type",
+                "type": "Other",
+                "value": "clusterrolebindings"
+              },
+              {
+                "name": "binding.name",
+                "type": "Other",
+                "value": "attacker-cluster-admin"
+              },
+              {
+                "name": "namespace",
+                "type": "Other",
+                "value": ""
+              },
+              {
+                "name": "rule",
+                "type": "Other",
+                "value": "r3-rbac-self-grant"
+              }
+            ],
+            "evidence": {
+              "events_observed": 1,
+              "first_seen_time": 1775797290000,
+              "last_seen_time": 1775797290000,
+              "raw_events": []
+            },
+            "finding_types": [
+              "k8s-r3-rbac-self-grant"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

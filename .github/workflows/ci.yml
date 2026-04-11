@@ -187,6 +187,30 @@ jobs:
       - working-directory: skills/detection-engineering/detect-privilege-escalation-k8s
         run: pytest tests/ -v -o "testpaths=tests"
 
+  test-convert-ocsf-to-sarif:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/convert-ocsf-to-sarif
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-convert-ocsf-to-mermaid-attack-flow:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/convert-ocsf-to-mermaid-attack-flow
+        run: pytest tests/ -v -o "testpaths=tests"
+
   # ── ai-infra-security/ ───────────────────────────────────────────
 
   test-model-serving:

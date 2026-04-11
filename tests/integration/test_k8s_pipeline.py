@@ -185,6 +185,73 @@ class TestMcpPipelineEndToEnd:
         assert findings[0]["metadata"]["version"] == "1.8.0"
 
 
+class TestK8sPipelineWithConvertLayer:
+    """Full closed-loop pipeline: raw → ingest → detect → convert (SARIF + Mermaid)."""
+
+    def setup_method(self):
+        self.ingest = _load_module(
+            "_int_v_ingest_k8s",
+            SKILLS_DIR / "ingest-k8s-audit-ocsf" / "src" / "ingest.py",
+        )
+        self.detect = _load_module(
+            "_int_v_detect_k8s",
+            SKILLS_DIR / "detect-privilege-escalation-k8s" / "src" / "detect.py",
+        )
+        self.sarif = _load_module(
+            "_int_v_sarif",
+            SKILLS_DIR / "convert-ocsf-to-sarif" / "src" / "convert.py",
+        )
+        self.mermaid = _load_module(
+            "_int_v_mermaid",
+            SKILLS_DIR / "convert-ocsf-to-mermaid-attack-flow" / "src" / "convert.py",
+        )
+
+    def _findings(self):
+        raw_lines = (GOLDEN_DIR / "k8s_audit_raw_sample.jsonl").read_text().splitlines()
+        return list(self.detect.detect(self.ingest.ingest(raw_lines)))
+
+    def test_full_pipe_to_sarif(self):
+        sarif_doc = self.sarif.convert(self._findings())
+        assert sarif_doc["version"] == "2.1.0"
+        assert sarif_doc["$schema"].endswith("sarif-schema-2.1.0.json")
+        assert len(sarif_doc["runs"]) == 1
+        assert len(sarif_doc["runs"][0]["results"]) == 3
+        rule_ids = {r["id"] for r in sarif_doc["runs"][0]["tool"]["driver"]["rules"]}
+        assert rule_ids == {"T1552", "T1611", "T1098"}
+        for result in sarif_doc["runs"][0]["results"]:
+            assert result["level"] == "error"
+
+    def test_full_pipe_to_sarif_matches_frozen_golden(self):
+        produced = self.sarif.convert(self._findings())
+        expected = json.loads((GOLDEN_DIR / "k8s_priv_esc_findings.sarif").read_text())
+        assert produced == expected, "End-to-end SARIF drift across the K8s pipeline"
+
+    def test_full_pipe_to_mermaid(self):
+        mermaid = self.mermaid.render(self._findings())
+        assert "flowchart LR" in mermaid
+        assert "classDef critical" in mermaid
+        assert "system:serviceaccount:default:builder" in mermaid
+        for technique in ("T1552.007", "T1611", "T1098"):
+            assert technique in mermaid
+        actor_lines = [line for line in mermaid.splitlines() if "system:serviceaccount" in line and "]:::" in line and "-->" not in line]
+        assert len(actor_lines) == 1
+        assert ":::critical" in actor_lines[0]
+
+    def test_full_pipe_to_mermaid_matches_frozen_golden(self):
+        produced = self.mermaid.render(self._findings())
+        expected = (GOLDEN_DIR / "k8s_priv_esc_attack_flow.mmd").read_text()
+        assert produced == expected, "End-to-end Mermaid drift across the K8s pipeline"
+
+    def test_sarif_and_mermaid_describe_the_same_findings(self):
+        findings = self._findings()
+        sarif_doc = self.sarif.convert(findings)
+        mermaid = self.mermaid.render(findings)
+        sarif_techniques = {r["id"] for r in sarif_doc["runs"][0]["tool"]["driver"]["rules"]}
+        for technique in sarif_techniques:
+            assert technique in mermaid, f"Technique {technique} in SARIF but missing from Mermaid"
+        assert len(sarif_doc["runs"][0]["results"]) == len(findings)
+
+
 class TestCrossSkillOcsfWireContract:
     """OCSF wire-contract assertions that must hold for any ingest+detect pair.
 

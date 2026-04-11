@@ -1,0 +1,14 @@
+flowchart LR
+    classDef critical fill:#3f1d1d,stroke:#f87171,color:#fecaca
+    classDef high     fill:#3a2a0e,stroke:#fb923c,color:#fed7aa
+    classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fef08a
+    classDef low      fill:#1e293b,stroke:#64748b,color:#cbd5e1
+
+    A122b20810e["system:serviceaccount:default:builder"]:::critical
+    T20b074c51c["secret · default/db-password"]:::high
+    T9071eb688c["clusterrolebinding · attacker-cluster-admin"]:::critical
+    Tfbd3557c97["pod · default/web-xyz"]:::critical
+
+    A122b20810e -- "T1552.007 · privilege-escalation-k8s" --> T20b074c51c
+    A122b20810e -- "T1611 · privilege-escalation-k8s" --> Tfbd3557c97
+    A122b20810e -- "T1098 · privilege-escalation-k8s" --> T9071eb688c
