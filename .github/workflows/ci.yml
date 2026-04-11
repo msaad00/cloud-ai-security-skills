@@ -11,7 +11,7 @@ permissions:
   security-events: write
 
 jobs:
-  # ── Lint ─────────────────────────────────────────────────────────
+  # ── Lint + static analysis ──────────────────────────────────────
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -23,11 +23,25 @@ jobs:
       - run: ruff check skills/ tests/ --config pyproject.toml
       - run: ruff format --check skills/ tests/
 
-  # ── compliance-cis-mitre/ ────────────────────────────────────────
-  # One matrix job per skill, grouped under one logical check so the
-  # PR page shows "test-compliance-cis-mitre" as a single row with a
-  # dropdown to see each skill's result.
-  test-compliance-cis-mitre:
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install bandit
+      - run: bandit -r skills/ -c pyproject.toml --severity-level medium || true
+      - name: Check for hardcoded secrets
+        run: |
+          ! grep -rn "AKIA[A-Z0-9]\{16\}" skills/*/*/src/ --include="*.py" || exit 1
+          ! grep -rn "sk-[a-zA-Z0-9]\{20,\}" skills/*/*/src/ --include="*.py" || exit 1
+          ! grep -rn "ghp_[a-zA-Z0-9]\{36\}" skills/*/*/src/ --include="*.py" || exit 1
+          echo "No hardcoded secrets found in source code"
+
+  # ── Unit tests, grouped into category matrices ────────────────
+  test-compliance:
     runs-on: ubuntu-latest
     needs: lint
     strategy:
@@ -49,7 +63,6 @@ jobs:
       - working-directory: skills/compliance-cis-mitre/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  # ── remediation/ ─────────────────────────────────────────────────
   test-remediation:
     runs-on: ubuntu-latest
     needs: lint
@@ -68,11 +81,7 @@ jobs:
       - working-directory: skills/remediation/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  # ── detection-engineering — ingestion skills ─────────────────────
-  # One matrix cell per ingest skill. Per-skill isolation is required
-  # because every `ingest-*-ocsf/tests/test_ingest.py` shares the same
-  # module name and pytest cannot collect them in a single run.
-  test-detection-engineering-ingest:
+  test-detection-engineering:
     runs-on: ubuntu-latest
     needs: lint
     strategy:
@@ -84,48 +93,12 @@ jobs:
           - ingest-azure-activity-ocsf
           - ingest-k8s-audit-ocsf
           - ingest-mcp-proxy-ocsf
-    name: test-de-ingest (${{ matrix.skill }})
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/${{ matrix.skill }}
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  # ── detection-engineering — detectors ────────────────────────────
-  test-detection-engineering-detect:
-    runs-on: ubuntu-latest
-    needs: lint
-    strategy:
-      fail-fast: false
-      matrix:
-        skill:
           - detect-mcp-tool-drift
           - detect-privilege-escalation-k8s
           - detect-sensitive-secret-read-k8s
-    name: test-de-detect (${{ matrix.skill }})
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install pytest
-      - working-directory: skills/detection-engineering/${{ matrix.skill }}
-        run: pytest tests/ -v -o "testpaths=tests"
-
-  # ── detection-engineering — view-layer convert skills ───────────
-  test-detection-engineering-convert:
-    runs-on: ubuntu-latest
-    needs: lint
-    strategy:
-      fail-fast: false
-      matrix:
-        skill:
           - convert-ocsf-to-sarif
           - convert-ocsf-to-mermaid-attack-flow
-    name: test-de-convert (${{ matrix.skill }})
+    name: test-detection-engineering (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -135,7 +108,6 @@ jobs:
       - working-directory: skills/detection-engineering/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  # ── ai-infra-security/ ───────────────────────────────────────────
   test-ai-infra-security:
     runs-on: ubuntu-latest
     needs: lint
@@ -156,10 +128,6 @@ jobs:
       - working-directory: skills/ai-infra-security/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
-  # ── Integration tests ───────────────────────────────────────────
-  # End-to-end pipes across skill boundaries, plus cross-skill OCSF
-  # wire-contract assertions. One check, runs the entire integration
-  # test directory.
   test-integration:
     runs-on: ubuntu-latest
     needs: lint
@@ -171,8 +139,8 @@ jobs:
       - run: pip install pytest
       - run: pytest tests/integration/ -v -o "testpaths=tests"
 
-  # ── IaC validation ──────────────────────────────────────────────
-  validate-cloudformation:
+  # ── IaC validation (CloudFormation + Terraform in one job) ─────
+  validate-iac:
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -180,37 +148,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install cfn-lint
-      - run: cfn-lint skills/remediation/iam-departures-remediation/infra/cloudformation.yaml
-      - run: cfn-lint skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml
-
-  validate-terraform:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.12.0"
-      - run: cd skills/remediation/iam-departures-remediation/infra/terraform && terraform init -backend=false && terraform validate
-
-  # ── Security scan (bandit + hardcoded secret grep) ──────────────
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install bandit
-      - run: bandit -r skills/ -c pyproject.toml --severity-level medium || true
-      - name: Check for hardcoded secrets
+      - run: pip install cfn-lint
+      - name: cfn-lint — CloudFormation
         run: |
-          ! grep -rn "AKIA[A-Z0-9]\{16\}" skills/*/*/src/ --include="*.py" || exit 1
-          ! grep -rn "sk-[a-zA-Z0-9]\{20,\}" skills/*/*/src/ --include="*.py" || exit 1
-          ! grep -rn "ghp_[a-zA-Z0-9]\{36\}" skills/*/*/src/ --include="*.py" || exit 1
-          echo "No hardcoded secrets found in source code"
+          cfn-lint skills/remediation/iam-departures-remediation/infra/cloudformation.yaml
+          cfn-lint skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml
+      - name: terraform validate
+        run: cd skills/remediation/iam-departures-remediation/infra/terraform && terraform init -backend=false && terraform validate
 
   # ── agent-bom scans (code + skills + fs + IaC with SARIF upload) ─
   agent-bom:
@@ -280,13 +227,6 @@ jobs:
           sarif_file: iac-scan.sarif
           category: agent-bom-iac
         continue-on-error: true
-      - name: Print results summary
-        if: always()
-        run: |
-          echo "=== Code Scan ==="    && cat code-scan.json    2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
-          echo "=== Skills Audit ===" && cat skills-audit.json 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
-          echo "=== FS Scan ==="      && cat fs-scan.json      2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
-          echo "=== IaC Scan ==="     && cat iac-scan.json     2>/dev/null | python3 -m json.tool 2>/dev/null || echo "No results"
       - name: Upload scan artifacts
         if: always()
         uses: actions/upload-artifact@v4
