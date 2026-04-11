@@ -1,0 +1,79 @@
+{
+  "_comment": "Sample output produced by `python src/checks.py --subscription <sub-id> --output json`. Each entry is the Finding dataclass shape from src/checks.py.",
+  "scan_metadata": {
+    "skill": "cspm-azure-cis-benchmark",
+    "skill_version": "0.1.0",
+    "benchmark": "CIS Azure Foundations v2.1 (subset of 6 controls)",
+    "subscription_id": "00000000-0000-0000-0000-000000000000",
+    "scan_started_at": "2026-04-10T05:00:00Z",
+    "scan_completed_at": "2026-04-10T05:00:28Z"
+  },
+  "findings": [
+    {
+      "control_id": "2.2",
+      "title": "Storage HTTPS-only",
+      "section": "storage",
+      "severity": "HIGH",
+      "status": "PASS",
+      "detail": "All 3 storage accounts enforce HTTPS.",
+      "nist_csf": "PR.DS-2",
+      "resources": []
+    },
+    {
+      "control_id": "2.3",
+      "title": "No public blob access",
+      "section": "storage",
+      "severity": "CRITICAL",
+      "status": "FAIL",
+      "detail": "1 storage account allows public blob access: acmeproduploads",
+      "nist_csf": "PR.AC-3",
+      "resources": ["acmeproduploads"]
+    },
+    {
+      "control_id": "2.4",
+      "title": "Storage network deny-by-default",
+      "section": "storage",
+      "severity": "HIGH",
+      "status": "PASS",
+      "detail": "All 3 storage accounts use deny-by-default network rules.",
+      "nist_csf": "PR.AC-5",
+      "resources": []
+    },
+    {
+      "control_id": "4.1",
+      "title": "No unrestricted SSH in NSGs",
+      "section": "networking",
+      "severity": "HIGH",
+      "status": "FAIL",
+      "detail": "1 NSG rule allows 0.0.0.0/0:22: prod-nsg/open-ssh",
+      "nist_csf": "PR.AC-5",
+      "resources": ["prod-nsg/open-ssh"]
+    },
+    {
+      "control_id": "4.2",
+      "title": "No unrestricted RDP in NSGs",
+      "section": "networking",
+      "severity": "HIGH",
+      "status": "PASS",
+      "detail": "No NSG rules allow 0.0.0.0/0:3389.",
+      "nist_csf": "PR.AC-5",
+      "resources": []
+    },
+    {
+      "control_id": "4.3",
+      "title": "NSG flow logs enabled",
+      "section": "networking",
+      "severity": "MEDIUM",
+      "status": "PASS",
+      "detail": "Network Watcher is present in the subscription; verify flow log configuration per NSG.",
+      "nist_csf": "DE.CM-1",
+      "resources": []
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 4,
+    "failed": 2,
+    "errored": 0
+  }
+}
