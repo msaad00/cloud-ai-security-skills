@@ -99,8 +99,11 @@ jobs:
         run: pytest tests/ -v -o "testpaths=tests"
 
   # ── detection-engineering/ ───────────────────────────────────────
+  # One job per skill so each can fail/succeed independently and the
+  # GitHub UI shows granular status. Duplicate test_ingest.py module
+  # names across skills mean they CANNOT be collected in one pytest run.
 
-  test-detection-engineering:
+  test-ingest-cloudtrail-ocsf:
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -109,21 +112,80 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install pytest
-      - name: Run all detection-engineering skill tests
-        run: |
-          shopt -s nullglob
-          ran=0
-          for d in skills/detection-engineering/*/tests; do
-            # skip the .templates/ directory by filtering on a non-dotfile parent
-            parent=$(basename "$(dirname "$d")")
-            [[ "$parent" == .* ]] && continue
-            echo "=== $d ==="
-            (cd "$(dirname "$d")" && pytest tests/ -v -o "testpaths=tests")
-            ran=$((ran+1))
-          done
-          if [ "$ran" -eq 0 ]; then
-            echo "No detection-engineering skills with tests yet (template-only)"
-          fi
+      - working-directory: skills/detection-engineering/ingest-cloudtrail-ocsf
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-ingest-gcp-audit-ocsf:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/ingest-gcp-audit-ocsf
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-ingest-azure-activity-ocsf:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/ingest-azure-activity-ocsf
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-ingest-k8s-audit-ocsf:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/ingest-k8s-audit-ocsf
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-ingest-mcp-proxy-ocsf:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/ingest-mcp-proxy-ocsf
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-detect-mcp-tool-drift:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/detect-mcp-tool-drift
+        run: pytest tests/ -v -o "testpaths=tests"
+
+  test-detect-privilege-escalation-k8s:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - working-directory: skills/detection-engineering/detect-privilege-escalation-k8s
+        run: pytest tests/ -v -o "testpaths=tests"
 
   # ── ai-infra-security/ ───────────────────────────────────────────
 

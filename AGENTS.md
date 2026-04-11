@@ -19,9 +19,18 @@ Skills are organised into four functional categories. See [`skills/README.md`](s
 **`remediation/`** (active fix workflows, HITL-gated, dual-audited)
 - `iam-departures-remediation` — event-driven multi-cloud IAM cleanup
 
-**`detection-engineering/`** 🆕 (OCSF 1.8 wire format, MITRE ATT&CK inside `finding_info.attacks[]`)
-- `ingest-mcp-proxy-ocsf` — raw MCP proxy JSONL → OCSF Application Activity (6002)
-- `detect-mcp-tool-drift` — OCSF → OCSF Detection Finding (2004) + MITRE T1195.001
+**`detection-engineering/`** (OCSF 1.8 wire format, MITRE ATT&CK inside `finding_info.attacks[]`)
+
+Ingestion (raw log → OCSF API/Application Activity):
+- `ingest-cloudtrail-ocsf` — AWS CloudTrail → OCSF API Activity 6003
+- `ingest-gcp-audit-ocsf` — GCP Cloud Audit Logs → OCSF API Activity 6003
+- `ingest-azure-activity-ocsf` — Azure Activity Logs → OCSF API Activity 6003
+- `ingest-k8s-audit-ocsf` — `kube-apiserver` audit → OCSF API Activity 6003
+- `ingest-mcp-proxy-ocsf` — agent-bom MCP proxy → OCSF Application Activity 6002
+
+Detection (OCSF → OCSF Detection Finding 2004 + MITRE):
+- `detect-mcp-tool-drift` — MCP tool schema drift, T1195.001
+- `detect-privilege-escalation-k8s` — K8s priv-esc patterns, T1552.007 / T1611 / T1098 / T1550.001
 - Compose via stdin/stdout pipes. See [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
 
 **`ai-infra-security/`** (model serving, GPU clusters, environment discovery)

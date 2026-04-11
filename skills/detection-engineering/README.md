@@ -58,10 +58,17 @@ Detection engineering closes the loop by being *checkable*: a finding is either 
 
 ## Current skills
 
-| Skill | Shape | Surface | MITRE | Status |
-|---|---|---|---|---|
-| [`ingest-mcp-proxy-ocsf`](ingest-mcp-proxy-ocsf/) | ingest | agent-bom MCP proxy JSONL | n/a (ingest-only) | ✅ first citizen |
-| [`detect-mcp-tool-drift`](detect-mcp-tool-drift/) | detect | MCP tool schemas | `T1195.001` Supply Chain Compromise | ✅ first citizen |
+| Skill | Shape | Surface | MITRE | Tests |
+|---|---|---|---|---:|
+| [`ingest-cloudtrail-ocsf`](ingest-cloudtrail-ocsf/) | ingest | AWS CloudTrail | n/a | 31 |
+| [`ingest-gcp-audit-ocsf`](ingest-gcp-audit-ocsf/) | ingest | GCP Cloud Audit Logs | n/a | 31 |
+| [`ingest-azure-activity-ocsf`](ingest-azure-activity-ocsf/) | ingest | Azure Activity Logs | n/a | 34 |
+| [`ingest-k8s-audit-ocsf`](ingest-k8s-audit-ocsf/) | ingest | Kubernetes audit logs | n/a | 36 |
+| [`ingest-mcp-proxy-ocsf`](ingest-mcp-proxy-ocsf/) | ingest | agent-bom MCP proxy | n/a | 20 |
+| [`detect-mcp-tool-drift`](detect-mcp-tool-drift/) | detect | MCP tool schemas | T1195.001 | 22 |
+| [`detect-privilege-escalation-k8s`](detect-privilege-escalation-k8s/) | detect | K8s OCSF API Activity | T1552.007, T1611, T1098, T1550.001 | 32 |
+
+**206 tests total.** Every skill reads and writes OCSF 1.8 JSONL.
 
 ## Roadmap
 
@@ -69,28 +76,33 @@ The category is intentionally opinionated about what comes next. Every row below
 
 ### Ingestion (`ingest-*`)
 
-| Skill | Source | OCSF class produced |
-|---|---|---|
-| `ingest-cloudtrail-ocsf` | AWS CloudTrail | API Activity (6003) |
-| `ingest-gcp-audit-ocsf` | GCP Audit Logs | API Activity (6003) |
-| `ingest-azure-activity-ocsf` | Azure Activity Logs | API Activity (6003) |
-| `ingest-k8s-audit-ocsf` | Kubernetes audit logs | API Activity (6003) |
-| `ingest-mcp-proxy-ocsf` | agent-bom MCP proxy | Application Activity (6002) ✅ |
-| `ingest-model-serving-ocsf` | Model serving access logs | HTTP Activity (4002) |
+| Skill | Source | OCSF class produced | Status |
+|---|---|---|---|
+| `ingest-cloudtrail-ocsf` | AWS CloudTrail | API Activity (6003) | ✅ shipped |
+| `ingest-gcp-audit-ocsf` | GCP Audit Logs | API Activity (6003) | ✅ shipped |
+| `ingest-azure-activity-ocsf` | Azure Activity Logs | API Activity (6003) | ✅ shipped |
+| `ingest-k8s-audit-ocsf` | Kubernetes audit logs | API Activity (6003) | ✅ shipped |
+| `ingest-mcp-proxy-ocsf` | agent-bom MCP proxy | Application Activity (6002) | ✅ shipped |
+| `ingest-model-serving-ocsf` | Model serving access logs | HTTP Activity (4002) | roadmap |
+| `ingest-vector-store-ocsf` | Vector DB query logs | Application Activity (6002) | roadmap |
+| `ingest-vm-audit-ocsf` | SSM / OS Login / VM activity | API Activity (6003) | roadmap |
 
 ### Detection (`detect-*`)
 
-| Skill | Data source | MITRE |
-|---|---|---|
-| `detect-mcp-tool-drift` | OCSF Application Activity (MCP) | T1195.001 ✅ |
-| `detect-mcp-prompt-injection` | OCSF Application Activity (MCP) | T1565 Data Manipulation |
-| `detect-credential-access` | OCSF API Activity (any cloud) | T1528, T1552 |
-| `detect-privilege-escalation` | OCSF API Activity (any cloud) | T1078.004, T1098 |
-| `detect-unusual-assume-role` | OCSF API Activity (AWS) | T1548.005 |
-| `detect-model-weight-tampering` | OCSF File System Activity + Application | T1565.001 |
-| `detect-vector-store-poisoning` | OCSF Application Activity (vector DB) | T1566.002 |
-| `detect-agent-to-agent-collusion` | OCSF Application Activity (multi-agent topology) | AI-specific, no T-code yet |
-| `detect-prompt-cache-poisoning` | OCSF Application Activity (inference) | AI-specific, no T-code yet |
+| Skill | Data source | MITRE | Status |
+|---|---|---|---|
+| `detect-mcp-tool-drift` | OCSF Application Activity (MCP) | T1195.001 | ✅ shipped |
+| `detect-privilege-escalation-k8s` | OCSF API Activity (K8s) | T1552.007, T1611, T1098, T1550.001 | ✅ shipped |
+| `detect-mcp-prompt-injection` | OCSF Application Activity (MCP) | T1565 Data Manipulation | roadmap |
+| `detect-credential-access-aws` | OCSF API Activity (CloudTrail) | T1528, T1552 | roadmap |
+| `detect-credential-access-gcp` | OCSF API Activity (GCP) | T1528, T1552 | roadmap |
+| `detect-credential-access-azure` | OCSF API Activity (Azure) | T1528, T1552 | roadmap |
+| `detect-unusual-assume-role` | OCSF API Activity (AWS) | T1548.005 | roadmap |
+| `detect-gcp-iam-impersonation` | OCSF API Activity (GCP) | T1078.004 | roadmap |
+| `detect-model-weight-tampering` | OCSF File System Activity + Application | T1565.001 | roadmap |
+| `detect-vector-store-poisoning` | OCSF Application Activity (vector DB) | T1566.002 | roadmap |
+| `detect-agent-to-agent-collusion` | OCSF Application Activity (multi-agent topology) | AI-specific, no T-code yet | roadmap |
+| `detect-prompt-cache-poisoning` | OCSF Application Activity (inference) | AI-specific, no T-code yet | roadmap |
 
 ### Conversion (`convert/*`)
 
