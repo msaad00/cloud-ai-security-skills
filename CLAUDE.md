@@ -23,8 +23,13 @@ skills/
 │   ├── README.md + OCSF_CONTRACT.md  (category contract — OCSF 1.8 wire format)
 │   ├── golden/                        (frozen OCSF fixtures — contract tests)
 │   ├── analytics/                     (stub for ClickHouse + Grafana follow-up)
+│   ├── ingest-cloudtrail-ocsf/        (AWS CloudTrail → OCSF API Activity 6003)
+│   ├── ingest-gcp-audit-ocsf/         (GCP Cloud Audit → OCSF API Activity 6003)
+│   ├── ingest-azure-activity-ocsf/    (Azure Activity Log → OCSF API Activity 6003)
+│   ├── ingest-k8s-audit-ocsf/         (kube-apiserver audit → OCSF API Activity 6003)
 │   ├── ingest-mcp-proxy-ocsf/         (raw MCP proxy → OCSF Application Activity 6002)
-│   └── detect-mcp-tool-drift/         (OCSF → OCSF Detection Finding 2004 + MITRE T1195.001)
+│   ├── detect-mcp-tool-drift/         (OCSF → OCSF Detection Finding 2004 + T1195.001)
+│   └── detect-privilege-escalation-k8s/ (OCSF → Detection Finding + T1552.007/T1611/T1098/T1550.001)
 │
 └── ai-infra-security/             # "AI-native surfaces: models, agents, GPU, topology"
     ├── model-serving-security/    (16 checks)

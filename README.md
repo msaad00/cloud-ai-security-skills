@@ -5,9 +5,18 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
 
-Production-grade cloud and AI-infra security — organised into four functional categories, compliance-mapped to MITRE ATT&CK, NIST CSF, CIS, ISO 27001, and SOC 2. Every workflow is a closed loop: **detect → act → audit → re-verify**.
+**Event-based detection, response, and evaluation for cloud and AI infrastructure.** Heavy focus on clusters, containers, Kubernetes, GPUs, model serving, and the AI supply chain — and traditional VMs and cloud control planes alongside.
 
-Each skill is a standalone Python script with its own checks, tests, examples, and `SKILL.md` definition following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide). Skills can be used directly from the CLI, integrated into CI/CD pipelines, or referenced by AI agents that read `SKILL.md` files (Claude Desktop, Cortex Code, Cursor, Codex, Windsurf, etc.).
+Every skill is **read-only by default, agentless, least-privilege, and closed-loop** (detect → act → audit → re-verify). Detection-engineering skills speak **OCSF 1.8** on the wire so they compose like Unix pipes — ingest from any cloud, run any detector, emit OCSF Detection Findings (class 2004) with MITRE ATT&CK populated inside `finding_info.attacks[]`. Posture skills emit per-control pass/fail mapped to CIS, NIST CSF, and ISO 27001.
+
+Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide) — `SKILL.md` with trigger phrases and a `Do NOT use…` clause, `src/`, `tests/`, golden fixtures. Skills run from the CLI, in CI, or via any agent that reads `SKILL.md` (Claude Desktop, Cursor, Codex, Cortex, Windsurf).
+
+```bash
+# Detection pipeline (OCSF on the wire, Unix-style composition)
+python skills/detection-engineering/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+  | python skills/detection-engineering/detect-privilege-escalation-k8s/src/detect.py \
+  > findings.ocsf.jsonl
+```
 
 ## Skills taxonomy
 
@@ -37,13 +46,26 @@ See [`skills/README.md`](skills/README.md) for the full category index. The cate
 |-------|-------|-------------|
 | [iam-departures-remediation](skills/remediation/iam-departures-remediation/) | Multi-cloud | Event-driven IAM cleanup for departed employees (HITL grace period, deny list, DLQ + SNS alerts) |
 
-### detection-engineering/ 🆕
+### detection-engineering/
 
-A new category for detection rules, threat hunts, and runtime monitors specific to AI infrastructure — MCP servers, agent topologies, model endpoints, vector stores, prompt caches. See [`skills/detection-engineering/README.md`](skills/detection-engineering/README.md) for the category contract and the seed roadmap.
+Detection rules, ingestion pipelines, and threat hunts for cloud control planes, Kubernetes, and AI infrastructure. Every skill reads and writes **OCSF 1.8 JSONL** so they compose via stdin/stdout pipes. See [`skills/detection-engineering/README.md`](skills/detection-engineering/README.md) for the category contract and [`OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md) for the field-level wire format.
 
-| Skill | Surface | Description |
-|-------|---------|-------------|
-| [mcp-tool-drift-detection](skills/detection-engineering/mcp-tool-drift-detection/) | MCP proxy logs | Detects when a tool's `name`, `description`, `inputSchema`, or `annotations` change between calls in the same session — the MCP tool-poisoning TTP |
+**Ingestion** (raw log → OCSF API Activity `6003` or Application Activity `6002`):
+
+| Skill | Source | OCSF class |
+|---|---|---|
+| [`ingest-cloudtrail-ocsf`](skills/detection-engineering/ingest-cloudtrail-ocsf/) | AWS CloudTrail | API Activity 6003 |
+| [`ingest-gcp-audit-ocsf`](skills/detection-engineering/ingest-gcp-audit-ocsf/) | GCP Cloud Audit Logs | API Activity 6003 |
+| [`ingest-azure-activity-ocsf`](skills/detection-engineering/ingest-azure-activity-ocsf/) | Azure Activity Logs | API Activity 6003 |
+| [`ingest-k8s-audit-ocsf`](skills/detection-engineering/ingest-k8s-audit-ocsf/) | `kube-apiserver` audit logs | API Activity 6003 |
+| [`ingest-mcp-proxy-ocsf`](skills/detection-engineering/ingest-mcp-proxy-ocsf/) | agent-bom MCP proxy | Application Activity 6002 |
+
+**Detection** (OCSF events → OCSF Detection Finding `2004` + MITRE ATT&CK inside `finding_info.attacks[]`):
+
+| Skill | Input | MITRE techniques |
+|---|---|---|
+| [`detect-mcp-tool-drift`](skills/detection-engineering/detect-mcp-tool-drift/) | OCSF Application Activity (MCP) | T1195.001 |
+| [`detect-privilege-escalation-k8s`](skills/detection-engineering/detect-privilege-escalation-k8s/) | OCSF API Activity (K8s) | T1552.007, T1611, T1098, T1550.001 |
 
 ### ai-infra-security/
 
