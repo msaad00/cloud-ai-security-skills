@@ -29,7 +29,7 @@ python skills/detection-engineering/ingest-k8s-audit-ocsf/src/ingest.py audit.lo
 
 Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide) — `SKILL.md` with trigger phrases and a `Do NOT use…` clause, `src/`, `tests/`, golden fixtures, `REFERENCES.md`. Runs from the CLI, in CI, or via any agent that reads `SKILL.md` (Claude Desktop, Cursor, Codex, Cortex, Windsurf).
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full layered diagram and closed-loop vendor flow.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
 
 ## Coverage
 
@@ -113,6 +113,9 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | Document | Purpose |
 |---|---|
 | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 9-layer design, two execution modes (stateless + persistent), 10 guardrails |
+| [`DIAGRAMS.md`](docs/DIAGRAMS.md) | Architecture map, IAM departures flow, and detection pipeline visuals |
+| [`CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) | CI lane layout, dedupe rules, and follow-up simplification plan |
+| [`DEPENDENCY_HYGIENE_SKILL.md`](docs/DEPENDENCY_HYGIENE_SKILL.md) | Proposed safe dependency-update skill contract |
 | [`OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md) | Wire format pinning for OCSF 1.8 + MITRE ATT&CK v14 |
 | [`SECURITY_BAR.md`](SECURITY_BAR.md) | Per-principle verification matrix — every skill graded against every principle |
 | [`SECURITY.md`](SECURITY.md) | Coordinated disclosure policy |

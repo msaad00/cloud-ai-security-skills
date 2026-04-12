@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">IAM departures data flow</title>
+  <desc id="desc">HR source to reconciler to S3 to EventBridge to Step Functions to parser and worker to audit.</desc>
+  <rect width="1280" height="420" fill="#08111f"/>
+  <text x="40" y="52" fill="#f8fafc" font-size="30" font-family="Arial, sans-serif" font-weight="700">IAM departures remediation flow</text>
+
+  <g font-family="Arial, sans-serif">
+    <rect x="40" y="120" width="150" height="84" rx="18" fill="#1d4ed8" stroke="#93c5fd"/>
+    <text x="72" y="158" fill="#eff6ff" font-size="20" font-weight="700">HR sources</text>
+    <text x="63" y="182" fill="#dbeafe" font-size="14">Workday / Snowflake</text>
+
+    <rect x="230" y="120" width="170" height="84" rx="18" fill="#0f766e" stroke="#5eead4"/>
+    <text x="262" y="158" fill="#ecfeff" font-size="20" font-weight="700">Reconciler</text>
+    <text x="247" y="182" fill="#ccfbf1" font-size="14">hash diff + manifest</text>
+
+    <rect x="440" y="120" width="140" height="84" rx="18" fill="#7c3aed" stroke="#c4b5fd"/>
+    <text x="490" y="158" fill="#f5f3ff" font-size="20" font-weight="700">S3</text>
+    <text x="462" y="182" fill="#ede9fe" font-size="14">versioned manifest</text>
+
+    <rect x="620" y="120" width="170" height="84" rx="18" fill="#92400e" stroke="#fdba74"/>
+    <text x="642" y="158" fill="#fff7ed" font-size="20" font-weight="700">EventBridge</text>
+    <text x="653" y="182" fill="#ffedd5" font-size="14">object-created rule</text>
+
+    <rect x="830" y="92" width="180" height="140" rx="18" fill="#111827" stroke="#94a3b8"/>
+    <text x="856" y="128" fill="#f8fafc" font-size="22" font-weight="700">Step Functions</text>
+    <rect x="850" y="146" width="140" height="32" rx="10" fill="#172554" stroke="#60a5fa"/>
+    <text x="892" y="168" fill="#e0f2fe" font-size="15">Parser</text>
+    <rect x="850" y="188" width="140" height="32" rx="10" fill="#1f2937" stroke="#2dd4bf"/>
+    <text x="890" y="210" fill="#dcfce7" font-size="15">Worker</text>
+
+    <rect x="1050" y="120" width="180" height="84" rx="18" fill="#3f1d1d" stroke="#fca5a5"/>
+    <text x="1105" y="158" fill="#fff1f2" font-size="20" font-weight="700">Audit</text>
+    <text x="1078" y="182" fill="#ffe4e6" font-size="14">DynamoDB + S3 evidence</text>
+  </g>
+
+  <g stroke-width="4" fill="none">
+    <path d="M190 162 L230 162" stroke="#93c5fd"/>
+    <path d="M400 162 L440 162" stroke="#5eead4"/>
+    <path d="M580 162 L620 162" stroke="#c4b5fd"/>
+    <path d="M790 162 L830 162" stroke="#fdba74"/>
+    <path d="M1010 162 L1050 162" stroke="#94a3b8"/>
+  </g>
+
+  <text x="60" y="300" fill="#cbd5e1" font-size="18" font-family="Arial, sans-serif">Verification loop: audit ingest-back closes the loop and the next reconciler run confirms state convergence.</text>
+</svg>

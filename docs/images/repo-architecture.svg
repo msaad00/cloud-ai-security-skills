@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
+  <title id="title">cloud-security repository architecture</title>
+  <desc id="desc">Skill families feed shared contracts and CI lanes.</desc>
+  <rect width="1200" height="640" fill="#0b1220"/>
+  <rect x="40" y="40" width="1120" height="560" rx="24" fill="#111827" stroke="#334155"/>
+  <text x="70" y="90" fill="#f8fafc" font-size="32" font-family="Arial, sans-serif" font-weight="700">cloud-security</text>
+  <text x="70" y="122" fill="#94a3b8" font-size="16" font-family="Arial, sans-serif">Skill families, shared contracts, and CI lanes</text>
+
+  <rect x="70" y="160" width="230" height="120" rx="18" fill="#172554" stroke="#60a5fa"/>
+  <text x="92" y="196" fill="#e0f2fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">Compliance</text>
+  <text x="92" y="226" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">AWS / GCP / Azure CIS</text>
+  <text x="92" y="248" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">K8s + container posture</text>
+
+  <rect x="330" y="160" width="230" height="120" rx="18" fill="#1e3a5f" stroke="#38bdf8"/>
+  <text x="352" y="196" fill="#e0f2fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">Detection</text>
+  <text x="352" y="226" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">Ingest → detect → convert</text>
+  <text x="352" y="248" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">OCSF 1.8 on the wire</text>
+
+  <rect x="590" y="160" width="230" height="120" rx="18" fill="#1f2937" stroke="#2dd4bf"/>
+  <text x="612" y="196" fill="#dcfce7" font-size="22" font-family="Arial, sans-serif" font-weight="700">Remediation</text>
+  <text x="612" y="226" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">IAM departures workflow</text>
+  <text x="612" y="248" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">Dry-run + dual audit</text>
+
+  <rect x="850" y="160" width="230" height="120" rx="18" fill="#3b0764" stroke="#c084fc"/>
+  <text x="872" y="196" fill="#f5d0fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">AI Infra</text>
+  <text x="872" y="226" fill="#ddd6fe" font-size="15" font-family="Arial, sans-serif">Model serving</text>
+  <text x="872" y="248" fill="#ddd6fe" font-size="15" font-family="Arial, sans-serif">GPU + environment discovery</text>
+
+  <rect x="180" y="340" width="840" height="96" rx="18" fill="#0f172a" stroke="#475569"/>
+  <text x="210" y="378" fill="#f8fafc" font-size="24" font-family="Arial, sans-serif" font-weight="700">Shared contracts</text>
+  <text x="210" y="408" fill="#cbd5e1" font-size="16" font-family="Arial, sans-serif">AGENTS.md • SKILL.md • OCSF contract • SECURITY_BAR • architecture docs</text>
+
+  <rect x="140" y="474" width="920" height="86" rx="18" fill="#111827" stroke="#64748b"/>
+  <text x="170" y="510" fill="#f8fafc" font-size="24" font-family="Arial, sans-serif" font-weight="700">CI lanes</text>
+  <text x="170" y="540" fill="#cbd5e1" font-size="16" font-family="Arial, sans-serif">lint • security-scan • test-compliance • test-remediation • test-detection-engineering • test-ai-infra • test-integration • validate-iac • agent-bom</text>
+
+  <path d="M185 280 L250 340" stroke="#60a5fa" stroke-width="3" fill="none"/>
+  <path d="M445 280 L460 340" stroke="#38bdf8" stroke-width="3" fill="none"/>
+  <path d="M705 280 L680 340" stroke="#2dd4bf" stroke-width="3" fill="none"/>
+  <path d="M965 280 L890 340" stroke="#c084fc" stroke-width="3" fill="none"/>
+  <path d="M600 436 L600 474" stroke="#94a3b8" stroke-width="3" fill="none"/>
+</svg>

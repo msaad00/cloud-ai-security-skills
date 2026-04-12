@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">Detection pipeline</title>
+  <desc id="desc">Raw telemetry to OCSF ingest to detect to output converters and downstream consumers.</desc>
+  <rect width="1280" height="420" fill="#0a1020"/>
+  <text x="40" y="52" fill="#f8fafc" font-size="30" font-family="Arial, sans-serif" font-weight="700">Detection engineering pipeline</text>
+
+  <g font-family="Arial, sans-serif">
+    <rect x="40" y="132" width="170" height="86" rx="18" fill="#164e63" stroke="#67e8f9"/>
+    <text x="78" y="170" fill="#ecfeff" font-size="22" font-weight="700">Raw logs</text>
+    <text x="64" y="194" fill="#cffafe" font-size="14">CloudTrail / K8s / MCP</text>
+
+    <rect x="260" y="132" width="190" height="86" rx="18" fill="#1d4ed8" stroke="#93c5fd"/>
+    <text x="318" y="170" fill="#eff6ff" font-size="22" font-weight="700">Ingest</text>
+    <text x="289" y="194" fill="#dbeafe" font-size="14">normalize to OCSF 1.8</text>
+
+    <rect x="500" y="132" width="190" height="86" rx="18" fill="#0f766e" stroke="#5eead4"/>
+    <text x="560" y="170" fill="#ecfeff" font-size="22" font-weight="700">Detect</text>
+    <text x="523" y="194" fill="#ccfbf1" font-size="14">MITRE-tagged findings</text>
+
+    <rect x="740" y="132" width="190" height="86" rx="18" fill="#7c3aed" stroke="#c4b5fd"/>
+    <text x="790" y="170" fill="#f5f3ff" font-size="22" font-weight="700">Convert</text>
+    <text x="777" y="194" fill="#ede9fe" font-size="14">SARIF / Mermaid / JSON</text>
+
+    <rect x="980" y="112" width="240" height="126" rx="18" fill="#111827" stroke="#94a3b8"/>
+    <text x="1048" y="150" fill="#f8fafc" font-size="22" font-weight="700">Consumers</text>
+    <text x="1014" y="178" fill="#cbd5e1" font-size="15">GitHub Security tab</text>
+    <text x="1014" y="200" fill="#cbd5e1" font-size="15">PR comments</text>
+    <text x="1014" y="222" fill="#cbd5e1" font-size="15">dashboards / agent workflows</text>
+  </g>
+
+  <g stroke-width="4" fill="none">
+    <path d="M210 175 L260 175" stroke="#67e8f9"/>
+    <path d="M450 175 L500 175" stroke="#93c5fd"/>
+    <path d="M690 175 L740 175" stroke="#5eead4"/>
+    <path d="M930 175 L980 175" stroke="#c4b5fd"/>
+  </g>
+
+  <text x="40" y="304" fill="#cbd5e1" font-size="18" font-family="Arial, sans-serif">Contract rule: every intermediate handoff stays OCSF-native; only the final delivery edge converts to other formats.</text>
+</svg>

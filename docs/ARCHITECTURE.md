@@ -5,6 +5,7 @@ This document is the load-bearing design contract for `cloud-security`. Every fu
 - **Wire format contract** — see [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-engineering/OCSF_CONTRACT.md)
 - **Sink / persistence contract** — see [`./SINK_CONTRACT.md`](./SINK_CONTRACT.md) *(lands with PR T)*
 - **Runner / streaming contract** — see [`./RUNNER_CONTRACT.md`](./RUNNER_CONTRACT.md) *(lands with PR V)*
+- **Visual guide** — see [`./DIAGRAMS.md`](./DIAGRAMS.md) for the architecture and data-flow diagrams in both markdown-native and SVG-friendly form
 
 ## 1. Purpose and scope
 
@@ -80,6 +81,16 @@ These are the non-negotiables. Everything in §3–§8 exists to serve them.
 ```
 
 Every data object flowing between layers is **OCSF 1.8 JSONL**. No layer invents a new wire format. Converters (L6) emit *other* formats only for downstream delivery — never as intermediate state.
+
+### Visuals
+
+For quick orientation, use the visual set in [`DIAGRAMS.md`](./DIAGRAMS.md):
+
+- **Repo architecture** — [`repo-architecture.svg`](./images/repo-architecture.svg)
+- **IAM departures data flow** — [`iam-departures-data-flow.svg`](./images/iam-departures-data-flow.svg)
+- **Detection pipeline** — [`detection-pipeline.svg`](./images/detection-pipeline.svg)
+
+The rule for this repo is simple: keep the architecture readable in Markdown, and keep polished SVGs in `docs/images/` for rendered docs.
 
 ### Layer status snapshot
 

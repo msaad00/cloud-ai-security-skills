@@ -11,6 +11,8 @@ Skills are grouped by **what kind of work they do**, not which cloud they run in
 
 Every skill in every category is a **closed loop** (detect → act → audit → re-verify) and follows the [Anthropic skills spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md` at the skill root with `name`, `description`, `license`, and a `Do NOT use…` clause in the description so agents route correctly.
 
+Proposed future skill contracts that are not shipped yet live under [`../docs/`](../docs/), including [`DEPENDENCY_HYGIENE_SKILL.md`](../docs/DEPENDENCY_HYGIENE_SKILL.md) for safe dependency refreshes.
+
 ## compliance-cis-mitre/
 
 Read-only posture assessments mapped to published benchmarks (CIS, NIST CSF, MITRE ATT&CK).
