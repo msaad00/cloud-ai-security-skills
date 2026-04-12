@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install ruff
@@ -27,7 +27,7 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install bandit
@@ -55,7 +55,7 @@ jobs:
     name: test-compliance (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install boto3 moto pytest pytest-cov
@@ -73,7 +73,7 @@ jobs:
     name: test-remediation (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install boto3 moto pytest pytest-cov
@@ -104,7 +104,7 @@ jobs:
     name: test-detection-engineering (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install pytest pytest-cov
@@ -124,7 +124,7 @@ jobs:
     name: test-ai-infra (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install pytest pytest-cov
@@ -136,7 +136,7 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install pytest pytest-cov
@@ -148,7 +148,7 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - uses: hashicorp/setup-terraform@v4
@@ -169,7 +169,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install agent-bom
@@ -225,14 +225,14 @@ jobs:
           PY
       - name: Upload IaC SARIF to GitHub code scanning
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: iac-scan.sarif
           category: agent-bom-iac
         continue-on-error: true
       - name: Upload scan artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agent-bom-results
           path: |
