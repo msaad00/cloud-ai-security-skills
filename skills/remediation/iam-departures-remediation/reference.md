@@ -5,6 +5,19 @@ and cross-cloud roadmap.
 
 ---
 
+## Secrets and Identity Guidance
+
+- Treat env vars in examples as runtime injection points, not as a recommendation
+  to store plaintext secrets in shell profiles or templates.
+- Prefer AWS Secrets Manager, SSM Parameter Store, Vault, workload identity,
+  Snowflake Storage Integration, and similar short-lived or managed-secret paths.
+- Keep the event-driven trigger path intact: manifest lands in S3, EventBridge
+  starts the Step Function, and the Step Function invokes parser and worker Lambdas.
+- If you need a manual test, upload a manifest to the trigger bucket instead of
+  calling the Step Function directly. That exercises the same production entrypoint.
+
+---
+
 ## Architecture Diagram
 
 ```
