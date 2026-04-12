@@ -2,32 +2,33 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import os
-import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+_SRC = Path(__file__).resolve().parent.parent / "src" / "ingest.py"
+_SPEC = importlib.util.spec_from_file_location("ingest_security_hub", _SRC)
+assert _SPEC and _SPEC.loader
+_INGEST = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_INGEST)
 
-from ingest import (  # type: ignore[import-not-found]
-    ASFF_REQUIRED_FIELDS,
-    CATEGORY_UID,
-    CLASS_UID,
-    OCSF_VERSION,
-    SEVERITY_CRITICAL,
-    SEVERITY_HIGH,
-    SEVERITY_INFORMATIONAL,
-    SEVERITY_LOW,
-    SEVERITY_MEDIUM,
-    SKILL_NAME,
-    TYPE_UID,
-    convert_finding,
-    extract_attacks,
-    ingest,
-    iter_raw_findings,
-    severity_to_id,
-    validate_asff,
-)
+ASFF_REQUIRED_FIELDS = _INGEST.ASFF_REQUIRED_FIELDS
+CATEGORY_UID = _INGEST.CATEGORY_UID
+CLASS_UID = _INGEST.CLASS_UID
+OCSF_VERSION = _INGEST.OCSF_VERSION
+SEVERITY_CRITICAL = _INGEST.SEVERITY_CRITICAL
+SEVERITY_HIGH = _INGEST.SEVERITY_HIGH
+SEVERITY_INFORMATIONAL = _INGEST.SEVERITY_INFORMATIONAL
+SEVERITY_LOW = _INGEST.SEVERITY_LOW
+SEVERITY_MEDIUM = _INGEST.SEVERITY_MEDIUM
+SKILL_NAME = _INGEST.SKILL_NAME
+TYPE_UID = _INGEST.TYPE_UID
+convert_finding = _INGEST.convert_finding
+extract_attacks = _INGEST.extract_attacks
+ingest = _INGEST.ingest
+iter_raw_findings = _INGEST.iter_raw_findings
+severity_to_id = _INGEST.severity_to_id
+validate_asff = _INGEST.validate_asff
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parent.parent / "golden"

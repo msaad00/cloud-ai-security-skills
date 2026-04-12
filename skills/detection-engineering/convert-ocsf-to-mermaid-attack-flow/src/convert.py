@@ -56,7 +56,7 @@ def safe_id(prefix: str, raw: str) -> str:
     """Produce a Mermaid-safe stable node ID for an arbitrary string."""
     if _SAFE_ID.match(raw) and len(raw) <= 32:
         return prefix + raw
-    digest = hashlib.sha1(raw.encode()).hexdigest()[:10]
+    digest = hashlib.sha1(raw.encode(), usedforsecurity=False).hexdigest()[:10]
     return f"{prefix}{digest}"
 
 

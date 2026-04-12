@@ -16,7 +16,7 @@ AI Foundry controls are tracked in the Roadmap section of
 | Section | Provider | Method | Why |
 |---|---|---|---|
 | Storage | `Microsoft.Storage` | `storageAccounts.list` | HTTPS-only (CIS 2.2), public blob (CIS 2.3), network rules (CIS 2.4) |
-| Networking | `Microsoft.Network` | `networkSecurityGroups.listAll`, `networkWatchers.listAll` | Unrestricted SSH/RDP (CIS 4.1, 4.2), NSG flow logs (CIS 4.3) |
+| Networking | `Microsoft.Network` | `networkSecurityGroups.listAll`, `networkWatchers.listAll`, `flowLogs.list` | Unrestricted SSH/RDP (CIS 4.1, 4.2), NSG flow logs (CIS 4.3) |
 
 ## Required role
 
@@ -28,11 +28,12 @@ If you want a tighter custom role, the minimal action set is:
 ```json
 {
   "Name": "cspm-azure-cis-benchmark-reader",
-  "Actions": [
-    "Microsoft.Storage/storageAccounts/read",
-    "Microsoft.Network/networkSecurityGroups/read",
-    "Microsoft.Network/networkWatchers/read"
-  ],
+    "Actions": [
+      "Microsoft.Storage/storageAccounts/read",
+      "Microsoft.Network/networkSecurityGroups/read",
+      "Microsoft.Network/networkWatchers/read",
+      "Microsoft.Network/networkWatchers/flowLogs/read"
+    ],
   "AssignableScopes": ["/subscriptions/{subscriptionId}"]
 }
 ```
@@ -42,6 +43,7 @@ If you want a tighter custom role, the minimal action set is:
 - **azure-identity** — https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme
 - **azure-mgmt-storage** — https://learn.microsoft.com/en-us/python/api/overview/azure/storage
 - **azure-mgmt-network** — https://learn.microsoft.com/en-us/python/api/overview/azure/network
+- **FlowLogsOperations.list** — https://learn.microsoft.com/en-us/python/api/azure-mgmt-network/azure.mgmt.network.operations.flowlogsoperations?view=azure-python
 
 Authentication uses `DefaultAzureCredential`, so the skill works with
 Azure CLI login (`az login`), managed identity, environment variables,

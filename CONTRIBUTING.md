@@ -27,7 +27,10 @@ metadata:
 3. Put source code in `src/` within your skill directory
 4. Put infrastructure-as-code in `infra/` (CloudFormation, Terraform)
 5. Put tests in `tests/` — every skill should have tests
-6. Add your skill to the table in `README.md`
+6. Add a `REFERENCES.md` that links only to the official docs, schemas, APIs, or benchmark sources the skill depends on
+7. Make sure `SKILL.md` explicitly includes both `Use when...` and `Do NOT use...`
+8. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
+9. Add your skill to the table in `README.md`
 
 ## Code standards
 
@@ -36,6 +39,9 @@ metadata:
 - Least-privilege IAM — document every permission your skill needs
 - Tests use `pytest` with `moto` for AWS mocking
 - Map to compliance frameworks where applicable (CIS, MITRE, NIST, OWASP)
+- Prefer only official vendor docs, schemas, and APIs in `REFERENCES.md`
+- Put structured results on `stdout`, debug/warning detail on `stderr`, and fail closed on invalid input
+- Follow [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) for the minimum shipped-skill bar
 
 ## Pull request process
 

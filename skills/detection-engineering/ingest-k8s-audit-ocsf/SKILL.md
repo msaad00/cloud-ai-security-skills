@@ -9,8 +9,8 @@ description: >-
   (Create / Read / Update / Delete) from the K8s verb. Sets status_id from
   responseStatus.code. Captures objectRef (resource, namespace, name, apiGroup)
   in resources[] with enough precision for detectors to spot
-  service-account-token-theft, privileged-pod creation, and secret access. Use
-  when the user mentions Kubernetes audit logs, kube-apiserver audit sink,
+  service-account-token-theft, privileged-pod creation, and secret access.
+  Use when the user mentions Kubernetes audit logs, kube-apiserver audit sink,
   OCSF pipeline for K8s, k8s detection engineering, or feeding K8s audit into
   a SIEM. Do NOT use for container runtime logs (different source), kubelet
   logs (different source), or CloudTrail / GCP audit / Azure activity (use the

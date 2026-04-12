@@ -188,7 +188,18 @@ def _check_nsg_port(network_client, port: int, control_id: str, title: str) -> F
 def check_4_3_nsg_flow_logs(network_client, subscription_id: str) -> Finding:
     """CIS 4.3 — NSG flow logs enabled."""
     try:
+        nsgs = list(network_client.network_security_groups.list_all())
         watchers = list(network_client.network_watchers.list_all())
+        if not nsgs:
+            return Finding(
+                control_id="4.3",
+                title="NSG flow logs enabled",
+                section="networking",
+                severity="MEDIUM",
+                status="PASS",
+                detail="No Network Security Groups found",
+                nist_csf="DE.CM-1",
+            )
         if not watchers:
             return Finding(
                 control_id="4.3",
@@ -196,16 +207,54 @@ def check_4_3_nsg_flow_logs(network_client, subscription_id: str) -> Finding:
                 section="networking",
                 severity="MEDIUM",
                 status="FAIL",
-                detail="No Network Watchers found",
+                detail=f"No Network Watchers found for {len(nsgs)} NSG(s)",
                 nist_csf="DE.CM-1",
+                resources=[getattr(nsg, "id", getattr(nsg, "name", "unknown")) for nsg in nsgs],
             )
+
+        enabled_targets: set[str] = set()
+        for watcher in watchers:
+            watcher_name = getattr(watcher, "name", "")
+            watcher_id = getattr(watcher, "id", "") or ""
+            resource_group_name = ""
+            parts = watcher_id.split("/")
+            for idx, part in enumerate(parts):
+                if part.lower() == "resourcegroups" and idx + 1 < len(parts):
+                    resource_group_name = parts[idx + 1]
+                    break
+            if not watcher_name or not resource_group_name:
+                continue
+            for flow_log in network_client.flow_logs.list(resource_group_name, watcher_name):
+                if not getattr(flow_log, "enabled", False):
+                    continue
+                target_id = getattr(flow_log, "target_resource_id", "") or ""
+                if target_id:
+                    enabled_targets.add(target_id.lower())
+
+        missing = [
+            getattr(nsg, "id", getattr(nsg, "name", "unknown"))
+            for nsg in nsgs
+            if (getattr(nsg, "id", "") or "").lower() not in enabled_targets
+        ]
+        if missing:
+            return Finding(
+                control_id="4.3",
+                title="NSG flow logs enabled",
+                section="networking",
+                severity="MEDIUM",
+                status="FAIL",
+                detail=f"{len(missing)} NSG(s) without enabled flow logs",
+                nist_csf="DE.CM-1",
+                resources=missing,
+            )
+
         return Finding(
             control_id="4.3",
             title="NSG flow logs enabled",
             section="networking",
             severity="MEDIUM",
             status="PASS",
-            detail=f"{len(watchers)} Network Watcher(s) found — verify flow logs per NSG",
+            detail=f"Enabled flow logs found for all {len(nsgs)} NSG(s)",
             nist_csf="DE.CM-1",
         )
     except Exception as e:

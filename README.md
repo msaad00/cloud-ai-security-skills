@@ -6,7 +6,9 @@
 [![OCSF 1.8](https://img.shields.io/badge/OCSF-1.8-22d3ee)](https://schema.ocsf.io/1.8.0)
 [![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
 
-**OCSF-native detection engineering and posture for cloud and AI infrastructure.** Normalise every source to **OCSF 1.8** on the wire, then compose ingest → detect → view skills like Unix pipes. MITRE ATT&CK inside every finding. Read-only, agentless, least-privilege, closed-loop.
+**OCSF-native security skills for cloud and AI systems.** Normalise every source to **OCSF 1.8** on the wire, then compose ingest → detect → evaluate → view → remediate flows like Unix pipes. Built for direct CLI use, CI, serverless pipelines, and agent wrappers. Read-only by default, least-privilege, zero-trust, closed-loop.
+
+The repo is intentionally broader than CSPM: cloud security, container security, AI infra security, detection engineering, compliance evaluation, and future inventory/enrichment skills such as AI BOM generation all fit here as long as they stay deterministic, auditable, and grounded in official specs.
 
 For coding agents, start with [AGENTS.md](AGENTS.md). For Claude/Codex-specific guidance and current integration gaps, see [docs/agent-integrations.md](docs/agent-integrations.md).
 
@@ -66,7 +68,7 @@ skills/
     └── discover-environment        (MITRE ATT&CK + ATLAS graph overlay)
 ```
 
-**Roadmap:** 14 open issues ([#26](https://github.com/msaad00/cloud-security/issues/26)–[#39](https://github.com/msaad00/cloud-security/issues/39)) covering VPC Flow / GuardDuty / Security Hub / AWS Config / Okta / GitHub / Workspace / Slack / Workday / Salesforce / SAP / GCP + Azure parity / folder reshape.
+**Roadmap:** current open issues cover AWS Config, GCP + Azure parity, vendor stories, folder reshape, a thin MCP wrapper, the formal skill contract, the safe-skill CI bar, and discovery / inventory follow-ons such as AI BOM generation.
 
 </details>
 
@@ -116,6 +118,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | [`DIAGRAMS.md`](docs/DIAGRAMS.md) | Architecture map, IAM departures flow, and detection pipeline visuals |
 | [`CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) | CI lane layout, dedupe rules, and follow-up simplification plan |
 | [`DEPENDENCY_HYGIENE_SKILL.md`](docs/DEPENDENCY_HYGIENE_SKILL.md) | Proposed safe dependency-update skill contract |
+| [`SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) | Minimum files, metadata, and guardrails for shipped skills |
 | [`OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md) | Wire format pinning for OCSF 1.8 + MITRE ATT&CK v14 |
 | [`SECURITY_BAR.md`](SECURITY_BAR.md) | Per-principle verification matrix — every skill graded against every principle |
 | [`SECURITY.md`](SECURITY.md) | Coordinated disclosure policy |

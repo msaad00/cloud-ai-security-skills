@@ -2,30 +2,31 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import os
-import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+_SRC = Path(__file__).resolve().parent.parent / "src" / "ingest.py"
+_SPEC = importlib.util.spec_from_file_location("ingest_vpc_flow_logs", _SRC)
+assert _SPEC and _SPEC.loader
+_INGEST = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_INGEST)
 
-from ingest import (  # type: ignore[import-not-found]
-    ACTIVITY_DENIED,
-    ACTIVITY_TRAFFIC,
-    ACTIVITY_UNKNOWN,
-    CATEGORY_UID,
-    CLASS_UID,
-    OCSF_VERSION,
-    SKILL_NAME,
-    activity_id_for_action,
-    convert_record,
-    decode_tcp_flags,
-    ingest,
-    parse_header,
-    parse_record,
-    protocol_name,
-    sec_to_ms,
-)
+ACTIVITY_DENIED = _INGEST.ACTIVITY_DENIED
+ACTIVITY_TRAFFIC = _INGEST.ACTIVITY_TRAFFIC
+ACTIVITY_UNKNOWN = _INGEST.ACTIVITY_UNKNOWN
+CATEGORY_UID = _INGEST.CATEGORY_UID
+CLASS_UID = _INGEST.CLASS_UID
+OCSF_VERSION = _INGEST.OCSF_VERSION
+SKILL_NAME = _INGEST.SKILL_NAME
+activity_id_for_action = _INGEST.activity_id_for_action
+convert_record = _INGEST.convert_record
+decode_tcp_flags = _INGEST.decode_tcp_flags
+ingest = _INGEST.ingest
+parse_header = _INGEST.parse_header
+parse_record = _INGEST.parse_record
+protocol_name = _INGEST.protocol_name
+sec_to_ms = _INGEST.sec_to_ms
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parent.parent / "golden"
@@ -165,19 +166,15 @@ class TestParseHeader:
 
 class TestParseRecord:
     def test_default_v5(self):
-        from ingest import _DEFAULT_V5_FIELDS  # type: ignore[import-not-found]
-
         line = "5 111122223333 eni-abc 10.0.0.1 10.0.0.2 80 443 6 5 320 1775797200 1775797260 ACCEPT OK"
-        rec = parse_record(line, _DEFAULT_V5_FIELDS)
+        rec = parse_record(line, _INGEST._DEFAULT_V5_FIELDS)
         assert rec is not None
         assert rec["srcaddr"] == "10.0.0.1"
         assert rec["dstaddr"] == "10.0.0.2"
         assert rec["action"] == "ACCEPT"
 
     def test_too_few_tokens(self):
-        from ingest import _DEFAULT_V5_FIELDS  # type: ignore[import-not-found]
-
-        assert parse_record("5 111122223333", _DEFAULT_V5_FIELDS) is None
+        assert parse_record("5 111122223333", _INGEST._DEFAULT_V5_FIELDS) is None
 
 
 # ── convert_record ───────────────────────────────────────────────

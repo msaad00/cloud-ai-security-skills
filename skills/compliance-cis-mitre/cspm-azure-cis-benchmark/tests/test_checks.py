@@ -92,6 +92,10 @@ class TestNetworkChecks:
     def _nsg_with_rule(self, name, *, port="22", source="*", access="Allow", direction="Inbound"):
         nsg = MagicMock()
         nsg.name = name
+        nsg.id = (
+            f"/subscriptions/{SUB_ID}/resourceGroups/rg-net/providers/"
+            f"Microsoft.Network/networkSecurityGroups/{name}"
+        )
         rule = MagicMock()
         rule.name = "rule0"
         rule.direction = direction
@@ -124,16 +128,58 @@ class TestNetworkChecks:
 
     def test_4_3_no_watchers_fails(self):
         client = MagicMock()
+        client.network_security_groups.list_all.return_value = [self._nsg_with_rule("nsg-a")]
         client.network_watchers.list_all.return_value = []
         f = check_4_3_nsg_flow_logs(client, SUB_ID)
         assert f.control_id == "4.3"
         assert f.status == "FAIL"
 
-    def test_4_3_with_watchers_passes(self):
+    def test_4_3_with_enabled_logs_passes(self):
         client = MagicMock()
-        client.network_watchers.list_all.return_value = [MagicMock()]
+        watcher = MagicMock()
+        watcher.name = "nw-eastus"
+        watcher.id = (
+            f"/subscriptions/{SUB_ID}/resourceGroups/NetworkWatcherRG/providers/"
+            "Microsoft.Network/networkWatchers/nw-eastus"
+        )
+        client.network_security_groups.list_all.return_value = [
+            self._nsg_with_rule("nsg-a"),
+            self._nsg_with_rule("nsg-b"),
+        ]
+        client.network_watchers.list_all.return_value = [watcher]
+        flow_log_a = MagicMock(enabled=True)
+        flow_log_a.target_resource_id = (
+            f"/subscriptions/{SUB_ID}/resourceGroups/rg-net/providers/"
+            "Microsoft.Network/networkSecurityGroups/nsg-a"
+        )
+        flow_log_b = MagicMock(enabled=True)
+        flow_log_b.target_resource_id = (
+            f"/subscriptions/{SUB_ID}/resourceGroups/rg-net/providers/"
+            "Microsoft.Network/networkSecurityGroups/nsg-b"
+        )
+        client.flow_logs.list.return_value = [flow_log_a, flow_log_b]
         f = check_4_3_nsg_flow_logs(client, SUB_ID)
         assert f.status == "PASS"
+        assert "all 2 NSG" in f.detail
+
+    def test_4_3_missing_logs_fail(self):
+        client = MagicMock()
+        watcher = MagicMock()
+        watcher.name = "nw-eastus"
+        watcher.id = (
+            f"/subscriptions/{SUB_ID}/resourceGroups/NetworkWatcherRG/providers/"
+            "Microsoft.Network/networkWatchers/nw-eastus"
+        )
+        nsg_a = self._nsg_with_rule("nsg-a")
+        nsg_b = self._nsg_with_rule("nsg-b")
+        client.network_security_groups.list_all.return_value = [nsg_a, nsg_b]
+        client.network_watchers.list_all.return_value = [watcher]
+        flow_log = MagicMock(enabled=True)
+        flow_log.target_resource_id = nsg_a.id
+        client.flow_logs.list.return_value = [flow_log]
+        f = check_4_3_nsg_flow_logs(client, SUB_ID)
+        assert f.status == "FAIL"
+        assert nsg_b.id in f.resources
 
 
 class TestFindingStructure:

@@ -41,6 +41,18 @@ These are the non-negotiables. Everything in §3–§8 exists to serve them.
 9. **Dry-run everywhere writes happen.** `--dry-run` is mandatory for every `remediate-*` and `sink-*` skill. It prints the SQL / API calls it *would* make without making them.
 10. **Audit the auditor.** Every sink write and every remediation action emits *itself* as an OCSF Application Activity (6002) event, so the tool's own actions are findable in the same pipeline it feeds.
 
+## 2.1 Validation, debugging, and API-drift policy
+
+The repo cannot assume cloud APIs stay still. Providers deprecate fields, add enum values, rename resources, or change SDK defaults. We treat that as a normal engineering event, not an exceptional one.
+
+1. **Validate before use.** Skills validate untrusted input before cloud calls, parsing, or conversion. Unknown shapes fail closed unless the skill explicitly supports partial-pass handling.
+2. **Use official contracts only.** `REFERENCES.md` links only to official docs, schemas, benchmarks, or SDK references. If a behavior is not grounded in a credible source, it does not belong in a shipped skill.
+3. **Debug cleanly.** Structured output goes to `stdout`; warnings, skips, and operator hints go to `stderr`; contract-breaking failures exit non-zero.
+4. **Capture drift in tests.** When AWS, Azure, GCP, Kubernetes, or another source adds or deprecates fields, we add regression coverage for both the old and new shapes during the migration window.
+5. **Migrate intentionally.** Deprecated APIs are removed only after the replacement path is tested, documented, and reflected in `REFERENCES.md`.
+
+This is how the repo stays secure and reliable without turning every skill into an over-general abstraction layer.
+
 ## 3. The 9 layers
 
 ```
@@ -98,7 +110,7 @@ The rule for this repo is simple: keep the architecture readable in Markdown, an
 |---|---|---|---|---|
 | L0 | sources | (external) | n/a | vendor stories #30–#36, Ramp (PR Y), Snowflake audit (PR Z) |
 | L1 | `ingest-*` | **shipping** | cloudtrail, vpc-flow-logs, guardduty, security-hub, gcp-audit, azure-activity, k8s-audit, mcp-proxy | gcp-vpc-flow, azure-nsg-flow, okta, github, workspace, slack, ramp |
-| L2 | `enrich-*` | **planned** | none | PR X (asset-inventory, geoip, mitre-navigator, **pii-redact is P0 before any sink in regulated env**) |
+| L2 | `enrich-*` | **planned** | none | PR X (asset-inventory, geoip, mitre-navigator, inventory / **AI BOM** generation, **pii-redact is P0 before any sink in regulated env**) |
 | L3 | `detect-*` | **shipping** | lateral-movement-aws, privesc-k8s, sensitive-secret-read-k8s, mcp-tool-drift | credential-access per cloud, unusual-assume-role, vector-store-poisoning |
 | L4 | `evaluate-*` | **shipping** | cspm-aws/gcp/azure-cis-benchmark, k8s-security-benchmark, container-security | evaluate-cis-aws-foundations (#29), NIST AI RMF, SOC2, PCI |
 | L5 | `remediate-*` | **shipping** | iam-departures-remediation | auto-close-exposed-s3, revoke-long-lived-key, patch-inspector-finding |
@@ -147,6 +159,17 @@ runners/runner-eventhubs-to-bigquery    # Azure Event Hubs → skill → BigQuer
 ```
 
 Properties: persistent state lives *only* in the runner (checkpoint) and sink (materialised rows). The skills themselves remain stateless, so failure recovery is: re-drive the runner from the last checkpoint, let idempotent sink merges collapse the duplicates.
+
+### Where AI BOM fits
+
+An AI BOM capability belongs in the **discovery / inventory path**, not as the identity of the repo.
+
+- **Collection** lives near L0/L1 when enumerating models, gateways, vector stores, runtimes, policies, and dependencies from vendor APIs or config exports.
+- **Normalization** should emit OCSF-compatible inventory or application-context records rather than inventing a new private schema.
+- **Enrichment** belongs in L2 when joining model inventory, framework metadata, package provenance, and control coverage into a usable graph.
+- **Evaluation** belongs in L4 when mapping that inventory to MITRE ATLAS, NIST AI RMF, OWASP LLM Top 10, or other AI-security frameworks.
+
+That keeps AI BOM as one valuable skill family inside `cloud-security`, instead of pulling the whole repo away from its broader cloud + AI security scope.
 
 ### Why this works: idempotency
 
