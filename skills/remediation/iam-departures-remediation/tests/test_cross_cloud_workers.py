@@ -88,7 +88,7 @@ class TestAzureEntra:
     def test_dry_run_produces_all_steps(self):
         from lambda_worker.clouds import azure_entra
 
-        result = asyncio.get_event_loop().run_until_complete(azure_entra.remediate_user("user-id-123", "tenant-abc", dry_run=True))
+        result = asyncio.run(azure_entra.remediate_user("user-id-123", "tenant-abc", dry_run=True))
         assert result.status == RemediationStatus.DRY_RUN
         assert result.cloud == CloudProvider.AZURE
         assert len(result.steps) == 6
@@ -110,7 +110,7 @@ class TestAzureEntra:
     def test_identity_type_is_entra_user(self):
         from lambda_worker.clouds import azure_entra
 
-        result = asyncio.get_event_loop().run_until_complete(azure_entra.remediate_user("user@domain.com", "tenant-123", dry_run=True))
+        result = asyncio.run(azure_entra.remediate_user("user@domain.com", "tenant-123", dry_run=True))
         assert result.identity_type == "entra_user"
 
 
@@ -121,7 +121,7 @@ class TestGCPIAM:
     def test_sa_dry_run_produces_all_steps(self):
         from lambda_worker.clouds import gcp_iam
 
-        result = asyncio.get_event_loop().run_until_complete(
+        result = asyncio.run(
             gcp_iam.remediate_service_account(
                 "sa@project.iam.gserviceaccount.com",
                 "my-project",
@@ -139,7 +139,7 @@ class TestGCPIAM:
     def test_workspace_user_dry_run(self):
         from lambda_worker.clouds import gcp_iam
 
-        result = asyncio.get_event_loop().run_until_complete(gcp_iam.remediate_workspace_user("user@domain.com", dry_run=True))
+        result = asyncio.run(gcp_iam.remediate_workspace_user("user@domain.com", dry_run=True))
         assert result.status == RemediationStatus.DRY_RUN
         assert result.identity_type == "workspace_user"
         assert len(result.steps) == 2
@@ -159,7 +159,7 @@ class TestSnowflake:
     def test_dry_run_produces_all_steps(self):
         from lambda_worker.clouds import snowflake_user
 
-        result = asyncio.get_event_loop().run_until_complete(snowflake_user.remediate_user("departing_user", "myaccount", dry_run=True))
+        result = asyncio.run(snowflake_user.remediate_user("departing_user", "myaccount", dry_run=True))
         assert result.status == RemediationStatus.DRY_RUN
         assert result.cloud == CloudProvider.SNOWFLAKE
         assert len(result.steps) == 6
@@ -173,7 +173,7 @@ class TestSnowflake:
     def test_identity_type_is_snowflake_user(self):
         from lambda_worker.clouds import snowflake_user
 
-        result = asyncio.get_event_loop().run_until_complete(snowflake_user.remediate_user("test_user", "acct", dry_run=True))
+        result = asyncio.run(snowflake_user.remediate_user("test_user", "acct", dry_run=True))
         assert result.identity_type == "snowflake_user"
 
     def test_implicit_roles_skipped(self):
@@ -199,7 +199,7 @@ class TestDatabricks:
     def test_dry_run_produces_all_steps(self):
         from lambda_worker.clouds import databricks_scim
 
-        result = asyncio.get_event_loop().run_until_complete(databricks_scim.remediate_user("user@company.com", dry_run=True))
+        result = asyncio.run(databricks_scim.remediate_user("user@company.com", dry_run=True))
         assert result.status == RemediationStatus.DRY_RUN
         assert result.cloud == CloudProvider.DATABRICKS
         assert len(result.steps) == 4
@@ -212,9 +212,7 @@ class TestDatabricks:
         from lambda_worker.clouds import databricks_scim
 
         # workspace_only still needs workspace client, but dry_run skips all
-        result = asyncio.get_event_loop().run_until_complete(
-            databricks_scim.remediate_user("user@company.com", workspace_only=True, dry_run=True)
-        )
+        result = asyncio.run(databricks_scim.remediate_user("user@company.com", workspace_only=True, dry_run=True))
         # dry_run returns all steps as DRY_RUN regardless of workspace_only
         assert result.status == RemediationStatus.DRY_RUN
 
@@ -228,7 +226,7 @@ class TestDatabricks:
     def test_identity_type(self):
         from lambda_worker.clouds import databricks_scim
 
-        result = asyncio.get_event_loop().run_until_complete(databricks_scim.remediate_user("user@co.com", dry_run=True))
+        result = asyncio.run(databricks_scim.remediate_user("user@co.com", dry_run=True))
         assert result.identity_type == "databricks_user"
 
 
@@ -263,10 +261,10 @@ class TestCrossCloudComparison:
         from lambda_worker.clouds import azure_entra, databricks_scim, gcp_iam, snowflake_user
 
         results = [
-            asyncio.get_event_loop().run_until_complete(azure_entra.remediate_user("u", "t", dry_run=True)),
-            asyncio.get_event_loop().run_until_complete(gcp_iam.remediate_service_account("sa@p.iam.gsa.com", "p", dry_run=True)),
-            asyncio.get_event_loop().run_until_complete(snowflake_user.remediate_user("u", "a", dry_run=True)),
-            asyncio.get_event_loop().run_until_complete(databricks_scim.remediate_user("u@c.com", dry_run=True)),
+            asyncio.run(azure_entra.remediate_user("u", "t", dry_run=True)),
+            asyncio.run(gcp_iam.remediate_service_account("sa@p.iam.gsa.com", "p", dry_run=True)),
+            asyncio.run(snowflake_user.remediate_user("u", "a", dry_run=True)),
+            asyncio.run(databricks_scim.remediate_user("u@c.com", dry_run=True)),
         ]
         for r in results:
             assert r.status == RemediationStatus.DRY_RUN

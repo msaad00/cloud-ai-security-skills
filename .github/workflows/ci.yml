@@ -90,6 +90,8 @@ jobs:
         skill:
           - ingest-cloudtrail-ocsf
           - ingest-vpc-flow-logs-ocsf
+          - ingest-guardduty-ocsf
+          - ingest-security-hub-ocsf
           - ingest-gcp-audit-ocsf
           - ingest-azure-activity-ocsf
           - ingest-k8s-audit-ocsf

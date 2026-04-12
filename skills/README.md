@@ -50,7 +50,7 @@ AI-native surfaces — model serving hardening, GPU tenant isolation, environmen
 ## How to add a new skill
 
 1. Pick the category that matches the job (not the cloud).
-2. Copy the nearest sibling as a starting point *or*, for detection-engineering, copy `detection-engineering/.templates/skill-template/` (coming in a follow-up PR).
+2. Copy the nearest sibling as a starting point — the existing skills in the target category are the canonical reference layout.
 3. Write `SKILL.md` with the spec-compliant frontmatter. Name must be ≤64 chars, `^[a-z0-9-]+$`, non-reserved.
 4. In the `description`, lead with "Use when…" and close with "Do NOT use…" — that is the Anthropic pattern.
 5. Add tests. If this is a detection-engineering skill, test against the frozen golden fixture in `detection-engineering/golden/`.

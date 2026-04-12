@@ -444,7 +444,8 @@ def discover_aws(region: str = "us-east-1", profile: str | None = None) -> Envir
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# GCP Discovery (stub — requires google-cloud SDKs)
+# GCP Discovery (requires google-cloud-resource-manager, google-cloud-iam,
+# google-cloud-storage)
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -528,7 +529,7 @@ def discover_gcp(project: str) -> EnvironmentGraph:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Azure Discovery (stub — requires azure SDKs)
+# Azure Discovery (requires azure-identity, azure-mgmt-resource)
 # ═══════════════════════════════════════════════════════════════════════════
 
 

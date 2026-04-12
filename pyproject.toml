@@ -25,3 +25,8 @@ testpaths = ["skills"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+# importlib mode lets multiple skills share basenames like `test_ingest.py`
+# without the prepend-sys-path import collision that the default mode causes
+# when `pytest skills/` is run from the repo root. Each matrix cell in CI
+# still runs per-skill, but local top-level `pytest` now Just Works.
+addopts = "--import-mode=importlib"

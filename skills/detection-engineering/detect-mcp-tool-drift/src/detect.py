@@ -137,8 +137,9 @@ def _build_finding(
             "events_observed": 2,
             "before_event_time": before_event.get("time"),
             "after_event_time": after_event.get("time"),
-            # Intentionally empty — the contract says raw events stay in storage,
-            # not inside the finding. A follow-up PR will wire a raw_uri.
+            # Intentionally empty: per the OCSF contract, raw events live in
+            # downstream storage (S3 / ClickHouse), not inside the finding body.
+            # Callers that need the raw events pivot via observables.session.uid.
             "raw_events": [],
         },
     }
