@@ -69,5 +69,6 @@ If you see a remediation step that succeeded but no audit row, treat it as a fai
 
 - Full guardrails and rationale: [`CLAUDE.md`](CLAUDE.md)
 - Per-skill contract: `skills/<skill-name>/SKILL.md`
+- Agent-specific guidance and current integration gaps: [`docs/agent-integrations.md`](docs/agent-integrations.md)
 - Architecture diagrams (closed loops): [`README.md`](README.md)
 - Security model: [`SECURITY.md`](SECURITY.md)

@@ -155,7 +155,10 @@ for deployable templates.
 
 ## Data Sources
 
-Configure one HR data source via environment variables:
+Configure one HR data source via environment variables. These variable names are
+the runtime interface, not the recommended storage mechanism. In production,
+inject them from AWS Secrets Manager, SSM Parameter Store, Vault, workload
+identity, or an equivalent secret store.
 
 | Source | Required Env Vars |
 |--------|-------------------|
@@ -164,6 +167,8 @@ Configure one HR data source via environment variables:
 | Databricks | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` |
 | ClickHouse | `CLICKHOUSE_HOST`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD` |
 | Workday API | `WORKDAY_API_URL`, `WORKDAY_CLIENT_ID`, `WORKDAY_CLIENT_SECRET` |
+
+Prefer the storage-integration or federation path where the source platform supports it.
 
 ## Security Principles
 

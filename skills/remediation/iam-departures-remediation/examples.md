@@ -73,19 +73,16 @@ python -m pytest tests/test_parser_lambda.py -v
 python -m pytest tests/test_worker_lambda.py -v
 ```
 
-## Example: Manual Step Function Execution
+## Example: Test Trigger via S3 and EventBridge
 
 ```bash
-# Trigger a test execution with a specific manifest
-aws stepfunctions start-execution \
-  --state-machine-arn arn:aws:states:us-east-1:111111111111:stateMachine:iam-departures-pipeline \
-  --input '{
-    "detail": {
-      "bucket": { "name": "my-security-remediation-bucket" },
-      "object": { "key": "departures/2026-03-01.json" }
-    }
-  }'
+# Upload a manifest to the bucket and let EventBridge start the Step Function
+aws s3 cp sample-manifest.json \
+  s3://my-security-remediation-bucket/departures/2026-03-01.json
 ```
+
+This is the preferred manual test path because it exercises the same event-driven
+entrypoint used in production instead of bypassing EventBridge.
 
 ## Example: Query Audit Records
 
