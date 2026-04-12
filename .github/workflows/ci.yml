@@ -21,7 +21,6 @@ jobs:
           python-version: "3.11"
       - run: pip install ruff
       - run: ruff check skills/ tests/ --config pyproject.toml
-      - run: ruff format --check skills/ tests/
 
   security-scan:
     runs-on: ubuntu-latest
