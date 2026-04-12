@@ -8,6 +8,8 @@
 
 **OCSF-native detection engineering and posture for cloud and AI infrastructure.** Normalise every source to **OCSF 1.8** on the wire, then compose ingest → detect → view skills like Unix pipes. MITRE ATT&CK inside every finding. Read-only, agentless, least-privilege, closed-loop.
 
+For coding agents, start with [AGENTS.md](AGENTS.md). For Claude/Codex-specific guidance and current integration gaps, see [docs/agent-integrations.md](docs/agent-integrations.md).
+
 ```bash
 python skills/detection-engineering/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
   | python skills/detection-engineering/detect-privilege-escalation-k8s/src/detect.py \
@@ -114,6 +116,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | [`OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md) | Wire format pinning for OCSF 1.8 + MITRE ATT&CK v14 |
 | [`SECURITY_BAR.md`](SECURITY_BAR.md) | Per-principle verification matrix — every skill graded against every principle |
 | [`SECURITY.md`](SECURITY.md) | Coordinated disclosure policy |
+| [`docs/agent-integrations.md`](docs/agent-integrations.md) | How Claude, Codex CLI, and AGENTS.md-aware tools should use this repo today |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to add a new skill |
 
 ## Contributing
