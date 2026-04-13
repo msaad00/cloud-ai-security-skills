@@ -54,6 +54,7 @@ Read-only inventory, graph, and AI BOM skills.
 | [`discover-environment`](discovery/discover-environment/) | Multi-cloud discovery / graph overlay |
 | [`discover-ai-bom`](discovery/discover-ai-bom/) | AI asset inventory → CycloneDX-aligned AI BOM |
 | [`discover-control-evidence`](discovery/discover-control-evidence/) | Discovery artifact → PCI / SOC 2 technical evidence JSON |
+| [`discover-cloud-control-evidence`](discovery/discover-cloud-control-evidence/) | Cross-cloud inventory → PCI / SOC 2 technical evidence JSON |
 
 ## evaluation/
 

@@ -23,7 +23,7 @@ This document is the load-bearing design contract for `cloud-security`. Every fu
 **Out of scope (explicit non-goals)**
 - Being a SIEM. SIEMs already ingest OCSF natively (Splunk, Sentinel, Chronicle, Elastic); we are the *producer* of OCSF, not a replacement for the consumer.
 - Running a long-lived multi-tenant SaaS runtime. We ship a skills library + reference runners + reference sinks. Productionising those is the operator's responsibility.
-- Inventing new telemetry schemas. OCSF 1.8 is the ceiling. If OCSF doesn't have a field, we use its `unmapped` escape hatch or a documented custom profile (see `OCSF_CONTRACT.md`).
+- Inventing new telemetry schemas for core event and finding flows. OCSF 1.8 is the default ceiling. If OCSF has a fitting class, profile, or extension point, we use it. If OCSF does not cleanly fit a discovery or BOM artifact yet, we use a documented bridge artifact and keep the mapping path explicit in `OCSF_CONTRACT.md`.
 - Real-time sub-second detection. Latency target is minute-scale batches. If you need sub-second, use a streaming runtime (Flink, Kafka Streams) with these skills as UDFs.
 
 ## 2. Design principles
@@ -66,6 +66,7 @@ This is how the repo stays secure and reliable without turning every skill into 
 │ L2  DISCOVER /      inventory + context                           │
 │     ENRICH          discover-environment, discover-ai-bom,        │
 │                     discover-control-evidence,                    │
+│                     discover-cloud-control-evidence,              │
 │                     enrich-asset-inventory, enrich-geoip,         │
 │                     enrich-mitre-navigator, enrich-pii-redact     │
  ├───────────────────────────────────────────────────────────────────┤
@@ -94,7 +95,7 @@ This is how the repo stays secure and reliable without turning every skill into 
  └───────────────────────────────────────────────────────────────────┘
 ```
 
-Every data object flowing between layers is **OCSF 1.8 JSONL**. No layer invents a new wire format. Converters (L6) emit *other* formats only for downstream delivery — never as intermediate state.
+Most data objects flowing between layers are **OCSF 1.8 JSONL**. That is the default wire contract for ingest, detect, evaluate, view, and sink paths. Discovery follows this rule where OCSF inventory/evidence classes fit cleanly; otherwise it may emit deterministic bridge artifacts such as environment graphs or CycloneDX-aligned AI BOMs with an explicit mapping path back to OCSF.
 
 ### Visuals
 
@@ -112,7 +113,7 @@ The rule for this repo is simple: keep the architecture readable in Markdown, an
 |---|---|---|---|---|
 | L0 | sources | (external) | n/a | vendor stories #30–#36, Ramp (PR Y), Snowflake audit (PR Z) |
 | L1 | `ingest-*` | **shipping** | cloudtrail, aws-vpc-flow, gcp-vpc-flow, azure-nsg-flow, guardduty, security-hub, gcp-scc, azure-defender, gcp-audit, azure-activity, k8s-audit, mcp-proxy | okta, github, workspace, slack, ramp |
-| L2 | `discovery/` + `enrich-*` | **shipping / planned** | discover-environment, discover-ai-bom, discover-control-evidence | PR X (asset-inventory, geoip, mitre-navigator, **pii-redact is P0 before any sink in regulated env**) |
+| L2 | `discovery/` + `enrich-*` | **shipping / planned** | discover-environment, discover-ai-bom, discover-control-evidence, discover-cloud-control-evidence | PR X (asset-inventory, geoip, mitre-navigator, **pii-redact is P0 before any sink in regulated env**) |
 | L3 | `detect-*` | **shipping** | lateral-movement, privesc-k8s, sensitive-secret-read-k8s, mcp-tool-drift | credential-access per cloud, unusual-assume-role, vector-store-poisoning |
 | L4 | `evaluate-*` | **shipping** | cspm-aws/gcp/azure-cis-benchmark, k8s-security-benchmark, container-security | evaluate-cis-aws-foundations (#29), NIST AI RMF, SOC2, PCI |
 | L5 | `remediate-*` | **shipping** | iam-departures-remediation | auto-close-exposed-s3, revoke-long-lived-key, patch-inspector-finding |

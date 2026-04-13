@@ -29,10 +29,11 @@ skills/
 │   ├── ingest-k8s-audit-ocsf/
 │   └── ingest-mcp-proxy-ocsf/
 │
-├── discovery/                     # inventory / graph / AI BOM
+├── discovery/                     # inventory / graph / AI BOM / evidence
 │   ├── discover-environment/
-│   └── discover-ai-bom/
-│   └── discover-control-evidence/
+│   ├── discover-ai-bom/
+│   ├── discover-control-evidence/
+│   └── discover-cloud-control-evidence/
 │
 ├── detection/                     # OCSF → Detection Finding 2004 + MITRE
 │   ├── detect-mcp-tool-drift/
