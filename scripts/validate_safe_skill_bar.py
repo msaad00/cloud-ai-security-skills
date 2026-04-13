@@ -4,8 +4,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SKILLS_ROOT = ROOT / "skills"
+from skill_validation_common import ROOT, SKILLS_ROOT, discover_skill_contracts
 
 SUBPROCESS_PATTERNS = (
     "import subprocess",
@@ -23,10 +22,6 @@ WILDCARD_PATTERNS = (
 )
 
 POLICY_SUFFIXES = (".json", ".tf", ".yaml", ".yml")
-
-
-def iter_skill_dirs() -> list[Path]:
-    return sorted(path.parent for path in SKILLS_ROOT.glob("*/*/SKILL.md"))
 
 
 def is_write_skill(skill_dir: Path) -> bool:
@@ -101,7 +96,8 @@ def validate_wildcards() -> list[str]:
 
 def main() -> int:
     errors: list[str] = []
-    for skill_dir in iter_skill_dirs():
+    for skill in discover_skill_contracts():
+        skill_dir = skill.skill_dir
         errors.extend(validate_read_only_no_subprocess(skill_dir))
         errors.extend(validate_write_skill_dry_run(skill_dir))
     errors.extend(validate_wildcards())

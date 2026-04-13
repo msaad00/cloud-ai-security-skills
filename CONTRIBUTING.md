@@ -57,7 +57,8 @@ metadata:
 2. Add or modify skills following the structure above
 3. Ensure tests pass: `pytest skills/<layer>/your-skill/tests/ -v`
 4. Ensure linting passes: `ruff check .`
-5. Open a PR against `main` with a clear description
+5. Ensure shared validators pass: `python scripts/validate_skill_contract.py`, `python scripts/validate_skill_integrity.py`, and `python scripts/validate_safe_skill_bar.py`
+6. Open a PR against `main` with a clear description
 
 ## Security
 
