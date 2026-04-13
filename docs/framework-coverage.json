@@ -203,6 +203,15 @@
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
     },
     {
+      "path": "skills/detection/detect-google-workspace-suspicious-login",
+      "layer": "detection",
+      "providers": ["google-workspace"],
+      "asset_classes": ["identities", "authentication", "sessions", "mfa"],
+      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "coverage_status": "validated",
+      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+    },
+    {
       "path": "skills/detection/detect-okta-mfa-fatigue",
       "layer": "detection",
       "providers": ["okta"],
