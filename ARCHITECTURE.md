@@ -127,16 +127,16 @@ Skills are **standalone Python bundles** (per the Anthropic skills spec — no s
 
 ```bash
 # Example: K8s priv-esc detection from raw audit log to GitHub Security tab
-python skills/detection-engineering/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
-  | python skills/detection-engineering/detect-privilege-escalation-k8s/src/detect.py \
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
   | python skills/view/convert-ocsf-to-sarif/src/convert.py \
   > findings.sarif
 
 # Example: cross-cloud credential access (one detector, three sources)
-cat cloudtrail.json | python skills/detection-engineering/ingest-cloudtrail-ocsf/src/ingest.py >> all-events.ocsf.jsonl
-cat gcp-audit.json | python skills/detection-engineering/ingest-gcp-audit-ocsf/src/ingest.py >> all-events.ocsf.jsonl
-cat azure.json    | python skills/detection-engineering/ingest-azure-activity-ocsf/src/ingest.py >> all-events.ocsf.jsonl
-cat all-events.ocsf.jsonl | python skills/detection-engineering/detect-credential-access/src/detect.py > findings.ocsf.jsonl
+cat cloudtrail.json | python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py >> all-events.ocsf.jsonl
+cat gcp-audit.json | python skills/ingestion/ingest-gcp-audit-ocsf/src/ingest.py >> all-events.ocsf.jsonl
+cat azure.json    | python skills/ingestion/ingest-azure-activity-ocsf/src/ingest.py >> all-events.ocsf.jsonl
+cat all-events.ocsf.jsonl | python skills/detection/detect-credential-access/src/detect.py > findings.ocsf.jsonl
 ```
 
 Or, when an agent (Claude Code, Cursor, Codex, Cortex, Windsurf) loads several skills at once, the agent reads each `SKILL.md`, picks the right one for the user's intent, and pipes the output of one into the next as a tool composition step. The OCSF contract is what makes this safe — the agent doesn't need to know the internals of any skill, only that ingest skills emit OCSF and detect skills consume it.
@@ -190,15 +190,17 @@ Existing AI-infra skills (`model-serving-security`, `gpu-cluster-security`) and 
 
 ## Where the code lives today vs the layered model
 
-The folder structure currently groups by use case (`compliance-cis-mitre/`, `remediation/`, `detection-engineering/`, `ai-infra-security/`) which is close to but not exactly the layered model above. A small dedicated PR after the first 2 vendor stories will reshape `skills/` to match:
+The layered reshape has landed for the canonical skill paths. Current skill homes are:
 
 ```
 skills/
 ├── ingestion/      ← L1
 ├── detection/      ← L3
 ├── evaluation/     ← L4
-├── view/           ← L5
-└── remediation/    ← L6
+├── view/           ← L6
+└── remediation/    ← L5
 ```
 
-The reshape is deliberately deferred so we don't `git mv` history twice. Until then, treat the existing folders as "current home" and the layered names above as "logical layer."
+Legacy roots `skills/detection-engineering/`, `skills/compliance-cis-mitre/`, and
+`skills/ai-infra-security/` remain temporarily as redirect / shared-resource
+folders so external links do not break in one jump.

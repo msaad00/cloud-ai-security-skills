@@ -183,7 +183,7 @@ Prefer the storage-integration or federation path where the source platform supp
 ## Project Structure
 
 ```
-skills/iam-departures-remediation/
+skills/remediation/iam-departures-remediation/
 ├── SKILL.md                    # This file (skill definition)
 ├── reference.md                # Detailed architecture + framework mappings
 ├── examples.md                 # Deployment walkthroughs

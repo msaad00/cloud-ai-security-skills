@@ -5,36 +5,45 @@ This repository contains production-ready cloud security automations structured 
 
 ## Repository structure
 
-Skills are grouped into four **functional** categories — not by cloud. The category answers *what kind of work does this skill do*, not *which cloud does it run in*. See [`skills/README.md`](skills/README.md) for the full catalog.
+Skills are grouped into layered categories — not by cloud. The category answers
+*what kind of work does this skill do*, not *which cloud does it run in*. See
+[`skills/README.md`](skills/README.md) for the full catalog.
 
 ```
 skills/
-├── compliance-cis-mitre/          # "Is this aligned with a published benchmark?" (read-only)
-│   ├── cspm-aws-cis-benchmark/    (18 CIS AWS v3.0 checks)
-│   ├── cspm-gcp-cis-benchmark/    (7 CIS GCP v3.0 checks)
-│   ├── cspm-azure-cis-benchmark/  (6 CIS Azure v2.1 checks)
-│   ├── k8s-security-benchmark/    (10 CIS Kubernetes checks)
-│   └── container-security/        (8 CIS Docker checks)
+├── ingestion/                     # raw source → OCSF 1.8
+│   ├── ingest-cloudtrail-ocsf/
+│   ├── ingest-gcp-audit-ocsf/
+│   ├── ingest-azure-activity-ocsf/
+│   ├── ingest-k8s-audit-ocsf/
+│   └── ingest-mcp-proxy-ocsf/
 │
-├── remediation/                   # "Something is wrong — fix it, gated and audited"
-│   └── iam-departures-remediation/ (event-driven, DLQ + SNS, dual audit)
+├── detection/                     # OCSF → Detection Finding 2004 + MITRE
+│   ├── detect-mcp-tool-drift/
+│   ├── detect-privilege-escalation-k8s/
+│   ├── detect-sensitive-secret-read-k8s/
+│   └── detect-lateral-movement-aws/
 │
-├── detection-engineering/         # "What does an attack look like on this surface?"
-│   ├── README.md + OCSF_CONTRACT.md  (category contract — OCSF 1.8 wire format)
-│   ├── golden/                        (frozen OCSF fixtures — contract tests)
-│   ├── analytics/                     (stub for ClickHouse + Grafana follow-up)
-│   ├── ingest-cloudtrail-ocsf/        (AWS CloudTrail → OCSF API Activity 6003)
-│   ├── ingest-gcp-audit-ocsf/         (GCP Cloud Audit → OCSF API Activity 6003)
-│   ├── ingest-azure-activity-ocsf/    (Azure Activity Log → OCSF API Activity 6003)
-│   ├── ingest-k8s-audit-ocsf/         (kube-apiserver audit → OCSF API Activity 6003)
-│   ├── ingest-mcp-proxy-ocsf/         (raw MCP proxy → OCSF Application Activity 6002)
-│   ├── detect-mcp-tool-drift/         (OCSF → OCSF Detection Finding 2004 + T1195.001)
-│   └── detect-privilege-escalation-k8s/ (OCSF → Detection Finding + T1552.007/T1611/T1098/T1550.001)
+├── evaluation/                    # posture, benchmark, and inventory checks
+│   ├── cspm-aws-cis-benchmark/
+│   ├── cspm-gcp-cis-benchmark/
+│   ├── cspm-azure-cis-benchmark/
+│   ├── k8s-security-benchmark/
+│   ├── container-security/
+│   ├── model-serving-security/
+│   ├── gpu-cluster-security/
+│   └── discover-environment/
 │
-└── ai-infra-security/             # "AI-native surfaces: models, agents, GPU, topology"
-    ├── model-serving-security/    (16 checks)
-    ├── gpu-cluster-security/      (13 checks)
-    └── discover-environment/      (MITRE ATT&CK/ATLAS graph overlay)
+├── view/                          # OCSF → rendered/review formats
+│   ├── convert-ocsf-to-sarif/
+│   └── convert-ocsf-to-mermaid-attack-flow/
+│
+├── remediation/                   # active fix workflows, gated and audited
+│   └── iam-departures-remediation/
+│
+└── detection-engineering/         # temporary transition home
+    ├── OCSF_CONTRACT.md
+    └── golden/
 ```
 
 Every skill in every category is a closed loop: **detect → act → audit → re-verify**.
@@ -155,28 +164,28 @@ SOC 2 TSC, ISO 27001:2022, PCI DSS 4.0, OWASP LLM Top 10, OWASP MCP Top 10.
 ## Running checks
 
 ```bash
-# compliance-cis-mitre/ (read-only)
+# evaluation/ (read-only)
 pip install boto3 google-cloud-resource-manager azure-identity
-python skills/compliance-cis-mitre/cspm-aws-cis-benchmark/src/checks.py   --region us-east-1
-python skills/compliance-cis-mitre/cspm-gcp-cis-benchmark/src/checks.py   --project my-project
-python skills/compliance-cis-mitre/cspm-azure-cis-benchmark/src/checks.py --subscription <sub-id>
+python skills/evaluation/cspm-aws-cis-benchmark/src/checks.py   --region us-east-1
+python skills/evaluation/cspm-gcp-cis-benchmark/src/checks.py   --project my-project
+python skills/evaluation/cspm-azure-cis-benchmark/src/checks.py --subscription <sub-id>
 
 # remediation/ (dry-run)
 python skills/remediation/iam-departures-remediation/src/lambda_parser/handler.py --dry-run examples/manifest.json
 
-# detection-engineering/ — end-to-end pipe
-python skills/detection-engineering/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
-  | python skills/detection-engineering/detect-mcp-tool-drift/src/detect.py \
+# ingestion + detection + view — end-to-end pipe
+python skills/ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+  | python skills/detection/detect-mcp-tool-drift/src/detect.py \
   > findings.ocsf.jsonl
 
 # Tests
 pip install pytest boto3 moto
-pytest skills/compliance-cis-mitre/cspm-aws-cis-benchmark/tests/     -o "testpaths=tests"
-pytest skills/compliance-cis-mitre/cspm-gcp-cis-benchmark/tests/     -o "testpaths=tests"
-pytest skills/compliance-cis-mitre/cspm-azure-cis-benchmark/tests/   -o "testpaths=tests"
+pytest skills/evaluation/cspm-aws-cis-benchmark/tests/     -o "testpaths=tests"
+pytest skills/evaluation/cspm-gcp-cis-benchmark/tests/     -o "testpaths=tests"
+pytest skills/evaluation/cspm-azure-cis-benchmark/tests/   -o "testpaths=tests"
 pytest skills/remediation/iam-departures-remediation/tests/          -o "testpaths=tests"
-pytest skills/detection-engineering/ingest-mcp-proxy-ocsf/tests/     -o "testpaths=tests"
-pytest skills/detection-engineering/detect-mcp-tool-drift/tests/     -o "testpaths=tests"
+pytest skills/ingestion/ingest-mcp-proxy-ocsf/tests/     -o "testpaths=tests"
+pytest skills/detection/detect-mcp-tool-drift/tests/     -o "testpaths=tests"
 ```
 
 ## Integration with agent-bom

@@ -7,34 +7,40 @@
 
 ## Repository at a glance
 
-Skills are organised into four functional categories. See [`skills/README.md`](skills/README.md) for the full catalog.
+Skills are organised into layered categories. See [`skills/README.md`](skills/README.md) for the full catalog.
 
-**`compliance-cis-mitre/`** (read-only posture checks)
-- `cspm-aws-cis-benchmark` — 18 CIS AWS Foundations v3.0 checks
-- `cspm-gcp-cis-benchmark` — 7 CIS GCP Foundations v3.0 checks
-- `cspm-azure-cis-benchmark` — 6 CIS Azure Foundations v2.1 checks
-- `k8s-security-benchmark` — 10 CIS Kubernetes checks
-- `container-security` — 8 CIS Docker checks
+**`ingestion/`** (raw source → OCSF)
+- `ingest-cloudtrail-ocsf`
+- `ingest-gcp-audit-ocsf`
+- `ingest-azure-activity-ocsf`
+- `ingest-k8s-audit-ocsf`
+- `ingest-mcp-proxy-ocsf`
+
+**`detection/`** (OCSF → OCSF Detection Finding 2004 + MITRE)
+- `detect-mcp-tool-drift`
+- `detect-privilege-escalation-k8s`
+- `detect-sensitive-secret-read-k8s`
+- `detect-lateral-movement-aws`
+
+**`evaluation/`** (read-only posture / benchmark checks)
+- `cspm-aws-cis-benchmark`
+- `cspm-gcp-cis-benchmark`
+- `cspm-azure-cis-benchmark`
+- `k8s-security-benchmark`
+- `container-security`
+- `model-serving-security`
+- `gpu-cluster-security`
+- `discover-environment`
+
+**`view/`** (OCSF export / rendering)
+- `convert-ocsf-to-sarif`
+- `convert-ocsf-to-mermaid-attack-flow`
 
 **`remediation/`** (active fix workflows, HITL-gated, dual-audited)
-- `iam-departures-remediation` — event-driven multi-cloud IAM cleanup
+- `iam-departures-remediation`
 
-**`detection-engineering/`** (OCSF 1.8 wire format, MITRE ATT&CK inside `finding_info.attacks[]`)
-
-Ingestion (raw log → OCSF API/Application Activity):
-- `ingest-cloudtrail-ocsf` — AWS CloudTrail → OCSF API Activity 6003
-- `ingest-gcp-audit-ocsf` — GCP Cloud Audit Logs → OCSF API Activity 6003
-- `ingest-azure-activity-ocsf` — Azure Activity Logs → OCSF API Activity 6003
-- `ingest-k8s-audit-ocsf` — `kube-apiserver` audit → OCSF API Activity 6003
-- `ingest-mcp-proxy-ocsf` — agent-bom MCP proxy → OCSF Application Activity 6002
-
-Detection (OCSF → OCSF Detection Finding 2004 + MITRE):
-- `detect-mcp-tool-drift` — MCP tool schema drift, T1195.001
-- `detect-privilege-escalation-k8s` — K8s priv-esc patterns, T1552.007 / T1611 / T1098 / T1550.001
-- Compose via stdin/stdout pipes. See [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
-
-**`ai-infra-security/`** (model serving, GPU clusters, environment discovery)
-- `model-serving-security`, `gpu-cluster-security`, `discover-environment`
+Compose via stdin/stdout pipes. The shared wire contract remains pinned in
+[`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
 
 ## Hard rules for agents
 
@@ -68,7 +74,7 @@ If you see a remediation step that succeeded but no audit row, treat it as a fai
 ## Where to read more
 
 - Full guardrails and rationale: [`CLAUDE.md`](CLAUDE.md)
-- Per-skill contract: `skills/<skill-name>/SKILL.md`
+- Per-skill contract: `skills/<layer>/<skill-name>/SKILL.md`
 - Agent-specific guidance and current integration gaps: [`docs/agent-integrations.md`](docs/agent-integrations.md)
 - Architecture diagrams (closed loops): [`README.md`](README.md)
 - Security model: [`SECURITY.md`](SECURITY.md)

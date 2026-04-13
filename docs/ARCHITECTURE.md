@@ -129,9 +129,9 @@ Finite input, pipe through skills, write the output somewhere. This is the defau
 
 ```
 cat cloudtrail.json \
-  | python3 skills/detection-engineering/ingest-cloudtrail-ocsf/src/ingest.py \
-  | python3 skills/detection-engineering/detect-lateral-movement-aws/src/detect.py \
-  | python3 skills/detection-engineering/convert-ocsf-to-sarif/src/convert.py \
+  | python3 skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
+  | python3 skills/detection/detect-lateral-movement-aws/src/detect.py \
+  | python3 skills/view/convert-ocsf-to-sarif/src/convert.py \
   > findings.sarif
 ```
 
@@ -182,32 +182,35 @@ Sinks exploit this: `MERGE INTO ocsf_findings USING input ON input.finding_info.
 
 ## 5. Directory layout
 
-### Current (pre-reshape)
+### Current layered tree
 
 ```
 cloud-security/
 ├── skills/
-│   ├── ai-infra-security/       # discover, gpu-cluster, model-serving
-│   ├── compliance-cis-mitre/    # → will become `evaluate/`
-│   ├── detection-engineering/   # ingest-*, enrich-*, detect-*, convert-*
-│   └── remediation/             # → will become `remediate/`
+│   ├── ingestion/               # L1
+│   ├── detection/               # L3
+│   ├── evaluation/              # L4
+│   ├── view/                    # L6
+│   ├── remediation/             # L5
+│   ├── detection-engineering/   # transition docs + golden fixtures
+│   ├── compliance-cis-mitre/    # transition README
+│   └── ai-infra-security/       # transition README
 ├── tests/integration/
 ├── .github/workflows/
 └── docs/
     └── ARCHITECTURE.md  (this file)
 ```
 
-### Target (post-reshape PR #39)
+### Near-term target
 
 ```
 cloud-security/
 ├── skills/
-│   ├── ingest-*              # L1
-│   ├── enrich-*              # L2
-│   ├── detect-*              # L3
-│   ├── evaluate-*            # L4 (was compliance-cis-mitre/)
-│   ├── remediate-*           # L5 (was remediation/)
-│   └── convert-*             # L6
+│   ├── ingestion/            # L1
+│   ├── detection/            # L3
+│   ├── evaluation/           # L4
+│   ├── view/                 # L6
+│   └── remediation/          # L5
 ├── sinks/                    # L7 — own top-level, side-effectful
 │   ├── sink-snowflake-ocsf/
 │   ├── sink-security-lake-ocsf/
@@ -226,14 +229,14 @@ cloud-security/
 ├── tests/integration/
 └── docs/
     ├── ARCHITECTURE.md
-    ├── OCSF_CONTRACT.md       # moved from skills/detection-engineering/
+    ├── OCSF_CONTRACT.md       # optional future move from skills/detection-engineering/
     ├── SINK_CONTRACT.md       # new, PR T
     └── RUNNER_CONTRACT.md     # new, PR V
 ```
 
 **Rationale for separating `sinks/`, `runners/`, `mcp-server/`, `query/` from `skills/`:** the "skills are pure, edges have side effects" mental model becomes visible in the directory tree. A reviewer can tell at a glance whether a change touches pure code or effectful code. This is cheap documentation that pays for itself on every PR.
 
-**Migration mechanics** — the reshape is tracked as issue #39 and is a mechanical `git mv` + import-path update. The directory names are stable public API for skill consumers; we will ship a one-release deprecation window where the old paths re-export from the new paths.
+**Migration mechanics** — issue #39 lands the layered skill directories first. The old category roots stay as transition docs / redirect stubs for one release cycle so external links do not break immediately.
 
 ## 6. Wire contract (OCSF 1.8)
 
