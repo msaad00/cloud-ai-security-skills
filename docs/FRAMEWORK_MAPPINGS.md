@@ -67,6 +67,7 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | `model-serving-security` | explicit ATLAS coverage in skill docs and checks |
 | `discover-ai-bom` | inventory artifact for future ATLAS / AI RMF evidence joins |
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
+| `discover-cloud-control-evidence` | cross-cloud evidence package that preserves ATT&CK / ATLAS / AI RMF inventory context |
 
 Recommended expansion:
 - make ATLAS mappings more explicit in `gpu-cluster-security`
@@ -94,6 +95,7 @@ uniform than classic cloud posture.
 |---|---|
 | `discover-ai-bom` | CycloneDX ML-BOM, NIST AI RMF, MITRE ATLAS, PCI, SOC 2 |
 | `discover-control-evidence` | PCI DSS 4.0, SOC 2 TSC, CycloneDX ML-BOM, MITRE ATLAS |
+| `discover-cloud-control-evidence` | PCI DSS 4.0, SOC 2 TSC, NIST AI RMF, MITRE ATT&CK, MITRE ATLAS |
 | `model-serving-security` | MITRE ATLAS, NIST CSF, OWASP LLM Top 10, SOC 2 |
 | `gpu-cluster-security` | MITRE ATT&CK, NIST CSF, CIS Controls, CIS Kubernetes |
 | `discover-environment` | MITRE ATT&CK, MITRE ATLAS, NIST CSF |

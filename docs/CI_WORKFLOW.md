@@ -17,7 +17,7 @@ The CI pipeline is split into independent lanes so failures point at the right k
 - `test-detection-engineering`
   - OCSF ingest, detect, and convert skills in one grouped lane
 - `test-ai-infra`
-  - discovery, evidence, model serving, GPU, and AI inventory/BOM skills in one grouped lane
+  - discovery, cross-cloud evidence, model serving, GPU, and AI inventory/BOM skills in one grouped lane
 - `test-integration`
   - cross-skill contracts and pipe-level regression tests
 - `validate-iac`

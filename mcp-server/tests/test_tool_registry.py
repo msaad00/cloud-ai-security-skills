@@ -22,7 +22,7 @@ tool_map = MODULE.tool_map
 class TestDiscovery:
     def test_discovers_all_skills(self):
         skills = discover_skills(REPO_ROOT)
-        assert len(skills) == 29
+        assert len(skills) == 30
         assert {skill.name for skill in skills} >= {
             "ingest-cloudtrail-ocsf",
             "detect-lateral-movement",
@@ -34,6 +34,7 @@ class TestDiscovery:
             "ingest-azure-defender-for-cloud-ocsf",
             "discover-ai-bom",
             "discover-control-evidence",
+            "discover-cloud-control-evidence",
         }
 
     def test_marks_remediation_skill_without_cli_entrypoint_as_unsupported(self):
@@ -48,6 +49,7 @@ class TestDiscovery:
         assert "model-serving-security" in tools
         assert "discover-ai-bom" in tools
         assert "discover-control-evidence" in tools
+        assert "discover-cloud-control-evidence" in tools
 
 
 class TestToolDefinition:

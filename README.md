@@ -6,11 +6,25 @@
 [![OCSF 1.8](https://img.shields.io/badge/OCSF-1.8-22d3ee)](https://schema.ocsf.io/1.8.0)
 [![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
 
-**OCSF-native security skills for cloud and AI systems.** Normalise every source to **OCSF 1.8** on the wire, then compose ingest → discover → detect → evaluate → view → remediate flows like Unix pipes. Built for direct CLI use, CI, serverless pipelines, and a thin local MCP wrapper. Read-only by default, least-privilege, zero-trust, closed-loop.
+**OCSF-native security skills for cloud and AI systems.** Compose `ingest → discover → detect → evaluate → view → remediate` like Unix pipes. Run the same skill code from the CLI, CI, MCP, or persistent pipelines.
 
-The repo is intentionally broader than CSPM: cloud security, container security, AI infra security, detection engineering, compliance evaluation, and future inventory/enrichment skills such as AI BOM generation all fit here as long as they stay deterministic, auditable, and grounded in official specs.
+**What it is**
+- Cross-cloud and AI security skills, not just CSPM
+- Read-only by default, least-privilege, zero-trust
+- Deterministic, auditable, and grounded in official vendor docs
 
-For coding agents, start with [AGENTS.md](AGENTS.md). For Claude-specific project memory, see [CLAUDE.md](CLAUDE.md). For Claude/Codex/Cortex MCP usage, see [docs/agent-integrations.md](docs/agent-integrations.md) and the project-scoped [`.mcp.json`](.mcp.json).
+**Start here**
+- Agents: [AGENTS.md](AGENTS.md)
+- Claude Code memory: [CLAUDE.md](CLAUDE.md)
+- MCP usage: [docs/agent-integrations.md](docs/agent-integrations.md) and [`.mcp.json`](.mcp.json)
+- Architecture and visuals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DIAGRAMS.md](docs/DIAGRAMS.md)
+
+![Repo architecture](docs/images/repo-architecture.svg)
+
+**Visuals**
+- [Repo architecture](docs/images/repo-architecture.svg)
+- [IAM departures flow](docs/images/iam-departures-data-flow.svg)
+- [Detection pipeline](docs/images/detection-pipeline.svg)
 
 ```bash
 python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
@@ -24,13 +38,13 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 | Layer | Role | Output |
 |---|---|---|
 | **Ingest** | Per-source raw log → OCSF | API / Network / HTTP / Application Activity |
-| **Discover** | point-in-time inventory / graph / AI BOM | deterministic JSON graph or CycloneDX-aligned BOM |
+| **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, evidence JSON, or CycloneDX-aligned BOM |
 | **Detect** | OCSF → finding + MITRE ATT&CK | Detection Finding (class 2004) |
 | **Evaluate** | OCSF → framework check | Compliance Finding (class 2003) — CIS / NIST / SOC 2 |
 | **View** | OCSF → SARIF / Mermaid / graph | GitHub Security tab, PR comments, dashboards |
 | **Remediate** | Finding → action (HITL-gated, audited) | Dual-write audit row |
 
-Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide) — `SKILL.md` with trigger phrases and a `Do NOT use…` clause, `src/`, `tests/`, golden fixtures, `REFERENCES.md`. Runs from the CLI, in CI, or via any agent that reads `SKILL.md` (Claude Desktop, Cursor, Codex, Cortex, Windsurf).
+Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, explicit `Use when...`, and explicit `Do NOT use...`.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
 
@@ -94,8 +108,9 @@ skills/
 │
 ├── discovery/                      "Point-in-time inventory and graph evidence"
 │   ├── discover-environment                      → MITRE ATT&CK + ATLAS graph overlay
-│   └── discover-ai-bom                           → CycloneDX-aligned AI BOM
-│   └── discover-control-evidence                 → PCI / SOC 2 technical evidence JSON
+│   ├── discover-ai-bom                           → CycloneDX-aligned AI BOM
+│   ├── discover-control-evidence                 → PCI / SOC 2 technical evidence JSON
+│   └── discover-cloud-control-evidence           → Cross-cloud PCI / SOC 2 evidence JSON
 │
 ├── detection/                      "What attack pattern does this event stream show?"
 │   ├── detect-lateral-movement                    → T1021 / T1078.004 cross-cloud pivot
