@@ -153,6 +153,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | **Static analysis** | Unsafe parsing, missing imports, style drift | `ruff check` + `ruff format --check` + `bandit` on every PR |
 | **Hardcoded-secret grep** | Leaked `AKIA…` / `sk-…` / `ghp_…` tokens before they ship | CI lint job, repo-wide on every push |
 | **`REFERENCES.md` per skill** | Fabricated APIs, opaque dependencies, undocumented IAM | Presence enforced by CI; manual review on new skills |
+| **Skill integrity validator** | Name drift, MCP metadata drift, unapproved reference domains, dangerous runtime patterns | `scripts/validate_skill_integrity.py` in CI and integration tests |
 | **`agent-bom` scans** | Vulnerable deps, IaC misconfig, shadow AI components | `code` / `skills scan` / `fs` / `iac` on every push; findings land in GitHub Security tab under `agent-bom-iac` |
 
 </details>

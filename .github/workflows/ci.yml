@@ -31,6 +31,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: python scripts/validate_skill_contract.py
+      - run: python scripts/validate_skill_integrity.py
 
   safe-skill-bar:
     runs-on: ubuntu-latest
