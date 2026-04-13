@@ -95,7 +95,7 @@ This is how the repo stays secure and reliable without turning every skill into 
  └───────────────────────────────────────────────────────────────────┘
 ```
 
-Most data objects flowing between layers are **OCSF 1.8 JSONL**. That is the default wire contract for ingest, detect, evaluate, view, and sink paths. Discovery follows this rule where OCSF inventory/evidence classes fit cleanly; otherwise it may emit deterministic bridge artifacts such as environment graphs or CycloneDX-aligned AI BOMs with an explicit mapping path back to OCSF. The current discovery evidence skills also support an explicit `ocsf-live-evidence` bridge mode so Discovery-category pipelines can stay OCSF-shaped without replacing the native deterministic artifact.
+Most data objects flowing between layers are **OCSF 1.8 JSONL**. That is the default wire contract for ingest, detect, evaluate, view, and sink paths. Discovery follows this rule where OCSF inventory/evidence classes fit cleanly; otherwise it may emit deterministic bridge artifacts such as environment graphs or CycloneDX-aligned AI BOMs with an explicit mapping path back to OCSF. The current discovery set now supports explicit bridge modes for `Cloud Resources Inventory Info [5023]` and `Live Evidence Info [5040]`, so Discovery-category pipelines can stay OCSF-shaped without replacing the native deterministic artifact.
 
 ### Visuals
 

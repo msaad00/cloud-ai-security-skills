@@ -46,6 +46,11 @@ Bridge artifacts are allowed only when:
 
 The direction of travel is still toward more native OCSF inventory/evidence use, not away from it.
 
+Current bridge modes shipped in-tree:
+- `discover-environment --output-format ocsf-cloud-resources-inventory`
+- `discover-control-evidence --output-format ocsf-live-evidence`
+- `discover-cloud-control-evidence --output-format ocsf-live-evidence`
+
 ## Wire format
 
 - All skills read and write **JSONL** (one OCSF event per line).

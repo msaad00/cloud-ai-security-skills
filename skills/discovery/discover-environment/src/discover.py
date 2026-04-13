@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+SUPPORTED_OUTPUT_FORMATS = ("native", "ocsf-cloud-resources-inventory")
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Graph data model (standalone — no agent-bom dependency)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -103,6 +105,11 @@ def _count_by_attr(items: list, attr: str) -> dict[str, int]:
         val = getattr(item, attr, "unknown")
         counts[val] = counts.get(val, 0) + 1
     return counts
+
+
+def _time_to_epoch_ms(value: str) -> int:
+    normalized = value.replace("Z", "+00:00")
+    return int(datetime.fromisoformat(normalized).timestamp() * 1000)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -722,6 +729,97 @@ def _add_mitre_edges(graph: EnvironmentGraph) -> None:
             )
 
 
+def _build_cloud_object(graph: EnvironmentGraph) -> dict[str, Any] | None:
+    if graph.provider == "static":
+        return None
+
+    cloud: dict[str, Any] = {"provider": graph.provider}
+    if graph.provider == "aws":
+        account_node = next((node for node in graph.nodes if node.id.startswith("aws:account:")), None)
+        if account_node:
+            account_id = account_node.attributes.get("account_id")
+            if account_id:
+                cloud["account"] = {"uid": str(account_id), "name": f"AWS Account {account_id}"}
+    elif graph.provider == "gcp":
+        project_node = next((node for node in graph.nodes if node.id.startswith("gcp:project:")), None)
+        if project_node:
+            project_uid = project_node.id.split(":", 2)[-1]
+            cloud["project_uid"] = project_uid
+            cloud["account"] = {"uid": project_uid, "name": project_node.label}
+    elif graph.provider == "azure":
+        subscription_node = next((node for node in graph.nodes if node.id.startswith("azure:subscription:")), None)
+        if subscription_node:
+            subscription_uid = subscription_node.id.split(":", 2)[-1]
+            cloud["account"] = {"uid": subscription_uid, "name": subscription_node.label}
+
+    if graph.region:
+        cloud["region"] = graph.region
+    return cloud
+
+
+def _node_to_ocsf_resource(node: GraphNode, region: str) -> dict[str, Any]:
+    resource = {
+        "uid": node.id,
+        "name": node.label,
+        "type": node.entity_type,
+        "region": region or node.attributes.get("region") or node.dimensions.get("region"),
+        "labels": sorted(set(node.compliance_tags)),
+        "data": {
+            "attributes": node.attributes,
+            "dimensions": node.dimensions,
+            "severity": node.severity,
+            "risk_score": node.risk_score,
+            "status": node.status,
+        },
+    }
+    if not resource["region"]:
+        resource.pop("region")
+    if not resource["labels"]:
+        resource.pop("labels")
+    return resource
+
+
+def to_ocsf_cloud_resources_inventory(graph: EnvironmentGraph) -> dict[str, Any]:
+    inventory_nodes = [node for node in graph.nodes if not node.id.startswith("mitre:")]
+    message = f"{graph.provider} cloud resource inventory snapshot"
+    event: dict[str, Any] = {
+        "activity_id": 99,
+        "activity_name": "inventory_snapshot",
+        "category_uid": 5,
+        "category_name": "Discovery",
+        "class_uid": 5023,
+        "class_name": "Cloud Resources Inventory Info",
+        "type_uid": 502399,
+        "type_name": "Cloud Resources Inventory Info: Other",
+        "severity_id": 1,
+        "severity": "Informational",
+        "status_id": 1,
+        "status": "Success",
+        "time": _time_to_epoch_ms(graph.discovered_at),
+        "message": message,
+        "metadata": {
+            "version": "1.8.0",
+            "product": {
+                "name": "cloud-security",
+                "vendor_name": "msaad00/cloud-security",
+                "feature": {"name": "discover-environment"},
+            },
+        },
+        "count": len(inventory_nodes),
+        "resources": [_node_to_ocsf_resource(node, graph.region) for node in inventory_nodes],
+        "unmapped": {
+            "environment_graph": graph.to_dict(),
+            "bridge_format": "cloud-security.environment-graph.v1",
+        },
+    }
+    if cloud := _build_cloud_object(graph):
+        event["cloud"] = cloud
+    if inventory_nodes:
+        event["start_time"] = _time_to_epoch_ms(graph.discovered_at)
+        event["end_time"] = _time_to_epoch_ms(graph.discovered_at)
+    return event
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════
@@ -735,6 +833,12 @@ def main() -> None:
     parser.add_argument("--subscription-id", help="Azure subscription ID")
     parser.add_argument("--profile", help="AWS CLI profile name")
     parser.add_argument("--config", help="Path to static config file (for 'config' provider)")
+    parser.add_argument(
+        "--output-format",
+        choices=SUPPORTED_OUTPUT_FORMATS,
+        default="native",
+        help="Output format: native graph JSON or OCSF Cloud Resources Inventory bridge",
+    )
     parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
     args = parser.parse_args()
 
@@ -755,7 +859,13 @@ def main() -> None:
     else:
         parser.error(f"Unknown provider: {args.provider}")
 
-    result = json.dumps(graph.to_dict(), indent=2, default=str)
+    payload: dict[str, Any]
+    if args.output_format == "ocsf-cloud-resources-inventory":
+        payload = to_ocsf_cloud_resources_inventory(graph)
+    else:
+        payload = graph.to_dict()
+
+    result = json.dumps(payload, indent=2, default=str)
 
     if args.output:
         Path(args.output).write_text(result)

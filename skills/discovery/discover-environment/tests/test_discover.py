@@ -16,6 +16,7 @@ from discover import (
     GraphNode,
     discover_from_config,
     get_attack_techniques,
+    to_ocsf_cloud_resources_inventory,
 )
 
 
@@ -150,3 +151,71 @@ class TestGraphStats:
         assert stats["node_types"]["user"] == 2
         assert stats["node_types"]["server"] == 1
         assert stats["relationship_types"]["uses"] == 2
+
+
+class TestOcsfCloudInventoryBridge:
+    def test_can_emit_ocsf_cloud_resources_inventory(self):
+        graph = EnvironmentGraph(
+            provider="aws",
+            region="us-east-1",
+            discovered_at="2026-04-13T12:00:00+00:00",
+        )
+        graph.add_node(
+            GraphNode(
+                id="aws:account:123456789012",
+                entity_type="cloud_resource",
+                label="AWS Account 123456789012",
+                attributes={"account_id": "123456789012", "arn": "arn:aws:iam::123456789012:root"},
+                dimensions={"cloud_provider": "aws", "surface": "account"},
+            )
+        )
+        graph.add_node(
+            GraphNode(
+                id="aws:s3:prod-bucket",
+                entity_type="cloud_resource",
+                label="s3://prod-bucket",
+                attributes={"created": "2026-04-13T11:00:00+00:00"},
+                compliance_tags=["MITRE-T1530"],
+                dimensions={"cloud_provider": "aws", "surface": "storage"},
+            )
+        )
+        graph.add_node(
+            GraphNode(
+                id="mitre:T1530",
+                entity_type="vulnerability",
+                label="T1530: Data from Cloud Storage",
+            )
+        )
+        graph.add_edge(
+            GraphEdge(
+                source="mitre:T1530",
+                target="aws:s3:prod-bucket",
+                relationship="exploitable_via",
+                evidence={"technique": "T1530"},
+            )
+        )
+
+        event = to_ocsf_cloud_resources_inventory(graph)
+
+        assert event["class_uid"] == 5023
+        assert event["category_uid"] == 5
+        assert event["activity_id"] == 99
+        assert event["metadata"]["product"]["feature"]["name"] == "discover-environment"
+        assert event["cloud"]["provider"] == "aws"
+        assert event["cloud"]["account"]["uid"] == "123456789012"
+        assert event["count"] == 2
+        assert len(event["resources"]) == 2
+        assert all(resource["uid"] != "mitre:T1530" for resource in event["resources"])
+        assert event["resources"][1]["labels"] == ["MITRE-T1530"]
+        assert event["unmapped"]["bridge_format"] == "cloud-security.environment-graph.v1"
+        assert event["unmapped"]["environment_graph"]["stats"]["total_nodes"] == 3
+
+    def test_static_graph_can_emit_bridge_without_cloud_object(self):
+        graph = EnvironmentGraph(provider="static", discovered_at="2026-04-13T12:00:00+00:00")
+        graph.add_node(GraphNode(id="res:1", entity_type="cloud_resource", label="Static Resource"))
+
+        event = to_ocsf_cloud_resources_inventory(graph)
+
+        assert event["class_uid"] == 5023
+        assert "cloud" not in event
+        assert event["count"] == 1

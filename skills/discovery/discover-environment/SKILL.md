@@ -11,6 +11,9 @@ description: >-
   (use cspm-aws/gcp/azure-cis-benchmark) or to drive remediation directly —
   this skill produces a graph, not findings, and never mutates cloud state.
   Do NOT use as a real-time monitor; the graph is a point-in-time snapshot.
+  Native output is deterministic graph JSON. Optional `--output-format
+  ocsf-cloud-resources-inventory` wraps the snapshot as OCSF Discovery / Cloud
+  Resources Inventory Info [5023] while preserving the graph under `unmapped`.
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Cloud discovery needs respective SDKs (boto3 for AWS,
@@ -19,7 +22,7 @@ compatibility: >-
 metadata:
   author: msaad00
   homepage: https://github.com/msaad00/cloud-security
-  source: https://github.com/msaad00/cloud-security/tree/main/skills/evaluation/discover-environment
+  source: https://github.com/msaad00/cloud-security/tree/main/skills/discovery/discover-environment
   version: 0.1.0
   frameworks:
     - MITRE ATT&CK
@@ -36,7 +39,8 @@ metadata:
 Maps cloud infrastructure to a security graph with MITRE ATT&CK and ATLAS
 technique overlays. Each resource becomes a graph node, each relationship
 an edge. Attack techniques are mapped as edges from technique nodes to
-vulnerable resources.
+vulnerable resources. When an OCSF consumer needs inventory-shaped output, the
+same snapshot can be emitted as `Cloud Resources Inventory Info [5023]`.
 
 ## When to Use
 
@@ -44,6 +48,7 @@ vulnerable resources.
 - Visualize IAM → service → storage → network relationships
 - Overlay MITRE ATT&CK techniques on infrastructure for threat modeling
 - Export cloud inventory as graph JSON for any visualization tool
+- Emit an OCSF Discovery bridge event for inventory-oriented pipelines
 - Feed into agent-bom's unified graph for cross-platform posture view
 - Periodic environment drift detection (compare graph snapshots)
 
@@ -155,13 +160,16 @@ python src/discover.py azure --subscription-id SUB_ID
 # Static config (no SDK needed)
 python src/discover.py config --config environment.json
 
-# Save output
+# Save native graph output
 python src/discover.py aws -o environment-graph.json
+
+# Emit an OCSF Cloud Resources Inventory bridge event
+python src/discover.py aws --output-format ocsf-cloud-resources-inventory -o inventory.ocsf.json
 ```
 
 ## Output Format
 
-The graph JSON is standalone — no agent-bom dependency. Any tool can consume it.
+Default output is standalone graph JSON — no agent-bom dependency. Any tool can consume it.
 
 ```json
 {
@@ -192,6 +200,30 @@ The graph JSON is standalone — no agent-bom dependency. Any tool can consume i
     "total_edges": 67,
     "node_types": {"user": 5, "service_account": 12, "cloud_resource": 25},
     "relationship_types": {"contains": 30, "owns": 5, "uses": 8, "exploitable_via": 24}
+  }
+}
+```
+
+Optional OCSF bridge output:
+
+```json
+{
+  "class_uid": 5023,
+  "class_name": "Cloud Resources Inventory Info",
+  "category_uid": 5,
+  "category_name": "Discovery",
+  "activity_id": 99,
+  "activity_name": "inventory_snapshot",
+  "resources": [
+    {
+      "uid": "aws:s3:prod-bucket",
+      "name": "s3://prod-bucket",
+      "type": "cloud_resource"
+    }
+  ],
+  "unmapped": {
+    "bridge_format": "cloud-security.environment-graph.v1",
+    "environment_graph": {}
   }
 }
 ```

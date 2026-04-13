@@ -38,7 +38,7 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 | Layer | Role | Output |
 |---|---|---|
 | **Ingest** | Per-source raw log → OCSF | API / Network / HTTP / Application Activity |
-| **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, evidence JSON, or CycloneDX-aligned BOM |
+| **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, OCSF inventory/evidence bridge events, evidence JSON, or CycloneDX-aligned BOM |
 | **Detect** | OCSF → finding + MITRE ATT&CK | Detection Finding (class 2004) |
 | **Evaluate** | OCSF → framework check | Compliance Finding (class 2003) — CIS / NIST / SOC 2 |
 | **View** | OCSF → SARIF / Mermaid / graph | GitHub Security tab, PR comments, dashboards |
@@ -50,6 +50,7 @@ Each skill is a standalone Python bundle following [Anthropic's skill spec](http
 - `ingest`, `detect`, `evaluate`, and `view` are OCSF-first wire paths
 - `discovery` prefers native OCSF inventory/evidence classes and profiles when they fit
 - where OCSF does not cleanly fit yet, the repo uses deterministic bridge artifacts with an explicit mapping path back to OCSF
+- `discover-environment` supports an `ocsf-cloud-resources-inventory` bridge mode
 - discovery evidence skills support an `ocsf-live-evidence` bridge mode for Discovery-category OCSF workflows
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
@@ -113,7 +114,7 @@ skills/
 │   └── ingest-mcp-proxy-ocsf       MCP            → Application Activity 6002
 │
 ├── discovery/                      "Point-in-time inventory and graph evidence"
-│   ├── discover-environment                      → MITRE ATT&CK + ATLAS graph overlay
+│   ├── discover-environment                      → graph JSON or OCSF 5023 inventory bridge
 │   ├── discover-ai-bom                           → CycloneDX-aligned AI BOM
 │   ├── discover-control-evidence                 → PCI / SOC 2 technical evidence JSON
 │   └── discover-cloud-control-evidence           → Cross-cloud PCI / SOC 2 evidence JSON
