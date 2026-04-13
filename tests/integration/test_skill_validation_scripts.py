@@ -91,3 +91,10 @@ class TestValidationScripts:
         gpu = next(item for item in registry["skills"] if item["path"] == "skills/evaluation/gpu-cluster-security")
         assert "mitre-atlas" in gpu["frameworks"]
         assert "nist-ai-rmf" in gpu["frameworks"]
+
+    def test_lateral_movement_identity_assets_are_registered(self):
+        registry = json.loads((ROOT / "docs" / "framework-coverage.json").read_text())
+        skill = next(item for item in registry["skills"] if item["path"] == "skills/detection/detect-lateral-movement")
+        assert "service-accounts" in skill["asset_classes"]
+        assert "service-principals" in skill["asset_classes"]
+        assert "managed-identities" in skill["asset_classes"]

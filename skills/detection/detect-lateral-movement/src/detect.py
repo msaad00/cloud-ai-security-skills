@@ -25,6 +25,8 @@ from typing import Any, Iterable
 
 SKILL_NAME = "detect-lateral-movement"
 OCSF_VERSION = "1.8.0"
+REPO_NAME = "cloud-ai-security-skills"
+REPO_VENDOR = "msaad00/cloud-ai-security-skills"
 
 # Detection Finding (2004)
 FINDING_CLASS_UID = 2004
@@ -77,6 +79,27 @@ AZURE_IDENTITY_PIVOT_OPERATIONS = {
     "MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/WRITE",
     "MICROSOFT.AUTHORIZATION/ELEVATEACCESS/ACTION",
     "MICROSOFT.MANAGEDIDENTITY/USERASSIGNEDIDENTITIES/ASSIGN/ACTION",
+}
+
+FRAMEWORKS = ("OCSF 1.8.0", "MITRE ATT&CK v14")
+PROVIDERS = ("aws", "azure", "gcp", "multi")
+ASSET_CLASSES = ("identities", "service-accounts", "managed-identities", "sessions", "api", "network")
+ATTACK_COVERAGE = {
+    "aws": {
+        "principal_types": ["iam-roles", "federated-role-sessions"],
+        "anchor_operations": sorted(ASSUME_ROLE_OPERATIONS),
+        "techniques": ["T1021", "T1078.004"],
+    },
+    "gcp": {
+        "principal_types": ["service-accounts"],
+        "anchor_operations": [f"*{suffix}" for suffix in GCP_IDENTITY_PIVOT_SUFFIXES],
+        "techniques": ["T1021", "T1078.004"],
+    },
+    "azure": {
+        "principal_types": ["service-principals", "managed-identities"],
+        "anchor_operations": sorted(AZURE_IDENTITY_PIVOT_OPERATIONS),
+        "techniques": ["T1021", "T1078.004"],
+    },
 }
 
 # RFC1918 private ranges + CGNAT shared-address range
@@ -187,6 +210,18 @@ def is_identity_pivot_anchor(event: dict[str, Any]) -> bool:
     return False
 
 
+def coverage_metadata() -> dict[str, object]:
+    """Return machine-readable ATT&CK and provider coverage for the detector."""
+    return {
+        "frameworks": list(FRAMEWORKS),
+        "providers": list(PROVIDERS),
+        "asset_classes": list(ASSET_CLASSES),
+        "attack_coverage": ATTACK_COVERAGE,
+        "correlation_window_seconds": CORRELATION_WINDOW_MS // 1000,
+        "min_flow_bytes": MIN_BYTES,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Finding builder
 # ---------------------------------------------------------------------------
@@ -238,8 +273,8 @@ def _build_finding(
         "metadata": {
             "version": OCSF_VERSION,
             "product": {
-                "name": "cloud-security",
-                "vendor_name": "msaad00/cloud-security",
+                "name": REPO_NAME,
+                "vendor_name": REPO_VENDOR,
                 "feature": {"name": SKILL_NAME},
             },
             "labels": ["detection-engineering", provider_key, "lateral-movement", "multi-source"],

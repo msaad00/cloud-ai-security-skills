@@ -18,6 +18,17 @@ description: >-
   use for pre-compromise detection. Do NOT use as an exfiltration
   detector — public internet destinations are deliberately filtered out.
 license: Apache-2.0
+metadata:
+  homepage: https://github.com/msaad00/cloud-ai-security-skills
+  source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/detection/detect-lateral-movement
+  version: 0.2.0
+  frameworks:
+    - OCSF 1.8
+    - MITRE ATT&CK v14
+  cloud:
+    - aws
+    - azure
+    - gcp
 ---
 
 # detect-lateral-movement
@@ -30,7 +41,7 @@ The canonical cloud lateral-movement sequence after initial access:
 2. Attacker pivots identity with a privileged cloud API operation:
    - AWS `AssumeRole*`
    - GCP service-account impersonation / key generation
-   - Azure role assignment / access elevation
+   - Azure role assignment / access elevation / managed-identity assignment
 3. From a compute resource inside the cloud network, attacker initiates east-west traffic to an internal service the original principal never accessed
 4. Data transfer starts
 
@@ -52,6 +63,31 @@ One pass over a merged OCSF stream of API Activity (6003) + Network Activity (40
 3. Emit one finding per distinct `(provider, session_uid, dst_endpoint.ip, dst_endpoint.port)` tuple
 
 **Stateless per-run, deterministic UIDs.** Findings are keyed on `(session_uid, dst_ip, dst_port)` so re-running on the same merged stream produces byte-identical output.
+
+## Cross-cloud identity coverage today
+
+This detector already covers the highest-signal identity pivot anchors that are
+observable in the repo's shipped audit ingestors:
+
+| Provider | Covered principal types | Covered anchor operations today |
+|---|---|---|
+| AWS | IAM roles, federated role sessions | `AssumeRole`, `AssumeRoleWithSAML`, `AssumeRoleWithWebIdentity` |
+| GCP | Service accounts | IAM Credentials API token generation, ID token generation, JWT/blob signing, service-account key creation |
+| Azure | Service principals, managed identities | role assignments, elevate access, user-assigned managed identity attach |
+
+This keeps the detector explicit and measurable for ATT&CK `T1021` and
+`T1078.004` without pretending it already covers every provider-native identity
+event family.
+
+## Current limits
+
+- Azure Entra / Microsoft Graph application credential events are **not**
+  covered here yet because they are not part of the current Azure Activity
+  ingest path.
+- AWS IAM user access-key creation and policy-document drift are roadmap work,
+  not current detector anchors.
+- GCP workload-identity federation abuse beyond the current IAM Credentials
+  events remains a roadmap item.
 
 ### Window semantics
 

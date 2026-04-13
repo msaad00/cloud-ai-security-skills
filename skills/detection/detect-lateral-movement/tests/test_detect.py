@@ -20,11 +20,14 @@ from detect import (  # type: ignore[import-not-found]
     MIN_BYTES,
     NET_ACTIVITY_ACCEPT,
     NETWORK_ACTIVITY_CLASS,
+    REPO_NAME,
+    REPO_VENDOR,
     SEVERITY_HIGH,
     SKILL_NAME,
     T1021_TECH_UID,
     T1078_SUB_UID,
     T1078_TECH_UID,
+    coverage_metadata,
     detect,
     is_identity_pivot_anchor,
     is_rfc1918,
@@ -153,6 +156,11 @@ class TestPositiveCases:
         f = list(detect(events))[0]
         assert "attacks" not in f
         assert "attacks" in f["finding_info"]
+
+    def test_product_metadata_tracks_renamed_repo(self):
+        f = list(detect([_anchor_event(), _flow()]))[0]
+        assert f["metadata"]["product"]["name"] == REPO_NAME
+        assert f["metadata"]["product"]["vendor_name"] == REPO_VENDOR
 
     def test_multiple_internal_dsts_produce_multiple_findings(self):
         events = [
@@ -329,6 +337,14 @@ class TestCrossCloudAnchors:
                 operation="MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/WRITE",
             )
         )
+
+    def test_coverage_metadata_declares_identity_scope(self):
+        metadata = coverage_metadata()
+        assert "MITRE ATT&CK v14" in metadata["frameworks"]
+        assert "azure" in metadata["providers"]
+        assert "managed-identities" in metadata["asset_classes"]
+        assert "service-principals" in metadata["attack_coverage"]["azure"]["principal_types"]
+        assert "CreateServiceAccountKey" in "".join(metadata["attack_coverage"]["gcp"]["anchor_operations"])
 
 
 # ── Stream robustness ───────────────────────────────────────────

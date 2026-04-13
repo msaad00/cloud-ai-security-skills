@@ -48,7 +48,7 @@ Strongest current ATT&CK coverage:
 
 | Skill | Coverage |
 |---|---|
-| `detect-lateral-movement` | T1021, T1078.004 |
+| `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots, and Azure role/service-principal identity pivots |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
 | `detect-sensitive-secret-read-k8s` | T1552, T1552.007 |
@@ -60,6 +60,7 @@ Strongest current ATT&CK coverage:
 Notes:
 - ATT&CK is pinned in the shared OCSF contract.
 - ATT&CK mappings belong inside `finding_info.attacks[]` for OCSF 1.8 outputs, not as loose side metadata.
+- Current cross-cloud identity depth is strongest in `detect-lateral-movement`; follow-up gaps now break down into provider-native identity families instead of one generic "identity coverage" bucket.
 
 ## MITRE ATLAS
 
