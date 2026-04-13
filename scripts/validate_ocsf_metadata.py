@@ -8,6 +8,12 @@ from skill_validation_common import discover_skill_contracts
 OCSF_LAYERS = {"ingestion", "discovery", "detection"}
 
 
+def _declares_ocsf_output(raw_modes: str) -> bool:
+    if not raw_modes.strip():
+        return True
+    return "ocsf" in {part.strip() for part in raw_modes.split(",") if part.strip()}
+
+
 def _const_str(node: ast.AST) -> str | None:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
@@ -43,6 +49,8 @@ def main() -> int:
 
     for skill in discover_skill_contracts():
         if skill.category not in OCSF_LAYERS or skill.entrypoint is None:
+            continue
+        if not _declares_ocsf_output(skill.frontmatter.get("output_formats", "")):
             continue
 
         tree = ast.parse(skill.entrypoint.read_text(), filename=str(skill.entrypoint))

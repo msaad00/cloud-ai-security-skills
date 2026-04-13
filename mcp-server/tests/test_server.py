@@ -176,3 +176,35 @@ class TestMcpServer:
         finally:
             proc.terminate()
             proc.wait(timeout=5)
+
+    def test_can_request_native_output_for_supported_tools(self):
+        proc = _start_server()
+        try:
+            _initialize(proc)
+
+            raw_cloudtrail = (GOLDEN_DIR / "cloudtrail_raw_sample.jsonl").read_text()
+            _send_message(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 6,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "ingest-cloudtrail-ocsf",
+                        "arguments": {"input": raw_cloudtrail, "output_format": "native"},
+                    },
+                },
+            )
+            ingest_response = _read_message(proc)
+            assert ingest_response["result"]["isError"] is False
+            ingest_lines = [
+                json.loads(line)
+                for line in ingest_response["result"]["structuredContent"]["stdout"].splitlines()
+                if line.strip()
+            ]
+            assert ingest_lines[0]["schema_mode"] == "native"
+            assert "class_uid" not in ingest_lines[0]
+            assert ingest_response["result"]["structuredContent"]["output_format"] == "native"
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)

@@ -24,6 +24,8 @@ class SkillSpec:
     capability: str
     skill_dir: Path
     entrypoint: Path | None
+    input_formats: tuple[str, ...]
+    output_formats: tuple[str, ...]
 
     @property
     def supported(self) -> bool:
@@ -107,6 +109,12 @@ def _derive_capability(skill_dir: Path, metadata: dict[str, str]) -> str:
     return "read-only"
 
 
+def _parse_modes(raw_value: str | None) -> tuple[str, ...]:
+    if not raw_value:
+        return ()
+    return tuple(part.strip() for part in raw_value.split(",") if part.strip())
+
+
 def _resolve_entrypoint(skill_dir: Path) -> Path | None:
     for candidate in ENTRYPOINT_CANDIDATES:
         path = skill_dir / candidate
@@ -128,6 +136,8 @@ def discover_skills(root: Path | None = None) -> list[SkillSpec]:
                 capability=_derive_capability(skill_dir, metadata),
                 skill_dir=skill_dir,
                 entrypoint=_resolve_entrypoint(skill_dir),
+                input_formats=_parse_modes(metadata.get("input_formats")),
+                output_formats=_parse_modes(metadata.get("output_formats")),
             )
         )
     return specs
@@ -141,19 +151,26 @@ def tool_input_schema(skill: SkillSpec) -> dict[str, object]:
     description = "Inline stdin payload for the skill. Use this for JSON or JSONL filters."
     if skill.entrypoint and skill.entrypoint.name == "checks.py":
         description = "Optional stdin payload. Most benchmark/check skills use explicit CLI args instead."
+    properties: dict[str, object] = {
+        "input": {
+            "type": "string",
+            "description": description,
+        },
+        "args": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Explicit CLI arguments forwarded to the fixed skill entrypoint.",
+        },
+    }
+    if skill.output_formats:
+        properties["output_format"] = {
+            "type": "string",
+            "enum": list(skill.output_formats),
+            "description": "Optional output rendering mode supported by this skill.",
+        }
     return {
         "type": "object",
-        "properties": {
-            "input": {
-                "type": "string",
-                "description": description,
-            },
-            "args": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Explicit CLI arguments forwarded to the fixed skill entrypoint.",
-            },
-        },
+        "properties": properties,
         "additionalProperties": False,
     }
 
@@ -176,7 +193,13 @@ def tool_map(root: Path | None = None) -> dict[str, SkillSpec]:
     return {skill.name: skill for skill in supported_skills(root)}
 
 
-def build_command(skill: SkillSpec, args: list[str]) -> list[str]:
+def build_command(skill: SkillSpec, args: list[str], output_format: str | None = None) -> list[str]:
     if not skill.entrypoint:
         raise ValueError(f"skill {skill.name} has no supported entrypoint")
-    return [sys.executable, str(skill.entrypoint), *args]
+    command = [sys.executable, str(skill.entrypoint), *args]
+    if output_format:
+        if output_format not in skill.output_formats:
+            raise ValueError(f"skill `{skill.name}` does not support output_format `{output_format}`")
+        if "--output-format" not in args:
+            command.extend(["--output-format", output_format])
+    return command

@@ -28,6 +28,7 @@ from ingest import (  # type: ignore[import-not-found]
     STATUS_FAILURE,
     STATUS_SUCCESS,
     convert_event,
+    convert_event_native,
     infer_activity_id,
     ingest,
     iter_raw_events,
@@ -192,6 +193,16 @@ class TestConvertEvent:
         assert len(e["resources"]) == 1
         assert e["resources"][0]["name"] == "bob"
 
+    def test_native_output_keeps_canonical_fields_without_ocsf_envelope(self):
+        e = convert_event_native(self._base_event())
+        assert e["schema_mode"] == "native"
+        assert e["record_type"] == "api_activity"
+        assert e["provider"] == "AWS"
+        assert e["operation"] == "CreateAccessKey"
+        assert e["event_uid"] == "abc-123"
+        assert "class_uid" not in e
+        assert "metadata" not in e
+
 
 # ── iter_raw_events: format auto-detect ─────────────────────────────────
 
@@ -263,3 +274,13 @@ class TestGoldenFixture:
         # principalId becomes the name when userName is missing (assumed-role events)
         assert "AROAEXAMPLEID:alice" in names or "alice" in names
         assert "bob" in names
+
+    def test_native_output_mode_emits_enriched_events(self):
+        produced = list(ingest(RAW_FIXTURE.read_text().splitlines(), output_format="native"))
+        assert len(produced) == 4
+        first = produced[0]
+        assert first["schema_mode"] == "native"
+        assert first["record_type"] == "api_activity"
+        assert first["provider"] == "AWS"
+        assert "class_uid" not in first
+        assert "metadata" not in first

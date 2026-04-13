@@ -88,6 +88,56 @@ def _flow(
     }
 
 
+def _native_anchor(
+    *,
+    provider: str = "AWS",
+    operation: str = "AssumeRole",
+    account_uid: str = "111122223333",
+    session_uid: str = "ASIASESSION001",
+    time_ms: int = 1775797200000,
+    actor_name: str = "alice",
+    service_name: str = "sts.amazonaws.com",
+) -> dict:
+    return {
+        "schema_mode": "native",
+        "record_type": "api_activity",
+        "provider": provider,
+        "account_uid": account_uid,
+        "session_uid": session_uid,
+        "actor_name": actor_name,
+        "operation": operation,
+        "service_name": service_name,
+        "time_ms": time_ms,
+    }
+
+
+def _native_flow(
+    *,
+    provider: str = "AWS",
+    account_uid: str = "111122223333",
+    src_ip: str = "10.0.1.100",
+    dst_ip: str = "10.0.3.75",
+    dst_port: int = 3306,
+    bytes_: int = 450000,
+    disposition: str = "ACCEPT",
+    time_ms: int = 1775797320000,
+    src_instance_uid: str = "i-0web01",
+) -> dict:
+    return {
+        "schema_mode": "native",
+        "record_type": "network_activity",
+        "provider": provider,
+        "account_uid": account_uid,
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "dst_port": dst_port,
+        "traffic_bytes": bytes_,
+        "disposition": disposition,
+        "time_ms": time_ms,
+        "src_instance_uid": src_instance_uid,
+    }
+
+
 # ── RFC1918 helper ───────────────────────────────────────────────
 
 
@@ -230,6 +280,29 @@ class TestPositiveCases:
             for finding in findings
         }
         assert sessions == {"session-a", "session-b"}
+
+    def test_native_input_can_emit_native_finding(self):
+        events = [
+            _native_anchor(time_ms=1000),
+            _native_flow(time_ms=60000, dst_ip="10.0.3.75", bytes_=450000),
+        ]
+        findings = list(detect(events, output_format="native"))
+        assert len(findings) == 1
+        finding = findings[0]
+        assert finding["schema_mode"] == "native"
+        assert finding["record_type"] == "detection_finding"
+        assert finding["provider"] == "AWS"
+        assert finding["session_uid"] == "ASIASESSION001"
+        assert "class_uid" not in finding
+
+    def test_mixed_native_and_ocsf_input_still_correlates(self):
+        events = [
+            _anchor_event(time_ms=1000),
+            _native_flow(time_ms=60000, dst_ip="10.0.3.75", bytes_=450000),
+        ]
+        findings = list(detect(events))
+        assert len(findings) == 1
+        assert findings[0]["class_uid"] == FINDING_CLASS_UID
 
 
 # ── Negative controls ───────────────────────────────────────────

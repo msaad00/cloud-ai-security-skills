@@ -70,9 +70,17 @@ class TestToolDefinition:
         assert "CloudTrail" in tool["description"]
         assert tool["annotations"]["readOnlyHint"] is True
         assert tool["inputSchema"]["properties"]["args"]["type"] == "array"
+        assert tool["inputSchema"]["properties"]["output_format"]["enum"] == ["ocsf", "native"]
+        assert skill.input_formats == ("raw",)
+        assert skill.output_formats == ("ocsf", "native")
 
     def test_build_command_uses_fixed_entrypoint(self):
         skill = tool_map(REPO_ROOT)["detect-lateral-movement"]
         command = build_command(skill, ["--output", "findings.jsonl"])
         assert command[1].endswith("skills/detection/detect-lateral-movement/src/detect.py")
         assert command[-2:] == ["--output", "findings.jsonl"]
+
+    def test_build_command_appends_output_format_when_requested(self):
+        skill = tool_map(REPO_ROOT)["ingest-cloudtrail-ocsf"]
+        command = build_command(skill, [], output_format="native")
+        assert command[-2:] == ["--output-format", "native"]

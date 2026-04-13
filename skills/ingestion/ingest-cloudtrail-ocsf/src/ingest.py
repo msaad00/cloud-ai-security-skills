@@ -2,7 +2,8 @@
 
 Input:  CloudTrail JSON — either single events one-per-line (NDJSON) or the
         digest format ({"Records": [...]}). Auto-detected.
-Output: JSONL of OCSF 1.8 API Activity events.
+Output: JSONL of OCSF 1.8 API Activity events by default, or a documented
+        native enriched event shape when --output-format native is selected.
 
 Contract: see ../OCSF_CONTRACT.md
 """
@@ -18,6 +19,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-cloudtrail-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 # OCSF 1.8 API Activity (6003)
 CLASS_UID = 6003
@@ -224,14 +226,14 @@ def _build_cloud(event: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def convert_event(raw: dict[str, Any]) -> dict[str, Any]:
-    """Convert one raw CloudTrail event into one OCSF API Activity event."""
+def _build_canonical_event(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one raw CloudTrail event into the repo's canonical event shape."""
     event_name = raw.get("eventName", "")
     activity_id = infer_activity_id(event_name)
     error_code = raw.get("errorCode")
     status_id = STATUS_FAILURE if error_code else STATUS_SUCCESS
 
-    metadata_uid = str(raw.get("eventID") or "").strip() or hashlib.sha256(
+    event_uid = str(raw.get("eventID") or "").strip() or hashlib.sha256(
         json.dumps(
             {
                 "eventSource": raw.get("eventSource", ""),
@@ -245,6 +247,41 @@ def convert_event(raw: dict[str, Any]) -> dict[str, Any]:
         ).encode("utf-8")
     ).hexdigest()
 
+    canonical: dict[str, Any] = {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "api_activity",
+        "event_uid": event_uid,
+        "provider": "AWS",
+        "account_uid": raw.get("recipientAccountId", ""),
+        "region": raw.get("awsRegion", ""),
+        "time_ms": parse_ts_ms(raw.get("eventTime")),
+        "event_name": event_name,
+        "operation": event_name,
+        "service_name": raw.get("eventSource", ""),
+        "activity_id": activity_id,
+        "activity_name": {1: "create", 2: "read", 3: "update", 4: "delete", 99: "other"}.get(activity_id, "unknown"),
+        "status_id": status_id,
+        "status": "failure" if error_code else "success",
+        "actor": _build_actor(raw.get("userIdentity") or {}),
+        "src": _build_src_endpoint(raw),
+        "resources": _project_resources(raw.get("requestParameters")),
+        "source": {
+            "kind": "aws.cloudtrail",
+            "request_id": raw.get("requestID", ""),
+            "event_id": raw.get("eventID", ""),
+            "event_category": raw.get("eventCategory", ""),
+        },
+    }
+    if error_code:
+        canonical["status_detail"] = f"{error_code}: {raw.get('errorMessage', '')}".strip(": ").strip()
+    return canonical
+
+
+def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    """Render the canonical CloudTrail event as OCSF API Activity."""
+    activity_id = int(canonical["activity_id"])
+    status_id = int(canonical["status_id"])
     event: dict[str, Any] = {
         "activity_id": activity_id,
         "category_uid": CATEGORY_UID,
@@ -254,10 +291,10 @@ def convert_event(raw: dict[str, Any]) -> dict[str, Any]:
         "type_uid": CLASS_UID * 100 + activity_id,
         "severity_id": SEVERITY_INFORMATIONAL,
         "status_id": status_id,
-        "time": parse_ts_ms(raw.get("eventTime")),
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": metadata_uid,
+            "uid": canonical["event_uid"],
             "product": {
                 "name": "cloud-ai-security-skills",
                 "vendor_name": "msaad00/cloud-ai-security-skills",
@@ -265,17 +302,47 @@ def convert_event(raw: dict[str, Any]) -> dict[str, Any]:
             },
             "labels": ["detection-engineering", "aws", "cloudtrail", "ingest"],
         },
-        "actor": _build_actor(raw.get("userIdentity") or {}),
-        "src_endpoint": _build_src_endpoint(raw),
-        "api": _build_api(raw),
-        "resources": _project_resources(raw.get("requestParameters")),
-        "cloud": _build_cloud(raw),
+        "actor": canonical["actor"],
+        "src_endpoint": canonical["src"],
+        "api": {
+            "operation": canonical["operation"],
+            "service": {"name": canonical["service_name"]},
+            "request": {"uid": canonical["event_uid"]},
+        },
+        "resources": canonical["resources"],
+        "cloud": {
+            "provider": canonical["provider"],
+            "account": {"uid": canonical["account_uid"]} if canonical["account_uid"] else {},
+            "region": canonical["region"],
+        },
     }
 
-    if error_code:
-        event["status_detail"] = f"{error_code}: {raw.get('errorMessage', '')}".strip(": ").strip()
+    cloud = event["cloud"]
+    if not cloud.get("account"):
+        cloud.pop("account")
+    if canonical.get("status_detail"):
+        event["status_detail"] = canonical["status_detail"]
 
     return event
+
+
+def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    """Render the canonical CloudTrail event as the repo's native enriched shape."""
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_event(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one raw CloudTrail event into one OCSF API Activity event."""
+    return _render_ocsf_event(_build_canonical_event(raw))
+
+
+def convert_event_native(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one raw CloudTrail event into the native enriched event shape."""
+    return _render_native_event(_build_canonical_event(raw))
 
 
 # ---------------------------------------------------------------------------
@@ -345,10 +412,14 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object or Records wrapper", file=sys.stderr)
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for raw in iter_raw_events(stream):
         try:
-            yield convert_event(raw)
+            canonical = _build_canonical_event(raw)
+            if output_format == "native":
+                yield _render_native_event(canonical)
+            else:
+                yield _render_ocsf_event(canonical)
         except Exception as e:  # defence-in-depth — never crash the pipeline
             print(f"[{SKILL_NAME}] skipping event: convert error: {e}", file=sys.stderr)
             continue
@@ -358,13 +429,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Convert raw CloudTrail JSON to OCSF 1.8 API Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON/JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument("--output-format", choices=("ocsf", "native"), default="ocsf", help="Render OCSF events or the native enriched event shape.")
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:

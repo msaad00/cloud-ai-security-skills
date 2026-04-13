@@ -14,10 +14,12 @@ description: >-
   movement, east-west pivot, cloud identity pivot followed by internal
   traffic, or wants to detect attackers moving between cloud resources
   after initial access. Do NOT use on raw logs — pipe audit and network
-  telemetry through their respective ingest-*-ocsf skills first. Do NOT
+  telemetry through their respective ingestion skills first. Do NOT
   use for pre-compromise detection. Do NOT use as an exfiltration
   detector — public internet destinations are deliberately filtered out.
 license: Apache-2.0
+input_formats: canonical, native, ocsf
+output_formats: ocsf, native
 metadata:
   homepage: https://github.com/msaad00/cloud-ai-security-skills
   source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/detection/detect-lateral-movement
@@ -52,7 +54,7 @@ This skill correlates them.
 
 ## Detection logic
 
-One pass over a merged OCSF stream of API Activity (6003) + Network Activity (4001). For each identity-pivot anchor in the API stream:
+One pass over a merged normalized stream of API activity + network activity. The skill accepts OCSF input and the repo's native/canonical event shapes from supported upstream skills. For each identity-pivot anchor in the API stream:
 
 1. Record the `(cloud.provider, cloud.account.uid, actor.session.uid, time)` as an anchor
 2. Within a correlation window (default: 15 minutes), scan the Network Activity stream for flows where:
@@ -100,7 +102,9 @@ The purpose of this rule is **east-west detection**. Egress to the public intern
 
 ## Output contract
 
-OCSF 1.8 Detection Finding (class `2004`) with:
+By default, the skill emits OCSF 1.8 Detection Finding (class `2004`). When `--output-format native` is selected, it emits the repo's native detection-finding shape with the same deterministic IDs and ATT&CK mappings.
+
+The output includes:
 
 - `finding_info.attacks[]` — two techniques populated per MITRE v14:
   - **T1021** Remote Services (Lateral Movement tactic, TA0008)
@@ -119,6 +123,9 @@ OCSF 1.8 Detection Finding (class `2004`) with:
 } > merged.ocsf.jsonl
 
 python src/detect.py < merged.ocsf.jsonl > findings.ocsf.jsonl
+
+# Keep the repo-native finding shape instead of OCSF
+python src/detect.py --output-format native < merged.native.jsonl > findings.native.jsonl
 
 # Or, run the whole pipe and feed into the SARIF converter
 cat merged.ocsf.jsonl \

@@ -19,12 +19,14 @@ The format is loosely based on Keep a Changelog.
 - `ingest-entra-directory-audit-ocsf` as the Microsoft Entra / Graph identity-audit ingestion skill, mapping verified `directoryAudit` application, service-principal, app-role-assignment, and federated-credential events into OCSF API Activity (6003).
 - `ingest-google-workspace-login-ocsf` as the Google Workspace identity-audit ingestion skill, mapping verified Admin SDK Reports login audit events into OCSF Authentication (3002) and Account Change (3001) while preserving Workspace natural IDs and event parameters.
 - `detect-google-workspace-suspicious-login` as the first Google Workspace-native detection skill, emitting OCSF Detection Finding (2004) for provider-marked suspicious logins and repeated Workspace login failures followed by success, aligned to MITRE ATT&CK T1110 and T1078.
+- a phased native/OCSF pilot for `ingest-cloudtrail-ocsf` and `detect-lateral-movement`, including explicit `--output-format {ocsf,native}` support, native/canonical-friendly test coverage, and MCP output-format selection for supported skills.
 
 ### Changed
 
 - Expanded the coverage registry and framework mapping docs to track Okta, Entra / Graph, and Google Workspace as first-class OCSF identity-ingestion sources and detections.
 - Expanded `ingest-okta-system-log-ocsf` to cover the verified Okta Verify push and denial event families needed for narrow MFA fatigue detection.
 - Reframed the repo contract so OCSF remains a first-class interoperability option, but not a mandatory storage or execution model; the stable internal contract is now explicitly source truth -> canonical model -> `native` / `ocsf` / `bridge` output.
+- Made the OCSF metadata validator format-aware so native-mode support does not weaken the OCSF path contract.
 
 ### Added
 - Added deterministic `metadata.uid` to OCSF emitters and discovery bridge events for replay-safe SIEM dedupe.

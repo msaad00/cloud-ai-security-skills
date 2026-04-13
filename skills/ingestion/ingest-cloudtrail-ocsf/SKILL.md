@@ -14,11 +14,13 @@ description: >-
   ingest-k8s-audit-ocsf). Do NOT use as a detection skill — this skill only
   normalises events, it does not flag anything.
 license: Apache-2.0
+input_formats: raw
+output_formats: ocsf, native
 ---
 
 # ingest-cloudtrail-ocsf
 
-Thin, single-purpose ingestion skill: raw CloudTrail JSON in → OCSF 1.8 API Activity JSONL out. No detection logic, no side effects, no AWS API calls. Reads files or stdin; writes JSONL or stdout.
+Thin, single-purpose ingestion skill: raw CloudTrail JSON in → canonical event projection → OCSF 1.8 API Activity JSONL or native enriched JSONL out. No detection logic, no side effects, no AWS API calls. Reads files or stdin; writes JSONL or stdout.
 
 ## Wire contract
 
@@ -29,7 +31,9 @@ Reads either of the two CloudTrail layouts that are emitted by the AWS service:
 
 The skill auto-detects which shape it's looking at and unwraps `Records` if present.
 
-Writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning that every event matches.
+By default it writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning that every OCSF event matches.
+
+When `--output-format native` is selected, it emits the same event in the repo's native enriched shape with stable `event_uid`, normalized provider/account/operation/status fields, and preserved actor/session/source context, but without the OCSF envelope fields.
 
 ## activity_id inference
 
@@ -56,6 +60,9 @@ CloudTrail records a top-level `errorCode` field when an API call fails. The ski
 ```bash
 # Single file
 python src/ingest.py cloudtrail.json > cloudtrail.ocsf.jsonl
+
+# Same input, native enriched output
+python src/ingest.py cloudtrail.json --output-format native > cloudtrail.native.jsonl
 
 # Piped from S3 sync
 aws s3 cp s3://my-cloudtrail-bucket/AWSLogs/.../recent.json.gz - | gunzip | python src/ingest.py

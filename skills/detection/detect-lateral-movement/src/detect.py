@@ -1,10 +1,8 @@
-"""Detect cloud lateral movement by joining OCSF API Activity with Network Activity.
+"""Detect cloud lateral movement by joining API and network telemetry.
 
-Reads a merged OCSF 1.8 JSONL stream containing both:
-  - API Activity (class 6003) from cloud audit ingestors (the identity-pivot
-    anchor events)
-  - Network Activity (class 4001) from cloud flow-log ingestors (the east-west
-    traffic that follows)
+Reads a merged JSONL stream containing either:
+  - OCSF API Activity / Network Activity events, or
+  - native canonical-ish events from supported upstream skills
 
 Emits OCSF 1.8 Detection Finding (class 2004) for each distinct
 (provider, session, internal destination) tuple where a privileged-identity
@@ -65,6 +63,7 @@ CORRELATION_WINDOW_MS = 15 * 60 * 1000
 
 # Byte threshold — filter out scan probes / 3-way handshake noise
 MIN_BYTES = 1024
+OUTPUT_FORMATS = ("ocsf", "native")
 
 # Cloud identity-pivot operations we anchor on
 ASSUME_ROLE_OPERATIONS = {"AssumeRole", "AssumeRoleWithSAML", "AssumeRoleWithWebIdentity"}
@@ -178,60 +177,8 @@ def _now_ms() -> int:
     return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
-def _event_time(event: dict[str, Any]) -> int:
-    return int(event.get("time") or 0)
-
-
-def _session_uid(event: dict[str, Any]) -> str:
-    return (((event.get("actor") or {}).get("session") or {}).get("uid")) or ""
-
-
-def _actor_name(event: dict[str, Any]) -> str:
-    return (((event.get("actor") or {}).get("user") or {}).get("name")) or ""
-
-
-def _api_operation(event: dict[str, Any]) -> str:
-    return ((event.get("api") or {}).get("operation")) or ""
-
-
-def _api_service(event: dict[str, Any]) -> str:
-    return ((((event.get("api") or {}).get("service")) or {}).get("name")) or ""
-
-
-def _cloud_provider(event: dict[str, Any]) -> str:
-    return (((event.get("cloud") or {}).get("provider")) or "").upper()
-
-
-def _cloud_account(event: dict[str, Any]) -> str:
-    return ((((event.get("cloud") or {}).get("account")) or {}).get("uid")) or ""
-
-
 def _provider_display(provider: str) -> str:
     return {"AWS": "AWS", "GCP": "GCP", "AZURE": "Azure"}.get(provider, provider.title() or "Cloud")
-
-
-def _dst_ip(event: dict[str, Any]) -> str:
-    return (event.get("dst_endpoint") or {}).get("ip") or ""
-
-
-def _dst_port(event: dict[str, Any]) -> int | None:
-    port = (event.get("dst_endpoint") or {}).get("port")
-    return int(port) if port is not None else None
-
-
-def _src_instance(event: dict[str, Any]) -> str:
-    return (event.get("src_endpoint") or {}).get("instance_uid") or ""
-
-
-def _src_ip(event: dict[str, Any]) -> str:
-    return (event.get("src_endpoint") or {}).get("ip") or ""
-
-
-def _bytes(event: dict[str, Any]) -> int:
-    try:
-        return int((event.get("traffic") or {}).get("bytes") or 0)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _normalize_token(value: str) -> str:
@@ -264,14 +211,119 @@ def _is_azure_entra_pivot(service: str, operation: str) -> bool:
     return operation_norm.startswith("POST /APPLICATIONS/") and "FEDERATEDIDENTITYCREDENTIALS" in operation_compact
 
 
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _normalize_native_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    record_type = str(event.get("record_type") or event.get("event_kind") or "").strip().lower()
+    if not record_type:
+        if "dst_ip" in event or "traffic_bytes" in event or "bytes" in event:
+            record_type = "network_activity"
+        elif "operation" in event or "service_name" in event:
+            record_type = "api_activity"
+        else:
+            return None
+
+    normalized: dict[str, Any] = {
+        "source_format": "native",
+        "event_kind": record_type,
+        "provider": str(event.get("provider") or event.get("cloud_provider") or "").upper(),
+        "account_uid": str(event.get("account_uid") or event.get("cloud_account_uid") or event.get("account") or ""),
+        "time_ms": _safe_int(event.get("time_ms") or event.get("time") or event.get("event_time")),
+        "session_uid": str(
+            event.get("session_uid")
+            or event.get("session_id")
+            or (((event.get("actor") or {}).get("session") or {}).get("uid"))
+            or ""
+        ),
+        "actor_name": str(
+            event.get("actor_name")
+            or (((event.get("actor") or {}).get("user") or {}).get("name"))
+            or ""
+        ),
+        "operation": str(event.get("operation") or event.get("api_operation") or ""),
+        "service_name": str(event.get("service_name") or event.get("api_service") or ""),
+        "src_ip": str(event.get("src_ip") or ""),
+        "src_instance_uid": str(event.get("src_instance_uid") or event.get("instance_uid") or ""),
+        "dst_ip": str(event.get("dst_ip") or ""),
+        "dst_port": int(event["dst_port"]) if event.get("dst_port") is not None else None,
+        "traffic_bytes": _safe_int(event.get("traffic_bytes") or event.get("bytes")),
+        "activity_id": _safe_int(event.get("activity_id")),
+        "disposition": str(event.get("disposition") or ""),
+        "raw": event,
+    }
+    if record_type == "network_activity" and not normalized["activity_id"]:
+        disposition = normalized["disposition"].upper()
+        if disposition in {"ACCEPT", "ALLOWED", "ALLOW"}:
+            normalized["activity_id"] = NET_ACTIVITY_ACCEPT
+    return normalized
+
+
+def _normalize_ocsf_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    class_uid = event.get("class_uid")
+    if class_uid == API_ACTIVITY_CLASS:
+        return {
+            "source_format": "ocsf",
+            "event_kind": "api_activity",
+            "provider": ((((event.get("cloud") or {}).get("provider")) or "")).upper(),
+            "account_uid": ((((event.get("cloud") or {}).get("account")) or {}).get("uid")) or "",
+            "time_ms": _safe_int(event.get("time")),
+            "session_uid": (((event.get("actor") or {}).get("session") or {}).get("uid")) or "",
+            "actor_name": (((event.get("actor") or {}).get("user") or {}).get("name")) or "",
+            "operation": ((event.get("api") or {}).get("operation")) or "",
+            "service_name": ((((event.get("api") or {}).get("service")) or {}).get("name")) or "",
+            "src_ip": (event.get("src_endpoint") or {}).get("ip") or "",
+            "src_instance_uid": (event.get("src_endpoint") or {}).get("instance_uid") or "",
+            "dst_ip": "",
+            "dst_port": None,
+            "traffic_bytes": 0,
+            "activity_id": _safe_int(event.get("activity_id")),
+            "disposition": "",
+            "raw": event,
+        }
+    if class_uid == NETWORK_ACTIVITY_CLASS:
+        dst_port = (event.get("dst_endpoint") or {}).get("port")
+        return {
+            "source_format": "ocsf",
+            "event_kind": "network_activity",
+            "provider": ((((event.get("cloud") or {}).get("provider")) or "")).upper(),
+            "account_uid": ((((event.get("cloud") or {}).get("account")) or {}).get("uid")) or "",
+            "time_ms": _safe_int(event.get("time")),
+            "session_uid": "",
+            "actor_name": "",
+            "operation": "",
+            "service_name": "",
+            "src_ip": (event.get("src_endpoint") or {}).get("ip") or "",
+            "src_instance_uid": (event.get("src_endpoint") or {}).get("instance_uid") or "",
+            "dst_ip": (event.get("dst_endpoint") or {}).get("ip") or "",
+            "dst_port": int(dst_port) if dst_port is not None else None,
+            "traffic_bytes": _safe_int((event.get("traffic") or {}).get("bytes")),
+            "activity_id": _safe_int(event.get("activity_id")),
+            "disposition": "",
+            "raw": event,
+        }
+    return None
+
+
+def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    if "class_uid" in event:
+        return _normalize_ocsf_event(event)
+    return _normalize_native_event(event)
+
+
 def is_identity_pivot_anchor(event: dict[str, Any]) -> bool:
-    """Return True when an OCSF API Activity event is a high-signal pivot anchor."""
-    if event.get("class_uid") != API_ACTIVITY_CLASS:
+    """Return True when an API-activity event is a high-signal pivot anchor."""
+    normalized = _normalize_event(event)
+    if normalized is None or normalized["event_kind"] != "api_activity":
         return False
 
-    provider = _cloud_provider(event)
-    operation = _api_operation(event)
-    service = _api_service(event)
+    provider = str(normalized["provider"])
+    operation = str(normalized["operation"])
+    service = str(normalized["service_name"])
 
     if provider == "AWS":
         return operation in ASSUME_ROLE_OPERATIONS
@@ -309,23 +361,23 @@ def coverage_metadata() -> dict[str, object]:
 # ---------------------------------------------------------------------------
 
 
-def _build_finding(
+def _build_native_finding(
     *,
     anchor_event: dict[str, Any],
     flow_event: dict[str, Any],
 ) -> dict[str, Any]:
-    session = _session_uid(anchor_event)
-    principal = _actor_name(anchor_event)
-    provider_code = _cloud_provider(anchor_event)
+    session = str(anchor_event["session_uid"])
+    principal = str(anchor_event["actor_name"])
+    provider_code = str(anchor_event["provider"])
     provider = _provider_display(provider_code)
     provider_key = (provider_code or "cloud").lower()
-    account = _cloud_account(anchor_event)
-    dst_ip = _dst_ip(flow_event)
-    dst_port = _dst_port(flow_event)
-    src_instance = _src_instance(flow_event)
-    src_ip = _src_ip(flow_event)
-    flow_bytes = _bytes(flow_event)
-    operation = _api_operation(anchor_event)
+    account = str(anchor_event["account_uid"])
+    dst_ip = str(flow_event["dst_ip"])
+    dst_port = flow_event["dst_port"]
+    src_instance = str(flow_event["src_instance_uid"])
+    src_ip = str(flow_event["src_ip"])
+    flow_bytes = _safe_int(flow_event["traffic_bytes"])
+    operation = str(anchor_event["operation"])
 
     dst_key = f"{dst_ip}:{dst_port}"
     uid = f"det-lm-{_short(provider_key)}-{_short(session)}-{_short(dst_key)}"
@@ -343,6 +395,59 @@ def _build_finding(
     )
 
     return {
+        "schema_mode": "native",
+        "record_type": "detection_finding",
+        "source_skill": SKILL_NAME,
+        "output_format": "native",
+        "finding_uid": uid,
+        "event_uid": uid,
+        "provider": provider_code,
+        "account_uid": account,
+        "time_ms": int(flow_event["time_ms"]) or _now_ms(),
+        "severity": "high",
+        "severity_id": SEVERITY_HIGH,
+        "status": "success",
+        "status_id": 1,
+        "title": f"{provider} lateral movement: identity pivot followed by east-west traffic",
+        "description": desc,
+        "finding_types": ["cloud-lateral-movement"],
+        "first_seen_time_ms": int(anchor_event["time_ms"]),
+        "last_seen_time_ms": int(flow_event["time_ms"]),
+        "mitre_attacks": [
+            {
+                "version": MITRE_VERSION,
+                "tactic_uid": T1021_TACTIC_UID,
+                "tactic_name": T1021_TACTIC_NAME,
+                "technique_uid": T1021_TECH_UID,
+                "technique_name": T1021_TECH_NAME,
+            },
+            {
+                "version": MITRE_VERSION,
+                "tactic_uid": T1078_TACTIC_UID,
+                "tactic_name": T1078_TACTIC_NAME,
+                "technique_uid": T1078_TECH_UID,
+                "technique_name": T1078_TECH_NAME,
+                "sub_technique_uid": T1078_SUB_UID,
+                "sub_technique_name": T1078_SUB_NAME,
+            },
+        ],
+        "session_uid": session,
+        "actor_name": principal,
+        "anchor_operation": operation,
+        "src_instance_uid": src_instance,
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "dst_port": dst_port,
+        "traffic_bytes": flow_bytes,
+        "window_seconds": CORRELATION_WINDOW_MS // 1000,
+        "rule_name": "cloud-lateral-movement",
+    }
+
+
+def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
+    provider_code = str(native_finding["provider"])
+    provider = _provider_display(provider_code)
+    return {
         "activity_id": FINDING_ACTIVITY_CREATE,
         "category_uid": FINDING_CATEGORY_UID,
         "category_name": FINDING_CATEGORY_NAME,
@@ -351,24 +456,24 @@ def _build_finding(
         "type_uid": FINDING_TYPE_UID,
         "severity_id": SEVERITY_HIGH,
         "status_id": 1,
-        "time": _event_time(flow_event) or _now_ms(),
+        "time": int(native_finding["time_ms"]) or _now_ms(),
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": uid,
+            "uid": native_finding["event_uid"],
             "product": {
                 "name": REPO_NAME,
                 "vendor_name": REPO_VENDOR,
                 "feature": {"name": SKILL_NAME},
             },
-            "labels": ["detection-engineering", provider_key, "lateral-movement", "multi-source"],
+            "labels": ["detection-engineering", provider_code.lower(), "lateral-movement", "multi-source"],
         },
         "finding_info": {
-            "uid": uid,
-            "title": f"{provider} lateral movement: identity pivot followed by east-west traffic",
-            "desc": desc,
-            "types": ["cloud-lateral-movement"],
-            "first_seen_time": _event_time(anchor_event),
-            "last_seen_time": _event_time(flow_event),
+            "uid": native_finding["finding_uid"],
+            "title": native_finding["title"],
+            "desc": native_finding["description"],
+            "types": native_finding["finding_types"],
+            "first_seen_time": int(native_finding["first_seen_time_ms"]),
+            "last_seen_time": int(native_finding["last_seen_time_ms"]),
             "attacks": [
                 {
                     "version": MITRE_VERSION,
@@ -385,22 +490,22 @@ def _build_finding(
         },
         "observables": [
             {"name": "cloud.provider", "type": "Other", "value": provider},
-            {"name": "cloud.account", "type": "Other", "value": account},
-            {"name": "session.uid", "type": "Other", "value": session},
-            {"name": "actor.name", "type": "Other", "value": principal},
-            {"name": "anchor.operation", "type": "Other", "value": operation},
-            {"name": "src.instance_uid", "type": "Other", "value": src_instance},
-            {"name": "src.ip", "type": "Other", "value": src_ip},
-            {"name": "dst.ip", "type": "Other", "value": dst_ip},
-            {"name": "dst.port", "type": "Other", "value": str(dst_port) if dst_port is not None else ""},
-            {"name": "traffic.bytes", "type": "Other", "value": str(flow_bytes)},
-            {"name": "window.seconds", "type": "Other", "value": str(CORRELATION_WINDOW_MS // 1000)},
-            {"name": "rule", "type": "Other", "value": "cloud-lateral-movement"},
+            {"name": "cloud.account", "type": "Other", "value": native_finding["account_uid"]},
+            {"name": "session.uid", "type": "Other", "value": native_finding["session_uid"]},
+            {"name": "actor.name", "type": "Other", "value": native_finding["actor_name"]},
+            {"name": "anchor.operation", "type": "Other", "value": native_finding["anchor_operation"]},
+            {"name": "src.instance_uid", "type": "Other", "value": native_finding["src_instance_uid"]},
+            {"name": "src.ip", "type": "Other", "value": native_finding["src_ip"]},
+            {"name": "dst.ip", "type": "Other", "value": native_finding["dst_ip"]},
+            {"name": "dst.port", "type": "Other", "value": str(native_finding["dst_port"] or "")},
+            {"name": "traffic.bytes", "type": "Other", "value": str(native_finding["traffic_bytes"])},
+            {"name": "window.seconds", "type": "Other", "value": str(native_finding["window_seconds"])},
+            {"name": "rule", "type": "Other", "value": native_finding["rule_name"]},
         ],
         "evidence": {
             "events_observed": 2,
-            "first_seen_time": _event_time(anchor_event),
-            "last_seen_time": _event_time(flow_event),
+            "first_seen_time": int(native_finding["first_seen_time_ms"]),
+            "last_seen_time": int(native_finding["last_seen_time_ms"]),
             "raw_events": [],
         },
     }
@@ -411,67 +516,67 @@ def _build_finding(
 # ---------------------------------------------------------------------------
 
 
-def detect(events: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
-    """Walk a merged OCSF stream. Yield one finding per (session, dst) pair.
+def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+    """Walk a merged stream. Yield one finding per (session, dst) pair.
 
     Deterministic output order: findings are yielded in anchor-event-time
     order (then by dst IP and port as tiebreaker).
     """
-    events_list = list(events)
+    events_list = [normalized for event in events if (normalized := _normalize_event(event)) is not None]
     # Partition the stream
     identity_anchors: list[dict[str, Any]] = []
     flows: list[dict[str, Any]] = []
     for ev in events_list:
-        cls = ev.get("class_uid")
         if is_identity_pivot_anchor(ev):
             identity_anchors.append(ev)
-        elif cls == NETWORK_ACTIVITY_CLASS and ev.get("activity_id") == NET_ACTIVITY_ACCEPT:
+        elif ev["event_kind"] == "network_activity" and int(ev["activity_id"]) == NET_ACTIVITY_ACCEPT:
             flows.append(ev)
 
     # Sort for deterministic iteration
-    identity_anchors.sort(key=_event_time)
-    flows.sort(key=_event_time)
+    identity_anchors.sort(key=lambda event: int(event["time_ms"]))
+    flows.sort(key=lambda event: int(event["time_ms"]))
 
     seen: set[str] = set()
     findings: list[dict[str, Any]] = []
 
     for anchor in identity_anchors:
-        anchor_time = _event_time(anchor)
+        anchor_time = int(anchor["time_ms"])
         window_end = anchor_time + CORRELATION_WINDOW_MS
-        anchor_provider = _cloud_provider(anchor)
-        anchor_account = _cloud_account(anchor)
+        anchor_provider = str(anchor["provider"])
+        anchor_account = str(anchor["account_uid"])
 
         for flow in flows:
-            ft = _event_time(flow)
+            ft = int(flow["time_ms"])
             if ft < anchor_time or ft > window_end:
                 continue
-            if anchor_provider and _cloud_provider(flow) != anchor_provider:
+            if anchor_provider and str(flow["provider"]) != anchor_provider:
                 continue
-            flow_account = _cloud_account(flow)
+            flow_account = str(flow["account_uid"])
             if anchor_account and flow_account and flow_account != anchor_account:
                 continue
-            if _bytes(flow) < MIN_BYTES:
+            if _safe_int(flow["traffic_bytes"]) < MIN_BYTES:
                 continue
-            dst = _dst_ip(flow)
+            dst = str(flow["dst_ip"])
             if not is_rfc1918(dst):
                 continue
 
-            session = _session_uid(anchor)
-            dst_port = _dst_port(flow)
+            session = str(anchor["session_uid"])
+            dst_port = flow["dst_port"]
             dedup_key = f"{anchor_provider}|{session}|{dst}|{dst_port}"
             if dedup_key in seen:
                 continue
             seen.add(dedup_key)
 
-            findings.append(_build_finding(anchor_event=anchor, flow_event=flow))
+            native_finding = _build_native_finding(anchor_event=anchor, flow_event=flow)
+            findings.append(_render_ocsf_finding(native_finding) if output_format == "ocsf" else native_finding)
 
     # Final deterministic ordering by anchor time, dst ip, dst port
     findings.sort(
         key=lambda f: (
-            next((o["value"] for o in f["observables"] if o["name"] == "cloud.provider"), ""),
-            next((o["value"] for o in f["observables"] if o["name"] == "session.uid"), ""),
-            next((o["value"] for o in f["observables"] if o["name"] == "dst.ip"), ""),
-            next((o["value"] for o in f["observables"] if o["name"] == "dst.port"), ""),
+            str(f.get("provider") or next((o["value"] for o in f.get("observables", []) if o["name"] == "cloud.provider"), "")),
+            str(f.get("session_uid") or next((o["value"] for o in f.get("observables", []) if o["name"] == "session.uid"), "")),
+            str(f.get("dst_ip") or next((o["value"] for o in f.get("observables", []) if o["name"] == "dst.ip"), "")),
+            str(f.get("dst_port") or next((o["value"] for o in f.get("observables", []) if o["name"] == "dst.port"), "")),
         )
     )
     yield from findings
@@ -500,8 +605,9 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Detect cloud lateral movement (API Activity + Network Activity join).")
-    parser.add_argument("input", nargs="?", help="Merged OCSF JSONL input. Defaults to stdin.")
-    parser.add_argument("--output", "-o", help="OCSF Detection Finding JSONL output. Defaults to stdout.")
+    parser.add_argument("input", nargs="?", help="Merged native or OCSF JSONL input. Defaults to stdin.")
+    parser.add_argument("--output", "-o", help="Detection Finding JSONL output. Defaults to stdout.")
+    parser.add_argument("--output-format", choices=OUTPUT_FORMATS, default="ocsf", help="Render OCSF detection findings or the native detection-finding shape.")
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
@@ -509,7 +615,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         events = list(load_jsonl(in_stream))
-        for finding in detect(events):
+        for finding in detect(events, output_format=args.output_format):
             out_stream.write(json.dumps(finding, separators=(",", ":")) + "\n")
     finally:
         if args.input:

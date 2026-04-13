@@ -71,6 +71,14 @@ def _validate_input(raw_input: Any) -> str:
     return raw_input
 
 
+def _validate_output_format(raw_output_format: Any) -> str | None:
+    if raw_output_format is None:
+        return None
+    if not isinstance(raw_output_format, str):
+        raise ValueError("`output_format` must be a string")
+    return raw_output_format
+
+
 def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     tools = tool_map()
     if name not in tools:
@@ -79,6 +87,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     skill = tools[name]
     args = _validate_args((arguments or {}).get("args"))
     stdin_text = _validate_input((arguments or {}).get("input"))
+    output_format = _validate_output_format((arguments or {}).get("output_format"))
 
     if not skill.read_only and "--dry-run" not in args:
         raise ValueError("write-capable tools must be called with `--dry-run`")
@@ -87,7 +96,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     env.setdefault("PYTHONUNBUFFERED", "1")
     timeout_seconds = int(env.get("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
     completed = subprocess.run(
-        build_command(skill, args),
+        build_command(skill, args, output_format=output_format),
         input=stdin_text,
         text=True,
         capture_output=True,
@@ -104,6 +113,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
             "skill": skill.name,
             "category": skill.category,
             "capability": skill.capability,
+            "output_format": output_format or "default",
             "stdout": completed.stdout,
             "stderr": completed.stderr,
             "exit_code": completed.returncode,
