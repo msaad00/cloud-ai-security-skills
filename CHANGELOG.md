@@ -16,6 +16,7 @@ The format is loosely based on Keep a Changelog.
 - [`docs/FRAMEWORK_MAPPINGS.md`](docs/FRAMEWORK_MAPPINGS.md) to consolidate ATT&CK, ATLAS, CIS, NIST, OWASP, SOC 2, ISO, and PCI coverage across the repo.
 - First `discovery/` layer AI BOM skill, `discover-ai-bom`, which turns AI asset inventory snapshots into a deterministic CycloneDX-aligned BOM.
 - First discovery-layer technical evidence skill, `discover-control-evidence`, which turns discovery artifacts into deterministic PCI / SOC 2 evidence JSON.
+- `discover-cloud-control-evidence`, which turns AWS, GCP, and Azure inventory snapshots into deterministic PCI / SOC 2 technical evidence JSON.
 
 ### Changed
 - Removed the redirect-only `skills/ai-infra-security/` and `skills/compliance-cis-mitre/` stubs after the layered skill reshape settled.

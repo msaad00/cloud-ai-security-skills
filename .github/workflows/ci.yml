@@ -169,6 +169,7 @@ jobs:
             skills/discovery/discover-environment \
             skills/discovery/discover-ai-bom \
             skills/discovery/discover-control-evidence \
+            skills/discovery/discover-cloud-control-evidence \
             skills/evaluation/model-serving-security \
             skills/evaluation/gpu-cluster-security
           do

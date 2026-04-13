@@ -66,6 +66,7 @@ This is how the repo stays secure and reliable without turning every skill into 
 │ L2  DISCOVER /      inventory + context                           │
 │     ENRICH          discover-environment, discover-ai-bom,        │
 │                     discover-control-evidence,                    │
+│                     discover-cloud-control-evidence,              │
 │                     enrich-asset-inventory, enrich-geoip,         │
 │                     enrich-mitre-navigator, enrich-pii-redact     │
  ├───────────────────────────────────────────────────────────────────┤
@@ -112,7 +113,7 @@ The rule for this repo is simple: keep the architecture readable in Markdown, an
 |---|---|---|---|---|
 | L0 | sources | (external) | n/a | vendor stories #30–#36, Ramp (PR Y), Snowflake audit (PR Z) |
 | L1 | `ingest-*` | **shipping** | cloudtrail, aws-vpc-flow, gcp-vpc-flow, azure-nsg-flow, guardduty, security-hub, gcp-scc, azure-defender, gcp-audit, azure-activity, k8s-audit, mcp-proxy | okta, github, workspace, slack, ramp |
-| L2 | `discovery/` + `enrich-*` | **shipping / planned** | discover-environment, discover-ai-bom, discover-control-evidence | PR X (asset-inventory, geoip, mitre-navigator, **pii-redact is P0 before any sink in regulated env**) |
+| L2 | `discovery/` + `enrich-*` | **shipping / planned** | discover-environment, discover-ai-bom, discover-control-evidence, discover-cloud-control-evidence | PR X (asset-inventory, geoip, mitre-navigator, **pii-redact is P0 before any sink in regulated env**) |
 | L3 | `detect-*` | **shipping** | lateral-movement, privesc-k8s, sensitive-secret-read-k8s, mcp-tool-drift | credential-access per cloud, unusual-assume-role, vector-store-poisoning |
 | L4 | `evaluate-*` | **shipping** | cspm-aws/gcp/azure-cis-benchmark, k8s-security-benchmark, container-security | evaluate-cis-aws-foundations (#29), NIST AI RMF, SOC2, PCI |
 | L5 | `remediate-*` | **shipping** | iam-departures-remediation | auto-close-exposed-s3, revoke-long-lived-key, patch-inspector-finding |
