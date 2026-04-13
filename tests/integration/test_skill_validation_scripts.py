@@ -99,6 +99,12 @@ class TestValidationScripts:
         assert "mitre-atlas" in gpu["frameworks"]
         assert "nist-ai-rmf" in gpu["frameworks"]
 
+    def test_model_serving_ai_framework_depth_is_registered(self):
+        registry = json.loads((ROOT / "docs" / "framework-coverage.json").read_text())
+        model_serving = next(item for item in registry["skills"] if item["path"] == "skills/evaluation/model-serving-security")
+        assert "mitre-atlas" in model_serving["frameworks"]
+        assert "nist-ai-rmf" in model_serving["frameworks"]
+
     def test_lateral_movement_identity_assets_are_registered(self):
         registry = json.loads((ROOT / "docs" / "framework-coverage.json").read_text())
         skill = next(item for item in registry["skills"] if item["path"] == "skills/detection/detect-lateral-movement")

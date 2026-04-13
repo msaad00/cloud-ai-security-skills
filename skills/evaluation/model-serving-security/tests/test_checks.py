@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from checks import (
     Finding,
+    benchmark_metadata,
     check_1_1_endpoint_auth_required,
     check_1_2_no_hardcoded_api_keys,
     check_1_3_rbac_model_access,
@@ -92,6 +93,7 @@ class TestAuthChecks:
         }
         f = check_1_4_workload_identity_required(config)
         assert f.status == "PASS"
+        assert f.nist_ai_rmf == "GOVERN, MANAGE"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -258,6 +260,11 @@ class TestSafety:
         config = {"endpoints": [{"name": "inference", "guardrails": {"enabled": False}}]}
         f = check_6_4_guardrails_attached(config)
         assert f.status == "FAIL"
+
+    def test_benchmark_metadata_declares_ai_rmf_scope(self):
+        metadata = benchmark_metadata()
+        assert "NIST AI RMF 1.0" in metadata["frameworks"]
+        assert metadata["ai_framework_focus"]["safety"]["nist_ai_rmf"] == "GOVERN, MEASURE, MANAGE"
 
     def test_6_4_azure_content_safety_passes(self):
         config = {

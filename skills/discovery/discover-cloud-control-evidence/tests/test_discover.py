@@ -123,6 +123,13 @@ class TestBuildEvidence:
         assert {control["framework"] for control in evidence["controls"]} == {"SOC 2 Security"}
         assert any(control["control_id"] == "cc6.ai-service-surface" for control in evidence["controls"])
 
+    def test_ai_rmf_filter(self):
+        evidence = build_evidence(_multi_cloud_snapshot(), ["ai-rmf"])
+        assert evidence["frameworks"] == ["NIST AI RMF 1.0"]
+        assert {control["framework"] for control in evidence["controls"]} == {"NIST AI RMF 1.0"}
+        assert any(control["control_id"] == "ai-rmf.map.ai-system-inventory" for control in evidence["controls"])
+        assert any(control["framework_mappings"]["nist_ai_rmf"] == "GOVERN" for control in evidence["controls"])
+
     def test_inventory_summary_includes_ai_surface_counts(self):
         evidence = build_evidence(_multi_cloud_snapshot())
         counts = evidence["inventory_summary"]["control_surface_counts"]
@@ -153,3 +160,7 @@ class TestBuildEvidence:
         assert event["class_name"] == "Live Evidence Info"
         assert event["metadata"]["version"] == "1.8.0"
         assert event["unmapped"]["cloud_security_technical_evidence"]["frameworks"] == ["PCI DSS 4.0"]
+
+    def test_ai_rmf_bridge_preserves_framework(self):
+        event = to_ocsf_live_evidence(build_evidence(_multi_cloud_snapshot(), ["ai-rmf"]))
+        assert event["unmapped"]["cloud_security_technical_evidence"]["frameworks"] == ["NIST AI RMF 1.0"]
