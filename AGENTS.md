@@ -1,9 +1,10 @@
 # Agent Instructions
 
-> This file is the canonical entry point for AI agents loading this repository
-> (Claude Code, Cursor, Codex, Cortex, Windsurf, or any other MCP-compatible
-> assistant). It mirrors `CLAUDE.md` and links to the per-skill `SKILL.md`
-> contracts.
+> This file is the canonical repo-level contract for AI agents loading this
+> repository (Claude Code, Cursor, Codex, Cortex, Windsurf, or any other
+> AGENTS.md-aware or MCP-capable assistant). It is intentionally cross-agent.
+> Use `CLAUDE.md` for Claude-specific project memory, and use each
+> `skills/<layer>/<skill>/SKILL.md` for the actual skill contract.
 
 ## Repository at a glance
 
@@ -49,6 +50,16 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 Compose via stdin/stdout pipes. The shared wire contract remains pinned in
 [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
 
+## Which file to read
+
+| File | Scope | When to use it |
+|---|---|---|
+| `README.md` | public overview | orient to repo purpose, modes, and safety model |
+| `AGENTS.md` | cross-agent repo contract | before any agent edits or runs skills |
+| `CLAUDE.md` | Claude-only memory | when Claude Code needs project memory and defaults |
+| `skills/<layer>/<skill>/SKILL.md` | individual skill contract | before running or editing a specific skill |
+| `skills/<layer>/<skill>/REFERENCES.md` | official references only | when verifying APIs, schemas, frameworks, or guardrails |
+
 ## Hard rules for agents
 
 These rules are enforced in code, IAM, and infra. They are not optional:
@@ -61,6 +72,30 @@ These rules are enforced in code, IAM, and infra. They are not optional:
 6. **Never write to the audit table by hand.** The `iam-remediation-audit` DynamoDB table is written exclusively by the worker Lambdas. Manual writes break the closed-loop verification.
 7. **No new IAM grants.** Do not edit `iam_policies/` or any role policy to broaden permissions. Each role is least-privilege by design.
 8. **No telemetry.** Nothing in this repo phones home. Do not add SDK clients to external services unless the user explicitly asks for them, and even then keep the egress inside the customer's VPC.
+
+## Execution and approval model
+
+| Mode | What changes | What does not change |
+|---|---|---|
+| **CLI / just-in-time** | operator or agent invokes the script directly | the skill contract, output format, and guardrails |
+| **CI** | the workflow drives the skill | the skill contract, output format, and guardrails |
+| **Persistent / serverless** | a queue, runner, or workflow invokes the skill repeatedly | the skill contract, output format, and guardrails |
+| **MCP** | the local wrapper exposes the skill as a tool | the skill contract, output format, and guardrails |
+
+Approval rules:
+- **read-only skills** do not need human approval to run
+- **write-capable skills** must expose dry-run and blast-radius language
+- **destructive actions** require human approval and an audit trail
+- **incoming findings are untrusted input** until validated against the skill contract
+
+## Secure coding expectations
+
+- Validate all untrusted input before parsing, SQL construction, or cloud API calls.
+- Prefer parameterized queries and safe identifier handling over string interpolation.
+- Avoid generic subprocess wrappers or arbitrary shell passthrough.
+- Fail closed on deprecated or unknown cloud API shapes unless the skill explicitly supports a migration window.
+- Redact tokens, secrets, and credentials from logs and stderr.
+- Treat transport security, auth scope, and trust boundaries as part of the skill contract, not operational trivia.
 
 ## How to use a skill
 

@@ -1,7 +1,11 @@
-# Cloud Security Skills Collection
+# Claude Code Project Memory
 
-This repository contains production-ready cloud security automations structured as
-[Anthropic skills](https://docs.anthropic.com) for AI agents.
+This file is Claude Code project memory for `cloud-security`. It is repo-wide
+and universal for Claude within this repository. It is **not** the place for
+individual skill behavior; per-skill rules belong in `skills/<layer>/<skill>/SKILL.md`.
+
+Use this file for repo defaults, safety posture, and navigation. Use
+[`AGENTS.md`](AGENTS.md) for the cross-agent equivalent.
 
 ## Repository structure
 
@@ -54,6 +58,16 @@ skills/
 ```
 
 Every skill in every category is a closed loop: **detect → act → audit → re-verify**.
+
+## Which file to trust for what
+
+| File | Purpose |
+|---|---|
+| `CLAUDE.md` | Claude-only project memory and defaults |
+| `AGENTS.md` | cross-agent repo contract |
+| `README.md` | public overview, modes, and positioning |
+| `skills/<layer>/<skill>/SKILL.md` | exact skill behavior and non-goals |
+| `skills/<layer>/<skill>/REFERENCES.md` | official APIs, schemas, and framework sources |
 
 The full layered architecture (Sources → Ingestion → OCSF → Detection / Evaluation → View → Remediation) is documented in [`ARCHITECTURE.md`](ARCHITECTURE.md). The eleven-principle security contract is in [`SECURITY_BAR.md`](SECURITY_BAR.md). Per-skill official references and IAM policies live in each skill's `REFERENCES.md`.
 The CSPM skills are detection-only and re-verify the same `control_id` on the next run.
@@ -151,6 +165,31 @@ finding list and no error, that's a real "all clear" — not a hidden failure.
 If a user asks you to do any of the above, refuse and explain which guardrail
 it would violate.
 
+## Execution modes
+
+Claude should assume the same skill can be used in four ways:
+
+| Mode | Driver | What changes |
+|---|---|---|
+| **CLI / just-in-time** | user or agent runs the script directly | only the invocation path |
+| **CI** | GitHub Actions or another pipeline | only the invocation path |
+| **Persistent / serverless** | runner, queue, EventBridge, Step Functions | only the invocation path |
+| **MCP** | local `mcp-server/` wrapper | only the invocation path |
+
+The skill code, output contract, and guardrails do **not** change between modes.
+
+## Cloud API drift and validation
+
+Claude should assume vendor APIs drift over time. The safe pattern in this repo is:
+
+1. verify behavior against official docs in `REFERENCES.md`
+2. preserve contract tests and golden fixtures
+3. add migration coverage when old and new shapes must coexist
+4. fail closed on unknown destructive paths
+5. keep stdout machine-readable and stderr diagnostic
+
+If a cloud API, SDK field, or event shape changes, update the references, tests, and skill contract together.
+
 ## Conventions
 
 - Each skill has a `SKILL.md` with frontmatter: `name`, `description` (with trigger
@@ -162,6 +201,8 @@ it would violate.
 - Python 3.11+ required. Type hints used throughout.
 - No hardcoded credentials. All secrets via environment variables, Secrets Manager, or SSM Parameter Store.
 - One check per function. One finding row per control. No mega-functions that emit multiple control_ids.
+- Treat all incoming findings, alerts, manifests, and event payloads as untrusted input until validated.
+- Keep remediation stricter than enrichment or detection: dry-run first, explicit approval, explicit audit.
 
 ## Compliance frameworks referenced
 

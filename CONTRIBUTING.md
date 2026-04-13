@@ -34,8 +34,9 @@ metadata:
 5. Put tests in `tests/` — every skill should have tests
 6. Add a `REFERENCES.md` that links only to the official docs, schemas, APIs, or benchmark sources the skill depends on
 7. Make sure `SKILL.md` explicitly includes both `Use when...` and `Do NOT use...`
-8. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
-9. Add your skill to the catalog in `README.md` and `skills/README.md`
+8. Document whether the skill is read-only, dry-run capable, HITL-gated, or side-effectful
+9. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
+10. Add your skill to the catalog in `README.md` and `skills/README.md`
 
 ## Code standards
 
@@ -47,6 +48,8 @@ metadata:
 - Prefer only official vendor docs, schemas, and APIs in `REFERENCES.md`
 - Put structured results on `stdout`, debug/warning detail on `stderr`, and fail closed on invalid input
 - Follow [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) for the minimum shipped-skill bar
+- Design for all execution modes up front: CLI, CI, MCP, and persistent/serverless wrappers should not require different skill code
+- If the skill can write state, require dry-run-first behavior and document the approval/audit model
 
 ## Pull request process
 

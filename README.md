@@ -10,7 +10,7 @@
 
 The repo is intentionally broader than CSPM: cloud security, container security, AI infra security, detection engineering, compliance evaluation, and future inventory/enrichment skills such as AI BOM generation all fit here as long as they stay deterministic, auditable, and grounded in official specs.
 
-For coding agents, start with [AGENTS.md](AGENTS.md). For Claude/Codex/Cortex MCP usage, see [docs/agent-integrations.md](docs/agent-integrations.md) and the project-scoped [`.mcp.json`](.mcp.json).
+For coding agents, start with [AGENTS.md](AGENTS.md). For Claude-specific project memory, see [CLAUDE.md](CLAUDE.md). For Claude/Codex/Cortex MCP usage, see [docs/agent-integrations.md](docs/agent-integrations.md) and the project-scoped [`.mcp.json`](.mcp.json).
 
 ```bash
 python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
@@ -33,6 +33,43 @@ Each skill is a standalone Python bundle following [Anthropic's skill spec](http
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
 
+## How it runs
+
+| Mode | Driver | Best for | Human approval |
+|---|---|---|---|
+| **CLI / just-in-time** | Operator or agent runs a skill directly | triage, local analysis, one-off conversions, golden-fixture checks | only for write-capable skills |
+| **CI** | GitHub Actions or another pipeline | regression testing, policy checks, compliance snapshots, SARIF generation | never for read-only skills |
+| **Persistent / serverless** | runner, queue, EventBridge, Step Functions, scheduled jobs | continuous detection, remediation pipelines, lake ingestion | required for destructive actions |
+| **MCP** | local `mcp-server/` wrapper | Claude, Codex, Cursor, Windsurf, Cortex Code CLI | inherited from the wrapped skill |
+
+The important rule is that the **skill code does not change between modes**. `SKILL.md + src/ + tests/` stays the product; the runner, pipeline, or MCP wrapper is only the access path.
+
+## Safety model
+
+| Skill type | Default posture | Required controls |
+|---|---|---|
+| **Ingest / detect / evaluate / view** | read-only | deterministic output, no hidden writes, official references only |
+| **Discovery / inventory / enrich** | read-only unless explicitly documented otherwise | schema validation, output contracts, no secret leakage |
+| **Remediation** | dry-run first | least privilege, blast-radius docs, audit trail, HITL gate |
+| **Sinks / runners** | side-effectful edge components | idempotency, merge-on-UID, transport security, checkpointing |
+
+For every shipped skill, the contract is:
+- exact input and output format
+- explicit `Use when...` and `Do NOT use...`
+- official vendor docs only in `REFERENCES.md`
+- failure-safe behavior on malformed input and deprecated API shapes
+- no generic shell, SQL, or network passthrough
+
+## Agent docs
+
+| File | Scope | Use it for |
+|---|---|---|
+| [`README.md`](README.md) | public repo overview | what the repo is, how it is positioned, where to start |
+| [`AGENTS.md`](AGENTS.md) | cross-agent repo contract | Codex, Cursor, Windsurf, Cortex, Claude, generic AGENTS.md-aware tools |
+| [`CLAUDE.md`](CLAUDE.md) | Claude Code project memory | repo-wide Claude defaults and working rules |
+| `skills/<layer>/<skill>/SKILL.md` | individual skill contract | when to use a skill, input/output, blast radius, non-goals |
+| `skills/<layer>/<skill>/REFERENCES.md` | source-of-truth references | official docs, schemas, APIs, benchmarks |
+
 ## Coverage
 
 <details>
@@ -42,12 +79,20 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design a
 skills/
 ├── ingestion/                      "Raw source → OCSF 1.8"
 │   ├── ingest-cloudtrail-ocsf      AWS            → API Activity 6003
+│   ├── ingest-vpc-flow-logs-ocsf   AWS            → Network Activity 4001
+│   ├── ingest-vpc-flow-logs-gcp-ocsf GCP          → Network Activity 4001
+│   ├── ingest-nsg-flow-logs-azure-ocsf Azure      → Network Activity 4001
+│   ├── ingest-guardduty-ocsf       AWS            → Detection Finding 2004
+│   ├── ingest-security-hub-ocsf    AWS            → Findings 2004 passthrough
+│   ├── ingest-gcp-scc-ocsf         GCP            → Findings 2004 passthrough
+│   ├── ingest-azure-defender-for-cloud-ocsf Azure → Findings 2004 passthrough
 │   ├── ingest-gcp-audit-ocsf       GCP            → API Activity 6003
 │   ├── ingest-azure-activity-ocsf  Azure          → API Activity 6003
 │   ├── ingest-k8s-audit-ocsf       K8s            → API Activity 6003
 │   └── ingest-mcp-proxy-ocsf       MCP            → Application Activity 6002
 │
 ├── detection/                      "What attack pattern does this event stream show?"
+│   ├── detect-lateral-movement                    → T1021 / T1078.004 cross-cloud pivot
 │   ├── detect-mcp-tool-drift                      → T1195.001 Supply Chain
 │   ├── detect-privilege-escalation-k8s            → T1552.007 / T1611 / T1098 / T1550.001
 │   └── detect-sensitive-secret-read-k8s           → T1552.007 Container API
@@ -70,7 +115,7 @@ skills/
     └── iam-departures-remediation  (event-driven, DLQ + SNS, dual audit)
 ```
 
-**Roadmap:** current open issues cover AWS Config, GCP + Azure parity, vendor stories, folder reshape, the formal skill contract, the safe-skill CI bar, richer MCP input schemas / transports, and discovery / inventory follow-ons such as AI BOM generation.
+**Roadmap:** current open issues focus on AWS Config and deeper evaluation coverage, richer MCP input schemas and transports, additional cloud and AI service coverage, vendor stories, and discovery / inventory follow-ons such as AI BOM generation.
 
 </details>
 
