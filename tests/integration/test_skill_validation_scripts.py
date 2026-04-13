@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -84,3 +85,9 @@ class TestValidationScripts:
 
     def test_framework_coverage_validator_passes(self):
         assert COVERAGE.main() == 0
+
+    def test_gpu_skill_ai_framework_depth_is_registered(self):
+        registry = json.loads((ROOT / "docs" / "framework-coverage.json").read_text())
+        gpu = next(item for item in registry["skills"] if item["path"] == "skills/evaluation/gpu-cluster-security")
+        assert "mitre-atlas" in gpu["frameworks"]
+        assert "nist-ai-rmf" in gpu["frameworks"]

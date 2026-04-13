@@ -79,8 +79,8 @@ Current provider depth in discovery:
 - Azure ML / Azure AI Foundry
 
 Recommended expansion:
-- make ATLAS mappings more explicit in `gpu-cluster-security`
 - add a shared table of ATLAS techniques used by AI-oriented skills
+- deepen provider-shaped GPU and accelerator evidence beyond the current benchmark input model
 
 ## Kubernetes and containers
 
@@ -105,7 +105,7 @@ uniform than classic cloud posture.
 | `discover-control-evidence` | PCI DSS 4.0, SOC 2 TSC, CycloneDX ML-BOM, MITRE ATLAS |
 | `discover-cloud-control-evidence` | PCI DSS 4.0, SOC 2 TSC, NIST AI RMF, MITRE ATT&CK, MITRE ATLAS |
 | `model-serving-security` | MITRE ATLAS, NIST CSF, OWASP LLM Top 10, SOC 2, provider-specific AI endpoint controls |
-| `gpu-cluster-security` | MITRE ATT&CK, NIST CSF, CIS Controls, CIS Kubernetes |
+| `gpu-cluster-security` | MITRE ATT&CK, MITRE ATLAS, NIST CSF, NIST AI RMF, CIS Controls, CIS Kubernetes |
 | `discover-environment` | MITRE ATT&CK, MITRE ATLAS, NIST CSF |
 
 Recommended next step:

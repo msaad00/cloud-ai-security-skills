@@ -25,6 +25,45 @@ import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+FRAMEWORKS = (
+    "MITRE ATT&CK v14",
+    "MITRE ATLAS",
+    "NIST CSF 2.0",
+    "NIST AI RMF 1.0",
+    "CIS Controls v8",
+    "CIS Kubernetes Benchmark",
+)
+
+PROVIDERS = ("aws", "azure", "gcp", "kubernetes", "containers", "multi")
+ASSET_CLASSES = ("gpu-fleets", "clusters", "containers", "runtime", "tenancy")
+
+AI_FRAMEWORK_FOCUS = {
+    "runtime": {
+        "mitre_atlas": "AI platform runtime hardening for GPU workloads",
+        "nist_ai_rmf": "MANAGE, GOVERN",
+    },
+    "driver": {
+        "mitre_atlas": "GPU compute integrity and vulnerable dependency exposure",
+        "nist_ai_rmf": "MEASURE, MANAGE",
+    },
+    "network": {
+        "mitre_atlas": "Tenant boundary protection for AI infrastructure traffic",
+        "nist_ai_rmf": "MAP, MANAGE",
+    },
+    "storage": {
+        "mitre_atlas": "Model and artifact protection against unauthorized access",
+        "nist_ai_rmf": "MAP, MANAGE",
+    },
+    "tenant": {
+        "mitre_atlas": "GPU tenancy controls against account and cost abuse",
+        "nist_ai_rmf": "GOVERN, MANAGE",
+    },
+    "observability": {
+        "mitre_atlas": "Detection and investigation support for AI infrastructure misuse",
+        "nist_ai_rmf": "MEASURE, MANAGE",
+    },
+}
+
 
 @dataclass
 class Finding:
@@ -39,6 +78,18 @@ class Finding:
     nist_csf: str = ""
     cis_control: str = ""
     resources: list[str] = field(default_factory=list)
+
+
+def benchmark_metadata() -> dict[str, object]:
+    """Return machine-readable benchmark metadata for wrappers and docs."""
+    return {
+        "frameworks": list(FRAMEWORKS),
+        "providers": list(PROVIDERS),
+        "asset_classes": list(ASSET_CLASSES),
+        "ai_framework_focus": AI_FRAMEWORK_FOCUS,
+        "check_count": sum(len(checks) for checks in ALL_CHECKS.values()),
+        "sections": {name: len(checks) for name, checks in ALL_CHECKS.items()},
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════

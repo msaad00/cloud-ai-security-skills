@@ -14,6 +14,7 @@ The format is loosely based on Keep a Changelog.
 ### Added
 - `docs/COVERAGE_MODEL.md`, `docs/framework-coverage.json`, and `docs/ROADMAP.md` to make framework, provider, asset, and execution coverage measurable and auditable.
 - `scripts/validate_framework_coverage.py` so CI can reject undocumented or drifting coverage claims.
+- explicit MITRE ATLAS and NIST AI RMF declarations for `gpu-cluster-security`, including machine-readable benchmark metadata for wrappers and coverage tests.
 
 ### Changed
 - Promoted the IAM departures cross-cloud workflow visual in `README.md` and made the CI badge explicitly track the `main` branch.

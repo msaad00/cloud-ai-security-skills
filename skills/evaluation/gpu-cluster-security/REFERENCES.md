@@ -5,8 +5,10 @@
 - **MITRE ATT&CK** — T1610 Deploy Container, T1611 Escape to Host, T1078.004 Cloud Accounts
   https://attack.mitre.org/techniques/T1610/
   https://attack.mitre.org/techniques/T1611/
+- **MITRE ATLAS** — https://atlas.mitre.org/
 - **CIS Kubernetes Benchmark** — https://www.cisecurity.org/benchmark/kubernetes
 - **NIST CSF 2.0** — PR.AC-3, PR.AC-4, PR.PT-3 — https://www.nist.gov/cyberframework
+- **NIST AI Risk Management Framework (AI RMF 1.0)** — https://www.nist.gov/itl/ai-risk-management-framework
 - **NVIDIA Container Toolkit security guidance** — https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/
 
 ## Inputs

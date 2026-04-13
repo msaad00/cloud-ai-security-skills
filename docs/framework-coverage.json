@@ -261,7 +261,7 @@
       "layer": "evaluation",
       "providers": ["aws", "azure", "gcp", "kubernetes", "containers", "multi"],
       "asset_classes": ["gpu-fleets", "clusters", "containers", "runtime", "tenancy"],
-      "frameworks": ["mitre-attack-v14", "nist-csf-2.0", "cis-controls-v8", "cis-k8s"],
+      "frameworks": ["mitre-attack-v14", "mitre-atlas", "nist-csf-2.0", "nist-ai-rmf", "cis-controls-v8", "cis-k8s"],
       "coverage_status": "validated",
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
     },

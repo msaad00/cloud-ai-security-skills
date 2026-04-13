@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from checks import (
     Finding,
+    benchmark_metadata,
     check_1_1_no_privileged_gpu_pods,
     check_1_2_gpu_device_plugin,
     check_1_3_no_host_ipc,
@@ -201,3 +202,11 @@ class TestBenchmarkRunner:
         findings = run_benchmark(config, section="runtime")
         for f in findings:
             assert f.nist_csf, f"{f.check_id} missing NIST CSF"
+
+    def test_benchmark_metadata_declares_ai_frameworks(self):
+        metadata = benchmark_metadata()
+        assert "MITRE ATLAS" in metadata["frameworks"]
+        assert "NIST AI RMF 1.0" in metadata["frameworks"]
+        assert metadata["check_count"] == 13
+        assert metadata["sections"]["tenant"] == 2
+        assert metadata["ai_framework_focus"]["tenant"]["mitre_atlas"]

@@ -19,12 +19,14 @@ compatibility: >-
   no API calls, no network access required.
 metadata:
   author: msaad00
-  homepage: https://github.com/msaad00/cloud-security
-  source: https://github.com/msaad00/cloud-security/tree/main/skills/evaluation/gpu-cluster-security
+  homepage: https://github.com/msaad00/cloud-ai-security-skills
+  source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/evaluation/gpu-cluster-security
   version: 0.1.0
   frameworks:
     - MITRE ATT&CK
+    - MITRE ATLAS
     - NIST CSF 2.0
+    - NIST AI RMF 1.0
     - CIS Controls v8
     - CIS Kubernetes Benchmark
   cloud: any
@@ -36,7 +38,9 @@ metadata:
 # GPU Cluster Security Benchmark
 
 13 automated checks across 6 domains, auditing the security posture of GPU
-compute infrastructure. Each check mapped to MITRE ATT&CK and NIST CSF 2.0.
+compute infrastructure. Each check mapped to MITRE ATT&CK and NIST CSF 2.0,
+with explicit MITRE ATLAS and NIST AI RMF coverage for AI infrastructure
+runtime, tenancy, storage, and observability safeguards.
 
 No CIS GPU benchmark exists today. This skill fills that gap.
 
@@ -221,6 +225,24 @@ logging:
 | Valid Accounts | T1078 | Checks namespace isolation per tenant |
 | Impair Defenses: Logging | T1562.002 | Checks GPU workload audit logging |
 | Data from Storage | T1530 | Checks model weight encryption |
+
+## MITRE ATLAS and NIST AI RMF Coverage
+
+This skill does **not** invent fake per-check ATLAS technique IDs where the fit
+is weak. Instead, it declares explicit framework depth for the AI
+infrastructure domains the benchmark covers today:
+
+| Domain | MITRE ATLAS focus | NIST AI RMF focus |
+|---|---|---|
+| Runtime isolation | hardening AI workload execution on GPU clusters | MANAGE, GOVERN |
+| Driver security | vulnerable GPU dependency and compute integrity exposure | MEASURE, MANAGE |
+| Network segmentation | tenant boundary protection for AI infrastructure traffic | MAP, MANAGE |
+| Storage and model artifacts | model/artifact protection against unauthorized access | MAP, MANAGE |
+| Tenant isolation and quotas | controls against account and cost abuse on shared GPU fleets | GOVERN, MANAGE |
+| Observability | detection and investigation support for AI infrastructure misuse | MEASURE, MANAGE |
+
+That keeps the framework claims explicit and testable today while leaving
+technique-by-technique ATLAS expansion as a roadmap item.
 
 ## Known Vulnerable NVIDIA Drivers
 
