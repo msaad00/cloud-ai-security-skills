@@ -12,11 +12,6 @@ Skills are grouped by **layered function**, not by vendor. An agent or operator 
 
 Every shipped skill follows the [Anthropic skills guide](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, and explicit `Use when...` / `Do NOT use...` routing language.
 
-Legacy folders remain for one release cycle as redirects:
-- [`compliance-cis-mitre/`](compliance-cis-mitre/)
-- [`ai-infra-security/`](ai-infra-security/)
-- [`detection-engineering/`](detection-engineering/)
-
 ## ingestion/
 
 Raw source formats to OCSF 1.8 JSONL.
@@ -47,7 +42,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-privilege-escalation-k8s`](detection/detect-privilege-escalation-k8s/) | T1552.007, T1611, T1098, T1550.001 |
 | [`detect-sensitive-secret-read-k8s`](detection/detect-sensitive-secret-read-k8s/) | secret access / K8s API misuse |
 
-Shared wire-contract docs and frozen fixtures still live under [`detection-engineering/`](detection-engineering/) during the transition window.
+Shared wire-contract docs and frozen fixtures live under [`detection-engineering/`](detection-engineering/). That folder is a shared-assets namespace, not a skill layer.
 
 ## evaluation/
 

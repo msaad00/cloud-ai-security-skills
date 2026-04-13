@@ -6,7 +6,8 @@ Findings come out the other, and the deep-equality assertion against the
 frozen golden output catches any drift in either skill.
 
 Layout:
-    1. Read the raw K8s audit fixture from skills/detection-engineering/golden/
+    1. Read the raw K8s audit fixture from the shared golden-fixture directory
+       under skills/detection-engineering/golden/
     2. Pipe it through ingest-k8s-audit-ocsf  → OCSF API Activity events
     3. Pipe those through detect-privilege-escalation-k8s → Detection Findings
     4. Assert deep-eq against the frozen Detection Finding golden

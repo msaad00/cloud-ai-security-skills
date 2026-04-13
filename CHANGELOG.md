@@ -15,6 +15,10 @@ The format is loosely based on Keep a Changelog.
 - Repo-wide `CHANGELOG.md` to make material architecture, security, and skill changes discoverable without reading every PR.
 - [`docs/FRAMEWORK_MAPPINGS.md`](docs/FRAMEWORK_MAPPINGS.md) to consolidate ATT&CK, ATLAS, CIS, NIST, OWASP, SOC 2, ISO, and PCI coverage across the repo.
 
+### Changed
+- Removed the redirect-only `skills/ai-infra-security/` and `skills/compliance-cis-mitre/` stubs after the layered skill reshape settled.
+- Reframed `skills/detection-engineering/` as a shared OCSF contract and golden-fixture namespace rather than a temporary transition root.
+
 ### Documentation
 - Clarified the repo-level release model: one repo version, lightweight per-skill contract metadata, no full per-skill semver yet.
 

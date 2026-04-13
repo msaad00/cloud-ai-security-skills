@@ -49,7 +49,7 @@ is the row you can take to your auditor.
 
 1. Read the matching `REFERENCES.md` for the closest sibling skill — it tells you which official docs / schemas / IAM policies you need to wire.
 2. Copy the directory layout: `SKILL.md` (with frontmatter + `Do NOT…` clause), `src/<entry>.py`, `tests/test_<entry>.py`, optional `examples/`.
-3. For detection-engineering skills, also ship a golden fixture pair under `skills/detection-engineering/golden/` and a deep-equality test against it.
+3. For OCSF-speaking skills, also ship a golden fixture pair under `skills/detection-engineering/golden/` and a deep-equality test against it.
 4. Document the exact IAM / RBAC permissions in your new `REFERENCES.md`.
 5. Run `ruff check`, `ruff format --check`, and `pytest skills/<your-skill>/tests/`.
 6. Add a row to the per-skill matrix above.

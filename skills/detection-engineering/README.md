@@ -1,18 +1,18 @@
-# detection-engineering/ (transition)
+# detection-engineering/ (shared assets)
 
-This folder is a transition home for shared detection resources during the
-layered-architecture reshape.
+This folder owns shared OCSF wire-contract and golden-fixture assets used by
+the layered skills elsewhere in the repo.
 
-Canonical skill locations now are:
+Canonical skill locations are:
 
 - ingestion skills: [`../ingestion/`](../ingestion/)
 - detection skills: [`../detection/`](../detection/)
 - view / convert skills: [`../view/`](../view/)
 
-This folder still owns shared cross-skill assets for one release cycle:
+This folder owns shared cross-skill assets:
 
 - [`OCSF_CONTRACT.md`](./OCSF_CONTRACT.md)
 - [`golden/`](./golden/)
 
-External links to the old `skills/detection-engineering/...` skill paths should
-be updated to the layered layout above.
+It is not a skill layer. New executable skills belong under `ingestion/`,
+`detection/`, or `view/` as appropriate.

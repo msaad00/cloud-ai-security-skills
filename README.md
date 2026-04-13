@@ -182,7 +182,7 @@ New skills land as standalone bundles. The checklist:
 
 1. **Pick a layer** — ingest, enrich, detect, evaluate, remediate, or convert
 2. **Copy the nearest sibling** — the existing skills in the target category are the canonical reference layout
-3. **Ship the bundle** — `SKILL.md` with a `Do NOT use…` clause, `src/<entry>.py`, `tests/test_<entry>.py`, golden fixtures under `detection-engineering/golden/` (or equivalent), `REFERENCES.md` listing every official doc the skill depends on
+3. **Ship the bundle** — `SKILL.md` with a `Do NOT use…` clause, `src/<entry>.py`, `tests/test_<entry>.py`, golden fixtures under `skills/detection-engineering/golden/` when the skill speaks OCSF, and `REFERENCES.md` listing every official doc the skill depends on
 4. **Add a row** to the [`SECURITY_BAR.md`](SECURITY_BAR.md) matrix
 5. **Wire into CI** — add the skill to the right matrix cell in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 6. **Open a PR** — [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the review contract; make sure your skill satisfies every applicable guardrail

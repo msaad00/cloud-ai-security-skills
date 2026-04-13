@@ -192,9 +192,7 @@ cloud-security/
 │   ├── evaluation/              # L4
 │   ├── view/                    # L6
 │   ├── remediation/             # L5
-│   ├── detection-engineering/   # transition docs + golden fixtures
-│   ├── compliance-cis-mitre/    # transition README
-│   └── ai-infra-security/       # transition README
+│   └── detection-engineering/   # shared OCSF contract + golden fixtures
 ├── tests/integration/
 ├── .github/workflows/
 └── docs/
@@ -236,7 +234,9 @@ cloud-security/
 
 **Rationale for separating `sinks/`, `runners/`, `mcp-server/`, `query/` from `skills/`:** the "skills are pure, edges have side effects" mental model becomes visible in the directory tree. A reviewer can tell at a glance whether a change touches pure code or effectful code. This is cheap documentation that pays for itself on every PR.
 
-**Migration mechanics** — issue #39 lands the layered skill directories first. The old category roots stay as transition docs / redirect stubs for one release cycle so external links do not break immediately.
+The layered skill directories are now canonical. `skills/detection-engineering/`
+remains only as the shared OCSF contract and frozen-fixture namespace used by
+ingestion, detection, and view skills.
 
 ## 6. Wire contract (OCSF 1.8)
 

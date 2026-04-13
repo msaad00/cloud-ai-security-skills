@@ -213,6 +213,6 @@ skills/
 └── remediation/    ← L5
 ```
 
-Legacy roots `skills/detection-engineering/`, `skills/compliance-cis-mitre/`, and
-`skills/ai-infra-security/` remain temporarily as redirect / shared-resource
-folders so external links do not break in one jump.
+`skills/detection-engineering/` remains as the shared OCSF contract and frozen
+fixture namespace. Executable skills live only under the five layered
+directories above.

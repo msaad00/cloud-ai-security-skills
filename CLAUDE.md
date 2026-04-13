@@ -52,7 +52,7 @@ skills/
 ├── remediation/                   # active fix workflows, gated and audited
 │   └── iam-departures-remediation/
 │
-└── detection-engineering/         # temporary transition home
+└── detection-engineering/         # shared OCSF contract + frozen fixtures
     ├── OCSF_CONTRACT.md
     └── golden/
 ```

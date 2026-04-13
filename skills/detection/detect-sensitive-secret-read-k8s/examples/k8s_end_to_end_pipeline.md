@@ -118,7 +118,7 @@ before the SARIF converter.)
 
 ## Expected output on the golden fixture
 
-Running the full pipe over `skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl`:
+Running the full pipe over the shared fixture `skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl`:
 
 - **3 priv-esc findings** (T1552.007 list+get, T1611 pod exec, T1098 RBAC self-grant)
 - **1 sensitive-secret-read finding** (`db-password` matches `*password*` pattern)
