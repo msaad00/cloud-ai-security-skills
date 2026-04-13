@@ -1,0 +1,136 @@
+# Framework Mappings
+
+This document shows which frameworks are represented in `cloud-security`, where
+they appear today, and where coverage is still partial.
+
+The repo uses two mapping styles:
+
+- **Event / finding mappings** inside OCSF output, especially `finding_info.attacks[]`
+- **Skill-level control mappings** inside benchmark and evaluation skills
+
+The goal is to make coverage explicit instead of forcing reviewers to infer it
+from individual `SKILL.md` files.
+
+## Current posture
+
+| Framework | Status | Where it appears |
+|---|---|---|
+| **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
+| **MITRE ATT&CK v14** | strong | cloud, Kubernetes, container, MCP, and remediation skills |
+| **MITRE ATLAS** | partial but real | AI-oriented evaluation and discovery skills |
+| **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
+| **NIST CSF 2.0** | strong | evaluation and some remediation skills |
+| **OWASP LLM Top 10** | partial | model-serving and future AI inventory/enrichment paths |
+| **OWASP MCP Top 10** | partial | `detect-mcp-tool-drift` and MCP-related repo controls |
+| **SOC 2 TSC** | partial | evaluation and remediation mappings |
+| **ISO 27001:2022** | partial | CSPM/evaluation mappings |
+| **PCI DSS 4.0** | partial | AWS posture mappings today |
+| **NIST AI RMF** | emerging | model-serving security and roadmap items |
+
+## By layer
+
+| Layer | Main frameworks |
+|---|---|
+| **ingestion/** | OCSF 1.8, vendor schemas, source-specific event contracts |
+| **detection/** | OCSF 1.8, MITRE ATT&CK, selective OWASP MCP mappings |
+| **evaluation/** | CIS, NIST CSF, ISO, SOC 2, PCI, MITRE ATLAS, OWASP LLM |
+| **view/** | OCSF 1.8, SARIF, Mermaid, MITRE ATT&CK labels |
+| **remediation/** | MITRE ATT&CK, NIST CSF, CIS Controls, SOC 2 |
+
+## MITRE ATT&CK
+
+Strongest current ATT&CK coverage:
+
+| Skill | Coverage |
+|---|---|
+| `detect-lateral-movement` | T1021, T1078.004 |
+| `detect-mcp-tool-drift` | T1195.001 |
+| `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
+| `detect-sensitive-secret-read-k8s` | T1552, T1552.007 |
+| `ingest-guardduty-ocsf` | curated ATT&CK tactic/technique extraction |
+| `ingest-security-hub-ocsf` | ATT&CK extraction when upstream findings contain MITRE hints |
+| `iam-departures-remediation` | ATT&CK-linked remediation context |
+| `discover-environment` | ATT&CK graph overlay for cloud resources and relationships |
+
+Notes:
+- ATT&CK is pinned in the shared OCSF contract.
+- ATT&CK mappings belong inside `finding_info.attacks[]` for OCSF 1.8 outputs, not as loose side metadata.
+
+## MITRE ATLAS
+
+ATLAS is present today, but coverage is narrower than ATT&CK.
+
+| Skill | Coverage |
+|---|---|
+| `discover-environment` | graph overlay for AI/ML resources and adversarial ML techniques |
+| `model-serving-security` | explicit ATLAS coverage in skill docs and checks |
+
+Recommended expansion:
+- make ATLAS mappings more explicit in `gpu-cluster-security`
+- use ATLAS in future AI BOM / discovery / inventory skills
+- add a shared table of ATLAS techniques used by AI-oriented skills
+
+## Kubernetes and containers
+
+Kubernetes and container security are currently covered through both benchmark
+and threat-model mappings.
+
+| Domain | Frameworks | Current skills |
+|---|---|---|
+| **Kubernetes detection** | MITRE ATT&CK | `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s` |
+| **Kubernetes posture** | CIS Kubernetes, NIST CSF | `k8s-security-benchmark` |
+| **Container posture** | CIS Docker, NIST CSF | `container-security` |
+| **Container / workload findings** | MITRE ATT&CK where applicable | detection skills and upstream ingestors |
+
+## GPU and AI infrastructure
+
+AI and GPU security are already in scope, but their framework coverage is less
+uniform than classic cloud posture.
+
+| Skill | Frameworks called out today |
+|---|---|
+| `model-serving-security` | MITRE ATLAS, NIST CSF, OWASP LLM Top 10, SOC 2 |
+| `gpu-cluster-security` | MITRE ATT&CK, NIST CSF, CIS Controls, CIS Kubernetes |
+| `discover-environment` | MITRE ATT&CK, MITRE ATLAS, NIST CSF |
+
+Recommended next step:
+- make ATLAS coverage first-class for GPU and model-serving paths
+- connect future AI BOM discovery/inventory outputs to ATLAS and AI RMF
+
+## Compliance and control frameworks
+
+| Framework | Skills with explicit mappings today |
+|---|---|
+| **CIS AWS Foundations** | `cspm-aws-cis-benchmark` |
+| **CIS GCP Foundations** | `cspm-gcp-cis-benchmark` |
+| **CIS Azure Foundations** | `cspm-azure-cis-benchmark` |
+| **CIS Kubernetes** | `k8s-security-benchmark`, `gpu-cluster-security` |
+| **CIS Docker** | `container-security` |
+| **NIST CSF 2.0** | CSPM skills, K8s/container evaluation, AI-oriented evaluation, remediation |
+| **SOC 2 TSC** | AWS evaluation, model-serving, IAM departures remediation |
+| **ISO 27001:2022** | AWS/GCP/Azure evaluation |
+| **PCI DSS 4.0** | AWS evaluation |
+| **NIST AI RMF** | model-serving docs and roadmap expansion |
+
+## AI BOM
+
+AI BOM is **not** the identity of the repo, but it fits naturally as one future
+capability in the discovery / inventory path.
+
+Best fit:
+- **collection** in a future `discovery/` or `inventory/` family
+- **normalization** into OCSF-compatible inventory/context records where possible
+- **evaluation** against ATLAS, NIST AI RMF, OWASP LLM Top 10, and internal policy
+
+That keeps AI BOM as one important capability inside a broader cloud + AI
+security skills repo.
+
+## How to extend mappings safely
+
+When adding or changing framework mappings:
+
+1. update the skill’s `SKILL.md`
+2. update `REFERENCES.md` with only official framework or vendor sources
+3. add or update tests when mapping logic affects output
+4. update this document when the change is material
+5. keep ATT&CK / ATLAS / OCSF version pinning consistent with the shared contract
