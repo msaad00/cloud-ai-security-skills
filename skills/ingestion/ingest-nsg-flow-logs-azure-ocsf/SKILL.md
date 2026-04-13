@@ -9,6 +9,9 @@ description: >-
   for correlation, detection, or storage. Do NOT use on Azure Activity
   Logs or Defender alerts. Do NOT use on AWS or GCP flow-log formats.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-nsg-flow-logs-azure-ocsf

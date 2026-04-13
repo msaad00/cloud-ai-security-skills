@@ -12,6 +12,9 @@ description: >-
   Azure Activity Logs, or as a detector or policy engine — this skill only
   normalizes verified Microsoft Graph directoryAudit payloads.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. No Graph SDK required when directoryAudit payloads are
   already exported. Read-only — validates raw Entra audit shape and emits OCSF

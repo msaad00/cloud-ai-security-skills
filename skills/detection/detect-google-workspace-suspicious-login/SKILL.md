@@ -14,6 +14,9 @@ description: >-
   ingest-google-workspace-login-ocsf first. Do NOT use as a generic MFA
   detector or for non-Workspace identity sources.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 metadata:
   homepage: https://github.com/msaad00/cloud-ai-security-skills
   source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/detection/detect-google-workspace-suspicious-login

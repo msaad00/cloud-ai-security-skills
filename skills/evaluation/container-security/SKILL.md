@@ -11,6 +11,9 @@ description: >-
   for Kubernetes cluster posture (use k8s-security-benchmark) or GPU runtime
   isolation (use gpu-cluster-security).
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. No Docker daemon needed — works with config files.
   Optional: PyYAML for YAML parsing. Read-only — no image pulls or execution.

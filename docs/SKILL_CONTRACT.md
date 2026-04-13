@@ -31,6 +31,9 @@ Optional:
 - `name`
 - `description`
 - `license`
+- `approval_model`
+- `execution_modes`
+- `side_effects`
 
 Rules:
 
@@ -38,6 +41,29 @@ Rules:
 - `name` must be 64 characters or fewer
 - `description` must clearly state when the skill should be used
 - `description` must clearly state what the skill must not be used for
+- `approval_model` must be one of:
+  - `none`
+  - `dry_run_required`
+  - `human_required`
+- `execution_modes` must be a comma-separated subset of:
+  - `jit`
+  - `ci`
+  - `mcp`
+  - `persistent`
+- `side_effects` must be a comma-separated subset of:
+  - `none`
+  - `writes-cloud`
+  - `writes-identity`
+  - `writes-storage`
+  - `writes-database`
+  - `writes-audit`
+- `side_effects: none` must appear by itself, never combined with write scopes
+- read-only skills must set:
+  - `approval_model: none`
+  - `side_effects: none`
+- write-capable skills must set:
+  - `approval_model: human_required`
+  - one or more explicit write scopes in `side_effects`
 
 ## Required language
 
@@ -67,6 +93,7 @@ Examples:
 - deterministic output where practical
 - explicit input/output shape
 - defensive parsing on untrusted input
+- explicit human-in-the-loop and runtime-mode declaration in frontmatter so agents know when they must stop for approval
 
 ## Required validation and error handling
 
@@ -98,8 +125,10 @@ CI currently validates:
 - required files exist
 - `name` format is valid
 - `Use when` and `Do NOT use` are present
+- `approval_model`, `execution_modes`, and `side_effects` are present and valid
 - read-only skills do not use subprocess/shell execution
 - write-capable skills document and test dry-run behavior
+- write-capable skills explicitly require human approval
 - wildcard IAM / RBAC policy entries carry an explicit `WILDCARD_OK` justification
 
 The contract will expand over time, but new CI rules should only be added when the current tree already satisfies them.

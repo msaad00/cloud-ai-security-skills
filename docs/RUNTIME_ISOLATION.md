@@ -8,6 +8,13 @@ The rule is simple:
 - write-capable skills run in tighter, separate execution boundaries
 - transport, storage, and audit controls are explicit, not assumed
 
+Each shipped `SKILL.md` now declares:
+- `approval_model`
+- `execution_modes`
+- `side_effects`
+
+Agents and wrappers should treat those fields as part of the runtime contract, not optional documentation.
+
 ## Modes
 
 | Mode | Best for | Isolation posture | Human approval |

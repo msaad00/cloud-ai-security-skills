@@ -15,6 +15,9 @@ description: >-
   (class_uid != 2004) — those don't have the MITRE / actor / target
   structure this skill expects.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # convert-ocsf-to-mermaid-attack-flow

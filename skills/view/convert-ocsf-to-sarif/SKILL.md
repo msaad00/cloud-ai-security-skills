@@ -15,6 +15,9 @@ description: >-
   convert-ocsf-compliance-to-sarif will cover those. Do NOT use as a
   detection skill — this only converts.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # convert-ocsf-to-sarif

@@ -15,6 +15,9 @@ description: >-
   of prompt injection inside live traffic (a future detect-prompt-injection skill
   will cover that). Do NOT use for GPU cluster posture (use gpu-cluster-security).
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files.
   Optional: PyYAML for YAML config parsing. Read-only — no write permissions,

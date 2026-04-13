@@ -10,6 +10,9 @@ description: >-
   with iam-departures-remediation for IAM cleanup, or open a ticket in your remediation
   workflow for other findings.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+, boto3, and AWS credentials with SecurityAudit managed policy
   (read-only). No write permissions needed — assessment only.

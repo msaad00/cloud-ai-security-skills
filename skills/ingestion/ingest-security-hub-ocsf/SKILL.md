@@ -18,6 +18,9 @@ description: >-
   aggregates detections from upstream products; this skill is a passthrough
   normaliser/validator.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-security-hub-ocsf

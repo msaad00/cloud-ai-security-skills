@@ -10,6 +10,9 @@ description: >-
   benchmark output. Do NOT use as a detector; SCC already produced the
   finding and this skill only validates and normalizes it.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-gcp-scc-ocsf

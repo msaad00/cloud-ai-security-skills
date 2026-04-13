@@ -15,6 +15,9 @@ description: >-
   diagnostic / metric logs — those are different pipelines. Do NOT use as a
   detection skill — this only normalises events.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-azure-activity-ocsf

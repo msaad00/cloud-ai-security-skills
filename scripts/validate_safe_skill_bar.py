@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
 
 from skill_validation_common import ROOT, SKILLS_ROOT, discover_skill_contracts
 
@@ -24,23 +23,12 @@ WILDCARD_PATTERNS = (
 POLICY_SUFFIXES = (".json", ".tf", ".yaml", ".yml")
 
 
-def is_write_skill(skill_dir: Path) -> bool:
-    category = skill_dir.parent.name
-    name = skill_dir.name
-    return (
-        category == "remediation"
-        or name.startswith("remediate-")
-        or name.startswith("sink-")
-        or name.startswith("runner-")
-    )
-
-
-def validate_read_only_no_subprocess(skill_dir: Path) -> list[str]:
+def validate_read_only_no_subprocess(skill) -> list[str]:
     errors: list[str] = []
-    if is_write_skill(skill_dir):
+    if skill.is_write_capable:
         return errors
 
-    for path in sorted((skill_dir / "src").rglob("*.py")):
+    for path in sorted((skill.skill_dir / "src").rglob("*.py")):
         text = path.read_text()
         for pattern in SUBPROCESS_PATTERNS:
             if pattern in text:
@@ -48,22 +36,28 @@ def validate_read_only_no_subprocess(skill_dir: Path) -> list[str]:
                 errors.append(
                     f"{rel}: read-only skill must not use subprocess/shell pattern `{pattern}`"
                 )
+    if skill.approval_model != "none":
+        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: read-only skill must keep approval_model `none`")
+    if skill.side_effects != ("none",):
+        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: read-only skill must keep side_effects `none`")
     return errors
 
 
-def validate_write_skill_dry_run(skill_dir: Path) -> list[str]:
+def validate_write_skill_dry_run(skill) -> list[str]:
     errors: list[str] = []
-    if not is_write_skill(skill_dir):
+    if not skill.is_write_capable:
         return errors
 
-    skill_md = (skill_dir / "SKILL.md").read_text().lower()
+    skill_md = (skill.skill_dir / "SKILL.md").read_text().lower()
     if "dry-run" not in skill_md and "dry_run" not in skill_md:
-        errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must document dry-run in SKILL.md")
+        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: write-capable skill must document dry-run in SKILL.md")
 
-    tests_dir = skill_dir / "tests"
+    tests_dir = skill.skill_dir / "tests"
     test_text = "\n".join(path.read_text() for path in sorted(tests_dir.rglob("*.py")))
     if "dry_run" not in test_text and "--dry-run" not in test_text and "dry-run" not in test_text:
-        errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must exercise dry-run in tests")
+        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: write-capable skill must exercise dry-run in tests")
+    if skill.approval_model != "human_required":
+        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: write-capable skill must require human approval")
 
     return errors
 
@@ -97,9 +91,8 @@ def validate_wildcards() -> list[str]:
 def main() -> int:
     errors: list[str] = []
     for skill in discover_skill_contracts():
-        skill_dir = skill.skill_dir
-        errors.extend(validate_read_only_no_subprocess(skill_dir))
-        errors.extend(validate_write_skill_dry_run(skill_dir))
+        errors.extend(validate_read_only_no_subprocess(skill))
+        errors.extend(validate_write_skill_dry_run(skill))
     errors.extend(validate_wildcards())
 
     if errors:

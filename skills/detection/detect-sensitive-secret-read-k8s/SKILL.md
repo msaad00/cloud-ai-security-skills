@@ -18,6 +18,9 @@ description: >-
   NOT use for cross-namespace analysis — that's a separate detector on the
   roadmap.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # detect-sensitive-secret-read-k8s

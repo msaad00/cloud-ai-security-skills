@@ -12,6 +12,9 @@ description: >-
   / ingest-azure-activity-ocsf / ingest-k8s-audit-ocsf respectively). Do NOT use as a
   detection skill — this skill only normalises, it does not flag anything.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-mcp-proxy-ocsf

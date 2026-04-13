@@ -18,6 +18,9 @@ description: >-
   use for pre-compromise detection. Do NOT use as an exfiltration
   detector — public internet destinations are deliberately filtered out.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 input_formats: canonical, native, ocsf
 output_formats: ocsf, native
 metadata:

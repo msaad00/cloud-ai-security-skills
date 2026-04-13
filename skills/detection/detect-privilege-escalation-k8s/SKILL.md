@@ -18,6 +18,9 @@ description: >-
   own detectors — roadmap). Do NOT use as a compliance check; this is an
   active detection skill that emits findings on observed behaviour.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # detect-privilege-escalation-k8s

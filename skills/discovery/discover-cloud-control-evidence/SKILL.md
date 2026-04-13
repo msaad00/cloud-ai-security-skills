@@ -12,6 +12,9 @@ description: >-
   certification tool, or remediation planner. Do NOT use on raw logs or OCSF
   findings.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. Read-only. Accepts raw cloud inventory JSON from
   stdin or a file path. Produces deterministic JSON evidence suitable for CLI,

@@ -12,6 +12,9 @@ description: >-
   Do NOT use as a live monitor or to claim compliance by itself — it produces a
   point-in-time inventory artifact and never mutates cloud state.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs required when inventory snapshots are
   already exported. Read-only — validates and normalizes inventory into a

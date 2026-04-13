@@ -14,6 +14,9 @@ description: >-
   Google Workspace, or AWS IAM logs. Do NOT use as a detector or policy engine
   — this skill only normalizes verified Okta event payloads into OCSF.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. No Okta SDK required when System Log payloads are
   already exported. Read-only — validates raw Okta event shape and emits OCSF

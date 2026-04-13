@@ -12,6 +12,17 @@ NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 URL_RE = re.compile(r"https://[^\s)>\"]+")
 
+APPROVAL_MODE_VALUES = {"none", "dry_run_required", "human_required"}
+EXECUTION_MODE_VALUES = {"jit", "ci", "mcp", "persistent"}
+SIDE_EFFECT_VALUES = {
+    "none",
+    "writes-cloud",
+    "writes-identity",
+    "writes-storage",
+    "writes-database",
+    "writes-audit",
+}
+
 ENTRYPOINT_CANDIDATES = (
     "src/ingest.py",
     "src/detect.py",
@@ -83,6 +94,18 @@ class SkillContract:
             return True
         return self.category == "remediation" or self.name.startswith(("remediate-", "sink-", "runner-"))
 
+    @property
+    def approval_model(self) -> str:
+        return self.frontmatter.get("approval_model", "")
+
+    @property
+    def execution_modes(self) -> tuple[str, ...]:
+        return parse_modes(self.frontmatter.get("execution_modes"))
+
+    @property
+    def side_effects(self) -> tuple[str, ...]:
+        return parse_modes(self.frontmatter.get("side_effects"))
+
 
 def iter_skill_dirs() -> list[Path]:
     return sorted(path.parent for path in SKILLS_ROOT.glob("*/*/SKILL.md"))
@@ -134,6 +157,12 @@ def parse_frontmatter(frontmatter: str) -> dict[str, str]:
         idx += 1
 
     return data
+
+
+def parse_modes(raw_value: str | None) -> tuple[str, ...]:
+    if not raw_value:
+        return ()
+    return tuple(part.strip() for part in raw_value.split(",") if part.strip())
 
 
 def resolve_entrypoint(skill_dir: Path) -> Path | None:

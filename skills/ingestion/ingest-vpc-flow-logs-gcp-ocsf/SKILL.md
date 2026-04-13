@@ -10,6 +10,9 @@ description: >-
   rendering. Do NOT use on firewall rule logs, packet mirroring, or raw
   pcap. Do NOT use when the source is AWS or Azure network telemetry.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-vpc-flow-logs-gcp-ocsf

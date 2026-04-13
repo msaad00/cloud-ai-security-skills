@@ -15,6 +15,9 @@ description: >-
   ingest-vpc-flow-logs-ocsf). Do NOT use as a detection skill — GuardDuty IS
   the detector; this skill is a passthrough normaliser.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 ---
 
 # ingest-guardduty-ocsf

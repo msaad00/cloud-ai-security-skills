@@ -13,6 +13,9 @@ description: >-
   for general K8s posture (use k8s-security-benchmark) or model serving endpoint
   hardening (use model-serving-security).
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files
   (JSON/YAML). Optional: PyYAML for YAML parsing. Read-only — no write permissions,

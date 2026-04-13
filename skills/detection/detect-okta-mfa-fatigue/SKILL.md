@@ -12,6 +12,9 @@ description: >-
   through ingest-okta-system-log-ocsf first. Do NOT use as a generic failed-logon
   detector or credential-stuffing rule.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 metadata:
   homepage: https://github.com/msaad00/cloud-ai-security-skills
   source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/detection/detect-okta-mfa-fatigue

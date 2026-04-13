@@ -9,6 +9,9 @@ description: >-
   claim full CIS GCP coverage — only 7 controls are implemented, see the Roadmap
   section in this file for the gap.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+, google-cloud-iam, google-cloud-storage, google-cloud-compute.
   Service account needs roles/viewer + roles/iam.securityReviewer.

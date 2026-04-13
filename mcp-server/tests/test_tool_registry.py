@@ -71,8 +71,14 @@ class TestToolDefinition:
         assert tool["annotations"]["readOnlyHint"] is True
         assert tool["inputSchema"]["properties"]["args"]["type"] == "array"
         assert tool["inputSchema"]["properties"]["output_format"]["enum"] == ["ocsf", "native"]
+        assert "Approval model: none." in tool["description"]
+        assert "Execution modes: jit, ci, mcp, persistent." in tool["description"]
+        assert "Side effects: none." in tool["description"]
         assert skill.input_formats == ("raw",)
         assert skill.output_formats == ("ocsf", "native")
+        assert skill.approval_model == "none"
+        assert skill.execution_modes == ("jit", "ci", "mcp", "persistent")
+        assert skill.side_effects == ("none",)
 
     def test_build_command_uses_fixed_entrypoint(self):
         skill = tool_map(REPO_ROOT)["detect-lateral-movement"]

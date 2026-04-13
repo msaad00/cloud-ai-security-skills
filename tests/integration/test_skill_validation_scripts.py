@@ -70,6 +70,9 @@ class TestSkillValidationCommon:
         ingest = next(skill for skill in skills if skill.name == "ingest-cloudtrail-ocsf")
         assert ingest.entrypoint is not None
         assert ingest.entrypoint.name == "ingest.py"
+        assert ingest.approval_model == "none"
+        assert ingest.execution_modes == ("jit", "ci", "mcp", "persistent")
+        assert ingest.side_effects == ("none",)
 
     def test_reference_policy_accepts_known_official_hosts(self):
         assert COMMON.reference_url_allowed("https://docs.aws.amazon.com/IAM/latest/APIReference/")
@@ -116,3 +119,10 @@ class TestValidationScripts:
         assert "service-accounts" in skill["asset_classes"]
         assert "service-principals" in skill["asset_classes"]
         assert "managed-identities" in skill["asset_classes"]
+
+    def test_remediation_skill_declares_human_approval(self):
+        skills = {skill.name: skill for skill in COMMON.discover_skill_contracts()}
+        remediation = skills["iam-departures-remediation"]
+        assert remediation.approval_model == "human_required"
+        assert remediation.execution_modes == ("jit", "persistent")
+        assert "writes-identity" in remediation.side_effects

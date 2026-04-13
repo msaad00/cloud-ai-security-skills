@@ -15,6 +15,9 @@ description: >-
   are closed-loop guarantees that must not be broken. Do NOT use for access
   provisioning; this skill only deactivates and deletes.
 license: Apache-2.0
+approval_model: human_required
+execution_modes: jit, persistent
+side_effects: writes-identity, writes-storage, writes-database, writes-audit
 compatibility: >-
   Requires AWS CLI, Python 3.11+, and boto3. Lambdas deploy to AWS. HR data
   source requires one of: Snowflake connector, Databricks SQL connector,

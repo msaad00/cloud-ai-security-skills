@@ -24,6 +24,9 @@ class SkillSpec:
     capability: str
     skill_dir: Path
     entrypoint: Path | None
+    approval_model: str
+    execution_modes: tuple[str, ...]
+    side_effects: tuple[str, ...]
     input_formats: tuple[str, ...]
     output_formats: tuple[str, ...]
 
@@ -136,6 +139,9 @@ def discover_skills(root: Path | None = None) -> list[SkillSpec]:
                 capability=_derive_capability(skill_dir, metadata),
                 skill_dir=skill_dir,
                 entrypoint=_resolve_entrypoint(skill_dir),
+                approval_model=metadata.get("approval_model", ""),
+                execution_modes=_parse_modes(metadata.get("execution_modes")),
+                side_effects=_parse_modes(metadata.get("side_effects")),
                 input_formats=_parse_modes(metadata.get("input_formats")),
                 output_formats=_parse_modes(metadata.get("output_formats")),
             )
@@ -176,9 +182,14 @@ def tool_input_schema(skill: SkillSpec) -> dict[str, object]:
 
 
 def tool_definition(skill: SkillSpec) -> dict[str, object]:
+    mode_list = ", ".join(skill.execution_modes) if skill.execution_modes else "unspecified"
+    effect_list = ", ".join(skill.side_effects) if skill.side_effects else "unspecified"
     tool: dict[str, object] = {
         "name": skill.name,
-        "description": skill.description,
+        "description": (
+            f"{skill.description} Approval model: {skill.approval_model or 'unspecified'}. "
+            f"Execution modes: {mode_list}. Side effects: {effect_list}."
+        ),
         "inputSchema": tool_input_schema(skill),
         "annotations": {
             "readOnlyHint": skill.read_only,

@@ -15,6 +15,9 @@ description: >-
   ocsf-cloud-resources-inventory` wraps the snapshot as OCSF Discovery / Cloud
   Resources Inventory Info [5023] while preserving the graph under `unmapped`.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+. Cloud discovery needs respective SDKs (boto3 for AWS,
   google-cloud-* for GCP, azure-* for Azure). Static config mode needs no SDKs.

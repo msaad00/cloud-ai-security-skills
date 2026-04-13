@@ -14,6 +14,9 @@ description: >-
   ingest-k8s-audit-ocsf). Do NOT use as a detection skill — this skill only
   normalises events, it does not flag anything.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 input_formats: raw
 output_formats: ocsf, native
 ---

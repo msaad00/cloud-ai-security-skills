@@ -9,6 +9,9 @@ description: >-
   claim full CIS Azure coverage — only 6 controls are implemented, see the Roadmap
   section in this file for the gap.
 license: Apache-2.0
+approval_model: none
+execution_modes: jit, ci, mcp, persistent
+side_effects: none
 compatibility: >-
   Requires Python 3.11+, azure-identity, azure-mgmt-storage, azure-mgmt-network.
   Service principal needs Reader role. No write permissions — assessment only.
