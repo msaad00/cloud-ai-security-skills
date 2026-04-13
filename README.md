@@ -133,6 +133,7 @@ skills/
 │   ├── ingest-azure-defender-for-cloud-ocsf Azure → Findings 2004 passthrough
 │   ├── ingest-gcp-audit-ocsf       GCP            → API Activity 6003
 │   ├── ingest-azure-activity-ocsf  Azure          → API Activity 6003
+│   ├── ingest-okta-system-log-ocsf Okta           → IAM 3002 / 3001 / 3005
 │   ├── ingest-k8s-audit-ocsf       K8s            → API Activity 6003
 │   └── ingest-mcp-proxy-ocsf       MCP            → Application Activity 6002
 │
@@ -144,6 +145,7 @@ skills/
 │
 ├── detection/                      "What attack pattern does this event stream show?"
 │   ├── detect-lateral-movement                    → T1021 / T1078.004 cross-cloud pivot
+│   ├── detect-okta-mfa-fatigue                    → T1621 Okta Verify push fatigue
 │   ├── detect-mcp-tool-drift                      → T1195.001 Supply Chain
 │   ├── detect-privilege-escalation-k8s            → T1552.007 / T1611 / T1098 / T1550.001
 │   └── detect-sensitive-secret-read-k8s           → T1552.007 Container API

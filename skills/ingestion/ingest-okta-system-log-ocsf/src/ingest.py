@@ -65,6 +65,11 @@ _AUTH_EVENT_MAP: dict[str, int] = {
     "user.session.start": AUTH_ACTIVITY_LOGON,
     "user.session.end": AUTH_ACTIVITY_LOGOFF,
     "user.authentication.sso": AUTH_ACTIVITY_LOGON,
+    "user.authentication.auth_via_mfa": AUTH_ACTIVITY_OTHER,
+    "user.mfa.okta_verify": AUTH_ACTIVITY_OTHER,
+    "user.mfa.okta_verify.deny_push": AUTH_ACTIVITY_OTHER,
+    "user.mfa.okta_verify.deny_push_upgrade_needed": AUTH_ACTIVITY_OTHER,
+    "system.push.send_factor_verify_push": AUTH_ACTIVITY_OTHER,
 }
 
 _ACCOUNT_CHANGE_EVENT_MAP: dict[str, int] = {
