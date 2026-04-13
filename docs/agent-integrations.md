@@ -1,9 +1,11 @@
 # Agent Integrations
 
 This repo is a good fit for coding agents because each skill is already packaged
-as a compact contract: `SKILL.md`, implementation code, tests, and infrastructure.
-This document explains how to use that structure with Claude-oriented tooling,
-Codex CLI, and generic AGENTS.md-aware agents.
+as a compact contract: `SKILL.md`, implementation code, tests, and
+infrastructure. This document explains how to use that structure with Claude
+Code, Codex, Cursor, Windsurf, Cortex Code CLI, and other AGENTS.md-aware
+clients without duplicating the repo contract into tool-specific top-level
+files.
 
 ## Source of truth
 
@@ -22,6 +24,20 @@ Use the docs in this order:
 - JSON, console, and SARIF outputs that are easy for agents and CI systems to consume
 - A native local MCP server under [`mcp-server/`](../mcp-server/README.md)
 - Project-scoped MCP config in [`.mcp.json`](../.mcp.json) for Claude Code and similar clients
+
+## Client quick map
+
+| Tool | Best integration path | What to rely on |
+|---|---|---|
+| **Claude Code** | `CLAUDE.md` + `AGENTS.md` + MCP | project memory + repo rules + tools |
+| **Codex** | `AGENTS.md` + MCP | repo rules + tool calling |
+| **Cursor** | `AGENTS.md` or `.cursor/rules` + MCP | repo rules + tool calling |
+| **Windsurf** | `AGENTS.md` + MCP | directory-scoped agent rules + tools |
+| **Cortex Code CLI** | `SKILL.md` / `.cortex/skills` + MCP | native skills + tool calling |
+
+We intentionally do **not** ship separate `CODEX.md`, `CURSOR.md`, or
+`WINDSURF.md` files. `AGENTS.md` stays universal, `CLAUDE.md` stays
+Claude-specific, and `SKILL.md` stays the per-skill source of truth.
 
 ## Execution modes
 
@@ -83,7 +99,7 @@ This repo now ships a project-scoped MCP config:
 ```json
 {
   "mcpServers": {
-    "cloud-security": {
+    "cloud-ai-security-skills": {
       "command": "python3",
       "args": ["mcp-server/src/server.py"]
     }

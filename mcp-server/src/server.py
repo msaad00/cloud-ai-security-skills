@@ -13,7 +13,7 @@ if str(CURRENT_DIR) not in sys.path:
 
 from tool_registry import build_command, repo_root, tool_definition, tool_map  # noqa: E402
 
-SERVER_NAME = "cloud-security"
+SERVER_NAME = "cloud-ai-security-skills"
 SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_TIMEOUT_SECONDS = 60

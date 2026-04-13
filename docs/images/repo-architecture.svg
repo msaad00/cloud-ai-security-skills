@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
-  <title id="title">cloud-security repository architecture</title>
+  <title id="title">cloud-ai-security-skills repository architecture</title>
   <desc id="desc">Skill families feed shared contracts and CI lanes.</desc>
   <rect width="1200" height="640" fill="#0b1220"/>
   <rect x="40" y="40" width="1120" height="560" rx="24" fill="#111827" stroke="#334155"/>
-  <text x="70" y="90" fill="#f8fafc" font-size="32" font-family="Arial, sans-serif" font-weight="700">cloud-security</text>
+  <text x="70" y="90" fill="#f8fafc" font-size="32" font-family="Arial, sans-serif" font-weight="700">cloud-ai-security-skills</text>
   <text x="70" y="122" fill="#94a3b8" font-size="16" font-family="Arial, sans-serif">Skill families, shared contracts, and CI lanes</text>
 
   <rect x="70" y="160" width="230" height="120" rx="18" fill="#172554" stroke="#60a5fa"/>

@@ -1,5 +1,5 @@
 [project]
-name = "cloud-security"
+name = "cloud-ai-security-skills"
 version = "0.4.0"
 description = "OCSF-native security skills for cloud and AI systems."
 readme = "README.md"

@@ -1,6 +1,6 @@
 # MCP Server
 
-Thin stdio MCP wrapper for `cloud-security`.
+Thin stdio MCP wrapper for `cloud-ai-security-skills`.
 
 This server does not replace the existing skills model. It auto-discovers
 `skills/*/*/SKILL.md`, resolves each supported skill to its existing Python

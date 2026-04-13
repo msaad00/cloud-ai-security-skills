@@ -1,6 +1,6 @@
 # Coverage Model
 
-`cloud-security` does not use vague framework claims. Coverage is measured
+`cloud-ai-security-skills` does not use vague framework claims. Coverage is measured
 against an explicit scope:
 
 - framework version

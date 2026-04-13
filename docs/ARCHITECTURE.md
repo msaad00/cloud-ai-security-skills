@@ -1,6 +1,6 @@
 # Architecture
 
-This document is the load-bearing design contract for `cloud-security`. Every future PR is reviewed against it. If you need to deviate, update this doc *in the same PR* — the contract drifts by design, never by accident.
+This document is the load-bearing design contract for `cloud-ai-security-skills`. Every future PR is reviewed against it. If you need to deviate, update this doc *in the same PR* — the contract drifts by design, never by accident.
 
 - **Wire format contract** — see [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-engineering/OCSF_CONTRACT.md)
 - **Sink / persistence contract** — see [`./SINK_CONTRACT.md`](./SINK_CONTRACT.md) *(lands with PR T)*
@@ -9,7 +9,7 @@ This document is the load-bearing design contract for `cloud-security`. Every fu
 
 ## 1. Purpose and scope
 
-`cloud-security` is a library of **composable, OCSF-native security skills** that normalize, enrich, detect on, evaluate, remediate, and deliver findings across cloud providers and SaaS products. The repository is designed to be driven by agentic tools (Claude Code, Snowflake Cortex Code CLI, Claude Agent SDK, any MCP client) *and* by traditional CI / serverless pipelines — with no code changes between the two modes.
+`cloud-ai-security-skills` is a library of **composable, OCSF-native security skills** that normalize, enrich, detect on, evaluate, remediate, and deliver findings across cloud providers and SaaS products. The repository is designed to be driven by agentic tools (Claude Code, Snowflake Cortex Code CLI, Claude Agent SDK, any MCP client) *and* by traditional CI / serverless pipelines — with no code changes between the two modes.
 
 **In scope**
 - Normalising raw vendor telemetry into OCSF 1.8 wire format
@@ -172,7 +172,7 @@ An AI BOM capability belongs in the **discovery / inventory path**, not as the i
 - **Enrichment** belongs in L2 when joining model inventory, framework metadata, package provenance, and control coverage into a usable graph.
 - **Evaluation** belongs in L4 when mapping that inventory to MITRE ATLAS, NIST AI RMF, OWASP LLM Top 10, or other AI-security frameworks.
 
-That keeps AI BOM as one valuable skill family inside `cloud-security`, instead of pulling the whole repo away from its broader cloud + AI security scope.
+That keeps AI BOM as one valuable skill family inside `cloud-ai-security-skills`, instead of pulling the whole repo away from its broader cloud + AI security scope.
 
 ### Why this works: idempotency
 
@@ -188,7 +188,7 @@ Sinks exploit this: `MERGE INTO ocsf_findings USING input ON input.finding_info.
 ### Current layered tree
 
 ```
-cloud-security/
+cloud-ai-security-skills/
 ├── skills/
 │   ├── ingestion/               # L1
 │   ├── discovery/               # L2 discovery / inventory
@@ -206,7 +206,7 @@ cloud-security/
 ### Near-term target
 
 ```
-cloud-security/
+cloud-ai-security-skills/
 ├── skills/
 │   ├── ingestion/            # L1
 │   ├── discovery/            # L2

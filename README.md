@@ -1,6 +1,6 @@
-# cloud-security
+# cloud-ai-security-skills
 
-[![CI](https://github.com/msaad00/cloud-security/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/msaad00/cloud-security/actions/workflows/ci.yml?query=branch%3Amain)
+[![CI](https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain)
 [![Version](https://img.shields.io/badge/version-0.4.0-0ea5e9)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -14,12 +14,28 @@
 - Read-only by default, least-privilege, zero-trust
 - Deterministic, auditable, and grounded in official vendor docs
 
+## Quick start
+
 **Start here**
 - Agents: [AGENTS.md](AGENTS.md)
 - Claude Code memory: [CLAUDE.md](CLAUDE.md)
 - MCP usage: [docs/agent-integrations.md](docs/agent-integrations.md) and [`.mcp.json`](.mcp.json)
 - Architecture and visuals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DIAGRAMS.md](docs/DIAGRAMS.md)
 - Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), and [docs/ROADMAP.md](docs/ROADMAP.md)
+
+| Tool | Best integration path | What to rely on |
+|---|---|---|
+| **Claude Code** | `CLAUDE.md` + `AGENTS.md` + MCP | project memory + agent rules + tools |
+| **Codex** | `AGENTS.md` + MCP | repo rules + tool calling |
+| **Cursor** | `AGENTS.md` or `.cursor/rules` + MCP | repo rules + tool calling |
+| **Windsurf** | `AGENTS.md` + MCP | directory-scoped agent rules + tools |
+| **Cortex Code CLI** | `SKILL.md` / `.cortex/skills` + MCP | native skills + tool calling |
+
+The repo keeps one source of truth:
+- `AGENTS.md` for universal agent instructions
+- `CLAUDE.md` for Claude-specific project memory
+- `SKILL.md` for each skill contract
+- MCP as the access layer, not a second implementation
 
 ## Flagship workflow
 
@@ -195,7 +211,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | Document | Purpose |
 |---|---|
 | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 9-layer design, two execution modes (stateless + persistent), 10 guardrails |
-| [`DIAGRAMS.md`](docs/DIAGRAMS.md) | Architecture map, IAM departures flow, and detection pipeline visuals |
+| [`DIAGRAMS.md`](docs/DIAGRAMS.md) | Architecture map, IAM departures workflow/data flow, and detection pipeline visuals |
 | [`CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) | CI lane layout, dedupe rules, and follow-up simplification plan |
 | [`CHANGELOG.md`](CHANGELOG.md) | Repo-level release notes and material skill changes |
 | [`COVERAGE_MODEL.md`](docs/COVERAGE_MODEL.md) | What framework coverage means and how it is measured |

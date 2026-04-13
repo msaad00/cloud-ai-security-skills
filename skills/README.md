@@ -67,7 +67,7 @@ Read-only posture and benchmark evaluation skills.
 | [`cspm-azure-cis-benchmark`](evaluation/cspm-azure-cis-benchmark/) | Azure | 6 |
 | [`k8s-security-benchmark`](evaluation/k8s-security-benchmark/) | Kubernetes | 10 |
 | [`container-security`](evaluation/container-security/) | Containers | 8 |
-| [`model-serving-security`](evaluation/model-serving-security/) | AI model serving | 16 |
+| [`model-serving-security`](evaluation/model-serving-security/) | AI model serving | 20 |
 | [`gpu-cluster-security`](evaluation/gpu-cluster-security/) | GPU clusters | 13 |
 
 ## view/

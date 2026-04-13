@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `cloud-security` should be recorded here.
+All notable changes to `cloud-ai-security-skills` should be recorded here.
 
 This changelog is intentionally **repo-level**, not per-skill semver. The repo
 is released as one trust boundary: one CI bar, one MCP wrapper, one validation
@@ -17,6 +17,7 @@ The format is loosely based on Keep a Changelog.
 
 ### Changed
 - Promoted the IAM departures cross-cloud workflow visual in `README.md` and made the CI badge explicitly track the `main` branch.
+- Rebranded the public repo/docs surface to `cloud-ai-security-skills`, updated the MCP server name and project-scoped `.mcp.json`, and added a concise agent quick-start matrix for Claude Code, Codex, Cursor, Windsurf, and Cortex Code CLI.
 
 ## 0.4.0 - 2026-04-13
 
