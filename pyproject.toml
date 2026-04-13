@@ -32,11 +32,13 @@ gcp = [
 azure = [
   "azure-identity>=1.17,<2",
   "azure-mgmt-network>=28,<29",
+  "azure-mgmt-resource>=25,<26",
   "azure-mgmt-storage>=21,<22",
 ]
 iam_departures = [
   "clickhouse-connect>=0.7,<1",
   "databricks-sql-connector>=4.2.5,<5",
+  "google-api-python-client>=2,<3",
   "httpx>=0.27,<1",
   "snowflake-connector-python>=4.4.0,<5",
 ]

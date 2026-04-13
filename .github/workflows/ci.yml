@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   security-events: write
@@ -32,6 +36,7 @@ jobs:
           python-version: "3.11"
       - run: python scripts/validate_skill_contract.py
       - run: python scripts/validate_skill_integrity.py
+      - run: python scripts/validate_dependency_consistency.py
 
   safe-skill-bar:
     runs-on: ubuntu-latest
@@ -63,119 +68,78 @@ jobs:
           packages: bandit
       - run: bandit -r skills/evaluation/cspm-aws-cis-benchmark skills/remediation/iam-departures-remediation mcp-server -c pyproject.toml --severity-level medium
 
-  # ── Unit tests, grouped into category matrices ────────────────
+  # ── Unit tests, grouped into category lanes ───────────────────
   test-compliance:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract, safe-skill-bar]
-    strategy:
-      fail-fast: false
-      matrix:
-        skill:
-          - cspm-aws-cis-benchmark
-          - cspm-gcp-cis-benchmark
-          - cspm-azure-cis-benchmark
-          - k8s-security-benchmark
-          - container-security
-    name: test-compliance (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: boto3 moto pytest pytest-cov
-      - working-directory: skills/evaluation/${{ matrix.skill }}
-        run: pytest tests/ -v -o "testpaths=tests"
+          packages: >-
+            boto3 moto pytest pytest-cov
+            google-cloud-compute google-cloud-iam google-cloud-resource-manager google-cloud-storage
+            azure-identity azure-mgmt-network azure-mgmt-resource azure-mgmt-storage
+      - run: >
+          pytest
+          skills/evaluation/cspm-aws-cis-benchmark/tests/
+          skills/evaluation/cspm-gcp-cis-benchmark/tests/
+          skills/evaluation/cspm-azure-cis-benchmark/tests/
+          skills/evaluation/k8s-security-benchmark/tests/
+          skills/evaluation/container-security/tests/
+          -v
 
   test-remediation:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract, safe-skill-bar]
-    strategy:
-      fail-fast: false
-      matrix:
-        skill:
-          - iam-departures-remediation
-    name: test-remediation (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: boto3 moto pytest pytest-cov
-      - working-directory: skills/remediation/${{ matrix.skill }}
-        run: pytest tests/ -v -o "testpaths=tests"
+          packages: >-
+            boto3 moto pytest pytest-cov
+            google-cloud-iam google-cloud-resource-manager google-api-python-client
+            azure-identity
+            clickhouse-connect databricks-sql-connector httpx snowflake-connector-python
+      - run: pytest skills/remediation/iam-departures-remediation/tests/ -v
 
   test-detection-engineering:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract, safe-skill-bar]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - skill: ingest-cloudtrail-ocsf
-            category: ingestion
-          - skill: ingest-vpc-flow-logs-ocsf
-            category: ingestion
-          - skill: ingest-vpc-flow-logs-gcp-ocsf
-            category: ingestion
-          - skill: ingest-nsg-flow-logs-azure-ocsf
-            category: ingestion
-          - skill: ingest-guardduty-ocsf
-            category: ingestion
-          - skill: ingest-security-hub-ocsf
-            category: ingestion
-          - skill: ingest-gcp-scc-ocsf
-            category: ingestion
-          - skill: ingest-azure-defender-for-cloud-ocsf
-            category: ingestion
-          - skill: ingest-gcp-audit-ocsf
-            category: ingestion
-          - skill: ingest-azure-activity-ocsf
-            category: ingestion
-          - skill: ingest-k8s-audit-ocsf
-            category: ingestion
-          - skill: ingest-mcp-proxy-ocsf
-            category: ingestion
-          - skill: detect-mcp-tool-drift
-            category: detection
-          - skill: detect-privilege-escalation-k8s
-            category: detection
-          - skill: detect-sensitive-secret-read-k8s
-            category: detection
-          - skill: detect-lateral-movement
-            category: detection
-          - skill: convert-ocsf-to-sarif
-            category: view
-          - skill: convert-ocsf-to-mermaid-attack-flow
-            category: view
-    name: test-detection-engineering (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
           packages: pytest pytest-cov
-      - working-directory: skills/${{ matrix.category }}/${{ matrix.skill }}
-        run: pytest tests/ -v -o "testpaths=tests"
+      - run: >
+          pytest
+          skills/ingestion/
+          skills/detection/
+          skills/view/
+          -v
 
   test-ai-infra-security:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract, safe-skill-bar]
-    strategy:
-      fail-fast: false
-      matrix:
-        skill:
-          - model-serving-security
-          - gpu-cluster-security
-          - discover-environment
-    name: test-ai-infra (${{ matrix.skill }})
+    name: test-ai-infra
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: pytest pytest-cov
-      - working-directory: skills/evaluation/${{ matrix.skill }}
-        run: pytest tests/ -v -o "testpaths=tests"
+          packages: >-
+            boto3 pytest pytest-cov
+            google-cloud-compute google-cloud-iam google-cloud-resource-manager google-cloud-storage
+            azure-identity azure-mgmt-resource
+      - run: >
+          pytest
+          skills/evaluation/model-serving-security/tests/
+          skills/evaluation/gpu-cluster-security/tests/
+          skills/evaluation/discover-environment/tests/
+          -v
 
   test-integration:
     runs-on: ubuntu-latest

@@ -35,6 +35,10 @@ INTEGRITY = _load_module(
     "cloud_security_validate_skill_integrity_test",
     SCRIPTS / "validate_skill_integrity.py",
 )
+DEPENDENCIES = _load_module(
+    "cloud_security_validate_dependency_consistency_test",
+    SCRIPTS / "validate_dependency_consistency.py",
+)
 
 
 class TestSkillValidationCommon:
@@ -67,3 +71,6 @@ class TestValidationScripts:
 
     def test_integrity_validator_passes(self):
         assert INTEGRITY.main() == 0
+
+    def test_dependency_consistency_validator_passes(self):
+        assert DEPENDENCIES.main() == 0
