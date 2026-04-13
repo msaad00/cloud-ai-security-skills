@@ -13,9 +13,9 @@ The repo is intentionally broader than CSPM: cloud security, container security,
 For coding agents, start with [AGENTS.md](AGENTS.md). For Claude/Codex/Cortex MCP usage, see [docs/agent-integrations.md](docs/agent-integrations.md) and the project-scoped [`.mcp.json`](.mcp.json).
 
 ```bash
-python skills/detection-engineering/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
-  | python skills/detection-engineering/detect-privilege-escalation-k8s/src/detect.py \
-  | python skills/detection-engineering/convert-ocsf-to-sarif/src/convert.py \
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
   > findings.sarif
 ```
 
@@ -40,32 +40,34 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design a
 
 ```
 skills/
-├── compliance-cis-mitre/           "Aligned with a published benchmark?"
-│   ├── cspm-aws-cis-benchmark      (CIS AWS Foundations v3.0 — 18 checks)
-│   ├── cspm-gcp-cis-benchmark      (CIS GCP Foundations v3.0 — 7 checks)
-│   ├── cspm-azure-cis-benchmark    (CIS Azure Foundations v2.1 — 6 checks)
-│   ├── k8s-security-benchmark      (CIS Kubernetes — 10 checks)
-│   └── container-security          (CIS Docker — 8 checks)
-│
-├── remediation/                    "Fix it, gated and audited"
-│   └── iam-departures-remediation  (event-driven, DLQ + SNS, dual audit)
-│
-├── detection-engineering/          "What does an attack look like on this surface?"
+├── ingestion/                      "Raw source → OCSF 1.8"
 │   ├── ingest-cloudtrail-ocsf      AWS            → API Activity 6003
 │   ├── ingest-gcp-audit-ocsf       GCP            → API Activity 6003
 │   ├── ingest-azure-activity-ocsf  Azure          → API Activity 6003
 │   ├── ingest-k8s-audit-ocsf       K8s            → API Activity 6003
-│   ├── ingest-mcp-proxy-ocsf       MCP            → Application Activity 6002
+│   └── ingest-mcp-proxy-ocsf       MCP            → Application Activity 6002
+│
+├── detection/                      "What attack pattern does this event stream show?"
 │   ├── detect-mcp-tool-drift                      → T1195.001 Supply Chain
 │   ├── detect-privilege-escalation-k8s            → T1552.007 / T1611 / T1098 / T1550.001
-│   ├── detect-sensitive-secret-read-k8s           → T1552.007 Container API
+│   └── detect-sensitive-secret-read-k8s           → T1552.007 Container API
+│
+├── evaluation/                     "Does this align with a benchmark or posture bar?"
+│   ├── cspm-aws-cis-benchmark      (CIS AWS Foundations v3.0 — 18 checks)
+│   ├── cspm-gcp-cis-benchmark      (CIS GCP Foundations v3.0 — 7 checks)
+│   ├── cspm-azure-cis-benchmark    (CIS Azure Foundations v2.1 — 6 checks)
+│   ├── k8s-security-benchmark      (CIS Kubernetes — 10 checks)
+│   ├── container-security          (CIS Docker — 8 checks)
+│   ├── model-serving-security      (16 checks — auth / rate limit / egress / safety)
+│   ├── gpu-cluster-security        (13 checks — runtime / driver / tenant isolation)
+│   └── discover-environment        (MITRE ATT&CK + ATLAS graph overlay)
+│
+├── view/                           "OCSF → reviewable output"
 │   ├── convert-ocsf-to-sarif                      → GitHub Security tab
 │   └── convert-ocsf-to-mermaid-attack-flow        → PR comments
 │
-└── ai-infra-security/              "AI-native surfaces"
-    ├── model-serving-security      (16 checks — auth / rate limit / egress / safety)
-    ├── gpu-cluster-security        (13 checks — runtime / driver / tenant isolation)
-    └── discover-environment        (MITRE ATT&CK + ATLAS graph overlay)
+└── remediation/                    "Fix it, gated and audited"
+    └── iam-departures-remediation  (event-driven, DLQ + SNS, dual audit)
 ```
 
 **Roadmap:** current open issues cover AWS Config, GCP + Azure parity, vendor stories, folder reshape, the formal skill contract, the safe-skill CI bar, richer MCP input schemas / transports, and discovery / inventory follow-ons such as AI BOM generation.

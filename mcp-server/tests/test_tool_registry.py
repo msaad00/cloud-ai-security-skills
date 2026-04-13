@@ -54,5 +54,5 @@ class TestToolDefinition:
     def test_build_command_uses_fixed_entrypoint(self):
         skill = tool_map(REPO_ROOT)["detect-lateral-movement-aws"]
         command = build_command(skill, ["--output", "findings.jsonl"])
-        assert command[1].endswith("skills/detection-engineering/detect-lateral-movement-aws/src/detect.py")
+        assert command[1].endswith("skills/detection/detect-lateral-movement-aws/src/detect.py")
         assert command[-2:] == ["--output", "findings.jsonl"]

@@ -60,7 +60,7 @@ jobs:
         with:
           python-version: "3.11"
           packages: bandit
-      - run: bandit -r skills/compliance-cis-mitre/cspm-aws-cis-benchmark skills/remediation/iam-departures-remediation mcp-server -c pyproject.toml --severity-level medium
+      - run: bandit -r skills/evaluation/cspm-aws-cis-benchmark skills/remediation/iam-departures-remediation mcp-server -c pyproject.toml --severity-level medium
 
   # ── Unit tests, grouped into category matrices ────────────────
   test-compliance:
@@ -82,7 +82,7 @@ jobs:
         with:
           python-version: "3.11"
           packages: boto3 moto pytest pytest-cov
-      - working-directory: skills/compliance-cis-mitre/${{ matrix.skill }}
+      - working-directory: skills/evaluation/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
   test-remediation:
@@ -109,21 +109,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        skill:
-          - ingest-cloudtrail-ocsf
-          - ingest-vpc-flow-logs-ocsf
-          - ingest-guardduty-ocsf
-          - ingest-security-hub-ocsf
-          - ingest-gcp-audit-ocsf
-          - ingest-azure-activity-ocsf
-          - ingest-k8s-audit-ocsf
-          - ingest-mcp-proxy-ocsf
-          - detect-mcp-tool-drift
-          - detect-privilege-escalation-k8s
-          - detect-sensitive-secret-read-k8s
-          - detect-lateral-movement-aws
-          - convert-ocsf-to-sarif
-          - convert-ocsf-to-mermaid-attack-flow
+        include:
+          - skill: ingest-cloudtrail-ocsf
+            category: ingestion
+          - skill: ingest-vpc-flow-logs-ocsf
+            category: ingestion
+          - skill: ingest-guardduty-ocsf
+            category: ingestion
+          - skill: ingest-security-hub-ocsf
+            category: ingestion
+          - skill: ingest-gcp-audit-ocsf
+            category: ingestion
+          - skill: ingest-azure-activity-ocsf
+            category: ingestion
+          - skill: ingest-k8s-audit-ocsf
+            category: ingestion
+          - skill: ingest-mcp-proxy-ocsf
+            category: ingestion
+          - skill: detect-mcp-tool-drift
+            category: detection
+          - skill: detect-privilege-escalation-k8s
+            category: detection
+          - skill: detect-sensitive-secret-read-k8s
+            category: detection
+          - skill: detect-lateral-movement-aws
+            category: detection
+          - skill: convert-ocsf-to-sarif
+            category: view
+          - skill: convert-ocsf-to-mermaid-attack-flow
+            category: view
     name: test-detection-engineering (${{ matrix.skill }})
     steps:
       - uses: actions/checkout@v6
@@ -131,7 +145,7 @@ jobs:
         with:
           python-version: "3.11"
           packages: pytest pytest-cov
-      - working-directory: skills/detection-engineering/${{ matrix.skill }}
+      - working-directory: skills/${{ matrix.category }}/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
   test-ai-infra-security:
@@ -151,7 +165,7 @@ jobs:
         with:
           python-version: "3.11"
           packages: pytest pytest-cov
-      - working-directory: skills/ai-infra-security/${{ matrix.skill }}
+      - working-directory: skills/evaluation/${{ matrix.skill }}
         run: pytest tests/ -v -o "testpaths=tests"
 
   test-integration:

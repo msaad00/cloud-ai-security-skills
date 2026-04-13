@@ -60,7 +60,7 @@ python -m reconciler.sources --source snowflake --use-storage-integration
 
 ```bash
 # Run the test suite
-cd skills/iam-departures-remediation
+cd skills/remediation/iam-departures-remediation
 python -m pytest tests/ -v
 
 # Test specific rehire scenarios

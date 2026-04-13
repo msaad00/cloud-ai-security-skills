@@ -4,7 +4,12 @@ Contributions are welcome. This repo follows a skills-based structure — each s
 
 ## Adding a new skill
 
-1. Create a directory under `skills/` with a descriptive name (e.g., `skills/cspm-snowflake-cis-benchmark/`)
+1. Create a directory under the layered skill tree that matches the work:
+   - `skills/ingestion/<skill-name>/`
+   - `skills/detection/<skill-name>/`
+   - `skills/evaluation/<skill-name>/`
+   - `skills/view/<skill-name>/`
+   - `skills/remediation/<skill-name>/`
 2. Add a `SKILL.md` with the required frontmatter:
 
 ```yaml
@@ -25,12 +30,12 @@ metadata:
 ```
 
 3. Put source code in `src/` within your skill directory
-4. Put infrastructure-as-code in `infra/` (CloudFormation, Terraform)
+4. Put infrastructure-as-code in `infra/` only when the skill needs it
 5. Put tests in `tests/` — every skill should have tests
 6. Add a `REFERENCES.md` that links only to the official docs, schemas, APIs, or benchmark sources the skill depends on
 7. Make sure `SKILL.md` explicitly includes both `Use when...` and `Do NOT use...`
 8. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
-9. Add your skill to the table in `README.md`
+9. Add your skill to the catalog in `README.md` and `skills/README.md`
 
 ## Code standards
 
@@ -47,7 +52,7 @@ metadata:
 
 1. Fork the repo and create a feature branch
 2. Add or modify skills following the structure above
-3. Ensure tests pass: `pytest skills/your-skill/tests/ -v`
+3. Ensure tests pass: `pytest skills/<layer>/your-skill/tests/ -v`
 4. Ensure linting passes: `ruff check .`
 5. Open a PR against `main` with a clear description
 
