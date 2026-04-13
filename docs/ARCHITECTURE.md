@@ -11,7 +11,7 @@ This document is the load-bearing design contract for `cloud-ai-security-skills`
 
 ## 1. Purpose and scope
 
-`cloud-ai-security-skills` is a library of **composable, OCSF-native security skills** that normalize, enrich, detect on, evaluate, remediate, and deliver findings across cloud providers and SaaS products. The repository is designed to be driven by agentic tools (Claude Code, Snowflake Cortex Code CLI, Claude Agent SDK, any MCP client) *and* by traditional CI / serverless pipelines — with no code changes between the two modes.
+`cloud-ai-security-skills` is a library of **composable security skills for cloud and AI systems** that can operate in native, canonical, OCSF, or bridge modes. The repository is designed to be driven by agentic tools (Claude Code, Snowflake Cortex Code CLI, Claude Agent SDK, any MCP client) *and* by traditional CI / serverless pipelines — with no code changes between the two modes.
 
 **In scope**
 - Normalising raw vendor telemetry into OCSF 1.8 wire format
@@ -25,7 +25,7 @@ This document is the load-bearing design contract for `cloud-ai-security-skills`
 **Out of scope (explicit non-goals)**
 - Being a SIEM. SIEMs already ingest OCSF natively (Splunk, Sentinel, Chronicle, Elastic); we are the *producer* of OCSF, not a replacement for the consumer.
 - Running a long-lived multi-tenant SaaS runtime. We ship a skills library + reference runners + reference sinks. Productionising those is the operator's responsibility.
-- Inventing new telemetry schemas. OCSF 1.8 is the ceiling. If OCSF doesn't have a field, we use its `unmapped` escape hatch or a documented custom profile (see `OCSF_CONTRACT.md`).
+- Letting every skill invent its own internal schema. Source-specific payloads are preserved, the repo normalizes them into a canonical internal model, and OCSF remains an interoperable option rather than a mandatory ceiling.
 - Real-time sub-second detection. Latency target is minute-scale batches. If you need sub-second, use a streaming runtime (Flink, Kafka Streams) with these skills as UDFs.
 
 ## 2. Design principles
@@ -34,7 +34,7 @@ These are the non-negotiables. Everything in §3–§8 exists to serve them.
 
 1. **Skills are pure functions.** Input JSONL → output JSONL. No side effects. No cloud API calls. No disk writes outside stdout. No hidden state.
 2. **Side effects live at the edges.** Exactly four categories may have side effects: **L0 sources** (read raw), **L5 remediate** (write cloud APIs), **L7 sinks** (write storage), **runners** (drive loops). Everything else is pure.
-3. **The wire contract is the only shared dependency.** Skills never import from each other. If two skills need the same logic, they each own a copy. Copy-paste beats coupling at this scale — the wire format is the API, not the Python.
+3. **The schema contract is the shared dependency.** Skills never import from each other. If two skills need the same logic, they each own a copy. Copy-paste beats coupling at this scale — the contract is the API, not the Python. For shared pipelines the contract may be OCSF; for stateful inventory and evidence it may be canonical or bridge mode.
 4. **Determinism.** Same input always produces the same output. Every finding UID is a content hash; no random UUIDs. Replayable ⇒ testable ⇒ idempotent sink merges.
 5. **Read-only by default.** A skill may only perform writes if it is prefixed `remediate-*` or `sink-*` and its `SKILL.md` carries an explicit "Do NOT use" clause describing the blast radius.
 6. **Least-privilege infra.** Every skill that talks to a cloud API ships the *minimum* IAM policy in `infra/iam_policies/`. Wildcard actions are a CI failure.
@@ -97,7 +97,20 @@ This is how the repo stays secure and reliable without turning every skill into 
  └───────────────────────────────────────────────────────────────────┘
 ```
 
-Most data objects flowing between layers are **OCSF 1.8 JSONL**. That is the default wire contract for ingest, detect, evaluate, view, and sink paths. Discovery follows this rule where OCSF inventory/evidence classes fit cleanly; otherwise it may emit deterministic bridge artifacts such as environment graphs or CycloneDX-aligned AI BOMs with an explicit mapping path back to OCSF. The current discovery set now supports explicit bridge modes for `Cloud Resources Inventory Info [5023]` and `Live Evidence Info [5040]`, so Discovery-category pipelines can stay OCSF-shaped without replacing the native deterministic artifact.
+The repo operates across four schema modes:
+
+- **native** for source-fidelity payloads
+- **canonical** for stable internal storage, joins, metrics, and state
+- **ocsf** for shared pipelines, SIEMs, and standard interoperability
+- **bridge** when OCSF transport helps but native or canonical detail still matters
+
+Most current ingest, detect, evaluate, view, and sink paths are still **OCSF-friendly JSONL**, but OCSF is no longer the only valid operating mode. Discovery and evidence paths may emit deterministic native or canonical artifacts, plus OCSF bridge events where that improves interoperability. The current discovery set already supports explicit bridge modes for `Cloud Resources Inventory Info [5023]` and `Live Evidence Info [5040]`.
+
+For the detailed contract, see:
+
+- [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
+- [`STATE_AND_TIMELINE_MODEL.md`](./STATE_AND_TIMELINE_MODEL.md)
+- [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-engineering/OCSF_CONTRACT.md)
 
 ### Visuals
 

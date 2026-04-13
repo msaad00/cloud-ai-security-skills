@@ -7,7 +7,7 @@
 [![OCSF 1.8](https://img.shields.io/badge/OCSF-1.8-22d3ee)](https://schema.ocsf.io/1.8.0)
 [![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
 
-**OCSF-native security skills for cloud and AI systems.** Compose `ingest → discover → detect → evaluate → view → remediate` like Unix pipes. Run the same skill code from the CLI, CI, MCP, or persistent pipelines.
+**Security skills for cloud and AI systems, with OCSF as an option instead of a lock-in.** Compose `ingest → discover → detect → evaluate → view → remediate` like Unix pipes. Run the same skill code from the CLI, CI, MCP, or persistent pipelines.
 
 **What it is**
 - Cross-cloud and AI security skills, not just CSPM
@@ -23,6 +23,8 @@
 - Architecture and visuals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DIAGRAMS.md](docs/DIAGRAMS.md)
 - Runtime isolation and trust boundaries: [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md)
 - SIEM indexing and dedupe: [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md)
+- Schema modes and interoperability: [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
+- Historical state and timeline handling: [docs/STATE_AND_TIMELINE_MODEL.md](docs/STATE_AND_TIMELINE_MODEL.md)
 - Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), and [docs/ROADMAP.md](docs/ROADMAP.md)
 
 | Tool | Best integration path | What to rely on |
@@ -60,23 +62,24 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 
 | Layer | Role | Output |
 |---|---|---|
-| **Ingest** | Per-source raw log → OCSF | API / Network / HTTP / Application Activity |
-| **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, OCSF inventory/evidence bridge events, evidence JSON, or CycloneDX-aligned BOM |
-| **Detect** | OCSF → finding + MITRE ATT&CK | Detection Finding (class 2004) |
-| **Evaluate** | OCSF → framework check | Compliance Finding (class 2003) — CIS / NIST / SOC 2 |
-| **View** | OCSF → SARIF / Mermaid / graph | GitHub Security tab, PR comments, dashboards |
+| **Ingest** | Per-source raw payload → canonical model, with optional OCSF or bridge output | native JSON, canonical JSON, or OCSF API / Network / HTTP / Application Activity |
+| **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, canonical evidence, OCSF inventory/evidence bridge events, or CycloneDX-aligned BOM |
+| **Detect** | canonical or OCSF telemetry → finding + MITRE ATT&CK | Detection Finding (class 2004) or documented native/canonical finding output |
+| **Evaluate** | canonical or OCSF telemetry → framework check | Compliance Finding (class 2003) or documented evidence/check output |
+| **View** | canonical or OCSF → SARIF / Mermaid / graph | GitHub Security tab, PR comments, dashboards |
 | **Remediate** | Finding → action (HITL-gated, audited) | Dual-write audit row |
 
 Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, explicit `Use when...`, and explicit `Do NOT use...`.
 
-**OCSF note**
-- `ingest`, `detect`, `evaluate`, and `view` are OCSF-first wire paths
-- `discovery` prefers native OCSF inventory/evidence classes and profiles when they fit
-- where OCSF does not cleanly fit yet, the repo uses deterministic bridge artifacts with an explicit mapping path back to OCSF
+**Schema mode note**
+- the repo supports `native`, `canonical`, `ocsf`, and `bridge` modes
+- `ingest`, `detect`, `evaluate`, and `view` remain OCSF-friendly, but OCSF is optional rather than mandatory
+- `discovery` prefers native OCSF inventory/evidence classes and profiles when they fit, and otherwise uses deterministic native or bridge artifacts
 - `discover-environment` supports an `ocsf-cloud-resources-inventory` bridge mode
 - discovery evidence skills support an `ocsf-live-evidence` bridge mode for Discovery-category OCSF workflows
+- the stable repo contract is now: preserve source truth, normalize into a canonical internal model, then emit `native`, `ocsf`, or `bridge` output as appropriate
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design, [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md) for schema-mode selection, [`docs/STATE_AND_TIMELINE_MODEL.md`](docs/STATE_AND_TIMELINE_MODEL.md) for historical-state handling, and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
 
 ## How it runs
 

@@ -2,7 +2,8 @@
 
 This document pins the exact OCSF fields every skill in `detection-engineering/` must read and write. It is the **only** dependency shared across skills in this category. If you are writing a new ingestion or detection skill, your tests must verify that the output matches this contract.
 
-It also defines the repo-wide OCSF preference for adjacent layers:
+It also defines the repo-wide OCSF policy for adjacent layers:
+- support `native`, `canonical`, `ocsf`, and `bridge` modes explicitly
 - use a native OCSF class when one exists and fits the artifact cleanly
 - use OCSF profiles and extensions before inventing repo-local fields
 - use a deterministic bridge artifact only when OCSF does not yet model the discovery or BOM shape well enough
@@ -18,23 +19,31 @@ It also defines the repo-wide OCSF preference for adjacent layers:
 contract version: 1.8.0+mcp.2026.04
 ```
 
-## OCSF-first policy beyond detection
+## OCSF-optional policy beyond detection
 
-The repo is broader than event ingestion and detections, so OCSF usage falls into three buckets:
+The repo is broader than event ingestion and detections, so schema usage falls into four buckets:
 
-1. **Native OCSF wire paths**
+1. **Native source mode**
+   - preserve source payload shape and source-natural identifiers
+   - use when vendor fidelity matters more than standard transport
+
+2. **Canonical repo mode**
+   - normalize into the repo's stable internal model
+   - use for storage, joins, metrics, state materialization, and downstream stability
+
+3. **Native OCSF wire paths**
    - `ingest-*`
    - `detect-*`
    - `evaluate-*`
    - `convert-*`
 
-2. **Discovery and evidence paths that should prefer native OCSF where it fits**
+4. **Discovery and evidence paths that should prefer native OCSF where it fits**
    - `Cloud Resources Inventory Info [5023]`
    - `Software Inventory Info [5020]`
    - `Live Evidence Info [5040]`
    - `Base Event [0]` only as a last-resort generic carrier
 
-3. **Documented bridge artifacts**
+5. **Documented bridge artifacts**
    - environment graph snapshots
    - CycloneDX-aligned AI BOMs
    - deterministic technical-evidence JSON
@@ -44,7 +53,7 @@ Bridge artifacts are allowed only when:
 - the skill documents the gap and the intended OCSF mapping path
 - the bridge format remains deterministic and validation-friendly
 
-The direction of travel is still toward more native OCSF inventory/evidence use, not away from it.
+The direction of travel is still toward more native OCSF inventory/evidence use where it helps, but the repo must continue to function correctly without OCSF when source fidelity or canonical-state stability is the more accurate contract.
 
 Some repo-local bridge/profile identifiers intentionally retain their older
 names for compatibility:

@@ -36,9 +36,11 @@ metadata:
 6. Add a `REFERENCES.md` that links only to the official docs, schemas, APIs, or benchmark sources the skill depends on
 7. Make sure `SKILL.md` explicitly includes both `Use when...` and `Do NOT use...`
 8. Document whether the skill is read-only, dry-run capable, HITL-gated, or side-effectful
-9. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
-10. Add your skill to the catalog in `README.md` and `skills/README.md`
-11. Add or update the skill entry in `docs/framework-coverage.json` when the change affects framework, provider, or asset coverage
+9. Document accepted input modes (`raw`, `canonical`, `ocsf`) and supported output modes (`native`, `ocsf`, `bridge`) when they apply
+10. Document whether the mapping is lossless or lossy, and which source-native identifiers must survive normalization
+11. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
+12. Add your skill to the catalog in `README.md` and `skills/README.md`
+13. Add or update the skill entry in `docs/framework-coverage.json` when the change affects framework, provider, or asset coverage
 
 ## Code standards
 
@@ -53,6 +55,7 @@ metadata:
 - Keep framework claims measurable and machine-readable via [`docs/COVERAGE_MODEL.md`](docs/COVERAGE_MODEL.md) and [`docs/framework-coverage.json`](docs/framework-coverage.json)
 - Design for all execution modes up front: CLI, CI, MCP, and persistent/serverless wrappers should not require different skill code
 - If the skill can write state, require dry-run-first behavior and document the approval/audit model
+- Use the repo schema-mode contract in [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md) and keep state/history semantics aligned with [`docs/STATE_AND_TIMELINE_MODEL.md`](docs/STATE_AND_TIMELINE_MODEL.md)
 
 ## Pull request process
 

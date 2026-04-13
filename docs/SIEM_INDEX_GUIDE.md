@@ -1,6 +1,6 @@
 # SIEM Index Guide
 
-This repo emits **OCSF 1.8-first JSON** for ingest, detect, and discovery bridge paths. If you index those events into Splunk, Sentinel, Chronicle, ClickHouse, Elastic, Snowflake, or Security Lake-adjacent stores, keep the indexing model simple and stable.
+This repo supports `native`, `canonical`, `ocsf`, and `bridge` modes. This guide covers the **OCSF and bridge outputs** you may index into Splunk, Sentinel, Chronicle, ClickHouse, Elastic, Snowflake, or Security Lake-adjacent stores. If you store canonical or native artifacts as well, keep their entity keys and normalized UTC time fields aligned with the same indexing model.
 
 ## Goals
 
