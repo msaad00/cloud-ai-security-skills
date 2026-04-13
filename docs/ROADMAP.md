@@ -80,6 +80,7 @@ Priority providers and surfaces:
 - AWS: IAM, VPC, EKS, Security Hub, GuardDuty, Bedrock, SageMaker
 - GCP: IAM, VPC, GKE, SCC, Vertex AI
 - Azure: Entra, NSG, Defender, AKS, Azure ML, AI Foundry
+- identity vendors: Okta, Entra ID / Graph, Google Workspace, SCIM-capable SaaS audit sources
 - shared asset classes:
   - identities
   - compute

@@ -27,6 +27,7 @@ OFFICIAL_REFERENCE_HOSTS = {
     "clickhouse.com",
     "cloud.google.com",
     "cyclonedx.org",
+    "developer.okta.com",
     "community.workday.com",
     "datatracker.ietf.org",
     "developers.google.com",
