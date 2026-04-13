@@ -53,10 +53,11 @@ OCSF_METADATA = _load_module(
 class TestSkillValidationCommon:
     def test_discovers_skills_and_entrypoints(self):
         skills = COMMON.discover_skill_contracts()
-        assert len(skills) >= 31
+        assert len(skills) >= 32
         names = {skill.name for skill in skills}
         assert "detect-lateral-movement" in names
         assert "detect-okta-mfa-fatigue" in names
+        assert "detect-google-workspace-suspicious-login" in names
         assert "ingest-entra-directory-audit-ocsf" in names
         assert "ingest-google-workspace-login-ocsf" in names
         assert "ingest-gcp-scc-ocsf" in names

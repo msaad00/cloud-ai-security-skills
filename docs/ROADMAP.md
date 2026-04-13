@@ -82,6 +82,7 @@ Priority providers and surfaces:
 - Azure: Entra, NSG, Defender, AKS, Azure ML, AI Foundry
 - identity vendors: Okta, Entra ID / Graph, Google Workspace, SCIM-capable SaaS audit sources
 - current identity-vendor ingesters: Okta System Log, Entra / Graph directoryAudit, and Google Workspace login audit
+- current identity-vendor detections: Okta MFA fatigue and Google Workspace suspicious login
 - shared asset classes:
   - identities
   - compute
