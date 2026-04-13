@@ -49,6 +49,7 @@ Strongest current ATT&CK coverage:
 | Skill | Coverage |
 |---|---|
 | `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots |
+| `detect-okta-mfa-fatigue` | T1621 for repeated Okta Verify push challenge + deny bursts |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
 | `detect-sensitive-secret-read-k8s` | T1552, T1552.007 |
@@ -68,7 +69,7 @@ Identity ingestion is broader than cloud control planes now.
 
 | Skill | OCSF scope |
 |---|---|
-| `ingest-okta-system-log-ocsf` | Authentication (3002), Account Change (3001), User Access Management (3005) from verified Okta System Log fields |
+| `ingest-okta-system-log-ocsf` | Authentication (3002), Account Change (3001), User Access Management (3005) from verified Okta System Log fields, including Okta Verify push and deny event families |
 | `ingest-cloudtrail-ocsf` | API Activity (6003) for AWS IAM and control-plane events |
 | `ingest-gcp-audit-ocsf` | API Activity (6003) for GCP audit events |
 | `ingest-azure-activity-ocsf` | API Activity (6003) for Azure Activity events |

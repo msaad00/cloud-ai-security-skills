@@ -21,6 +21,7 @@ ACCOUNT_CHANGE_MFA_ENABLE = _INGEST.ACCOUNT_CHANGE_MFA_ENABLE
 ACCOUNT_CHANGE_PASSWORD_CHANGE = _INGEST.ACCOUNT_CHANGE_PASSWORD_CHANGE
 AUTH_ACTIVITY_LOGOFF = _INGEST.AUTH_ACTIVITY_LOGOFF
 AUTH_ACTIVITY_LOGON = _INGEST.AUTH_ACTIVITY_LOGON
+AUTH_ACTIVITY_OTHER = _INGEST.AUTH_ACTIVITY_OTHER
 AUTH_CLASS_UID = _INGEST.AUTH_CLASS_UID
 OCSF_VERSION = _INGEST.OCSF_VERSION
 SKILL_NAME = _INGEST.SKILL_NAME
@@ -117,6 +118,21 @@ class TestClassification:
     def test_authentication_routes(self):
         assert _classify_event("user.session.start") == (AUTH_CLASS_UID, "Authentication", AUTH_ACTIVITY_LOGON)
         assert _classify_event("user.session.end") == (AUTH_CLASS_UID, "Authentication", AUTH_ACTIVITY_LOGOFF)
+        assert _classify_event("user.authentication.auth_via_mfa") == (
+            AUTH_CLASS_UID,
+            "Authentication",
+            AUTH_ACTIVITY_OTHER,
+        )
+        assert _classify_event("user.mfa.okta_verify.deny_push") == (
+            AUTH_CLASS_UID,
+            "Authentication",
+            AUTH_ACTIVITY_OTHER,
+        )
+        assert _classify_event("system.push.send_factor_verify_push") == (
+            AUTH_CLASS_UID,
+            "Authentication",
+            AUTH_ACTIVITY_OTHER,
+        )
 
     def test_account_change_routes(self):
         assert _classify_event("user.lifecycle.deactivate") == (
@@ -188,6 +204,65 @@ class TestConvert:
         assert event["status_id"] == STATUS_FAILURE
         assert event["status_detail"] == "INVALID_CREDENTIALS"
         assert "session" not in event
+
+    def test_okta_verify_push_send_event(self):
+        event = convert_event(
+            _event(
+                uuid="okta-evt-push-1",
+                eventType="system.push.send_factor_verify_push",
+                displayMessage="Push notification sent for verification",
+                target=[
+                    {
+                        "id": "00u-target",
+                        "type": "User",
+                        "alternateId": "alice@example.com",
+                        "displayName": "Alice Example",
+                        "detailEntry": None,
+                    },
+                    {
+                        "id": "opf-factor",
+                        "type": "AuthenticatorEnrollment",
+                        "alternateId": "okta_verify",
+                        "displayName": "Okta Verify",
+                        "detailEntry": "okta_verify",
+                    },
+                ],
+            )
+        )
+        assert event["class_uid"] == AUTH_CLASS_UID
+        assert event["activity_id"] == AUTH_ACTIVITY_OTHER
+        assert event["resources"][0]["name"] == "Okta Verify"
+        assert event["service"]["name"] == "Okta Verify"
+
+    def test_okta_verify_deny_event(self):
+        event = convert_event(
+            _event(
+                uuid="okta-evt-deny-1",
+                eventType="user.mfa.okta_verify.deny_push",
+                displayMessage="User rejected Okta push verify",
+                outcome={"result": "FAILURE", "reason": "INVALID_CREDENTIALS"},
+                target=[
+                    {
+                        "id": "00u-target",
+                        "type": "User",
+                        "alternateId": "alice@example.com",
+                        "displayName": "Alice Example",
+                        "detailEntry": None,
+                    },
+                    {
+                        "id": "opf-factor",
+                        "type": "AuthenticatorEnrollment",
+                        "alternateId": "okta_verify",
+                        "displayName": "Okta Verify",
+                        "detailEntry": "okta_verify",
+                    },
+                ],
+            )
+        )
+        assert event["class_uid"] == AUTH_CLASS_UID
+        assert event["activity_id"] == AUTH_ACTIVITY_OTHER
+        assert event["status_id"] == STATUS_FAILURE
+        assert event["status_detail"] == "INVALID_CREDENTIALS"
 
     def test_account_change_event(self):
         event = convert_event(

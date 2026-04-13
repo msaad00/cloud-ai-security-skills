@@ -4,6 +4,7 @@
 
 - **Okta System Log API** — https://developer.okta.com/docs/reference/api/system-log
 - **Okta System Log query guide** — https://developer.okta.com/docs/reference/system-log-query/
+- **Okta Event Types catalog** — https://developer.okta.com/docs/reference/api/event-types/
 - **Okta event hook implementation sample payload** — https://developer.okta.com/docs/guides/event-hook-implementation/-/main/
 
 ## Output format

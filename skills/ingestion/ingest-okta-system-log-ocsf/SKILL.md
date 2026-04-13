@@ -4,14 +4,15 @@ description: >-
   Convert verified Okta System Log events into OCSF 1.8 Identity & Access
   Management events. The first slice maps session and SSO events to
   Authentication (3002), user lifecycle and account-control changes to Account
-  Change (3001), and app/group membership updates to User Access Management
-  (3005). It preserves Okta natural IDs such as uuid, published, transaction.id,
-  and authenticationContext.externalSessionId for SIEM-friendly dedupe and
-  correlation. Use when the user mentions Okta System Log ingestion, Okta audit
-  log normalization, cross-vendor identity telemetry, or feeding Okta identity
-  events into an OCSF pipeline. Do NOT use for raw Azure Entra, Google
-  Workspace, or AWS IAM logs. Do NOT use as a detector or policy engine — this
-  skill only normalizes verified Okta event payloads into OCSF.
+  Change (3001), app/group membership updates to User Access Management (3005),
+  and a narrow verified set of Okta Verify MFA challenge and denial events to
+  Authentication (3002). It preserves Okta natural IDs such as uuid, published,
+  transaction.id, and authenticationContext.externalSessionId for SIEM-friendly
+  dedupe and correlation. Use when the user mentions Okta System Log ingestion,
+  Okta audit log normalization, cross-vendor identity telemetry, or feeding
+  Okta identity events into an OCSF pipeline. Do NOT use for raw Azure Entra,
+  Google Workspace, or AWS IAM logs. Do NOT use as a detector or policy engine
+  — this skill only normalizes verified Okta event payloads into OCSF.
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. No Okta SDK required when System Log payloads are
@@ -94,6 +95,7 @@ The first slice intentionally supports a narrow, verified event family:
 - `user.session.start`
 - `user.session.end`
 - `user.authentication.sso`
+- `user.authentication.auth_via_mfa`
 - `user.lifecycle.create`
 - `user.lifecycle.activate`
 - `user.lifecycle.deactivate`
@@ -105,6 +107,10 @@ The first slice intentionally supports a narrow, verified event family:
 - `user.account.unlock_by_admin`
 - `user.mfa.factor.activate`
 - `user.mfa.factor.deactivate`
+- `user.mfa.okta_verify`
+- `user.mfa.okta_verify.deny_push`
+- `user.mfa.okta_verify.deny_push_upgrade_needed`
+- `system.push.send_factor_verify_push`
 - `application.user_membership.add`
 - `application.user_membership.remove`
 - `group.user_membership.add`
@@ -118,7 +124,7 @@ Unsupported event types are skipped with a warning to `stderr`.
 
 Emits OCSF 1.8 JSONL with verified class mappings:
 
-- **Authentication (3002)** for session and SSO events
+- **Authentication (3002)** for session, SSO, and verified Okta Verify MFA verification events
 - **Account Change (3001)** for user lifecycle and account-control events
 - **User Access Management (3005)** for app/group membership and privilege grant/revoke events
 

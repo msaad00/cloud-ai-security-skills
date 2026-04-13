@@ -56,6 +56,7 @@ class TestSkillValidationCommon:
         assert len(skills) >= 30
         names = {skill.name for skill in skills}
         assert "detect-lateral-movement" in names
+        assert "detect-okta-mfa-fatigue" in names
         assert "ingest-gcp-scc-ocsf" in names
         assert "ingest-azure-defender-for-cloud-ocsf" in names
         assert "ingest-okta-system-log-ocsf" in names

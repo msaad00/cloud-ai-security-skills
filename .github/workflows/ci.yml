@@ -141,6 +141,7 @@ jobs:
             skills/ingestion/ingest-k8s-audit-ocsf \
             skills/ingestion/ingest-mcp-proxy-ocsf \
             skills/detection/detect-mcp-tool-drift \
+            skills/detection/detect-okta-mfa-fatigue \
             skills/detection/detect-privilege-escalation-k8s \
             skills/detection/detect-sensitive-secret-read-k8s \
             skills/detection/detect-lateral-movement \
