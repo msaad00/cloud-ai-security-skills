@@ -12,11 +12,12 @@ from pathlib import Path
 from typing import Any
 
 SKILL_NAME = "discover-cloud-control-evidence"
-SUPPORTED_FRAMEWORKS = ("pci", "soc2")
+SUPPORTED_FRAMEWORKS = ("pci", "soc2", "ai-rmf")
 SUPPORTED_OUTPUT_FORMATS = ("native", "ocsf-live-evidence")
 FRAMEWORK_LABELS = {
     "pci": "PCI DSS 4.0",
     "soc2": "SOC 2 Security",
+    "ai-rmf": "NIST AI RMF 1.0",
 }
 SECRET_KEYWORDS = (
     "authorization",
@@ -34,6 +35,12 @@ PUBLIC_CIDRS = {"0.0.0.0/0", "::/0", "*", "internet", "any"}
 AI_SERVICES = {"ai-foundry", "azure-ml", "bedrock", "sagemaker", "vertex-ai"}
 AI_ENDPOINT_KINDS = {"deployment", "endpoint", "inference-endpoint"}
 AI_GOVERNANCE_KINDS = {"ai-guardrail", "dataset", "guardrail", "model", "model-package", "training-job", "vector-index", "vector-store"}
+AI_RMF_CONTROL_FOCUS = {
+    "ai-rmf.govern.ai-service-governance": "GOVERN",
+    "ai-rmf.map.ai-system-inventory": "MAP",
+    "ai-rmf.measure.ai-logging-and-monitoring": "MEASURE",
+    "ai-rmf.manage.ai-safeguards-and-network-boundaries": "MANAGE",
+}
 
 
 def _load_json(path: str | None) -> dict[str, Any]:
@@ -91,7 +98,7 @@ def _sanitize(value: Any) -> Any:
 
 def _normalize_frameworks(frameworks: list[str] | None) -> list[str]:
     if not frameworks:
-        return list(SUPPORTED_FRAMEWORKS)
+        return ["pci", "soc2"]
     normalized = []
     for item in frameworks:
         key = item.strip().lower()
@@ -745,6 +752,7 @@ def _control(
     description: str,
     evidence: list[dict[str, Any]],
     gaps: list[str],
+    framework_mappings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     status = _status(not gaps and bool(evidence), bool(evidence))
     return {
@@ -755,6 +763,7 @@ def _control(
         "description": description,
         "evidence": evidence,
         "gaps": gaps,
+        "framework_mappings": framework_mappings or {},
     }
 
 
@@ -839,6 +848,52 @@ def _controls_for(framework: str, normalized: dict[str, Any]) -> list[dict[str, 
                 "Inventory-backed evidence for models, datasets, vector stores, training jobs, and guardrails associated with AI services.",
                 _sample(ai_governance_assets),
                 [] if ai_governance_assets else ["No AI governance inventory was present in the supplied snapshot."],
+            ),
+        ]
+
+    if framework == "ai-rmf":
+        return [
+            _control(
+                framework,
+                "ai-rmf.govern.ai-service-governance",
+                "AI governance surface evidence",
+                "Inventory-backed evidence for guardrails, models, datasets, vector stores, and training paths that contribute to AI governance scope.",
+                _sample(ai_governance_assets),
+                [] if ai_governance_assets else ["No AI governance inventory was present in the supplied snapshot."],
+                framework_mappings={"nist_ai_rmf": AI_RMF_CONTROL_FOCUS["ai-rmf.govern.ai-service-governance"]},
+            ),
+            _control(
+                framework,
+                "ai-rmf.map.ai-system-inventory",
+                "AI system inventory evidence",
+                "Inventory-backed evidence for AI endpoints, deployments, models, datasets, and supporting cloud providers.",
+                _sample(ai_assets),
+                [] if ai_assets else ["No AI system inventory was present in the supplied snapshot."],
+                framework_mappings={"nist_ai_rmf": AI_RMF_CONTROL_FOCUS["ai-rmf.map.ai-system-inventory"]},
+            ),
+            _control(
+                framework,
+                "ai-rmf.measure.ai-logging-and-monitoring",
+                "AI logging and monitoring evidence",
+                "Inventory-backed evidence for endpoint logging, audit trails, and diagnostic surfaces supporting AI monitoring.",
+                _sample(logging_assets + [asset for asset in ai_endpoint_assets if _bool(asset.get("logged"))]),
+                [] if logging_assets else ["No logging inventory was present in the supplied snapshot."],
+                framework_mappings={"nist_ai_rmf": AI_RMF_CONTROL_FOCUS["ai-rmf.measure.ai-logging-and-monitoring"]},
+            ),
+            _control(
+                framework,
+                "ai-rmf.manage.ai-safeguards-and-network-boundaries",
+                "AI safeguards and network boundary evidence",
+                "Inventory-backed evidence for private AI endpoints, encryption, and guardrail surfaces that support AI risk treatment.",
+                _sample(
+                    [asset for asset in ai_endpoint_assets if not _bool(asset.get("public"))]
+                    + [asset for asset in ai_governance_assets if asset.get("kind") in {"ai-guardrail", "guardrail"}]
+                    + encrypted_assets
+                ),
+                [] if ai_endpoint_assets or ai_governance_assets or encrypted_assets else [
+                    "No AI safeguard, private endpoint, or encryption inventory was present in the supplied snapshot."
+                ],
+                framework_mappings={"nist_ai_rmf": AI_RMF_CONTROL_FOCUS["ai-rmf.manage.ai-safeguards-and-network-boundaries"]},
             ),
         ]
 

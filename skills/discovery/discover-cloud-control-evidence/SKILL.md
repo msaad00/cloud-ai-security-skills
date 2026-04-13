@@ -3,8 +3,8 @@ name: discover-cloud-control-evidence
 description: >-
   Generate deterministic technical-control evidence from raw cross-cloud
   inventory snapshots. Supports AWS, GCP, and Azure inventory inputs and
-  produces a machine-readable evidence package for PCI DSS 4.0 and SOC 2
-  security reviews without claiming attestation. Use when the user mentions
+  produces a machine-readable evidence package for PCI DSS 4.0, SOC 2, and
+  NIST AI RMF 1.0 reviews without claiming attestation. Use when the user mentions
   PCI evidence, SOC 2 evidence, cloud inventory evidence, audit evidence, or
   wants a reviewable JSON package showing identity surface, externally exposed
   assets, encryption coverage, logging coverage, and key-management coverage
@@ -74,6 +74,7 @@ The skill emits one deterministic JSON document:
 - `frameworks[]` with the requested evidence families
 - `inventory_summary` with providers, services, asset counts, and control-surface counts
 - `controls[]` with `evidence-ready` / `partial` / `missing` status per control domain
+- `framework_mappings` per control when the selected framework carries explicit mappings such as NIST AI RMF
 - `gaps[]` only when the source artifact cannot support a given evidence domain
 - AI-oriented evidence domains for endpoint surface and governance inventory when AI service assets are present
 
@@ -87,6 +88,9 @@ python src/discover.py inventory.json > cloud-evidence.json
 
 # Limit to PCI-focused evidence
 python src/discover.py inventory.json --framework pci --pretty > pci-evidence.json
+
+# Emit NIST AI RMF evidence from the same inventory
+python src/discover.py inventory.json --framework ai-rmf --pretty > ai-rmf-evidence.json
 
 # Emit an OCSF Discovery bridge event
 python src/discover.py inventory.json --output-format ocsf-live-evidence > evidence.ocsf.json

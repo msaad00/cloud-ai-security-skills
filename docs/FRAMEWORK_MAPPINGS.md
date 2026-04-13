@@ -29,7 +29,7 @@ from individual `SKILL.md` files.
 | **SOC 2 TSC** | partial | evaluation and remediation mappings |
 | **ISO 27001:2022** | partial | CSPM/evaluation mappings |
 | **PCI DSS 4.0** | partial | AWS posture mappings today |
-| **NIST AI RMF** | emerging | model-serving security and roadmap items |
+| **NIST AI RMF** | real and growing | model-serving security, cloud control evidence, AI BOM, and roadmap items |
 
 ## By layer
 
@@ -69,10 +69,10 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | Skill | Coverage |
 |---|---|
 | `discover-environment` | graph overlay for AI/ML resources and adversarial ML techniques |
-| `model-serving-security` | explicit ATLAS coverage in skill docs and checks |
+| `model-serving-security` | explicit ATLAS coverage plus machine-readable NIST AI RMF section scope in the benchmark metadata |
 | `discover-ai-bom` | inventory artifact for future ATLAS / AI RMF evidence joins |
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
-| `discover-cloud-control-evidence` | cross-cloud evidence package that preserves ATT&CK / ATLAS / AI RMF inventory context |
+| `discover-cloud-control-evidence` | cross-cloud evidence package with explicit NIST AI RMF evidence mode and ATT&CK / ATLAS / AI RMF inventory context |
 
 Current provider depth in discovery:
 - AWS Bedrock / SageMaker
@@ -105,7 +105,7 @@ uniform than classic cloud posture.
 | `discover-ai-bom` | CycloneDX ML-BOM, NIST AI RMF, MITRE ATLAS, PCI, SOC 2 |
 | `discover-control-evidence` | PCI DSS 4.0, SOC 2 TSC, CycloneDX ML-BOM, MITRE ATLAS |
 | `discover-cloud-control-evidence` | PCI DSS 4.0, SOC 2 TSC, NIST AI RMF, MITRE ATT&CK, MITRE ATLAS |
-| `model-serving-security` | MITRE ATLAS, NIST CSF, OWASP LLM Top 10, SOC 2, provider-specific AI endpoint controls |
+| `model-serving-security` | MITRE ATLAS, NIST CSF, NIST AI RMF, OWASP LLM Top 10, SOC 2, provider-specific AI endpoint controls |
 | `gpu-cluster-security` | MITRE ATT&CK, MITRE ATLAS, NIST CSF, NIST AI RMF, CIS Controls, CIS Kubernetes |
 | `discover-environment` | MITRE ATT&CK, MITRE ATLAS, NIST CSF |
 

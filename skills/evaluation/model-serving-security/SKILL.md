@@ -27,6 +27,7 @@ metadata:
   frameworks:
     - MITRE ATLAS
     - NIST CSF 2.0
+    - NIST AI RMF 1.0
     - OWASP LLM Top 10
     - SOC 2 TSC
   cloud: any
@@ -35,7 +36,8 @@ metadata:
 # Model Serving Security Benchmark
 
 20 automated checks across 6 domains, auditing the security posture of AI model
-serving infrastructure. Each check mapped to MITRE ATLAS and NIST CSF 2.0.
+serving infrastructure. Each check is mapped to MITRE ATLAS, NIST CSF 2.0, and
+an explicit NIST AI RMF 1.0 function scope.
 
 ## When to Use
 

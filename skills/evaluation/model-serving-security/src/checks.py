@@ -25,6 +25,43 @@ import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+FRAMEWORKS = (
+    "MITRE ATLAS",
+    "NIST CSF 2.0",
+    "NIST AI RMF 1.0",
+    "OWASP LLM Top 10",
+    "SOC 2 TSC",
+)
+
+PROVIDERS = ("aws", "azure", "gcp", "multi")
+ASSET_CLASSES = ("ai-endpoints", "models", "identities", "network", "logging", "guardrails")
+AI_FRAMEWORK_FOCUS = {
+    "auth": {
+        "nist_ai_rmf": "GOVERN, MANAGE",
+        "scope": "identity, access, and provider workload identity on AI endpoints",
+    },
+    "abuse_prevention": {
+        "nist_ai_rmf": "MAP, MANAGE",
+        "scope": "rate limiting and input constraints for misuse and cost containment",
+    },
+    "data_egress": {
+        "nist_ai_rmf": "MAP, MEASURE, MANAGE",
+        "scope": "training-data leakage, PII handling, and output filtering",
+    },
+    "runtime": {
+        "nist_ai_rmf": "MANAGE",
+        "scope": "container and runtime isolation on serving infrastructure",
+    },
+    "network": {
+        "nist_ai_rmf": "MAP, MANAGE",
+        "scope": "public exposure, TLS, and private network isolation",
+    },
+    "safety": {
+        "nist_ai_rmf": "GOVERN, MEASURE, MANAGE",
+        "scope": "guardrails, content safety, audit logging, and version traceability",
+    },
+}
+
 
 @dataclass
 class Finding:
@@ -37,7 +74,20 @@ class Finding:
     remediation: str = ""
     mitre_atlas: str = ""
     nist_csf: str = ""
+    nist_ai_rmf: str = ""
     resources: list[str] = field(default_factory=list)
+
+
+def benchmark_metadata() -> dict[str, object]:
+    """Return machine-readable framework and section coverage for wrappers and docs."""
+    return {
+        "frameworks": list(FRAMEWORKS),
+        "providers": list(PROVIDERS),
+        "asset_classes": list(ASSET_CLASSES),
+        "ai_framework_focus": AI_FRAMEWORK_FOCUS,
+        "check_count": sum(len(checks) for checks in ALL_CHECKS.values()),
+        "sections": {name: len(checks) for name, checks in ALL_CHECKS.items()},
+    }
 
 
 def _iter_endpoints(config: dict) -> list[dict]:
@@ -205,6 +255,7 @@ def check_1_1_endpoint_auth_required(config: dict) -> Finding:
         remediation="Enable API key, OAuth2, or mTLS on all model serving endpoints",
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-1",
+        nist_ai_rmf="GOVERN, MANAGE",
         resources=unauthenticated,
     )
 
@@ -253,6 +304,7 @@ def check_1_2_no_hardcoded_api_keys(config: dict, scan_paths: list[str] | None =
         remediation="Use Secrets Manager, Vault, or environment variable references instead of inline secrets",
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-4",
+        nist_ai_rmf="GOVERN, MANAGE",
         resources=found[:10],
     )
 
@@ -276,6 +328,7 @@ def check_1_3_rbac_model_access(config: dict) -> Finding:
         remediation="Configure role-based permissions per endpoint (admin, user, read-only)",
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-4",
+        nist_ai_rmf="GOVERN, MANAGE",
         resources=no_rbac,
     )
 
@@ -299,6 +352,7 @@ def check_1_4_workload_identity_required(config: dict) -> Finding:
         remediation="Use IAM roles, Vertex AI service accounts, Azure managed identity, or equivalent provider-native workload identity.",
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-4",
+        nist_ai_rmf="GOVERN, MANAGE",
         resources=missing_identity,
     )
 
@@ -326,6 +380,7 @@ def check_2_1_rate_limiting_enabled(config: dict) -> Finding:
         remediation="Set per-client RPM/RPD limits to prevent abuse and cost overruns",
         mitre_atlas="AML.T0042",
         nist_csf="PR.DS-4",
+        nist_ai_rmf="MAP, MANAGE",
         resources=no_rate_limit,
     )
 
@@ -350,6 +405,7 @@ def check_2_2_input_size_limits(config: dict) -> Finding:
         remediation="Set max_tokens and max_input_size to prevent resource exhaustion",
         mitre_atlas="AML.T0042",
         nist_csf="PR.DS-4",
+        nist_ai_rmf="MAP, MANAGE",
         resources=no_limits,
     )
 
@@ -374,6 +430,7 @@ def check_3_1_output_filtering(config: dict) -> Finding:
             remediation="Enable content safety filters to prevent PII leakage, harmful content, and prompt injection echoing",
             mitre_atlas="AML.T0048.002",
             nist_csf="PR.DS-5",
+            nist_ai_rmf="MEASURE, MANAGE",
         )
     return Finding(
         check_id="MS-3.1",
@@ -384,6 +441,7 @@ def check_3_1_output_filtering(config: dict) -> Finding:
         detail="Output content filtering is enabled",
         mitre_atlas="AML.T0048.002",
         nist_csf="PR.DS-5",
+        nist_ai_rmf="MEASURE, MANAGE",
     )
 
 
@@ -401,6 +459,7 @@ def check_3_2_no_training_data_in_response(config: dict) -> Finding:
         remediation="Enable training data memorization detection to prevent data extraction attacks",
         mitre_atlas="AML.T0025",
         nist_csf="PR.DS-5",
+        nist_ai_rmf="MAP, MEASURE, MANAGE",
     )
 
 
@@ -420,6 +479,7 @@ def check_3_3_logging_no_pii(config: dict) -> Finding:
             remediation="Enable pii_redaction in logging config or disable request body logging",
             mitre_atlas="AML.T0025",
             nist_csf="PR.DS-5",
+            nist_ai_rmf="MEASURE, MANAGE",
         )
     return Finding(
         check_id="MS-3.3",
@@ -430,6 +490,7 @@ def check_3_3_logging_no_pii(config: dict) -> Finding:
         detail="PII redaction enabled or request logging disabled",
         mitre_atlas="AML.T0025",
         nist_csf="PR.DS-5",
+        nist_ai_rmf="MEASURE, MANAGE",
     )
 
 
@@ -456,6 +517,7 @@ def check_4_1_no_privileged_containers(config: dict) -> Finding:
         remediation="Remove privileged: true from all model serving containers. Use specific capabilities instead.",
         mitre_atlas="AML.T0011",
         nist_csf="PR.AC-4",
+        nist_ai_rmf="MANAGE",
         resources=privileged,
     )
 
@@ -478,6 +540,7 @@ def check_4_2_read_only_rootfs(config: dict) -> Finding:
         remediation="Set readOnlyRootFilesystem: true and use emptyDir volumes for temp data",
         mitre_atlas="AML.T0011",
         nist_csf="PR.DS-6",
+        nist_ai_rmf="MANAGE",
         resources=writable,
     )
 
@@ -502,6 +565,7 @@ def check_4_3_non_root_user(config: dict) -> Finding:
         remediation="Set runAsNonRoot: true and runAsUser to a non-zero UID",
         mitre_atlas="AML.T0011",
         nist_csf="PR.AC-4",
+        nist_ai_rmf="MANAGE",
         resources=root_containers,
     )
 
@@ -529,6 +593,7 @@ def check_5_1_tls_enforced(config: dict) -> Finding:
         detail=f"{len(no_tls)} endpoints without TLS" if no_tls else "All endpoints enforce TLS",
         remediation="Enable TLS 1.2+ on all model serving endpoints. Redirect HTTP to HTTPS.",
         nist_csf="PR.DS-2",
+        nist_ai_rmf="MAP, MANAGE",
         resources=no_tls,
     )
 
@@ -552,6 +617,7 @@ def check_5_2_no_public_endpoints(config: dict) -> Finding:
         remediation="Place model endpoints behind API gateway or VPC. No direct public access.",
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-5",
+        nist_ai_rmf="MAP, MANAGE",
         resources=public,
     )
 
@@ -577,6 +643,7 @@ def check_5_3_private_network_isolation(config: dict) -> Finding:
         remediation="Attach SageMaker endpoints to VPCs, Vertex AI endpoints to PSC/private networking, or Azure ML/Foundry endpoints to private endpoints.",
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-5",
+        nist_ai_rmf="MAP, MANAGE",
         resources=missing_private,
     )
 
@@ -600,6 +667,7 @@ def check_6_1_prompt_injection_guard(config: dict) -> Finding:
         remediation="Enable prompt injection detection to prevent adversarial input attacks",
         mitre_atlas="AML.T0051",
         nist_csf="DE.CM-4",
+        nist_ai_rmf="MEASURE, MANAGE",
     )
 
 
@@ -620,6 +688,7 @@ def check_6_2_content_safety_enabled(config: dict) -> Finding:
         remediation="Enable content safety with blocked categories (violence, hate, self-harm, sexual)",
         mitre_atlas="AML.T0048",
         nist_csf="DE.CM-4",
+        nist_ai_rmf="GOVERN, MEASURE, MANAGE",
     )
 
 
@@ -641,6 +710,7 @@ def check_6_3_model_versioning(config: dict) -> Finding:
         remediation="Pin model versions (never use 'latest'). Enable model registry with immutable tags.",
         mitre_atlas="AML.T0010",
         nist_csf="PR.DS-6",
+        nist_ai_rmf="GOVERN, MEASURE",
         resources=no_version,
     )
 
@@ -663,6 +733,7 @@ def check_6_4_guardrails_attached(config: dict) -> Finding:
         remediation="Attach Bedrock guardrails, Vertex AI safety settings, Azure AI content safety, or equivalent provider-native safety layers.",
         mitre_atlas="AML.T0048",
         nist_csf="DE.CM-4",
+        nist_ai_rmf="GOVERN, MEASURE, MANAGE",
         resources=missing_guardrails,
     )
 
@@ -685,6 +756,7 @@ def check_6_5_ai_endpoint_audit_logging(config: dict) -> Finding:
         remediation="Enable provider-native endpoint access logging, diagnostics, or request capture on all AI endpoints.",
         mitre_atlas="AML.T0010",
         nist_csf="DE.CM-3",
+        nist_ai_rmf="MEASURE, MANAGE",
         resources=no_logging,
     )
 
