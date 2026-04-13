@@ -29,6 +29,7 @@ Raw source formats to OCSF 1.8 JSONL.
 | [`ingest-azure-defender-for-cloud-ocsf`](ingestion/ingest-azure-defender-for-cloud-ocsf/) | Azure Defender for Cloud |
 | [`ingest-gcp-audit-ocsf`](ingestion/ingest-gcp-audit-ocsf/) | GCP Cloud Audit Logs |
 | [`ingest-azure-activity-ocsf`](ingestion/ingest-azure-activity-ocsf/) | Azure Activity Logs |
+| [`ingest-entra-directory-audit-ocsf`](ingestion/ingest-entra-directory-audit-ocsf/) | Microsoft Entra / Graph directory audit |
 | [`ingest-okta-system-log-ocsf`](ingestion/ingest-okta-system-log-ocsf/) | Okta System Log |
 | [`ingest-k8s-audit-ocsf`](ingestion/ingest-k8s-audit-ocsf/) | Kubernetes audit logs |
 | [`ingest-mcp-proxy-ocsf`](ingestion/ingest-mcp-proxy-ocsf/) | MCP proxy activity |

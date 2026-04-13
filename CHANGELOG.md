@@ -15,10 +15,11 @@ The format is loosely based on Keep a Changelog.
 
 - `ingest-okta-system-log-ocsf` as the first external identity-vendor ingestion skill, mapping verified Okta System Log session, user lifecycle, and membership events into OCSF Authentication (3002), Account Change (3001), and User Access Management (3005).
 - `detect-okta-mfa-fatigue` as the first Okta-native detection skill, emitting OCSF Detection Finding (2004) for repeated Okta Verify push challenge and denial bursts aligned to MITRE ATT&CK T1621.
+- `ingest-entra-directory-audit-ocsf` as the Microsoft Entra / Graph identity-audit ingestion skill, mapping verified `directoryAudit` application, service-principal, app-role-assignment, and federated-credential events into OCSF API Activity (6003).
 
 ### Changed
 
-- Expanded the coverage registry and framework mapping docs to track Okta as a first-class OCSF identity-ingestion source.
+- Expanded the coverage registry and framework mapping docs to track Okta and Entra / Graph as first-class OCSF identity-ingestion sources.
 - Expanded `ingest-okta-system-log-ocsf` to cover the verified Okta Verify push and denial event families needed for narrow MFA fatigue detection.
 
 ### Added

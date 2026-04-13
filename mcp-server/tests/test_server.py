@@ -56,6 +56,7 @@ class TestMcpServer:
             response = _read_message(proc)
             names = {tool["name"] for tool in response["result"]["tools"]}
             assert "ingest-cloudtrail-ocsf" in names
+            assert "ingest-entra-directory-audit-ocsf" in names
             assert "ingest-okta-system-log-ocsf" in names
             assert "detect-lateral-movement" in names
             assert "detect-okta-mfa-fatigue" in names
