@@ -137,6 +137,7 @@ jobs:
             skills/ingestion/ingest-azure-defender-for-cloud-ocsf \
             skills/ingestion/ingest-gcp-audit-ocsf \
             skills/ingestion/ingest-azure-activity-ocsf \
+            skills/ingestion/ingest-entra-directory-audit-ocsf \
             skills/ingestion/ingest-okta-system-log-ocsf \
             skills/ingestion/ingest-k8s-audit-ocsf \
             skills/ingestion/ingest-mcp-proxy-ocsf \
