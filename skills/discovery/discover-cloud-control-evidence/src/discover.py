@@ -7,11 +7,13 @@ import json
 import sys
 import uuid
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 SKILL_NAME = "discover-cloud-control-evidence"
 SUPPORTED_FRAMEWORKS = ("pci", "soc2")
+SUPPORTED_OUTPUT_FORMATS = ("native", "ocsf-live-evidence")
 FRAMEWORK_LABELS = {
     "pci": "PCI DSS 4.0",
     "soc2": "SOC 2 Security",
@@ -97,6 +99,18 @@ def _normalize_frameworks(frameworks: list[str] | None) -> list[str]:
         if key not in normalized:
             normalized.append(key)
     return normalized
+
+
+def _time_to_epoch_ms(value: str | None) -> int:
+    text = _string(value)
+    if not text:
+        return 0
+    try:
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        return int(datetime.fromisoformat(text).timestamp() * 1000)
+    except ValueError:
+        return 0
 
 
 def _asset(provider: str, service: str, kind: str, identifier: str | None, **kwargs: Any) -> dict[str, Any]:
@@ -693,6 +707,36 @@ def build_evidence(document: dict[str, Any], frameworks: list[str] | None = None
     }
 
 
+def to_ocsf_live_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
+    time_ms = _time_to_epoch_ms(evidence.get("collected_at"))
+    return {
+        "activity_id": 99,
+        "activity_name": "Other",
+        "category_uid": 5,
+        "category_name": "Discovery",
+        "class_uid": 5040,
+        "class_name": "Live Evidence Info",
+        "type_uid": 504099,
+        "type_name": "Live Evidence Info: Other",
+        "severity_id": 1,
+        "severity": "Informational",
+        "time": time_ms,
+        "metadata": {
+            "version": "1.8.0",
+            "product": {
+                "name": "cloud-security",
+                "vendor_name": "msaad00/cloud-security",
+                "feature": {"name": SKILL_NAME},
+            },
+            "profiles": ["cloud", "security_control"],
+        },
+        "message": "Discovery-layer technical control evidence generated from cross-cloud inventory.",
+        "unmapped": {
+            "cloud_security_technical_evidence": evidence,
+        },
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", nargs="?", help="JSON file path. Reads stdin when omitted.")
@@ -703,6 +747,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Evidence family to emit. Repeat for multiple values: pci, soc2.",
     )
+    parser.add_argument(
+        "--output-format",
+        choices=SUPPORTED_OUTPUT_FORMATS,
+        default="native",
+        help="Emit native evidence JSON or an OCSF Live Evidence bridge event.",
+    )
     parser.add_argument("-o", "--output", help="Write the evidence JSON to this file.")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     args = parser.parse_args(argv)
@@ -710,6 +760,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         payload = _load_json(args.input)
         result = build_evidence(payload, args.frameworks)
+        if args.output_format == "ocsf-live-evidence":
+            result = to_ocsf_live_evidence(result)
     except ValueError as exc:
         _warn(str(exc))
         return 2

@@ -13,6 +13,7 @@ _SPEC.loader.exec_module(_MODULE)
 
 build_evidence = _MODULE.build_evidence
 normalize_inventory = _MODULE.normalize_inventory
+to_ocsf_live_evidence = _MODULE.to_ocsf_live_evidence
 
 
 def _aws_snapshot() -> dict:
@@ -112,3 +113,11 @@ class TestBuildEvidence:
             assert "supported provider inventory" in str(exc)
         else:  # pragma: no cover - defensive
             raise AssertionError("expected ValueError")
+
+    def test_can_emit_ocsf_live_evidence_bridge(self):
+        event = to_ocsf_live_evidence(build_evidence(_multi_cloud_snapshot(), ["pci"]))
+        assert event["category_uid"] == 5
+        assert event["class_uid"] == 5040
+        assert event["class_name"] == "Live Evidence Info"
+        assert event["metadata"]["version"] == "1.8.0"
+        assert event["unmapped"]["cloud_security_technical_evidence"]["frameworks"] == ["PCI DSS 4.0"]

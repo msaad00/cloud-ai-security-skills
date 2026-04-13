@@ -13,6 +13,7 @@ _SPEC.loader.exec_module(_MODULE)
 
 build_evidence = _MODULE.build_evidence
 normalize_source = _MODULE.normalize_source
+to_ocsf_live_evidence = _MODULE.to_ocsf_live_evidence
 
 
 def _bom() -> dict:
@@ -125,3 +126,11 @@ class TestBuildEvidence:
             assert "CycloneDX AI BOM" in str(exc)
         else:  # pragma: no cover - defensive
             raise AssertionError("expected ValueError")
+
+    def test_can_emit_ocsf_live_evidence_bridge(self):
+        event = to_ocsf_live_evidence(build_evidence(_bom(), ["soc2"]))
+        assert event["category_uid"] == 5
+        assert event["class_uid"] == 5040
+        assert event["class_name"] == "Live Evidence Info"
+        assert event["metadata"]["version"] == "1.8.0"
+        assert event["unmapped"]["cloud_security_technical_evidence"]["frameworks"] == ["SOC 2 Security"]

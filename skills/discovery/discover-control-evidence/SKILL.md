@@ -73,7 +73,7 @@ The skill emits one deterministic JSON document:
 - `controls[]` with evidence-ready / partial / missing status per control domain
 - `gaps[]` only when the source artifact cannot support a given evidence domain
 
-This is evidence, not an attestation.
+By default this is native evidence JSON, not an attestation. When `--output-format ocsf-live-evidence` is used, the skill emits a Discovery-category OCSF bridge event for `Live Evidence Info [5040]` and carries the deterministic evidence payload under `unmapped.cloud_security_technical_evidence`.
 
 ## Usage
 
@@ -86,6 +86,9 @@ python src/discover.py graph.json --framework pci --framework soc2 > evidence.js
 
 # Pretty-print to a file
 python src/discover.py ai-bom.json --pretty -o control-evidence.json
+
+# Emit an OCSF Discovery bridge event
+python src/discover.py graph.json --output-format ocsf-live-evidence > control-evidence.ocsf.json
 ```
 
 ## Security guardrails

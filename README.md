@@ -46,6 +46,12 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 
 Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, explicit `Use when...`, and explicit `Do NOT use...`.
 
+**OCSF note**
+- `ingest`, `detect`, `evaluate`, and `view` are OCSF-first wire paths
+- `discovery` prefers native OCSF inventory/evidence classes and profiles when they fit
+- where OCSF does not cleanly fit yet, the repo uses deterministic bridge artifacts with an explicit mapping path back to OCSF
+- discovery evidence skills support an `ocsf-live-evidence` bridge mode for Discovery-category OCSF workflows
+
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
 
 ## How it runs
