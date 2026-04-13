@@ -61,6 +61,7 @@ class TestMcpServer:
             assert "ingest-google-workspace-login-ocsf" in names
             assert "detect-lateral-movement" in names
             assert "detect-okta-mfa-fatigue" in names
+            assert "detect-google-workspace-suspicious-login" in names
             assert "model-serving-security" in names
             assert "iam-departures-remediation" not in names
         finally:
