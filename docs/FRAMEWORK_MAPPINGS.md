@@ -100,7 +100,7 @@ uniform than classic cloud posture.
 | `discover-ai-bom` | CycloneDX ML-BOM, NIST AI RMF, MITRE ATLAS, PCI, SOC 2 |
 | `discover-control-evidence` | PCI DSS 4.0, SOC 2 TSC, CycloneDX ML-BOM, MITRE ATLAS |
 | `discover-cloud-control-evidence` | PCI DSS 4.0, SOC 2 TSC, NIST AI RMF, MITRE ATT&CK, MITRE ATLAS |
-| `model-serving-security` | MITRE ATLAS, NIST CSF, OWASP LLM Top 10, SOC 2 |
+| `model-serving-security` | MITRE ATLAS, NIST CSF, OWASP LLM Top 10, SOC 2, provider-specific AI endpoint controls |
 | `gpu-cluster-security` | MITRE ATT&CK, NIST CSF, CIS Controls, CIS Kubernetes |
 | `discover-environment` | MITRE ATT&CK, MITRE ATLAS, NIST CSF |
 

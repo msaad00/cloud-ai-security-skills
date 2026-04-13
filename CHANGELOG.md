@@ -19,6 +19,7 @@ The format is loosely based on Keep a Changelog.
 - `discover-cloud-control-evidence`, which turns AWS, GCP, and Azure inventory snapshots into deterministic PCI / SOC 2 technical evidence JSON.
 - `discover-environment --output-format ocsf-cloud-resources-inventory`, which emits an OCSF Discovery / Cloud Resources Inventory Info `[5023]` bridge event while preserving the native environment graph under `unmapped`.
 - deeper AI provider inventory and evidence coverage across AWS Bedrock / SageMaker, Google Vertex AI, Azure ML, and Azure AI Foundry in the discovery layer.
+- deeper AI evaluation coverage in `model-serving-security`, including provider-shaped endpoint configs for SageMaker, Bedrock, Vertex AI, Azure ML, and Azure AI Foundry.
 
 ### Changed
 - Removed the redirect-only `skills/ai-infra-security/` and `skills/compliance-cis-mitre/` stubs after the layered skill reshape settled.

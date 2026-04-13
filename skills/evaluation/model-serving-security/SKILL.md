@@ -1,11 +1,13 @@
 ---
 name: model-serving-security
 description: >-
-  Audit the security posture of AI model serving infrastructure. Runs 16 read-only
+  Audit the security posture of AI model serving infrastructure. Runs 20 read-only
   checks covering authentication, rate limiting, data egress controls, prompt
   injection surface, container isolation, TLS enforcement, and safety-layer
   configuration. Works with any serving config (JSON / YAML) — API gateways,
-  Kubernetes deployments, cloud-native serving. Use when the user mentions model
+  Kubernetes deployments, cloud-native serving. Includes provider-shaped support
+  for SageMaker, Bedrock, Vertex AI, Azure ML, and Azure AI Foundry endpoint
+  configs. Use when the user mentions model
   endpoint security, serving infrastructure audit, API gateway security, prompt
   injection protection, model deployment review, or content safety check. Do NOT
   use to send live inference requests, mutate serving configs, or interact with
@@ -32,7 +34,7 @@ metadata:
 
 # Model Serving Security Benchmark
 
-16 automated checks across 6 domains, auditing the security posture of AI model
+20 automated checks across 6 domains, auditing the security posture of AI model
 serving infrastructure. Each check mapped to MITRE ATLAS and NIST CSF 2.0.
 
 ## When to Use
@@ -49,7 +51,7 @@ serving infrastructure. Each check mapped to MITRE ATLAS and NIST CSF 2.0.
 ```mermaid
 flowchart LR
     CONFIG["Serving Config<br/>API Gateway · K8s · Docker · Cloud ML"]
-    BENCH["checks.py — 16 checks<br/>Auth · Rate Limit · Egress<br/>Runtime · TLS · Safety"]
+    BENCH["checks.py — 20 checks<br/>Auth · Rate Limit · Egress<br/>Runtime · TLS · Safety"]
     OUT["JSON / Console"]
 
     CONFIG --> BENCH --> OUT
@@ -60,13 +62,14 @@ flowchart LR
 
 ## Controls — 6 Domains, 16 Checks
 
-### Section 1 — Authentication & Authorization (3 checks)
+### Section 1 — Authentication & Authorization (4 checks)
 
 | # | Check | Severity | MITRE ATLAS | NIST CSF |
 |---|-------|----------|-------------|----------|
 | MS-1.1 | Endpoint authentication required | CRITICAL | AML.T0024 | PR.AC-1 |
 | MS-1.2 | No hardcoded API keys in config | CRITICAL | AML.T0024 | PR.AC-4 |
 | MS-1.3 | RBAC on model endpoints | HIGH | AML.T0024 | PR.AC-4 |
+| MS-1.4 | Managed identity or workload identity on endpoints | HIGH | AML.T0024 | PR.AC-4 |
 
 ### Section 2 — Rate Limiting & Abuse Prevention (2 checks)
 
@@ -91,20 +94,23 @@ flowchart LR
 | MS-4.2 | Read-only root filesystem | MEDIUM | AML.T0011 | PR.DS-6 |
 | MS-4.3 | Non-root container user | HIGH | AML.T0011 | PR.AC-4 |
 
-### Section 5 — TLS & Network (2 checks)
+### Section 5 — TLS & Network (3 checks)
 
 | # | Check | Severity | NIST CSF |
 |---|-------|----------|----------|
 | MS-5.1 | TLS enforced on all endpoints | CRITICAL | PR.DS-2 |
 | MS-5.2 | No public model endpoints | HIGH | PR.AC-5 |
+| MS-5.3 | Private network isolation on endpoints | HIGH | AML.T0024 | PR.AC-5 |
 
-### Section 6 — Safety Layers (3 checks)
+### Section 6 — Safety Layers (5 checks)
 
 | # | Check | Severity | MITRE ATLAS | NIST CSF |
 |---|-------|----------|-------------|----------|
 | MS-6.1 | Prompt injection detection | HIGH | AML.T0051 | DE.CM-4 |
 | MS-6.2 | Content safety classification | HIGH | AML.T0048 | DE.CM-4 |
 | MS-6.3 | Model version tracking | MEDIUM | AML.T0010 | PR.DS-6 |
+| MS-6.4 | Guardrails attached to AI endpoints | HIGH | AML.T0048 | DE.CM-4 |
+| MS-6.5 | Audit logging on AI endpoints | MEDIUM | AML.T0010 | DE.CM-3 |
 
 ## Usage
 
@@ -161,6 +167,35 @@ logging:
 models:
   - name: "claude-3.5-sonnet"
     version: "20241022"
+
+aws:
+  sagemaker:
+    endpoints:
+      - EndpointName: fraud-endpoint
+        ExecutionRoleArn: arn:aws:iam::123456789012:role/sagemaker-runtime
+        VpcConfig: { Subnets: ["subnet-123"] }
+        DataCaptureConfig: { EnableCapture: true }
+  bedrock:
+    guardrails:
+      - id: guardrail-1
+
+gcp:
+  vertex_ai:
+    endpoints:
+      - name: projects/p/locations/us-central1/endpoints/1
+        displayName: fraud-endpoint
+        serviceAccount: svc@example.iam.gserviceaccount.com
+        privateServiceConnectConfig: { enablePrivateServiceConnect: true }
+        safetySettings: [{ category: HARM_CATEGORY_HATE_SPEECH }]
+
+azure:
+  azure_ml:
+    online_endpoints:
+      - name: fraud-endpoint
+        auth_mode: aad_token
+        identity: { type: SystemAssigned }
+        private_endpoint: true
+        app_insights_enabled: true
 ```
 
 ## Security Guardrails
@@ -198,5 +233,5 @@ models:
 ```bash
 cd skills/model-serving-security
 pytest tests/ -v -o "testpaths=tests"
-# 31 tests covering all 16 checks + runner + compliance mappings
+# focused tests cover the provider-shaped endpoint paths and all 20 checks
 ```

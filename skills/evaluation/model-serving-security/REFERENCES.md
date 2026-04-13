@@ -16,6 +16,12 @@ serving stack:
 - API Gateway / Lambda / ALB target group config
 - Kubernetes Deployment + Service + Ingress (the same JSON `kubectl get -o json` produces)
 - Cloud-native serving config (Vertex AI endpoint config, SageMaker endpoint config, Azure ML online endpoint config)
+- Cloud AI service security controls:
+  - AWS Bedrock guardrails: https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html
+  - AWS SageMaker endpoint security and IAM: https://docs.aws.amazon.com/sagemaker/latest/dg/security-iam.html
+  - Google Vertex AI endpoint and private networking concepts: https://cloud.google.com/vertex-ai/docs/general/private-service-connect
+  - Azure AI Foundry overview: https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-ai-foundry
+  - Azure Machine Learning online endpoint concepts: https://learn.microsoft.com/en-us/azure/machine-learning/concept-endpoints-online
 
 ## Required permissions
 
@@ -27,15 +33,15 @@ viewer role:
 - **SageMaker** — `AmazonSageMakerReadOnly` https://docs.aws.amazon.com/sagemaker/latest/dg/security-iam-awsmanpol.html#security-iam-awsmanpol-AmazonSageMakerReadOnly
 - **Azure ML** — Reader role on the workspace https://learn.microsoft.com/en-us/azure/machine-learning/how-to-assign-roles
 
-## What gets checked (16 controls across 6 domains)
+## What gets checked (20 controls across 6 domains)
 
 | Domain | Controls | Reference |
 |---|---|---|
-| Authentication | OAuth2 / API key required, JWT validation | https://genai.owasp.org/llmrisk/llm07-system-prompt-leakage/ |
+| Authentication | OAuth2 / API key required, JWT validation, workload identity | https://genai.owasp.org/llmrisk/llm07-system-prompt-leakage/ |
 | Rate limiting | Per-key and per-IP RPM/RPD | https://genai.owasp.org/llmrisk/llm10-unbounded-consumption/ |
 | Data egress | VPC-only endpoint, no public internet | https://atlas.mitre.org/techniques/AML.T0024/ |
 | Runtime isolation | Non-root, read-only FS, dropped caps | https://kubernetes.io/docs/concepts/security/pod-security-standards/ |
-| TLS | TLS 1.2+ enforced, valid cert | https://datatracker.ietf.org/doc/rfc8446/ |
-| Safety | Prompt injection filter, content classification, output filter | https://genai.owasp.org/llmrisk/llm01-prompt-injection/ |
+| TLS | TLS 1.2+ enforced, valid cert, private endpoint isolation | https://datatracker.ietf.org/doc/rfc8446/ |
+| Safety | Prompt injection filter, content classification, output filter, guardrail attachment, audit logging | https://genai.owasp.org/llmrisk/llm01-prompt-injection/ |
 
 The full check list is in `src/checks.py` — one function per check.

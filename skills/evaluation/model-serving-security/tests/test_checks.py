@@ -12,6 +12,7 @@ from checks import (
     check_1_1_endpoint_auth_required,
     check_1_2_no_hardcoded_api_keys,
     check_1_3_rbac_model_access,
+    check_1_4_workload_identity_required,
     check_2_1_rate_limiting_enabled,
     check_2_2_input_size_limits,
     check_3_1_output_filtering,
@@ -21,9 +22,12 @@ from checks import (
     check_4_3_non_root_user,
     check_5_1_tls_enforced,
     check_5_2_no_public_endpoints,
+    check_5_3_private_network_isolation,
     check_6_1_prompt_injection_guard,
     check_6_2_content_safety_enabled,
     check_6_3_model_versioning,
+    check_6_4_guardrails_attached,
+    check_6_5_ai_endpoint_audit_logging,
     run_benchmark,
 )
 
@@ -67,6 +71,27 @@ class TestAuthChecks:
         config = {"endpoints": [{"name": "inference", "auth": {"type": "api_key"}}]}
         f = check_1_3_rbac_model_access(config)
         assert f.status == "FAIL"
+
+    def test_1_4_workload_identity_fails(self):
+        config = {"endpoints": [{"name": "inference", "auth": {"type": "oauth2"}}]}
+        f = check_1_4_workload_identity_required(config)
+        assert f.status == "FAIL"
+
+    def test_1_4_sagemaker_execution_role_passes(self):
+        config = {
+            "aws": {
+                "sagemaker": {
+                    "endpoints": [
+                        {
+                            "EndpointName": "fraud",
+                            "ExecutionRoleArn": "arn:aws:iam::123:role/sagemaker-runtime",
+                        }
+                    ]
+                }
+            }
+        }
+        f = check_1_4_workload_identity_required(config)
+        assert f.status == "PASS"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -176,6 +201,29 @@ class TestNetwork:
         f = check_5_2_no_public_endpoints(config)
         assert f.status == "FAIL"
 
+    def test_5_3_private_network_isolation_fails(self):
+        config = {"endpoints": [{"name": "inference", "network": {"public": False}}]}
+        f = check_5_3_private_network_isolation(config)
+        assert f.status == "FAIL"
+
+    def test_5_3_vertex_private_service_connect_passes(self):
+        config = {
+            "gcp": {
+                "vertex_ai": {
+                    "endpoints": [
+                        {
+                            "name": "projects/p/locations/us/endpoints/1",
+                            "displayName": "fraud-endpoint",
+                            "serviceAccount": "svc@example.iam.gserviceaccount.com",
+                            "privateServiceConnectConfig": {"enablePrivateServiceConnect": True},
+                        }
+                    ]
+                }
+            }
+        }
+        f = check_5_3_private_network_isolation(config)
+        assert f.status == "PASS"
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Safety
@@ -206,6 +254,53 @@ class TestSafety:
         f = check_6_3_model_versioning(config)
         assert f.status == "PASS"
 
+    def test_6_4_guardrails_attached_fails(self):
+        config = {"endpoints": [{"name": "inference", "guardrails": {"enabled": False}}]}
+        f = check_6_4_guardrails_attached(config)
+        assert f.status == "FAIL"
+
+    def test_6_4_azure_content_safety_passes(self):
+        config = {
+            "azure": {
+                "ai_foundry": {
+                    "deployments": [
+                        {
+                            "name": "chat-prod",
+                            "content_safety": True,
+                            "logging_enabled": True,
+                            "identity": {"type": "SystemAssigned"},
+                            "private_endpoint": True,
+                        }
+                    ]
+                }
+            }
+        }
+        f = check_6_4_guardrails_attached(config)
+        assert f.status == "PASS"
+
+    def test_6_5_ai_endpoint_audit_logging_fails(self):
+        config = {"endpoints": [{"name": "inference", "logging": {"enabled": False}}]}
+        f = check_6_5_ai_endpoint_audit_logging(config)
+        assert f.status == "FAIL"
+
+    def test_6_5_ai_endpoint_audit_logging_passes(self):
+        config = {
+            "aws": {
+                "sagemaker": {
+                    "endpoints": [
+                        {
+                            "EndpointName": "fraud",
+                            "DataCaptureConfig": {"EnableCapture": True},
+                            "ExecutionRoleArn": "arn:aws:iam::123:role/sagemaker-runtime",
+                            "VpcConfig": {"Subnets": ["subnet-1"]},
+                        }
+                    ]
+                }
+            }
+        }
+        f = check_6_5_ai_endpoint_audit_logging(config)
+        assert f.status == "PASS"
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Integration
@@ -215,17 +310,26 @@ class TestSafety:
 class TestBenchmarkRunner:
     def test_run_all_sections(self):
         config = {
-            "endpoints": [{"name": "inference", "auth": {"type": "api_key"}, "url": "https://model:8443"}],
+            "endpoints": [
+                {
+                    "name": "inference",
+                    "auth": {"type": "api_key", "identity": "runtime-role", "roles": ["user"]},
+                    "url": "https://model:8443",
+                    "network": {"vpc": True},
+                    "guardrails": {"enabled": True},
+                    "logging": {"enabled": True},
+                }
+            ],
             "containers": [{"name": "model", "security_context": {"runAsNonRoot": True, "readOnlyRootFilesystem": True}}],
         }
         findings = run_benchmark(config)
-        assert len(findings) == 16  # All 16 checks
+        assert len(findings) == 20  # All 20 checks
         assert all(isinstance(f, Finding) for f in findings)
 
     def test_run_single_section(self):
         config = {"endpoints": [{"name": "inference", "auth": {"type": "api_key"}}]}
         findings = run_benchmark(config, section="auth")
-        assert len(findings) == 3  # 3 auth checks
+        assert len(findings) == 4  # 4 auth checks
 
     def test_finding_has_compliance_mappings(self):
         config = {"endpoints": [{"name": "inference", "auth": {"type": "none"}}]}

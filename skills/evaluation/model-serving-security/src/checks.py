@@ -40,6 +40,148 @@ class Finding:
     resources: list[str] = field(default_factory=list)
 
 
+def _iter_endpoints(config: dict) -> list[dict]:
+    endpoints = list(config.get("endpoints", []))
+
+    aws = config.get("aws", {}) or {}
+    sagemaker = aws.get("sagemaker", {}) or {}
+    for endpoint in sagemaker.get("endpoints", []):
+        endpoints.append(
+            {
+                "name": endpoint.get("EndpointName", "unknown"),
+                "auth": {
+                    "type": endpoint.get("AuthMode", endpoint.get("auth_mode", "iam")),
+                    "enabled": endpoint.get("AuthEnabled", True),
+                    "identity": endpoint.get("ExecutionRoleArn") or endpoint.get("RoleArn"),
+                },
+                "network": {
+                    "public": endpoint.get("public", False),
+                    "vpc": bool(endpoint.get("VpcConfig")),
+                    "private_endpoint": bool(endpoint.get("VpcConfig")),
+                },
+                "tls": {"enabled": endpoint.get("tls_enabled", True)},
+                "logging": {
+                    "enabled": bool(endpoint.get("DataCaptureConfig", {}).get("EnableCapture")),
+                },
+                "guardrails": {
+                    "enabled": bool(endpoint.get("GuardrailConfiguration"))
+                    or bool(endpoint.get("guardrail_id"))
+                    or bool(endpoint.get("guardrails", {}).get("enabled")),
+                },
+                "rate_limit": endpoint.get("rate_limit", {}),
+                "limits": endpoint.get("limits", {}),
+            }
+        )
+
+    gcp = config.get("gcp", {}) or {}
+    vertex = gcp.get("vertex_ai", {}) or {}
+    for endpoint in vertex.get("endpoints", []) + vertex.get("index_endpoints", []):
+        endpoints.append(
+            {
+                "name": endpoint.get("displayName", endpoint.get("name", "unknown")),
+                "auth": {
+                    "type": endpoint.get("auth_mode", "iam"),
+                    "enabled": endpoint.get("auth_enabled", True),
+                    "identity": endpoint.get("serviceAccount") or endpoint.get("service_account"),
+                },
+                "network": {
+                    "public": endpoint.get("public", False),
+                    "vpc": bool(endpoint.get("privateServiceConnectConfig")),
+                    "private_endpoint": bool(endpoint.get("privateServiceConnectConfig")),
+                },
+                "tls": {"enabled": True},
+                "logging": {
+                    "enabled": bool(endpoint.get("logging_enabled"))
+                    or bool(endpoint.get("enable_access_logging")),
+                },
+                "guardrails": {
+                    "enabled": bool(endpoint.get("safetySettings"))
+                    or bool(endpoint.get("contentFilter")),
+                },
+                "rate_limit": endpoint.get("rate_limit", {}),
+                "limits": endpoint.get("limits", {}),
+            }
+        )
+
+    azure = config.get("azure", {}) or {}
+    azure_ml = azure.get("azure_ml", {}) or {}
+    for endpoint in azure_ml.get("online_endpoints", []):
+        endpoints.append(
+            {
+                "name": endpoint.get("name", "unknown"),
+                "auth": {
+                    "type": endpoint.get("auth_mode", "key"),
+                    "enabled": endpoint.get("auth_mode", "key") != "none",
+                    "identity": (endpoint.get("identity", {}) or {}).get("type")
+                    or endpoint.get("managed_identity"),
+                },
+                "network": {
+                    "public": endpoint.get("public", False) or endpoint.get("public_network_access", False),
+                    "vpc": bool(endpoint.get("private_endpoint")),
+                    "private_endpoint": bool(endpoint.get("private_endpoint")),
+                },
+                "tls": {"enabled": True},
+                "logging": {
+                    "enabled": bool(endpoint.get("app_insights_enabled")) or bool(endpoint.get("logging_enabled")),
+                },
+                "guardrails": {
+                    "enabled": bool(endpoint.get("rai_policy_name"))
+                    or bool(endpoint.get("content_safety"))
+                    or bool(endpoint.get("guardrails", {}).get("enabled")),
+                },
+                "rate_limit": endpoint.get("rate_limit", {}),
+                "limits": endpoint.get("limits", {}),
+            }
+        )
+
+    ai_foundry = azure.get("ai_foundry", {}) or {}
+    for deployment in ai_foundry.get("deployments", []):
+        endpoints.append(
+            {
+                "name": deployment.get("name", "unknown"),
+                "auth": {
+                    "type": deployment.get("auth_mode", "key"),
+                    "enabled": deployment.get("auth_mode", "key") != "none",
+                    "identity": deployment.get("managed_identity")
+                    or (deployment.get("identity", {}) or {}).get("type"),
+                },
+                "network": {
+                    "public": deployment.get("public", False) or deployment.get("public_network_access", False),
+                    "vpc": bool(deployment.get("private_endpoint")),
+                    "private_endpoint": bool(deployment.get("private_endpoint")),
+                },
+                "tls": {"enabled": True},
+                "logging": {"enabled": bool(deployment.get("logging_enabled"))},
+                "guardrails": {
+                    "enabled": bool(deployment.get("content_safety"))
+                    or bool(deployment.get("guardrails", {}).get("enabled")),
+                },
+                "rate_limit": deployment.get("rate_limit", {}),
+                "limits": deployment.get("limits", {}),
+            }
+        )
+
+    return endpoints
+
+
+def _iter_models(config: dict) -> list[dict]:
+    models = list(config.get("models", []))
+    for provider in ("aws", "gcp", "azure"):
+        section = config.get(provider, {}) or {}
+        if provider == "aws":
+            sagemaker = section.get("sagemaker", {}) or {}
+            models.extend(sagemaker.get("model_packages", []))
+            models.extend((section.get("bedrock", {}) or {}).get("custom_models", []))
+        elif provider == "gcp":
+            vertex = section.get("vertex_ai", {}) or {}
+            models.extend(vertex.get("models", []))
+        elif provider == "azure":
+            azure_ml = section.get("azure_ml", {}) or {}
+            models.extend(azure_ml.get("models", []))
+            models.extend((section.get("ai_foundry", {}) or {}).get("models", []))
+    return models
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Section 1 — Authentication & Authorization
 # ═══════════════════════════════════════════════════════════════════════════
@@ -47,7 +189,7 @@ class Finding:
 
 def check_1_1_endpoint_auth_required(config: dict) -> Finding:
     """MS-1.1 — Model endpoints must require authentication."""
-    endpoints = config.get("endpoints", [])
+    endpoints = _iter_endpoints(config)
     unauthenticated = []
     for ep in endpoints:
         auth = ep.get("auth", ep.get("authentication", {}))
@@ -117,7 +259,7 @@ def check_1_2_no_hardcoded_api_keys(config: dict, scan_paths: list[str] | None =
 
 def check_1_3_rbac_model_access(config: dict) -> Finding:
     """MS-1.3 — Role-based access control on model endpoints."""
-    endpoints = config.get("endpoints", [])
+    endpoints = _iter_endpoints(config)
     no_rbac = []
     for ep in endpoints:
         auth = ep.get("auth", ep.get("authentication", {}))
@@ -138,6 +280,29 @@ def check_1_3_rbac_model_access(config: dict) -> Finding:
     )
 
 
+def check_1_4_workload_identity_required(config: dict) -> Finding:
+    """MS-1.4 — Provider-managed workload identity on AI endpoints."""
+    endpoints = _iter_endpoints(config)
+    missing_identity = []
+    for ep in endpoints:
+        auth = ep.get("auth", ep.get("authentication", {}))
+        identity = auth.get("identity") or ep.get("identity") or ep.get("service_account")
+        if not identity:
+            missing_identity.append(ep.get("name", "unknown"))
+    return Finding(
+        check_id="MS-1.4",
+        title="Managed identity or workload identity on endpoints",
+        section="auth",
+        severity="HIGH",
+        status="FAIL" if missing_identity else "PASS",
+        detail=f"{len(missing_identity)} endpoints without workload identity" if missing_identity else "All endpoints use provider-managed identity",
+        remediation="Use IAM roles, Vertex AI service accounts, Azure managed identity, or equivalent provider-native workload identity.",
+        mitre_atlas="AML.T0024",
+        nist_csf="PR.AC-4",
+        resources=missing_identity,
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Section 2 — Rate Limiting & Abuse Prevention
 # ═══════════════════════════════════════════════════════════════════════════
@@ -145,7 +310,7 @@ def check_1_3_rbac_model_access(config: dict) -> Finding:
 
 def check_2_1_rate_limiting_enabled(config: dict) -> Finding:
     """MS-2.1 — Rate limiting on inference endpoints."""
-    endpoints = config.get("endpoints", [])
+    endpoints = _iter_endpoints(config)
     no_rate_limit = []
     for ep in endpoints:
         rl = ep.get("rate_limit", ep.get("rateLimit", ep.get("throttle", {})))
@@ -167,7 +332,7 @@ def check_2_1_rate_limiting_enabled(config: dict) -> Finding:
 
 def check_2_2_input_size_limits(config: dict) -> Finding:
     """MS-2.2 — Input size/token limits on endpoints."""
-    endpoints = config.get("endpoints", [])
+    endpoints = _iter_endpoints(config)
     no_limits = []
     for ep in endpoints:
         limits = ep.get("limits", ep.get("input_limits", {}))
@@ -348,7 +513,7 @@ def check_4_3_non_root_user(config: dict) -> Finding:
 
 def check_5_1_tls_enforced(config: dict) -> Finding:
     """MS-5.1 — TLS enforced on all model endpoints."""
-    endpoints = config.get("endpoints", [])
+    endpoints = _iter_endpoints(config)
     no_tls = []
     for ep in endpoints:
         url = ep.get("url", ep.get("endpoint", ""))
@@ -370,7 +535,7 @@ def check_5_1_tls_enforced(config: dict) -> Finding:
 
 def check_5_2_no_public_endpoints(config: dict) -> Finding:
     """MS-5.2 — Model endpoints not publicly accessible without gateway."""
-    endpoints = config.get("endpoints", [])
+    endpoints = _iter_endpoints(config)
     public = []
     for ep in endpoints:
         visibility = ep.get("visibility", ep.get("access", ""))
@@ -388,6 +553,31 @@ def check_5_2_no_public_endpoints(config: dict) -> Finding:
         mitre_atlas="AML.T0024",
         nist_csf="PR.AC-5",
         resources=public,
+    )
+
+
+def check_5_3_private_network_isolation(config: dict) -> Finding:
+    """MS-5.3 — Provider-private networking on model endpoints."""
+    endpoints = _iter_endpoints(config)
+    missing_private = []
+    for ep in endpoints:
+        network = ep.get("network", {})
+        if network.get("public", False):
+            missing_private.append(ep.get("name", "unknown"))
+            continue
+        if not (network.get("vpc") or network.get("private") or network.get("private_endpoint")):
+            missing_private.append(ep.get("name", "unknown"))
+    return Finding(
+        check_id="MS-5.3",
+        title="Private network isolation on endpoints",
+        section="network",
+        severity="HIGH",
+        status="FAIL" if missing_private else "PASS",
+        detail=f"{len(missing_private)} endpoints without private network attachment" if missing_private else "All endpoints use private network isolation",
+        remediation="Attach SageMaker endpoints to VPCs, Vertex AI endpoints to PSC/private networking, or Azure ML/Foundry endpoints to private endpoints.",
+        mitre_atlas="AML.T0024",
+        nist_csf="PR.AC-5",
+        resources=missing_private,
     )
 
 
@@ -435,7 +625,7 @@ def check_6_2_content_safety_enabled(config: dict) -> Finding:
 
 def check_6_3_model_versioning(config: dict) -> Finding:
     """MS-6.3 — Model versions tracked and auditable."""
-    models = config.get("models", config.get("deployments", []))
+    models = _iter_models(config) or config.get("deployments", [])
     no_version = []
     for m in models:
         version = m.get("version", m.get("model_version", m.get("tag", "")))
@@ -455,17 +645,61 @@ def check_6_3_model_versioning(config: dict) -> Finding:
     )
 
 
+def check_6_4_guardrails_attached(config: dict) -> Finding:
+    """MS-6.4 — Provider guardrails or content safety attached to AI endpoints."""
+    endpoints = _iter_endpoints(config)
+    missing_guardrails = []
+    for ep in endpoints:
+        safety = ep.get("guardrails", ep.get("safety", {}))
+        if not safety or safety.get("enabled") is False:
+            missing_guardrails.append(ep.get("name", "unknown"))
+    return Finding(
+        check_id="MS-6.4",
+        title="Guardrails attached to AI endpoints",
+        section="safety",
+        severity="HIGH",
+        status="FAIL" if missing_guardrails else "PASS",
+        detail=f"{len(missing_guardrails)} endpoints without guardrails or content safety attachment" if missing_guardrails else "All endpoints attach guardrails or content safety layers",
+        remediation="Attach Bedrock guardrails, Vertex AI safety settings, Azure AI content safety, or equivalent provider-native safety layers.",
+        mitre_atlas="AML.T0048",
+        nist_csf="DE.CM-4",
+        resources=missing_guardrails,
+    )
+
+
+def check_6_5_ai_endpoint_audit_logging(config: dict) -> Finding:
+    """MS-6.5 — AI endpoint audit logging or access logging enabled."""
+    endpoints = _iter_endpoints(config)
+    no_logging = []
+    for ep in endpoints:
+        logging_cfg = ep.get("logging", {})
+        if not logging_cfg or logging_cfg.get("enabled") is False:
+            no_logging.append(ep.get("name", "unknown"))
+    return Finding(
+        check_id="MS-6.5",
+        title="Audit logging on AI endpoints",
+        section="safety",
+        severity="MEDIUM",
+        status="FAIL" if no_logging else "PASS",
+        detail=f"{len(no_logging)} endpoints without audit or access logging" if no_logging else "All endpoints have audit logging or access capture enabled",
+        remediation="Enable provider-native endpoint access logging, diagnostics, or request capture on all AI endpoints.",
+        mitre_atlas="AML.T0010",
+        nist_csf="DE.CM-3",
+        resources=no_logging,
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Orchestrator
 # ═══════════════════════════════════════════════════════════════════════════
 
 ALL_CHECKS = {
-    "auth": [check_1_1_endpoint_auth_required, check_1_2_no_hardcoded_api_keys, check_1_3_rbac_model_access],
+    "auth": [check_1_1_endpoint_auth_required, check_1_2_no_hardcoded_api_keys, check_1_3_rbac_model_access, check_1_4_workload_identity_required],
     "abuse_prevention": [check_2_1_rate_limiting_enabled, check_2_2_input_size_limits],
     "data_egress": [check_3_1_output_filtering, check_3_2_no_training_data_in_response, check_3_3_logging_no_pii],
     "runtime": [check_4_1_no_privileged_containers, check_4_2_read_only_rootfs, check_4_3_non_root_user],
-    "network": [check_5_1_tls_enforced, check_5_2_no_public_endpoints],
-    "safety": [check_6_1_prompt_injection_guard, check_6_2_content_safety_enabled, check_6_3_model_versioning],
+    "network": [check_5_1_tls_enforced, check_5_2_no_public_endpoints, check_5_3_private_network_isolation],
+    "safety": [check_6_1_prompt_injection_guard, check_6_2_content_safety_enabled, check_6_3_model_versioning, check_6_4_guardrails_attached, check_6_5_ai_endpoint_audit_logging],
 }
 
 
