@@ -113,6 +113,15 @@
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
     },
     {
+      "path": "skills/ingestion/ingest-okta-system-log-ocsf",
+      "layer": "ingestion",
+      "providers": ["okta"],
+      "asset_classes": ["identities", "authentication", "user-access", "groups", "applications", "audit-logs"],
+      "frameworks": ["ocsf-1.8"],
+      "coverage_status": "validated",
+      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+    },
+    {
       "path": "skills/ingestion/ingest-k8s-audit-ocsf",
       "layer": "ingestion",
       "providers": ["kubernetes"],

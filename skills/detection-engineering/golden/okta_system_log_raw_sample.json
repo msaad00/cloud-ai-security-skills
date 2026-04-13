@@ -1,0 +1,300 @@
+[
+  {
+    "uuid": "okta-auth-success-1",
+    "published": "2026-04-13T02:15:00.000Z",
+    "eventType": "user.session.start",
+    "displayMessage": "User signs in to Okta",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-admin-1",
+      "type": "User",
+      "alternateId": "admin@example.com",
+      "displayName": "Admin User",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.10",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+      }
+    },
+    "authenticationContext": {
+      "externalSessionId": "sess-1",
+      "rootSessionId": "root-1"
+    },
+    "outcome": {
+      "result": "SUCCESS",
+      "reason": null
+    },
+    "transaction": {
+      "id": "txn-auth-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-1",
+        "type": "User",
+        "alternateId": "alice@example.com",
+        "displayName": "Alice Example",
+        "detailEntry": null
+      }
+    ]
+  },
+  {
+    "uuid": "okta-auth-failure-1",
+    "published": "2026-04-13T02:16:00.000Z",
+    "eventType": "user.session.start",
+    "displayMessage": "User sign in to Okta",
+    "severity": "WARN",
+    "actor": {
+      "id": "00u-target-2",
+      "type": "User",
+      "alternateId": "bob@example.com",
+      "displayName": "Bob Example",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.11",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0 (Windows NT 10.0)"
+      }
+    },
+    "authenticationContext": {},
+    "outcome": {
+      "result": "FAILURE",
+      "reason": "INVALID_CREDENTIALS"
+    },
+    "transaction": {
+      "id": "txn-auth-2"
+    },
+    "target": [
+      {
+        "id": "00u-target-2",
+        "type": "User",
+        "alternateId": "bob@example.com",
+        "displayName": "Bob Example",
+        "detailEntry": null
+      }
+    ]
+  },
+  {
+    "uuid": "okta-lifecycle-1",
+    "published": "2026-04-13T02:17:00.000Z",
+    "eventType": "user.lifecycle.deactivate",
+    "displayMessage": "Deactivate Okta User",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-admin-1",
+      "type": "User",
+      "alternateId": "admin@example.com",
+      "displayName": "Admin User",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.12",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0"
+      }
+    },
+    "authenticationContext": {
+      "externalSessionId": "sess-2",
+      "rootSessionId": "root-2"
+    },
+    "outcome": {
+      "result": "SUCCESS",
+      "reason": null
+    },
+    "transaction": {
+      "id": "txn-life-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-3",
+        "type": "User",
+        "alternateId": "carol@example.com",
+        "displayName": "Carol Example",
+        "detailEntry": null
+      }
+    ]
+  },
+  {
+    "uuid": "okta-password-1",
+    "published": "2026-04-13T02:18:00.000Z",
+    "eventType": "user.account.update_password",
+    "displayMessage": "Update user password",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-target-4",
+      "type": "User",
+      "alternateId": "dave@example.com",
+      "displayName": "Dave Example",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.13",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0"
+      }
+    },
+    "authenticationContext": {
+      "externalSessionId": "sess-3",
+      "rootSessionId": "root-3"
+    },
+    "outcome": {
+      "result": "SUCCESS",
+      "reason": null
+    },
+    "transaction": {
+      "id": "txn-pass-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-4",
+        "type": "User",
+        "alternateId": "dave@example.com",
+        "displayName": "Dave Example",
+        "detailEntry": null
+      }
+    ]
+  },
+  {
+    "uuid": "okta-mfa-1",
+    "published": "2026-04-13T02:19:00.000Z",
+    "eventType": "user.mfa.factor.activate",
+    "displayMessage": "Activate MFA factor",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-target-5",
+      "type": "User",
+      "alternateId": "erin@example.com",
+      "displayName": "Erin Example",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.14",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0"
+      }
+    },
+    "authenticationContext": {
+      "externalSessionId": "sess-4",
+      "rootSessionId": "root-4"
+    },
+    "outcome": {
+      "result": "SUCCESS",
+      "reason": null
+    },
+    "transaction": {
+      "id": "txn-mfa-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-5",
+        "type": "User",
+        "alternateId": "erin@example.com",
+        "displayName": "Erin Example",
+        "detailEntry": null
+      },
+      {
+        "id": "opf-factor-1",
+        "type": "AuthenticatorEnrollment",
+        "alternateId": "okta_verify",
+        "displayName": "Okta Verify",
+        "detailEntry": "okta_verify"
+      }
+    ]
+  },
+  {
+    "uuid": "okta-app-membership-1",
+    "published": "2026-04-13T02:20:00.000Z",
+    "eventType": "application.user_membership.add",
+    "displayMessage": "Add user to app membership",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-admin-1",
+      "type": "User",
+      "alternateId": "admin@example.com",
+      "displayName": "Admin User",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.15",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0"
+      }
+    },
+    "authenticationContext": {
+      "externalSessionId": "sess-5",
+      "rootSessionId": "root-5"
+    },
+    "outcome": {
+      "result": "SUCCESS",
+      "reason": null
+    },
+    "transaction": {
+      "id": "txn-app-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-6",
+        "type": "User",
+        "alternateId": "frank@example.com",
+        "displayName": "Frank Example",
+        "detailEntry": null
+      },
+      {
+        "id": "0oa-app-1",
+        "type": "AppInstance",
+        "alternateId": "salesforce",
+        "displayName": "Salesforce",
+        "detailEntry": null
+      }
+    ]
+  },
+  {
+    "uuid": "okta-group-membership-1",
+    "published": "2026-04-13T02:21:00.000Z",
+    "eventType": "group.user_membership.remove",
+    "displayMessage": "Remove user from group membership",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-admin-1",
+      "type": "User",
+      "alternateId": "admin@example.com",
+      "displayName": "Admin User",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "198.51.100.16",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0"
+      }
+    },
+    "authenticationContext": {
+      "externalSessionId": "sess-6",
+      "rootSessionId": "root-6"
+    },
+    "outcome": {
+      "result": "SUCCESS",
+      "reason": null
+    },
+    "transaction": {
+      "id": "txn-group-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-7",
+        "type": "User",
+        "alternateId": "gina@example.com",
+        "displayName": "Gina Example",
+        "detailEntry": null
+      },
+      {
+        "id": "00g-group-1",
+        "type": "UserGroup",
+        "alternateId": "sales",
+        "displayName": "Sales",
+        "detailEntry": null
+      }
+    ]
+  }
+]

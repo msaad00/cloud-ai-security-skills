@@ -62,6 +62,22 @@ Notes:
 - ATT&CK mappings belong inside `finding_info.attacks[]` for OCSF 1.8 outputs, not as loose side metadata.
 - Current cross-cloud identity depth is strongest in `detect-lateral-movement`; the Azure slice now distinguishes Azure Activity control-plane pivots from Entra / Graph application-service-principal credential pivots.
 
+## OCSF identity normalization
+
+Identity ingestion is broader than cloud control planes now.
+
+| Skill | OCSF scope |
+|---|---|
+| `ingest-okta-system-log-ocsf` | Authentication (3002), Account Change (3001), User Access Management (3005) from verified Okta System Log fields |
+| `ingest-cloudtrail-ocsf` | API Activity (6003) for AWS IAM and control-plane events |
+| `ingest-gcp-audit-ocsf` | API Activity (6003) for GCP audit events |
+| `ingest-azure-activity-ocsf` | API Activity (6003) for Azure Activity events |
+
+The rule stays the same across vendors:
+- verify the real source payload and natural IDs first
+- normalize to the narrowest OCSF class that fits cleanly
+- keep provider-specific context under `unmapped` instead of losing it
+
 ## MITRE ATLAS
 
 ATLAS is present today, but coverage is narrower than ATT&CK.

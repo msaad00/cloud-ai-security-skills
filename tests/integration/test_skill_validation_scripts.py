@@ -58,6 +58,7 @@ class TestSkillValidationCommon:
         assert "detect-lateral-movement" in names
         assert "ingest-gcp-scc-ocsf" in names
         assert "ingest-azure-defender-for-cloud-ocsf" in names
+        assert "ingest-okta-system-log-ocsf" in names
         assert "discover-ai-bom" in names
         assert "discover-control-evidence" in names
         assert "discover-cloud-control-evidence" in names
