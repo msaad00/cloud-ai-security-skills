@@ -114,9 +114,17 @@ jobs:
             category: ingestion
           - skill: ingest-vpc-flow-logs-ocsf
             category: ingestion
+          - skill: ingest-vpc-flow-logs-gcp-ocsf
+            category: ingestion
+          - skill: ingest-nsg-flow-logs-azure-ocsf
+            category: ingestion
           - skill: ingest-guardduty-ocsf
             category: ingestion
           - skill: ingest-security-hub-ocsf
+            category: ingestion
+          - skill: ingest-gcp-scc-ocsf
+            category: ingestion
+          - skill: ingest-azure-defender-for-cloud-ocsf
             category: ingestion
           - skill: ingest-gcp-audit-ocsf
             category: ingestion
@@ -132,7 +140,7 @@ jobs:
             category: detection
           - skill: detect-sensitive-secret-read-k8s
             category: detection
-          - skill: detect-lateral-movement-aws
+          - skill: detect-lateral-movement
             category: detection
           - skill: convert-ocsf-to-sarif
             category: view

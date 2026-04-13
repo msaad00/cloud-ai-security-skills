@@ -11,6 +11,13 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 
 **`ingestion/`** (raw source → OCSF)
 - `ingest-cloudtrail-ocsf`
+- `ingest-vpc-flow-logs-ocsf`
+- `ingest-vpc-flow-logs-gcp-ocsf`
+- `ingest-nsg-flow-logs-azure-ocsf`
+- `ingest-guardduty-ocsf`
+- `ingest-security-hub-ocsf`
+- `ingest-gcp-scc-ocsf`
+- `ingest-azure-defender-for-cloud-ocsf`
 - `ingest-gcp-audit-ocsf`
 - `ingest-azure-activity-ocsf`
 - `ingest-k8s-audit-ocsf`
@@ -20,7 +27,7 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 - `detect-mcp-tool-drift`
 - `detect-privilege-escalation-k8s`
 - `detect-sensitive-secret-read-k8s`
-- `detect-lateral-movement-aws`
+- `detect-lateral-movement`
 
 **`evaluation/`** (read-only posture / benchmark checks)
 - `cspm-aws-cis-benchmark`

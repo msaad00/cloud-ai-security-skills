@@ -22,12 +22,16 @@ tool_map = MODULE.tool_map
 class TestDiscovery:
     def test_discovers_all_skills(self):
         skills = discover_skills(REPO_ROOT)
-        assert len(skills) == 23
+        assert len(skills) == 27
         assert {skill.name for skill in skills} >= {
             "ingest-cloudtrail-ocsf",
-            "detect-lateral-movement-aws",
+            "detect-lateral-movement",
             "cspm-aws-cis-benchmark",
             "iam-departures-remediation",
+            "ingest-vpc-flow-logs-gcp-ocsf",
+            "ingest-nsg-flow-logs-azure-ocsf",
+            "ingest-gcp-scc-ocsf",
+            "ingest-azure-defender-for-cloud-ocsf",
         }
 
     def test_marks_remediation_skill_without_cli_entrypoint_as_unsupported(self):
@@ -38,7 +42,7 @@ class TestDiscovery:
     def test_supported_tools_include_ingest_detect_and_evaluate(self):
         tools = tool_map(REPO_ROOT)
         assert "ingest-cloudtrail-ocsf" in tools
-        assert "detect-lateral-movement-aws" in tools
+        assert "detect-lateral-movement" in tools
         assert "model-serving-security" in tools
 
 
@@ -52,7 +56,7 @@ class TestToolDefinition:
         assert tool["inputSchema"]["properties"]["args"]["type"] == "array"
 
     def test_build_command_uses_fixed_entrypoint(self):
-        skill = tool_map(REPO_ROOT)["detect-lateral-movement-aws"]
+        skill = tool_map(REPO_ROOT)["detect-lateral-movement"]
         command = build_command(skill, ["--output", "findings.jsonl"])
-        assert command[1].endswith("skills/detection/detect-lateral-movement-aws/src/detect.py")
+        assert command[1].endswith("skills/detection/detect-lateral-movement/src/detect.py")
         assert command[-2:] == ["--output", "findings.jsonl"]

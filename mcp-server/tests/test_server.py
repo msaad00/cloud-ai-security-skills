@@ -56,7 +56,7 @@ class TestMcpServer:
             response = _read_message(proc)
             names = {tool["name"] for tool in response["result"]["tools"]}
             assert "ingest-cloudtrail-ocsf" in names
-            assert "detect-lateral-movement-aws" in names
+            assert "detect-lateral-movement" in names
             assert "model-serving-security" in names
             assert "iam-departures-remediation" not in names
         finally:
@@ -87,14 +87,14 @@ class TestMcpServer:
             ]
             assert ingest_lines[0]["class_uid"] == 6003
 
-            detect_input = (GOLDEN_DIR / "aws_lateral_movement_input.ocsf.jsonl").read_text()
+            detect_input = (GOLDEN_DIR / "lateral_movement_input.ocsf.jsonl").read_text()
             _send_message(
                 proc,
                 {
                     "jsonrpc": "2.0",
                     "id": 4,
                     "method": "tools/call",
-                    "params": {"name": "detect-lateral-movement-aws", "arguments": {"input": detect_input}},
+                    "params": {"name": "detect-lateral-movement", "arguments": {"input": detect_input}},
                 },
             )
             detect_response = _read_message(proc)

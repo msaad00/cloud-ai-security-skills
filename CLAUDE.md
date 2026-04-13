@@ -13,6 +13,13 @@ Skills are grouped into layered categories — not by cloud. The category answer
 skills/
 ├── ingestion/                     # raw source → OCSF 1.8
 │   ├── ingest-cloudtrail-ocsf/
+│   ├── ingest-vpc-flow-logs-ocsf/
+│   ├── ingest-vpc-flow-logs-gcp-ocsf/
+│   ├── ingest-nsg-flow-logs-azure-ocsf/
+│   ├── ingest-guardduty-ocsf/
+│   ├── ingest-security-hub-ocsf/
+│   ├── ingest-gcp-scc-ocsf/
+│   ├── ingest-azure-defender-for-cloud-ocsf/
 │   ├── ingest-gcp-audit-ocsf/
 │   ├── ingest-azure-activity-ocsf/
 │   ├── ingest-k8s-audit-ocsf/
@@ -22,7 +29,7 @@ skills/
 │   ├── detect-mcp-tool-drift/
 │   ├── detect-privilege-escalation-k8s/
 │   ├── detect-sensitive-secret-read-k8s/
-│   └── detect-lateral-movement-aws/
+│   └── detect-lateral-movement/
 │
 ├── evaluation/                    # posture, benchmark, and inventory checks
 │   ├── cspm-aws-cis-benchmark/

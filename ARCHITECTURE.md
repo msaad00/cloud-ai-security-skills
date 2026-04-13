@@ -21,13 +21,17 @@ flowchart TB
         direction LR
         I1["ingest-cloudtrail-ocsf"]
         I2["ingest-vpc-flow-logs-ocsf"]
-        I3["ingest-gcp-audit-ocsf"]
-        I4["ingest-azure-activity-ocsf"]
-        I5["ingest-k8s-audit-ocsf"]
-        I6["ingest-okta-system-log-ocsf"]
-        I7["ingest-github-audit-ocsf"]
-        I8["ingest-mcp-proxy-ocsf"]
-        I9["… one per source"]
+        I3["ingest-vpc-flow-logs-gcp-ocsf"]
+        I4["ingest-nsg-flow-logs-azure-ocsf"]
+        I5["ingest-guardduty-ocsf"]
+        I6["ingest-security-hub-ocsf"]
+        I7["ingest-gcp-scc-ocsf"]
+        I8["ingest-azure-defender-for-cloud-ocsf"]
+        I9["ingest-gcp-audit-ocsf"]
+        I10["ingest-azure-activity-ocsf"]
+        I11["ingest-k8s-audit-ocsf"]
+        I12["ingest-mcp-proxy-ocsf"]
+        I13["… one per source"]
     end
 
     OCSF["LAYER 2 — Normalised wire format<br/><b>OCSF 1.8 JSONL</b><br/>API Activity 6003 · Application Activity 6002<br/>Network Activity 4001 · HTTP Activity 4002<br/>Authentication 3002 · Account Change 3001<br/>Inventory Info 5001"]
@@ -37,7 +41,7 @@ flowchart TB
         D1["detect-mcp-tool-drift<br/>T1195.001"]
         D2["detect-privilege-escalation-k8s<br/>T1552.007 · T1611 · T1098 · T1550.001"]
         D3["detect-credential-stuffing-okta<br/>T1110.003 (roadmap)"]
-        D4["detect-lateral-movement-aws<br/>T1021 (roadmap)"]
+        D4["detect-lateral-movement<br/>T1021 · T1078.004"]
         D5["… one per attack pattern"]
     end
 
@@ -63,10 +67,14 @@ flowchart TB
     S1 --> I2
     S2 --> I3
     S3 --> I4
-    S4 --> I5
-    S5 --> I6
-    S6 --> I7
-    S7 --> I8
+    S1 --> I5
+    S1 --> I6
+    S2 --> I7
+    S3 --> I8
+    S2 --> I9
+    S3 --> I10
+    S4 --> I11
+    S7 --> I12
 
     I1 --> OCSF
     I2 --> OCSF
@@ -77,6 +85,10 @@ flowchart TB
     I7 --> OCSF
     I8 --> OCSF
     I9 --> OCSF
+    I10 --> OCSF
+    I11 --> OCSF
+    I12 --> OCSF
+    I13 --> OCSF
 
     OCSF --> D1
     OCSF --> D2
@@ -181,7 +193,7 @@ After the current PRs land:
 |---|---|---|
 | L1 Ingestion | `cloudtrail`, `gcp-audit`, `azure-activity`, `k8s-audit`, `mcp-proxy` (5) | `vpc-flow-logs`, `guardduty`, `aws-config`, `security-hub`, `eks-audit`, `okta-system-log`, `github-audit`, `entra-audit`, `workspace-admin`, `slack-audit`, `workday-audit`, `salesforce-event-mon`, `sap-audit-log`, … |
 | L2 Wire format | OCSF 1.8 contract pinned in `OCSF_CONTRACT.md` | OCSF 1.9 migration when stable |
-| L3 Detection | `detect-mcp-tool-drift`, `detect-privilege-escalation-k8s` (2) | `detect-credential-stuffing-okta`, `detect-lateral-movement-aws`, `detect-mfa-fatigue`, `detect-impossible-travel`, `detect-mcp-prompt-injection`, … |
+| L3 Detection | `detect-mcp-tool-drift`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-lateral-movement` (4) | `detect-credential-stuffing-okta`, `detect-mfa-fatigue`, `detect-impossible-travel`, `detect-mcp-prompt-injection`, … |
 | L4 Evaluation | (legacy `cspm-aws/gcp/azure-cis-benchmark` + `k8s-security-benchmark` + `container-security` — these will migrate to OCSF-based equivalents over time) | `evaluate-cis-aws-foundations-ocsf`, `evaluate-nist-csf-ocsf`, `evaluate-mitre-attack-coverage` |
 | L5 View / convert | (none yet) | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow`, `convert-ocsf-to-graph-overlay`, `convert-ocsf-to-clickhouse` |
 | L6 Remediation | `iam-departures-remediation` (1) | More response automations as detection patterns mature |

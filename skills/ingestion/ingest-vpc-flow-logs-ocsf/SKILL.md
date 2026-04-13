@@ -11,9 +11,9 @@ description: >-
   action. Emits one OCSF event per flow log record. Use when the user
   mentions VPC Flow Logs, AWS network telemetry, east-west traffic, or
   wants to feed VPC Flow into a SIEM or lateral-movement detector. Do
-  NOT use for GCP VPC Flow Logs (use ingest-vpc-flow-logs-gcp-ocsf —
-  roadmap), Azure NSG Flow Logs (use ingest-nsg-flow-logs-azure-ocsf —
-  roadmap), or CloudTrail (use ingest-cloudtrail-ocsf). Do NOT use as a
+  NOT use for GCP VPC Flow Logs (use ingest-vpc-flow-logs-gcp-ocsf),
+  Azure NSG Flow Logs (use ingest-nsg-flow-logs-azure-ocsf), or CloudTrail
+  (use ingest-cloudtrail-ocsf). Do NOT use as a
   detection skill — this only normalises network flows.
 license: Apache-2.0
 ---

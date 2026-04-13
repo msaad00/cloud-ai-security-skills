@@ -1,14 +1,14 @@
-"""Detect AWS lateral movement by joining CloudTrail OCSF with VPC Flow OCSF.
+"""Detect cloud lateral movement by joining OCSF API Activity with Network Activity.
 
 Reads a merged OCSF 1.8 JSONL stream containing both:
-  - API Activity (class 6003) from ingest-cloudtrail-ocsf (the sts:AssumeRole
+  - API Activity (class 6003) from cloud audit ingestors (the identity-pivot
     anchor events)
-  - Network Activity (class 4001) from ingest-vpc-flow-logs-ocsf (the east-west
+  - Network Activity (class 4001) from cloud flow-log ingestors (the east-west
     traffic that follows)
 
 Emits OCSF 1.8 Detection Finding (class 2004) for each distinct
-(session, internal destination) tuple where an assume-role anchor
-precedes a meaningful east-west flow within the correlation window.
+(provider, session, internal destination) tuple where a privileged-identity
+anchor precedes a meaningful east-west flow within the correlation window.
 
 Contract: see ../OCSF_CONTRACT.md
 """
@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
-SKILL_NAME = "detect-lateral-movement-aws"
+SKILL_NAME = "detect-lateral-movement"
 OCSF_VERSION = "1.8.0"
 
 # Detection Finding (2004)
@@ -58,14 +58,26 @@ NETWORK_ACTIVITY_CLASS = 4001
 # Network Activity activity_id 6 == ACCEPT (traffic allowed)
 NET_ACTIVITY_ACCEPT = 6
 
-# Correlation window: 15 minutes post-AssumeRole
+# Correlation window: 15 minutes post-anchor
 CORRELATION_WINDOW_MS = 15 * 60 * 1000
 
 # Byte threshold — filter out scan probes / 3-way handshake noise
 MIN_BYTES = 1024
 
-# The CloudTrail API operation we anchor on
+# Cloud identity-pivot operations we anchor on
 ASSUME_ROLE_OPERATIONS = {"AssumeRole", "AssumeRoleWithSAML", "AssumeRoleWithWebIdentity"}
+GCP_IDENTITY_PIVOT_SUFFIXES = (
+    "GenerateAccessToken",
+    "GenerateIdToken",
+    "SignJwt",
+    "SignBlob",
+    "CreateServiceAccountKey",
+)
+AZURE_IDENTITY_PIVOT_OPERATIONS = {
+    "MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/WRITE",
+    "MICROSOFT.AUTHORIZATION/ELEVATEACCESS/ACTION",
+    "MICROSOFT.MANAGEDIDENTITY/USERASSIGNEDIDENTITIES/ASSIGN/ACTION",
+}
 
 # RFC1918 private ranges + CGNAT shared-address range
 _PRIVATE_NETWORKS = tuple(ipaddress.ip_network(cidr) for cidr in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"))
@@ -111,6 +123,22 @@ def _api_operation(event: dict[str, Any]) -> str:
     return ((event.get("api") or {}).get("operation")) or ""
 
 
+def _api_service(event: dict[str, Any]) -> str:
+    return ((((event.get("api") or {}).get("service")) or {}).get("name")) or ""
+
+
+def _cloud_provider(event: dict[str, Any]) -> str:
+    return (((event.get("cloud") or {}).get("provider")) or "").upper()
+
+
+def _cloud_account(event: dict[str, Any]) -> str:
+    return ((((event.get("cloud") or {}).get("account")) or {}).get("uid")) or ""
+
+
+def _provider_display(provider: str) -> str:
+    return {"AWS": "AWS", "GCP": "GCP", "AZURE": "Azure"}.get(provider, provider.title() or "Cloud")
+
+
 def _dst_ip(event: dict[str, Any]) -> str:
     return (event.get("dst_endpoint") or {}).get("ip") or ""
 
@@ -135,6 +163,30 @@ def _bytes(event: dict[str, Any]) -> int:
         return 0
 
 
+def is_identity_pivot_anchor(event: dict[str, Any]) -> bool:
+    """Return True when an OCSF API Activity event is a high-signal pivot anchor."""
+    if event.get("class_uid") != API_ACTIVITY_CLASS:
+        return False
+
+    provider = _cloud_provider(event)
+    operation = _api_operation(event)
+    service = _api_service(event)
+
+    if provider == "AWS":
+        return operation in ASSUME_ROLE_OPERATIONS
+
+    if provider == "GCP":
+        if service not in {"iamcredentials.googleapis.com", "iam.googleapis.com"}:
+            return False
+        last = operation.rsplit(".", 1)[-1]
+        return any(last.endswith(suffix) for suffix in GCP_IDENTITY_PIVOT_SUFFIXES)
+
+    if provider == "AZURE":
+        return operation.upper() in AZURE_IDENTITY_PIVOT_OPERATIONS
+
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Finding builder
 # ---------------------------------------------------------------------------
@@ -142,30 +194,35 @@ def _bytes(event: dict[str, Any]) -> int:
 
 def _build_finding(
     *,
-    assume_role_event: dict[str, Any],
+    anchor_event: dict[str, Any],
     flow_event: dict[str, Any],
 ) -> dict[str, Any]:
-    session = _session_uid(assume_role_event)
-    principal = _actor_name(assume_role_event)
+    session = _session_uid(anchor_event)
+    principal = _actor_name(anchor_event)
+    provider_code = _cloud_provider(anchor_event)
+    provider = _provider_display(provider_code)
+    provider_key = (provider_code or "cloud").lower()
+    account = _cloud_account(anchor_event)
     dst_ip = _dst_ip(flow_event)
     dst_port = _dst_port(flow_event)
     src_instance = _src_instance(flow_event)
     src_ip = _src_ip(flow_event)
     flow_bytes = _bytes(flow_event)
+    operation = _api_operation(anchor_event)
 
     dst_key = f"{dst_ip}:{dst_port}"
-    uid = f"det-aws-lm-{_short(session)}-{_short(dst_key)}"
+    uid = f"det-lm-{_short(provider_key)}-{_short(session)}-{_short(dst_key)}"
 
     desc = (
-        f"Principal '{principal}' called {_api_operation(assume_role_event)} "
+        f"Principal '{principal}' triggered identity pivot operation '{operation}' "
         f"(session '{session}'), and within the "
         f"{CORRELATION_WINDOW_MS // 60000}-minute correlation window an "
         f"accepted east-west flow moved {flow_bytes} bytes from "
         f"{src_instance or src_ip} to {dst_ip}:{dst_port}. This is the "
-        f"canonical AWS lateral movement pattern (MITRE T1021 Remote "
-        f"Services via T1078.004 Cloud Accounts) — the AssumeRole anchor "
-        f"alone looks routine and the VPC Flow alone looks like normal "
-        f"intra-VPC traffic, but together they tell the full pivot story."
+        f"canonical {provider} lateral movement pattern (MITRE T1021 Remote "
+        f"Services via T1078.004 Cloud Accounts) — the API anchor alone looks "
+        f"routine and the flow alone looks like normal intra-cloud traffic, "
+        f"but together they tell the full pivot story."
     )
 
     return {
@@ -185,14 +242,14 @@ def _build_finding(
                 "vendor_name": "msaad00/cloud-security",
                 "feature": {"name": SKILL_NAME},
             },
-            "labels": ["detection-engineering", "aws", "lateral-movement", "multi-source"],
+            "labels": ["detection-engineering", provider_key, "lateral-movement", "multi-source"],
         },
         "finding_info": {
             "uid": uid,
-            "title": "AWS lateral movement: AssumeRole chain followed by east-west traffic",
+            "title": f"{provider} lateral movement: identity pivot followed by east-west traffic",
             "desc": desc,
-            "types": ["aws-lateral-movement"],
-            "first_seen_time": _event_time(assume_role_event),
+            "types": ["cloud-lateral-movement"],
+            "first_seen_time": _event_time(anchor_event),
             "last_seen_time": _event_time(flow_event),
             "attacks": [
                 {
@@ -209,19 +266,22 @@ def _build_finding(
             ],
         },
         "observables": [
+            {"name": "cloud.provider", "type": "Other", "value": provider},
+            {"name": "cloud.account", "type": "Other", "value": account},
             {"name": "session.uid", "type": "Other", "value": session},
             {"name": "actor.name", "type": "Other", "value": principal},
+            {"name": "anchor.operation", "type": "Other", "value": operation},
             {"name": "src.instance_uid", "type": "Other", "value": src_instance},
             {"name": "src.ip", "type": "Other", "value": src_ip},
             {"name": "dst.ip", "type": "Other", "value": dst_ip},
             {"name": "dst.port", "type": "Other", "value": str(dst_port) if dst_port is not None else ""},
             {"name": "traffic.bytes", "type": "Other", "value": str(flow_bytes)},
             {"name": "window.seconds", "type": "Other", "value": str(CORRELATION_WINDOW_MS // 1000)},
-            {"name": "rule", "type": "Other", "value": "aws-lateral-movement"},
+            {"name": "rule", "type": "Other", "value": "cloud-lateral-movement"},
         ],
         "evidence": {
             "events_observed": 2,
-            "first_seen_time": _event_time(assume_role_event),
+            "first_seen_time": _event_time(anchor_event),
             "last_seen_time": _event_time(flow_event),
             "raw_events": [],
         },
@@ -241,29 +301,36 @@ def detect(events: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     """
     events_list = list(events)
     # Partition the stream
-    assume_role_anchors: list[dict[str, Any]] = []
+    identity_anchors: list[dict[str, Any]] = []
     flows: list[dict[str, Any]] = []
     for ev in events_list:
         cls = ev.get("class_uid")
-        if cls == API_ACTIVITY_CLASS and _api_operation(ev) in ASSUME_ROLE_OPERATIONS:
-            assume_role_anchors.append(ev)
+        if is_identity_pivot_anchor(ev):
+            identity_anchors.append(ev)
         elif cls == NETWORK_ACTIVITY_CLASS and ev.get("activity_id") == NET_ACTIVITY_ACCEPT:
             flows.append(ev)
 
     # Sort for deterministic iteration
-    assume_role_anchors.sort(key=_event_time)
+    identity_anchors.sort(key=_event_time)
     flows.sort(key=_event_time)
 
     seen: set[str] = set()
     findings: list[dict[str, Any]] = []
 
-    for anchor in assume_role_anchors:
+    for anchor in identity_anchors:
         anchor_time = _event_time(anchor)
         window_end = anchor_time + CORRELATION_WINDOW_MS
+        anchor_provider = _cloud_provider(anchor)
+        anchor_account = _cloud_account(anchor)
 
         for flow in flows:
             ft = _event_time(flow)
             if ft < anchor_time or ft > window_end:
+                continue
+            if anchor_provider and _cloud_provider(flow) != anchor_provider:
+                continue
+            flow_account = _cloud_account(flow)
+            if anchor_account and flow_account and flow_account != anchor_account:
                 continue
             if _bytes(flow) < MIN_BYTES:
                 continue
@@ -273,16 +340,17 @@ def detect(events: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
 
             session = _session_uid(anchor)
             dst_port = _dst_port(flow)
-            dedup_key = f"{session}|{dst}|{dst_port}"
+            dedup_key = f"{anchor_provider}|{session}|{dst}|{dst_port}"
             if dedup_key in seen:
                 continue
             seen.add(dedup_key)
 
-            findings.append(_build_finding(assume_role_event=anchor, flow_event=flow))
+            findings.append(_build_finding(anchor_event=anchor, flow_event=flow))
 
     # Final deterministic ordering by anchor time, dst ip, dst port
     findings.sort(
         key=lambda f: (
+            next((o["value"] for o in f["observables"] if o["name"] == "cloud.provider"), ""),
             next((o["value"] for o in f["observables"] if o["name"] == "session.uid"), ""),
             next((o["value"] for o in f["observables"] if o["name"] == "dst.ip"), ""),
             next((o["value"] for o in f["observables"] if o["name"] == "dst.port"), ""),
@@ -313,7 +381,7 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Detect AWS lateral movement (CloudTrail + VPC Flow join).")
+    parser = argparse.ArgumentParser(description="Detect cloud lateral movement (API Activity + Network Activity join).")
     parser.add_argument("input", nargs="?", help="Merged OCSF JSONL input. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="OCSF Detection Finding JSONL output. Defaults to stdout.")
     args = parser.parse_args(argv)

@@ -25,8 +25,12 @@ Raw source formats to OCSF 1.8 JSONL.
 |---|---|
 | [`ingest-cloudtrail-ocsf`](ingestion/ingest-cloudtrail-ocsf/) | AWS CloudTrail |
 | [`ingest-vpc-flow-logs-ocsf`](ingestion/ingest-vpc-flow-logs-ocsf/) | AWS VPC Flow Logs |
+| [`ingest-vpc-flow-logs-gcp-ocsf`](ingestion/ingest-vpc-flow-logs-gcp-ocsf/) | GCP VPC Flow Logs |
+| [`ingest-nsg-flow-logs-azure-ocsf`](ingestion/ingest-nsg-flow-logs-azure-ocsf/) | Azure NSG Flow Logs |
 | [`ingest-guardduty-ocsf`](ingestion/ingest-guardduty-ocsf/) | AWS GuardDuty |
 | [`ingest-security-hub-ocsf`](ingestion/ingest-security-hub-ocsf/) | AWS Security Hub |
+| [`ingest-gcp-scc-ocsf`](ingestion/ingest-gcp-scc-ocsf/) | GCP Security Command Center |
+| [`ingest-azure-defender-for-cloud-ocsf`](ingestion/ingest-azure-defender-for-cloud-ocsf/) | Azure Defender for Cloud |
 | [`ingest-gcp-audit-ocsf`](ingestion/ingest-gcp-audit-ocsf/) | GCP Cloud Audit Logs |
 | [`ingest-azure-activity-ocsf`](ingestion/ingest-azure-activity-ocsf/) | Azure Activity Logs |
 | [`ingest-k8s-audit-ocsf`](ingestion/ingest-k8s-audit-ocsf/) | Kubernetes audit logs |
@@ -38,7 +42,7 @@ Deterministic OCSF-to-finding rules.
 
 | Skill | MITRE |
 |---|---|
-| [`detect-lateral-movement-aws`](detection/detect-lateral-movement-aws/) | lateral movement / AWS session analytics |
+| [`detect-lateral-movement`](detection/detect-lateral-movement/) | lateral movement / cross-cloud identity pivot + east-west traffic |
 | [`detect-mcp-tool-drift`](detection/detect-mcp-tool-drift/) | T1195.001 |
 | [`detect-privilege-escalation-k8s`](detection/detect-privilege-escalation-k8s/) | T1552.007, T1611, T1098, T1550.001 |
 | [`detect-sensitive-secret-read-k8s`](detection/detect-sensitive-secret-read-k8s/) | secret access / K8s API misuse |

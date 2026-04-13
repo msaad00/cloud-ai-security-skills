@@ -9,8 +9,8 @@ description: >-
   Failure when CloudTrail records an errorCode. Use when the user mentions
   CloudTrail ingestion, AWS audit log normalization, OCSF pipeline for AWS,
   or feeding CloudTrail into a SIEM. Do NOT use for GCP audit logs (use
-  ingest-gcp-audit-ocsf — roadmap), Azure activity logs (use
-  ingest-azure-activity-ocsf — roadmap), or Kubernetes audit logs (use
+  ingest-gcp-audit-ocsf), Azure activity logs (use
+  ingest-azure-activity-ocsf), or Kubernetes audit logs (use
   ingest-k8s-audit-ocsf). Do NOT use as a detection skill — this skill only
   normalises events, it does not flag anything.
 license: Apache-2.0

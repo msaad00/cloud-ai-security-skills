@@ -1,0 +1,1 @@
+{"finding":{"name":"organizations/123/sources/456/findings/finding-1","category":"PUBLIC_BUCKET","resourceName":"//cloudresourcemanager.googleapis.com/projects/prod-project","severity":"HIGH","state":"ACTIVE","findingClass":"MISCONFIGURATION","description":"Cloud Storage bucket is publicly accessible.","eventTime":"2026-04-10T05:00:00.000000Z"}}

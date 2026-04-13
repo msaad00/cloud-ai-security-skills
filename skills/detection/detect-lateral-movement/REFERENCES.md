@@ -1,9 +1,13 @@
-# References — detect-lateral-movement-aws
+# References — detect-lateral-movement
 
 ## Source formats and schemas
 
 - **AWS CloudTrail user guide** — https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html
 - **Amazon VPC Flow Logs** — https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html
+- **GCP Cloud Audit Logs** — https://cloud.google.com/logging/docs/audit
+- **GCP VPC Flow Logs record format** — https://cloud.google.com/vpc/docs/about-flow-logs-records
+- **Azure Activity Log schema** — https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema
+- **Azure NSG Flow Logs overview** — https://learn.microsoft.com/en-us/azure/network-watcher/network-watcher-nsg-flow-logging-overview
 - **OCSF schema** — https://schema.ocsf.io/1.8.0/
 
 ## Threat framework

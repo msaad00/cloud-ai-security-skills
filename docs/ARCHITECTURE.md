@@ -68,7 +68,7 @@ This is how the repo stays secure and reliable without turning every skill into 
  │                     enrich-mitre-navigator, enrich-pii-redact     │
  ├───────────────────────────────────────────────────────────────────┤
  │ L3  DETECT          OCSF → OCSF Detection Finding (2004)          │
- │                     detect-lateral-movement-aws, detect-*         │
+ │                     detect-lateral-movement, detect-*             │
  ├───────────────────────────────────────────────────────────────────┤
  │ L4  EVALUATE        OCSF → compliance pass/fail + evidence        │
  │                     cspm-*-cis-benchmark, evaluate-nist-ai-rmf    │
@@ -109,9 +109,9 @@ The rule for this repo is simple: keep the architecture readable in Markdown, an
 | Layer | Category | Status | Skills shipped | Roadmap |
 |---|---|---|---|---|
 | L0 | sources | (external) | n/a | vendor stories #30–#36, Ramp (PR Y), Snowflake audit (PR Z) |
-| L1 | `ingest-*` | **shipping** | cloudtrail, vpc-flow-logs, guardduty, security-hub, gcp-audit, azure-activity, k8s-audit, mcp-proxy | gcp-vpc-flow, azure-nsg-flow, okta, github, workspace, slack, ramp |
+| L1 | `ingest-*` | **shipping** | cloudtrail, aws-vpc-flow, gcp-vpc-flow, azure-nsg-flow, guardduty, security-hub, gcp-scc, azure-defender, gcp-audit, azure-activity, k8s-audit, mcp-proxy | okta, github, workspace, slack, ramp |
 | L2 | `enrich-*` | **planned** | none | PR X (asset-inventory, geoip, mitre-navigator, inventory / **AI BOM** generation, **pii-redact is P0 before any sink in regulated env**) |
-| L3 | `detect-*` | **shipping** | lateral-movement-aws, privesc-k8s, sensitive-secret-read-k8s, mcp-tool-drift | credential-access per cloud, unusual-assume-role, vector-store-poisoning |
+| L3 | `detect-*` | **shipping** | lateral-movement, privesc-k8s, sensitive-secret-read-k8s, mcp-tool-drift | credential-access per cloud, unusual-assume-role, vector-store-poisoning |
 | L4 | `evaluate-*` | **shipping** | cspm-aws/gcp/azure-cis-benchmark, k8s-security-benchmark, container-security | evaluate-cis-aws-foundations (#29), NIST AI RMF, SOC2, PCI |
 | L5 | `remediate-*` | **shipping** | iam-departures-remediation | auto-close-exposed-s3, revoke-long-lived-key, patch-inspector-finding |
 | L6 | `convert-*` | **shipping** | ocsf-to-sarif, ocsf-to-mermaid-attack-flow | to-sigma, to-splunk-cim, to-jira, to-opa-rego |
@@ -130,7 +130,7 @@ Finite input, pipe through skills, write the output somewhere. This is the defau
 ```
 cat cloudtrail.json \
   | python3 skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
-  | python3 skills/detection/detect-lateral-movement-aws/src/detect.py \
+  | python3 skills/detection/detect-lateral-movement/src/detect.py \
   | python3 skills/view/convert-ocsf-to-sarif/src/convert.py \
   > findings.sarif
 ```
@@ -175,7 +175,7 @@ That keeps AI BOM as one valuable skill family inside `cloud-security`, instead 
 
 Every OCSF event we emit carries a deterministic UID derived from content, never from wall clock or RNG. Today:
 
-- **Findings**: `finding_info.uid = det-<rule>-<short(semantic_key)>`. Example: `det-aws-lm-cbef99b7-9ea97278` is the (session, dst-ip, dst-port) hash for the AWS lateral-movement rule. Running the same input a thousand times yields the same uid.
+- **Findings**: `finding_info.uid = det-<rule>-<short(semantic_key)>`. Example: `det-lm-1f455f51-cbef99b7-9ea97278` is the (provider, session, dst-ip, dst-port) hash for the cross-cloud lateral-movement rule. Running the same input a thousand times yields the same uid.
 - **Ingested events**: inherit the source event's immutable ID (`eventID` for CloudTrail, `Id` for GuardDuty, etc.). Ingest is content-addressable.
 
 Sinks exploit this: `MERGE INTO ocsf_findings USING input ON input.finding_info.uid = target.finding_info.uid WHEN MATCHED THEN UPDATE SET ... WHEN NOT MATCHED THEN INSERT ...`. Replaying a day's worth of raw events after a sink outage **converges to the same table state**.
@@ -349,7 +349,7 @@ This section governs what happens the moment the repo graduates from "Unix filte
 
 ## 10. Determinism and idempotency — worked example
 
-This is the property that lets Mode A and Mode B share the same skill code. Worked example using `detect-lateral-movement-aws`:
+This is the property that lets Mode A and Mode B share the same skill code. Worked example using `detect-lateral-movement`:
 
 **Input** — one CloudTrail AssumeRole event + one VPC Flow ACCEPT to 10.0.3.75:3306, same session.
 
