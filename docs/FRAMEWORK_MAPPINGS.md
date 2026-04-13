@@ -69,9 +69,13 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
 | `discover-cloud-control-evidence` | cross-cloud evidence package that preserves ATT&CK / ATLAS / AI RMF inventory context |
 
+Current provider depth in discovery:
+- AWS Bedrock / SageMaker
+- Google Vertex AI
+- Azure ML / Azure AI Foundry
+
 Recommended expansion:
 - make ATLAS mappings more explicit in `gpu-cluster-security`
-- use ATLAS in future AI BOM / discovery / inventory skills
 - add a shared table of ATLAS techniques used by AI-oriented skills
 
 ## Kubernetes and containers
@@ -102,7 +106,7 @@ uniform than classic cloud posture.
 
 Recommended next step:
 - make ATLAS coverage first-class for GPU and model-serving paths
-- connect future AI BOM discovery/inventory outputs to ATLAS and AI RMF
+- connect AI BOM and discovery outputs more directly to ATLAS and AI RMF evidence views
 
 ## Compliance and control frameworks
 

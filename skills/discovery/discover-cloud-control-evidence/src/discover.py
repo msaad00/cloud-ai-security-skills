@@ -31,6 +31,9 @@ SECRET_KEYWORDS = (
     "access_key",
 )
 PUBLIC_CIDRS = {"0.0.0.0/0", "::/0", "*", "internet", "any"}
+AI_SERVICES = {"ai-foundry", "azure-ml", "bedrock", "sagemaker", "vertex-ai"}
+AI_ENDPOINT_KINDS = {"deployment", "endpoint", "inference-endpoint"}
+AI_GOVERNANCE_KINDS = {"ai-guardrail", "dataset", "guardrail", "model", "model-package", "training-job", "vector-index", "vector-store"}
 
 
 def _load_json(path: str | None) -> dict[str, Any]:
@@ -239,6 +242,60 @@ def _aws_assets(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
                 name=model.get("modelName"),
             )
         )
+    for guardrail in bedrock.get("guardrails", []):
+        assets.append(
+            _asset(
+                "aws",
+                "bedrock",
+                "ai-guardrail",
+                guardrail.get("id") or guardrail.get("guardrailArn"),
+                name=guardrail.get("name"),
+            )
+        )
+    for knowledge_base in bedrock.get("knowledge_bases", []):
+        assets.append(
+            _asset(
+                "aws",
+                "bedrock",
+                "vector-store",
+                knowledge_base.get("knowledgeBaseId") or knowledge_base.get("knowledgeBaseArn"),
+                name=knowledge_base.get("name"),
+                encrypted=_bool(knowledge_base.get("encrypted")),
+            )
+        )
+    for package in sagemaker.get("model_packages", []):
+        assets.append(
+            _asset(
+                "aws",
+                "sagemaker",
+                "model-package",
+                package.get("ModelPackageArn") or package.get("ModelPackageName"),
+                name=package.get("ModelPackageName") or package.get("ModelPackageGroupName"),
+            )
+        )
+    for job in sagemaker.get("training_jobs", []):
+        assets.append(
+            _asset(
+                "aws",
+                "sagemaker",
+                "training-job",
+                job.get("TrainingJobArn") or job.get("TrainingJobName"),
+                name=job.get("TrainingJobName"),
+                encrypted=_bool(job.get("VolumeKmsKeyId")) or _bool(job.get("OutputDataConfig", {}).get("KmsKeyId")),
+                logged=_bool(job.get("EnableNetworkIsolation")) or _bool(job.get("EnableInterContainerTrafficEncryption")),
+            )
+        )
+    for dataset in sagemaker.get("datasets", []):
+        assets.append(
+            _asset(
+                "aws",
+                "sagemaker",
+                "dataset",
+                dataset.get("DatasetArn") or dataset.get("DatasetName"),
+                name=dataset.get("DatasetName"),
+                encrypted=_bool(dataset.get("KmsKeyId")),
+            )
+        )
     for endpoint in sagemaker.get("endpoints", []):
         assets.append(
             _asset(
@@ -248,6 +305,8 @@ def _aws_assets(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
                 endpoint.get("EndpointArn") or endpoint.get("EndpointName"),
                 name=endpoint.get("EndpointName"),
                 public=_bool(endpoint.get("public")),
+                encrypted=_bool(endpoint.get("KmsKeyId")) or _bool(endpoint.get("DataCaptureConfig", {}).get("KmsKeyId")),
+                logged=_bool(endpoint.get("DataCaptureConfig", {}).get("EnableCapture")),
             )
         )
     return assets
@@ -347,6 +406,40 @@ def _gcp_assets(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
                 name=model.get("displayName") or model.get("name"),
             )
         )
+    for dataset in vertex.get("datasets", []):
+        assets.append(
+            _asset(
+                "gcp",
+                "vertex-ai",
+                "dataset",
+                dataset.get("name"),
+                name=dataset.get("displayName") or dataset.get("name"),
+                encrypted=bool(dataset.get("encryptionSpec", {}).get("kmsKeyName")),
+            )
+        )
+    for pipeline in vertex.get("training_pipelines", []):
+        assets.append(
+            _asset(
+                "gcp",
+                "vertex-ai",
+                "training-job",
+                pipeline.get("name"),
+                name=pipeline.get("displayName") or pipeline.get("name"),
+                encrypted=bool(pipeline.get("encryptionSpec", {}).get("kmsKeyName")),
+                logged=_bool(pipeline.get("enableContainerLogging")),
+            )
+        )
+    for index in vertex.get("indexes", []):
+        assets.append(
+            _asset(
+                "gcp",
+                "vertex-ai",
+                "vector-index",
+                index.get("name"),
+                name=index.get("displayName") or index.get("name"),
+                encrypted=bool(index.get("encryptionSpec", {}).get("kmsKeyName")),
+            )
+        )
     for endpoint in vertex.get("endpoints", []):
         assets.append(
             _asset(
@@ -356,6 +449,19 @@ def _gcp_assets(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
                 endpoint.get("name"),
                 name=endpoint.get("displayName") or endpoint.get("name"),
                 public=_bool(endpoint.get("public")),
+                encrypted=bool(endpoint.get("encryptionSpec", {}).get("kmsKeyName")),
+            )
+        )
+    for index_endpoint in vertex.get("index_endpoints", []):
+        assets.append(
+            _asset(
+                "gcp",
+                "vertex-ai",
+                "endpoint",
+                index_endpoint.get("name"),
+                name=index_endpoint.get("displayName") or index_endpoint.get("name"),
+                public=_bool(index_endpoint.get("public")),
+                encrypted=bool(index_endpoint.get("encryptionSpec", {}).get("kmsKeyName")),
             )
         )
     return assets
@@ -481,6 +587,75 @@ def _azure_assets(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
                 deployment.get("id") or deployment.get("name"),
                 name=deployment.get("name"),
                 public=_bool(deployment.get("public")),
+                encrypted=_bool(deployment.get("cmk_enabled")) or _bool(deployment.get("encrypted")),
+                logged=_bool(deployment.get("diagnostic_logging")) or _bool(deployment.get("logging_enabled")),
+            )
+        )
+    for project in ai_foundry.get("projects", []):
+        assets.append(
+            _asset(
+                "azure",
+                "ai-foundry",
+                "runtime",
+                project.get("id") or project.get("name"),
+                name=project.get("name"),
+                logged=_bool(project.get("diagnostic_logging")) or _bool(project.get("logging_enabled")),
+            )
+        )
+    for model in ai_foundry.get("models", []):
+        assets.append(
+            _asset(
+                "azure",
+                "ai-foundry",
+                "model",
+                model.get("id") or model.get("name"),
+                name=model.get("name"),
+            )
+        )
+    azure_ml = snapshot.get("azure_ml", {}) or {}
+    for model in azure_ml.get("models", []):
+        assets.append(
+            _asset(
+                "azure",
+                "azure-ml",
+                "model",
+                model.get("id") or model.get("name"),
+                name=model.get("name"),
+            )
+        )
+    for dataset in azure_ml.get("data_assets", []):
+        assets.append(
+            _asset(
+                "azure",
+                "azure-ml",
+                "dataset",
+                dataset.get("id") or dataset.get("name"),
+                name=dataset.get("name"),
+                encrypted=_bool(dataset.get("cmk_enabled")) or _bool(dataset.get("encrypted")),
+            )
+        )
+    for endpoint in azure_ml.get("online_endpoints", []):
+        assets.append(
+            _asset(
+                "azure",
+                "azure-ml",
+                "endpoint",
+                endpoint.get("id") or endpoint.get("name"),
+                name=endpoint.get("name"),
+                public=_bool(endpoint.get("public")) or _bool(endpoint.get("public_network_access")),
+                encrypted=_bool(endpoint.get("cmk_enabled")) or _bool(endpoint.get("encrypted")),
+                logged=_bool(endpoint.get("app_insights_enabled")) or _bool(endpoint.get("logging_enabled")),
+            )
+        )
+    for deployment in azure_ml.get("deployments", []):
+        assets.append(
+            _asset(
+                "azure",
+                "azure-ml",
+                "deployment",
+                deployment.get("id") or deployment.get("name"),
+                name=deployment.get("name"),
+                logged=_bool(deployment.get("logging_enabled")),
             )
         )
     return assets
@@ -531,6 +706,10 @@ def _summaries(normalized: dict[str, Any]) -> dict[str, Any]:
     encrypted_assets = [asset for asset in assets if _bool(asset.get("encrypted"))]
     logging_assets = [asset for asset in assets if _bool(asset.get("logged"))]
     key_assets = [asset for asset in assets if asset["kind"] in {"key", "key-vault"}]
+    ai_assets = [asset for asset in assets if asset["service"] in AI_SERVICES]
+    ai_endpoint_assets = [asset for asset in ai_assets if asset["kind"] in AI_ENDPOINT_KINDS]
+    ai_public_assets = [asset for asset in ai_endpoint_assets if _bool(asset.get("public"))]
+    ai_governance_assets = [asset for asset in ai_assets if asset["kind"] in AI_GOVERNANCE_KINDS]
 
     return {
         "providers": normalized["providers"],
@@ -543,6 +722,10 @@ def _summaries(normalized: dict[str, Any]) -> dict[str, Any]:
             "encrypted_assets": len(encrypted_assets),
             "logging_assets": len(logging_assets),
             "key_assets": len(key_assets),
+            "ai_assets": len(ai_assets),
+            "ai_endpoint_assets": len(ai_endpoint_assets),
+            "ai_public_assets": len(ai_public_assets),
+            "ai_governance_assets": len(ai_governance_assets),
         },
     }
 
@@ -601,6 +784,9 @@ def _controls_for(framework: str, normalized: dict[str, Any]) -> list[dict[str, 
     encrypted_assets = [asset for asset in assets if _bool(asset.get("encrypted"))]
     logging_assets = [asset for asset in assets if _bool(asset.get("logged"))]
     key_assets = [asset for asset in assets if asset["kind"] in {"key", "key-vault"}]
+    ai_assets = [asset for asset in assets if asset["service"] in AI_SERVICES]
+    ai_endpoint_assets = [asset for asset in ai_assets if asset["kind"] in AI_ENDPOINT_KINDS]
+    ai_governance_assets = [asset for asset in ai_assets if asset["kind"] in AI_GOVERNANCE_KINDS]
 
     if framework == "pci":
         return [
@@ -638,6 +824,22 @@ def _controls_for(framework: str, normalized: dict[str, Any]) -> list[dict[str, 
                 _sample(logging_assets),
                 [] if logging_assets else ["No logging inventory was present in the supplied snapshot."],
             ),
+            _control(
+                framework,
+                "inventory.ai-service-surface",
+                "AI service surface evidence",
+                "Inventory-backed evidence for model endpoints, deployments, and AI-facing service surfaces across AWS, GCP, and Azure.",
+                _sample(ai_endpoint_assets),
+                [] if ai_endpoint_assets else ["No AI endpoint or deployment inventory was present in the supplied snapshot."],
+            ),
+            _control(
+                framework,
+                "inventory.ai-governance",
+                "AI governance and data-path evidence",
+                "Inventory-backed evidence for models, datasets, vector stores, training jobs, and guardrails associated with AI services.",
+                _sample(ai_governance_assets),
+                [] if ai_governance_assets else ["No AI governance inventory was present in the supplied snapshot."],
+            ),
         ]
 
     return [
@@ -674,6 +876,22 @@ def _controls_for(framework: str, normalized: dict[str, Any]) -> list[dict[str, 
             "Inventory-backed evidence for audit logging and diagnostic coverage.",
             _sample(logging_assets),
             [] if logging_assets else ["No logging inventory was present in the supplied snapshot."],
+        ),
+        _control(
+            framework,
+            "cc6.ai-service-surface",
+            "AI service surface evidence",
+            "Inventory-backed evidence for model-serving endpoints, AI deployments, and externally reachable AI service surfaces.",
+            _sample(ai_endpoint_assets),
+            [] if ai_endpoint_assets else ["No AI endpoint or deployment inventory was present in the supplied snapshot."],
+        ),
+        _control(
+            framework,
+            "cc7.ai-governance-and-monitoring",
+            "AI governance and monitoring evidence",
+            "Inventory-backed evidence for models, datasets, vector stores, training jobs, and guardrail surfaces associated with AI services.",
+            _sample(ai_governance_assets),
+            [] if ai_governance_assets else ["No AI governance inventory was present in the supplied snapshot."],
         ),
     ]
 

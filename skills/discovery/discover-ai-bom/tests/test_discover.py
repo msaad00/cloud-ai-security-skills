@@ -95,6 +95,19 @@ class TestProviderSnapshots:
                             "ModelPackageArn": "arn:aws:sagemaker:us-east-1:123:model-package/fraud/5",
                         }
                     ],
+                    "training_jobs": [
+                        {
+                            "TrainingJobArn": "arn:aws:sagemaker:us-east-1:123:training-job/fraud-train",
+                            "TrainingJobName": "fraud-train",
+                            "TrainingJobStatus": "Completed",
+                        }
+                    ],
+                    "datasets": [
+                        {
+                            "DatasetArn": "arn:aws:sagemaker:us-east-1:123:dataset/fraud",
+                            "DatasetName": "fraud-dataset",
+                        }
+                    ],
                 },
                 "bedrock": {
                     "custom_models": [
@@ -103,11 +116,26 @@ class TestProviderSnapshots:
                             "modelName": "fraud-custom",
                             "foundationModelArn": "arn:aws:bedrock:::foundation-model/anthropic.claude",
                         }
-                    ]
+                    ],
+                    "knowledge_bases": [
+                        {
+                            "knowledgeBaseId": "kb-1",
+                            "name": "fraud-kb",
+                            "status": "ACTIVE",
+                            "storageConfiguration": {"type": "OPENSEARCH_SERVERLESS"},
+                        }
+                    ],
                 },
             }
         )
-        assert [asset["kind"] for asset in assets] == ["model", "endpoint", "model-package"]
+        assert [asset["kind"] for asset in assets] == [
+            "model",
+            "vector-store",
+            "dataset",
+            "endpoint",
+            "model-package",
+            "training-job",
+        ]
 
     def test_gcp_snapshot_normalization(self):
         assets = _normalize_assets(
@@ -122,10 +150,27 @@ class TestProviderSnapshots:
                             "deployedModels": [{"model": "projects/p/locations/us/models/1"}],
                         }
                     ],
+                    "datasets": [{"name": "projects/p/locations/us/datasets/1", "displayName": "fraud-dataset"}],
+                    "training_pipelines": [{"name": "projects/p/locations/us/trainingPipelines/1", "displayName": "fraud-train"}],
+                    "indexes": [{"name": "projects/p/locations/us/indexes/1", "displayName": "fraud-index"}],
+                    "index_endpoints": [
+                        {
+                            "name": "projects/p/locations/us/indexEndpoints/1",
+                            "displayName": "fraud-index-endpoint",
+                            "deployedIndexes": [{"index": "projects/p/locations/us/indexes/1"}],
+                        }
+                    ],
                 },
             }
         )
-        assert [asset["kind"] for asset in assets] == ["endpoint", "model"]
+        assert [asset["kind"] for asset in assets] == [
+            "dataset",
+            "endpoint",
+            "endpoint",
+            "model",
+            "training-job",
+            "vector-index",
+        ]
 
     def test_azure_snapshot_normalization(self):
         assets = _normalize_assets(
@@ -140,10 +185,24 @@ class TestProviderSnapshots:
                             "deployments": [{"id": "/deployments/fraud-blue"}],
                         }
                     ],
+                    "data_assets": [{"id": "/data/fraud", "name": "fraud-data", "version": "1"}],
+                    "compute_clusters": [{"id": "/compute/gpu", "name": "gpu", "vmSize": "Standard_NC6s_v3"}],
+                },
+                "ai_foundry": {
+                    "deployments": [{"id": "/foundry/deployments/chat", "name": "chat-prod", "model": "/models/fraud"}],
+                    "projects": [{"id": "/foundry/projects/ai-sec", "name": "ai-sec"}],
                 },
             }
         )
-        assert [asset["kind"] for asset in assets] == ["deployment", "endpoint", "model"]
+        assert [asset["kind"] for asset in assets] == [
+            "endpoint",
+            "runtime",
+            "dataset",
+            "deployment",
+            "endpoint",
+            "model",
+            "runtime",
+        ]
 
 
 class TestErrors:

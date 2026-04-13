@@ -62,8 +62,9 @@ The skill accepts one JSON document with any mix of these provider snapshots:
 
 Each provider section may include relevant inventory such as identities,
 storage, logging, encryption, key management, network policies, public IPs,
-endpoints, or AI service inventory. The skill only processes the providers and
-services present in the supplied input.
+endpoints, or AI service inventory. AI-specific inputs can include Bedrock,
+SageMaker, Vertex AI, Azure ML, and Azure AI Foundry snapshots. The skill only
+processes the providers and services present in the supplied input.
 
 ## Output contract
 
@@ -74,6 +75,7 @@ The skill emits one deterministic JSON document:
 - `inventory_summary` with providers, services, asset counts, and control-surface counts
 - `controls[]` with `evidence-ready` / `partial` / `missing` status per control domain
 - `gaps[]` only when the source artifact cannot support a given evidence domain
+- AI-oriented evidence domains for endpoint surface and governance inventory when AI service assets are present
 
 By default this is native evidence JSON, not an attestation. When `--output-format ocsf-live-evidence` is used, the skill emits a Discovery-category OCSF bridge event for `Live Evidence Info [5040]` and carries the deterministic evidence payload under `unmapped.cloud_security_technical_evidence`.
 

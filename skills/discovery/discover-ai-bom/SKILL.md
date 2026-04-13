@@ -80,9 +80,9 @@ The skill accepts one JSON document, either:
 
 2. **Provider-shaped snapshots**
 
-- AWS: `sagemaker.model_packages[]`, `sagemaker.endpoints[]`, `bedrock.custom_models[]`, `bedrock.guardrails[]`
-- GCP: `vertex_ai.models[]`, `vertex_ai.endpoints[]`
-- Azure: `azure_ml.models[]`, `azure_ml.online_endpoints[]`, `azure_ml.deployments[]`
+- AWS: `sagemaker.model_packages[]`, `sagemaker.endpoints[]`, `sagemaker.training_jobs[]`, `sagemaker.datasets[]`, `bedrock.custom_models[]`, `bedrock.guardrails[]`, `bedrock.knowledge_bases[]`
+- GCP: `vertex_ai.models[]`, `vertex_ai.endpoints[]`, `vertex_ai.datasets[]`, `vertex_ai.training_pipelines[]`, `vertex_ai.indexes[]`, `vertex_ai.index_endpoints[]`
+- Azure: `azure_ml.models[]`, `azure_ml.online_endpoints[]`, `azure_ml.deployments[]`, `azure_ml.data_assets[]`, `azure_ml.compute_clusters[]`, `ai_foundry.deployments[]`, `ai_foundry.projects[]`
 
 ## Output contract
 

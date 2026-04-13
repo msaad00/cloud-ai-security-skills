@@ -51,18 +51,40 @@ def _multi_cloud_snapshot() -> dict:
         "snapshot_id": "multi-1",
         "captured_at": "2026-04-12T03:00:00Z",
         "aws": {
-            "bedrock": {"custom_models": [{"modelArn": "arn:aws:bedrock:model/guard", "modelName": "guard-model"}]}
+            "bedrock": {
+                "custom_models": [{"modelArn": "arn:aws:bedrock:model/guard", "modelName": "guard-model"}],
+                "guardrails": [{"id": "gr-1", "name": "bedrock-guard"}],
+                "knowledge_bases": [{"knowledgeBaseId": "kb-1", "name": "kb-prod", "encrypted": True}],
+            },
+            "sagemaker": {
+                "endpoints": [{"EndpointArn": "arn:aws:sagemaker:endpoint/fraud", "EndpointName": "fraud", "public": False}],
+                "training_jobs": [{"TrainingJobArn": "arn:aws:sagemaker:training-job/fraud", "TrainingJobName": "fraud-train"}],
+            },
         },
         "gcp": {
             "iam": {"service_accounts": [{"email": "svc@example.iam.gserviceaccount.com"}]},
             "logging": {"sinks": [{"name": "org-sink"}]},
             "compute": {"instances": [{"id": "gce-1", "name": "gce-1", "networkInterfaces": [{"accessConfigs": [{}]}]}]},
+            "vertex_ai": {
+                "models": [{"name": "projects/p/locations/us/models/1", "displayName": "fraud-model"}],
+                "endpoints": [{"name": "projects/p/locations/us/endpoints/1", "displayName": "fraud-endpoint", "public": True}],
+                "datasets": [{"name": "projects/p/locations/us/datasets/1", "displayName": "fraud-dataset"}],
+                "indexes": [{"name": "projects/p/locations/us/indexes/1", "displayName": "fraud-index"}],
+            },
         },
         "azure": {
             "entra": {"managed_identities": [{"id": "mi-1", "name": "mi-prod"}]},
             "storage": {"accounts": [{"id": "st-1", "name": "stprod", "encrypted": True}]},
             "monitor": {"diagnostic_settings": [{"id": "diag-1", "name": "diag-prod"}]},
-            "ai_foundry": {"deployments": [{"id": "dep-1", "name": "chat-prod", "public": True}]},
+            "ai_foundry": {
+                "deployments": [{"id": "dep-1", "name": "chat-prod", "public": True, "logging_enabled": True}],
+                "projects": [{"id": "proj-1", "name": "ai-project"}],
+            },
+            "azure_ml": {
+                "models": [{"id": "/models/fraud", "name": "fraud-model"}],
+                "data_assets": [{"id": "/data/fraud", "name": "fraud-data"}],
+                "online_endpoints": [{"id": "/endpoints/fraud", "name": "fraud", "public_network_access": False}],
+            },
         },
     }
 
@@ -79,6 +101,8 @@ class TestNormalizeInventory:
         assert normalized["providers"] == ["aws", "azure", "gcp"]
         assert any(asset["provider"] == "azure" for asset in normalized["assets"])
         assert any(asset["provider"] == "gcp" for asset in normalized["assets"])
+        assert any(asset["service"] == "vertex-ai" for asset in normalized["assets"])
+        assert any(asset["kind"] == "ai-guardrail" for asset in normalized["assets"])
 
 
 class TestBuildEvidence:
@@ -86,7 +110,7 @@ class TestBuildEvidence:
         evidence = build_evidence(_aws_snapshot())
         assert evidence["artifact_type"] == "technical-control-evidence"
         assert evidence["frameworks"] == ["PCI DSS 4.0", "SOC 2 Security"]
-        assert len(evidence["controls"]) == 8
+        assert len(evidence["controls"]) == 12
 
     def test_drops_secret_like_properties(self):
         normalized = normalize_inventory(_aws_snapshot())
@@ -97,6 +121,14 @@ class TestBuildEvidence:
         evidence = build_evidence(_multi_cloud_snapshot(), ["soc2"])
         assert evidence["frameworks"] == ["SOC 2 Security"]
         assert {control["framework"] for control in evidence["controls"]} == {"SOC 2 Security"}
+        assert any(control["control_id"] == "cc6.ai-service-surface" for control in evidence["controls"])
+
+    def test_inventory_summary_includes_ai_surface_counts(self):
+        evidence = build_evidence(_multi_cloud_snapshot())
+        counts = evidence["inventory_summary"]["control_surface_counts"]
+        assert counts["ai_assets"] >= 1
+        assert counts["ai_endpoint_assets"] >= 1
+        assert counts["ai_governance_assets"] >= 1
 
     def test_deterministic_output(self):
         assert build_evidence(_multi_cloud_snapshot()) == build_evidence(_multi_cloud_snapshot())

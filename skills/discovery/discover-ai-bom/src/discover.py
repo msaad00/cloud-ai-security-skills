@@ -40,10 +40,21 @@ COMPONENT_TYPES = {
 }
 KIND_ALIASES = {
     "guardrails": "guardrail",
+    "datasets": "dataset",
+    "data-assets": "dataset",
+    "data_assets": "dataset",
+    "index": "vector-index",
+    "indexes": "vector-index",
+    "index-endpoint": "endpoint",
+    "index_endpoints": "endpoint",
+    "knowledge-base": "vector-store",
+    "knowledge_bases": "vector-store",
     "model-package": "model-package",
     "model-packages": "model-package",
     "online-endpoint": "endpoint",
     "online-endpoints": "endpoint",
+    "training-jobs": "training-job",
+    "training_pipelines": "training-job",
 }
 
 
@@ -182,6 +193,32 @@ def _normalize_aws(document: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
 
+    for job in sagemaker.get("training_jobs", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="sagemaker",
+                kind="training-job",
+                id=job.get("TrainingJobArn") or job.get("TrainingJobName"),
+                name=job.get("TrainingJobName"),
+                status=job.get("TrainingJobStatus"),
+                region=job.get("Region"),
+            )
+        )
+
+    for dataset in sagemaker.get("datasets", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="sagemaker",
+                kind="dataset",
+                id=dataset.get("DatasetArn") or dataset.get("DatasetName"),
+                name=dataset.get("DatasetName"),
+                version=dataset.get("DatasetVersion"),
+                region=dataset.get("Region"),
+            )
+        )
+
     for model in bedrock.get("custom_models", []):
         assets.append(
             _make_asset(
@@ -206,6 +243,18 @@ def _normalize_aws(document: dict[str, Any]) -> list[dict[str, Any]]:
                 name=guardrail.get("name"),
                 version=guardrail.get("version"),
                 status=guardrail.get("status"),
+            )
+        )
+
+    for knowledge_base in bedrock.get("knowledge_bases", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="bedrock",
+                kind="vector-store",
+                id=knowledge_base.get("knowledgeBaseId") or knowledge_base.get("knowledgeBaseArn"),
+                name=knowledge_base.get("name"),
+                status=knowledge_base.get("status"),
             )
         )
 
@@ -247,6 +296,60 @@ def _normalize_gcp(document: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
 
+    for dataset in vertex.get("datasets", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="vertex-ai",
+                kind="dataset",
+                id=dataset.get("name"),
+                name=dataset.get("displayName") or dataset.get("name"),
+                region=dataset.get("region"),
+                labels=dataset.get("labels"),
+            )
+        )
+
+    for pipeline in vertex.get("training_pipelines", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="vertex-ai",
+                kind="training-job",
+                id=pipeline.get("name"),
+                name=pipeline.get("displayName") or pipeline.get("name"),
+                status=pipeline.get("state"),
+                region=pipeline.get("region"),
+                labels=pipeline.get("labels"),
+            )
+        )
+
+    for index in vertex.get("indexes", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="vertex-ai",
+                kind="vector-index",
+                id=index.get("name"),
+                name=index.get("displayName") or index.get("name"),
+                region=index.get("region"),
+                labels=index.get("labels"),
+            )
+        )
+
+    for index_endpoint in vertex.get("index_endpoints", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="vertex-ai",
+                kind="endpoint",
+                id=index_endpoint.get("name"),
+                name=index_endpoint.get("displayName") or index_endpoint.get("name"),
+                region=index_endpoint.get("region"),
+                dependencies=[item.get("index") for item in index_endpoint.get("deployedIndexes", []) if item.get("index")],
+                labels=index_endpoint.get("labels"),
+            )
+        )
+
     return assets
 
 
@@ -254,6 +357,7 @@ def _normalize_azure(document: dict[str, Any]) -> list[dict[str, Any]]:
     assets: list[dict[str, Any]] = []
     provider = (document.get("provider") or "azure").lower()
     aml = document.get("azure_ml", {}) or {}
+    ai_foundry = document.get("ai_foundry", {}) or {}
 
     for model in aml.get("models", []):
         assets.append(
@@ -292,6 +396,56 @@ def _normalize_azure(document: dict[str, Any]) -> list[dict[str, Any]]:
                 name=deployment.get("name"),
                 version=deployment.get("version"),
                 dependencies=[deployment.get("model"), deployment.get("endpoint_name")],
+            )
+        )
+
+    for dataset in aml.get("data_assets", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="azure-ml",
+                kind="dataset",
+                id=dataset.get("id") or dataset.get("name"),
+                name=dataset.get("name"),
+                version=dataset.get("version"),
+            )
+        )
+
+    for compute in aml.get("compute_clusters", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="azure-ml",
+                kind="runtime",
+                id=compute.get("id") or compute.get("name"),
+                name=compute.get("name"),
+                version=compute.get("size") or compute.get("vmSize"),
+                status=compute.get("state"),
+            )
+        )
+
+    for deployment in ai_foundry.get("deployments", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="ai-foundry",
+                kind="endpoint",
+                id=deployment.get("id") or deployment.get("name"),
+                name=deployment.get("name"),
+                status=deployment.get("provisioning_state") or deployment.get("status"),
+                dependencies=[deployment.get("model"), deployment.get("project_id")],
+            )
+        )
+
+    for project in ai_foundry.get("projects", []):
+        assets.append(
+            _make_asset(
+                provider=provider,
+                service="ai-foundry",
+                kind="runtime",
+                id=project.get("id") or project.get("name"),
+                name=project.get("name"),
+                status=project.get("status"),
             )
         )
 
