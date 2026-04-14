@@ -14,6 +14,7 @@ The format is loosely based on Keep a Changelog.
 ### Added
 
 - [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md) and [`docs/STATE_AND_TIMELINE_MODEL.md`](docs/STATE_AND_TIMELINE_MODEL.md) to make `native`, `canonical`, `ocsf`, and `bridge` modes explicit and to pin historical-state, tombstone, and timeline expectations across just-in-time and persistent runs.
+- [`docs/DEBUGGING.md`](docs/DEBUGGING.md) and [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for operator-facing format, CI, and runtime troubleshooting.
 - `ingest-okta-system-log-ocsf` as the first external identity-vendor ingestion skill, mapping verified Okta System Log session, user lifecycle, and membership events into OCSF Authentication (3002), Account Change (3001), and User Access Management (3005).
 - `detect-okta-mfa-fatigue` as the first Okta-native detection skill, emitting OCSF Detection Finding (2004) for repeated Okta Verify push challenge and denial bursts aligned to MITRE ATT&CK T1621.
 - `ingest-entra-directory-audit-ocsf` as the Microsoft Entra / Graph identity-audit ingestion skill, mapping verified `directoryAudit` application, service-principal, app-role-assignment, and federated-credential events into OCSF API Activity (6003).
@@ -41,6 +42,7 @@ The format is loosely based on Keep a Changelog.
 - Extended the native/OCSF pilot to `ingest-entra-directory-audit-ocsf` and `detect-entra-credential-addition`, so Entra directory-audit ingestion and credential-addition detection now support native or OCSF input/output without changing the underlying detection semantics.
 - Extended the native/OCSF pilot to `ingest-okta-system-log-ocsf` and `detect-okta-mfa-fatigue`, so the Okta System Log ingestion and MFA-fatigue detection path now supports native or OCSF input/output without changing the underlying detection semantics.
 - Made the README honest about current schema-mode rollout, required `input_formats` / `output_formats` for every shipped skill, and documented the native output fields on the currently dual-mode skills.
+- Added a runnable README hello-world path, clarified that the `DATA_FLOW.md` rollout list is now driven by README + `SKILL.md` frontmatter, and documented bounded-batch guidance for `detect-lateral-movement`.
 
 - `docs/COVERAGE_MODEL.md`, `docs/framework-coverage.json`, and `docs/ROADMAP.md` to make framework, provider, asset, and execution coverage measurable and auditable.
 - `scripts/validate_framework_coverage.py` so CI can reject undocumented or drifting coverage claims.

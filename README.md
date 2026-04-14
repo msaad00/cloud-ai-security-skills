@@ -14,6 +14,29 @@
 - Read-only by default, least-privilege, zero-trust
 - Deterministic, auditable, and grounded in official vendor docs
 
+## 1-minute hello world
+
+Run a real bundled fixture through an end-to-end pipeline:
+
+```bash
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
+  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
+  > findings.sarif
+```
+
+Or keep the repo-native format for the ingest + detect path:
+
+```bash
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
+  --output-format native \
+  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+      --output-format native \
+  > findings.native.jsonl
+```
+
 ## Quick start
 
 **Start here**
@@ -26,6 +49,7 @@
 - Schema modes and interoperability: [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
 - Canonical schema and data flow: [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md) and [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
 - Historical state and timeline handling: [docs/STATE_AND_TIMELINE_MODEL.md](docs/STATE_AND_TIMELINE_MODEL.md)
+- Debugging and troubleshooting: [docs/DEBUGGING.md](docs/DEBUGGING.md) and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), and [docs/ROADMAP.md](docs/ROADMAP.md)
 
 | Tool | Best integration path | What to rely on |
@@ -63,7 +87,7 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 
 | Layer | Role | Output |
 |---|---|---|
-| **Ingest** | Per-source raw payload → canonical model, with optional OCSF or bridge output | native JSON, canonical JSON, or OCSF API / Network / HTTP / Application Activity |
+| **Ingest** | Per-source raw payload → canonical model, with optional native / OCSF / bridge output | native JSON, OCSF API / Network / HTTP / Application Activity, or bridge JSON |
 | **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, canonical evidence, OCSF inventory/evidence bridge events, or CycloneDX-aligned BOM |
 | **Detect** | canonical or OCSF telemetry → finding + MITRE ATT&CK | Detection Finding (class 2004) or documented native/canonical finding output |
 | **Evaluate** | canonical or OCSF telemetry → framework check | Compliance Finding (class 2003) or documented evidence/check output |
@@ -260,6 +284,8 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | [`ROADMAP.md`](docs/ROADMAP.md) | Coverage and execution roadmap for cloud, AI, and framework depth |
 | [`RUNTIME_ISOLATION.md`](docs/RUNTIME_ISOLATION.md) | Sandbox, credential, transport, integrity, and approval guidance by execution mode |
 | [`SIEM_INDEX_GUIDE.md`](docs/SIEM_INDEX_GUIDE.md) | Index fields, dedupe keys, timestamps, and transport guidance for OCSF consumers |
+| [`DEBUGGING.md`](docs/DEBUGGING.md) | Common integration failures, format mismatches, and scaling guidance |
+| [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Short answers for common operator, reviewer, and CI questions |
 | [`mcp-server/README.md`](mcp-server/README.md) | Thin local MCP wrapper for auto-discovered skills |
 | [`DEPENDENCY_HYGIENE_SKILL.md`](docs/DEPENDENCY_HYGIENE_SKILL.md) | Proposed safe dependency-update skill contract |
 | [`SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) | Minimum files, metadata, and guardrails for shipped skills |

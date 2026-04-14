@@ -92,6 +92,22 @@ event family.
 
 Default 15 minutes post-anchor. Rationale: attackers tend to act fast after acquiring a more powerful cloud identity. A longer window catches more but produces more false positives on legitimate cross-service traffic.
 
+### Batch sizing guidance
+
+This detector is designed for bounded batch windows, not as an infinite-stream
+in-memory correlator. Today it materializes the normalized event set for the
+current run before correlation.
+
+Recommended operator pattern:
+
+- partition by provider and account or tenant where possible
+- keep replay or scheduled jobs in explicit time windows
+- use upstream chunking for higher-volume environments instead of sending a full
+  mixed day of audit and flow telemetry through one process
+
+If you need continuous or very high-volume operation, put a runner in front of
+this skill and let the runner own checkpointing and chunk boundaries.
+
 ### Why RFC1918-only
 
 The purpose of this rule is **east-west detection**. Egress to the public internet is a different detector (data exfiltration). Filtering to RFC1918 destinations — `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, plus the shared `100.64.0.0/10` — means any fire is definitionally east-west.
