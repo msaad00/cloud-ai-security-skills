@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+import ingest as ingest_module  # type: ignore[import-not-found]
 from ingest import (  # type: ignore[import-not-found]
     ACTIVITY_CREATE,
     ACTIVITY_DELETE,
@@ -301,3 +302,15 @@ class TestGoldenFixture:
         events = _load_jsonl(OCSF_FIXTURE)
         actors = {e["actor"]["user"]["name"] for e in events}
         assert actors == {"system:serviceaccount:default:builder"}
+
+
+class TestStderrTelemetry:
+    def test_skips_malformed_with_json_stderr(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        out = list(ingest_module.iter_raw_entries(['{"bad": ', '{"kind": "Event"}']))
+        assert len(out) == 1
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["skill"] == SKILL_NAME
+        assert payload["level"] == "warning"
+        assert payload["event"] == "json_parse_failed"
+        assert payload["line"] == 1

@@ -53,6 +53,12 @@ Expected controls:
 - optional structured `stderr` telemetry via `SKILL_LOG_FORMAT=json` or `AGENT_TELEMETRY=1` for wrappers and operators that need machine-readable runtime hints
 - strict input validation before parse, convert, or cloud calls
 
+Current pilots:
+- `ingest-cloudtrail-ocsf`
+- `detect-lateral-movement`
+- `ingest-k8s-audit-ocsf`
+- `detect-privilege-escalation-k8s`
+
 ## Write-capable skills and edge components
 
 These are the only places where side effects should happen:
