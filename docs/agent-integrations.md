@@ -47,10 +47,15 @@ The same skill should be usable in all of these modes without code changes:
 |---|---|---|
 | **CLI / just-in-time** | user or agent invokes the script directly | one-off analysis, triage, conversion, local debugging |
 | **CI** | GitHub Actions or another build system | regression tests, compliance snapshots, SARIF generation |
-| **Persistent / serverless** | queue, runner, EventBridge, Step Functions, scheduled jobs | continuous detection or remediation pipelines |
+| **Persistent / serverless** | queue, runner, EventBridge, Step Functions, scheduled jobs | continuous detection or remediation pipelines; in most cases this means the skill is runner-compatible, not that the repo already ships a dedicated runtime |
 | **MCP** | local `mcp-server/` wrapper | Claude, Codex, Cursor, Windsurf, Cortex Code CLI |
 
 MCP is the access layer, not a separate implementation model.
+
+Important nuance:
+- `execution_modes: persistent` in a skill contract means the skill can be embedded in a long-lived runner or serverless loop without changing the skill code
+- it does **not** automatically mean the repo already ships that runner, daemon, or sink
+- today, most skills are persistent-compatible; only a smaller set of workflows ship repo-owned persistent wrappers
 
 ## What Does Not Exist Yet
 

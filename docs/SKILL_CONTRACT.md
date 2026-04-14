@@ -52,6 +52,9 @@ Rules:
   - `ci`
   - `mcp`
   - `persistent`
+- `execution_modes: persistent` means the skill can be embedded unchanged in a long-lived runner, queue consumer, scheduler, or serverless loop.
+- `persistent` does **not** imply that this repo already ships a dedicated runner, daemon, Lambda wrapper, or sink for that skill.
+- if a skill is the exception and does ship a repo-owned persistent entrypoint, document that explicitly in `SKILL.md`
 - `side_effects` must be a comma-separated subset of:
   - `none`
   - `writes-cloud`

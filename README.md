@@ -108,6 +108,8 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design, 
 
 The important rule is that the **skill code does not change between modes**. `SKILL.md + src/ + tests/` stays the product; the runner, pipeline, or MCP wrapper is only the access path.
 
+`execution_modes: persistent` means the skill is safe to embed in a persistent runner or serverless loop. It does **not** mean this repo already ships a dedicated daemon, queue worker, or sink for that skill. Today the only fully shipped persistent workflow is `iam-departures-remediation`; the broader runner and sink layer remains an explicit roadmap item.
+
 ## Safety model
 
 | Skill type | Default posture | Required controls |

@@ -108,6 +108,11 @@ The repo operates across four schema modes:
 
 Most current ingest, detect, evaluate, view, and sink paths are still **OCSF-friendly JSONL**, but OCSF is no longer the only valid operating mode. Discovery and evidence paths may emit deterministic native or canonical artifacts, plus OCSF bridge events where that improves interoperability. The current discovery set already supports explicit bridge modes for `Cloud Resources Inventory Info [5023]` and `Live Evidence Info [5040]`.
 
+Execution-mode note:
+- `execution_modes: persistent` means a skill is safe to embed in a persistent runner, queue consumer, scheduler, or serverless loop without changing the skill logic
+- it does **not** mean the repo already ships that runner, daemon, or sink for every skill
+- today, the broad runner/sink layer is still planned work; `iam-departures-remediation` is the main shipped exception with repo-owned event-driven infrastructure
+
 For the detailed contract, see:
 
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)

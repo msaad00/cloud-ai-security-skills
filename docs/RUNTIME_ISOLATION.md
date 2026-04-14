@@ -15,6 +15,11 @@ Each shipped `SKILL.md` now declares:
 
 Agents and wrappers should treat those fields as part of the runtime contract, not optional documentation.
 
+Important meaning:
+- `execution_modes: persistent` means the skill is compatible with a persistent runner or serverless loop
+- it does **not** mean the repo already ships a dedicated daemon, queue worker, sink, or Lambda wrapper for that skill
+- today, most skills are persistent-compatible but still run as stateless CLI tools; only a small number of workflows ship repo-owned persistent code paths
+
 ## Modes
 
 | Mode | Best for | Isolation posture | Human approval |
@@ -23,6 +28,11 @@ Agents and wrappers should treat those fields as part of the runtime contract, n
 | CI | regression testing, policy checks, snapshots | ephemeral runner, short-lived creds, no write skills in normal PR lanes | never for read-only skills |
 | MCP | local agent tool calling | stdio-only wrapper, fixed tool surface, timeouts, no generic shell tool | inherited from the wrapped skill |
 | Persistent / serverless | continuous detection, sinks, remediation | isolated runner or cloud service boundary, checkpointing, egress controls, idempotent writes | required for destructive actions |
+
+Persistent mode should be read as:
+- the skill stays stateless and deterministic
+- a separate runner or serverless wrapper owns checkpoints, retries, queue offsets, and sink writes
+- operators still need to provide the surrounding runtime unless the skill explicitly ships one
 
 ## Read-only skills
 
@@ -47,6 +57,9 @@ These are the only places where side effects should happen:
 - `remediation/`
 - future `sinks/`
 - future `runners/`
+
+Current shipped exception:
+- `iam-departures-remediation` includes repo-owned Lambda handlers and infrastructure for its event-driven persistent path
 
 Required controls:
 - `--dry-run` support
