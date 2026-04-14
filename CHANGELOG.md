@@ -33,6 +33,7 @@ The format is loosely based on Keep a Changelog.
 - clarified in the README and use-case guide that repo-owned remediation audit lands in DynamoDB + S3 today, while customer-controlled sinks such as Snowflake / Snowpipe belong to the planned sink / runner layer rather than the currently shipped generic path.
 - a new start-here visual and updated IAM departures data-flow visual so operators can see sources, layer choice, outputs, runtime surfaces, and the shipped-vs-optional sink boundary without reading the full architecture docs first.
 - a runtime-surfaces visual showing that CLI, CI, MCP, and persistent wrappers all call the same `SKILL.md + src/ + tests/` contract instead of creating parallel implementations.
+- expanded the vendor icon asset set with Okta plus Microsoft Entra and Google Workspace stand-ins so the visual system can represent shipped identity sources alongside cloud and data-platform vendors.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed

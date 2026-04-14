@@ -1,11 +1,12 @@
 # Vendor icons
 
 Source SVGs used to derive the `<symbol>` definitions embedded inline in
-[`../iam-departures-architecture.svg`](../iam-departures-architecture.svg).
+[`../iam-departures-architecture.svg`](../iam-departures-architecture.svg) and
+other polished repo visuals.
 
 ## Attribution
 
-Six of the seven icons come from **[Simple Icons](https://simpleicons.org/)**,
+Nine of the ten icons come from **[Simple Icons](https://simpleicons.org/)**,
 a curated collection of SVG brand icons released under **CC0 1.0
 Universal** (public domain). The project maintains the icons specifically
 for documentation and application use, and the license is deliberately
@@ -28,6 +29,26 @@ The files in this directory are the unmodified SVGs as fetched from
 | `snowflake.svg` | `snowflake` | Snowflake HR source + Snowflake target |
 | `databricks.svg` | `databricks` | Databricks HR source + Databricks target |
 | `clickhouse.svg` | `clickhouse` | ClickHouse HR source |
+| `okta.svg` | `okta` | Okta identity source |
+| `microsoftentra.svg` | `microsoft` | Microsoft Entra identity source (umbrella Microsoft mark used as a stand-in) |
+| `googleworkspace.svg` | `google` | Google Workspace identity source (umbrella Google mark used as a stand-in) |
+
+## Stand-in product marks
+
+Simple Icons includes a direct `okta` icon, so the Okta source can use the
+product mark directly.
+
+Simple Icons does **not** currently expose a dedicated `microsoftentra` or
+`googleworkspace` product icon. Until the repo adopts vendor-licensed product
+artwork or another acceptable open icon source, these files intentionally use
+the umbrella `microsoft` and `google` brand marks as documentation-safe
+stand-ins for:
+
+- Microsoft Entra
+- Google Workspace
+
+That keeps the visual set honest about source families without implying that
+these are official product-specific marks.
 
 ## Workday — generic glyph
 
@@ -46,7 +67,8 @@ It is not a reproduction of any brand mark.
 
 ## Trademarks
 
-AWS, Azure, GCP, Snowflake, Databricks, ClickHouse, and Workday are
+AWS, Azure, GCP, Okta, Microsoft, Google, Snowflake, Databricks, ClickHouse,
+and Workday are
 trademarks of their respective owners. Their use in the architecture
 diagram is nominative — identifying the products as components of a
 real-world IAM departures pipeline — and conforms to the usage patterns
@@ -65,11 +87,33 @@ re-generation.
 ## Regenerating
 
 ```bash
-for slug in amazonwebservices microsoftazure googlecloud snowflake databricks clickhouse; do
-  curl -fsSL -A "Mozilla/5.0" \
-    "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${slug}.svg" \
-    -o "docs/images/vendor-icons/${slug}.svg"
-done
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/amazonwebservices.svg" \
+  -o "docs/images/vendor-icons/amazonwebservices.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/microsoftazure.svg" \
+  -o "docs/images/vendor-icons/microsoftazure.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/googlecloud.svg" \
+  -o "docs/images/vendor-icons/googlecloud.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/snowflake.svg" \
+  -o "docs/images/vendor-icons/snowflake.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/databricks.svg" \
+  -o "docs/images/vendor-icons/databricks.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/clickhouse.svg" \
+  -o "docs/images/vendor-icons/clickhouse.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/okta.svg" \
+  -o "docs/images/vendor-icons/okta.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/microsoft.svg" \
+  -o "docs/images/vendor-icons/microsoftentra.svg"
+curl -fsSL -A "Mozilla/5.0" \
+  "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/google.svg" \
+  -o "docs/images/vendor-icons/googleworkspace.svg"
 ```
 
 Then re-run the path-extraction + inline-embed script documented in the
