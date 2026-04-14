@@ -12,9 +12,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from detect import (  # type: ignore[import-not-found]
     AUTH_CLASS_UID,
     BRUTE_FORCE_UID,
+    CANONICAL_VERSION,
     FINDING_CLASS_UID,
     FINDING_TYPE_UID,
     MIN_FAILURES,
+    OUTPUT_FORMATS,
     REPO_NAME,
     REPO_VENDOR,
     SKILL_NAME,
@@ -87,6 +89,42 @@ def _event(
     return event
 
 
+def _native_event(
+    *,
+    uid: str,
+    event_name: str,
+    time_ms: int,
+    user_uid: str = "workspace-user-1",
+    user_name: str = "alice@example.com",
+    ip: str = "198.51.100.21",
+    session_uid: str = "workspace-login-1",
+    suspicious: bool = False,
+    status_id: int = 1,
+    status_detail: str | None = None,
+) -> dict:
+    params: dict[str, object] = {"login_type": "google_password"}
+    if suspicious:
+        params["is_suspicious"] = True
+    event = {
+        "schema_mode": "native",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "authentication",
+        "source_skill": "ingest-google-workspace-login-ocsf",
+        "event_uid": uid,
+        "provider": "Google Workspace",
+        "time_ms": time_ms,
+        "status_id": status_id,
+        "user": {"uid": user_uid, "name": user_name, "email_addr": user_name},
+        "src_endpoint": {"ip": ip},
+        "session": {"uid": session_uid},
+        "event_name": event_name,
+        "parameters": params,
+    }
+    if status_detail:
+        event["status_detail"] = status_detail
+    return event
+
+
 class TestDetection:
     def test_suspicious_flag_fires(self):
         events = [_event(uid="evt-1", event_name="login_success", time_ms=1000, suspicious=True)]
@@ -153,6 +191,31 @@ class TestDetection:
     def test_golden_fixture_matches(self):
         findings = list(detect(_load(INPUT)))
         assert findings == _load(EXPECTED)
+
+    def test_native_input_can_emit_native_finding(self):
+        events = [_native_event(uid="evt-1", event_name="login_success", time_ms=1000, suspicious=True)]
+        findings = list(detect(events, output_format="native"))
+        assert OUTPUT_FORMATS == ("ocsf", "native")
+        assert len(findings) == 1
+        finding = findings[0]
+        assert finding["schema_mode"] == "native"
+        assert finding["record_type"] == "detection_finding"
+        assert finding["provider"] == "Google Workspace"
+        assert "class_uid" not in finding
+
+    def test_native_input_can_emit_ocsf_finding(self):
+        events = [_native_event(uid="evt-1", event_name="login_success", time_ms=1000, suspicious=True)]
+        findings = list(detect(events, output_format="ocsf"))
+        assert len(findings) == 1
+        assert findings[0]["class_uid"] == FINDING_CLASS_UID
+
+    def test_rejects_unsupported_output_format(self):
+        try:
+            list(detect([], output_format="bridge"))
+        except ValueError as exc:
+            assert "unsupported output_format" in str(exc)
+        else:
+            raise AssertionError("expected unsupported output_format to raise")
 
 
 class TestMetadata:

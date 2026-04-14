@@ -33,6 +33,7 @@ The format is loosely based on Keep a Changelog.
 - Extended the native/OCSF pilot to `ingest-k8s-audit-ocsf` and `detect-sensitive-secret-read-k8s`, so Kubernetes audit ingestion and one Kubernetes detector now support the same dual-mode rollout pattern as the earlier CloudTrail / VPC / lateral-movement pilots.
 - Extended the native/OCSF pilot to `detect-privilege-escalation-k8s`, so the main windowed Kubernetes privilege-escalation detector now accepts native or OCSF input and can emit native or OCSF findings.
 - Extended the native/OCSF pilot to `ingest-mcp-proxy-ocsf` and `detect-mcp-tool-drift`, so the MCP application-activity ingestion and tool-drift detection path now supports native or OCSF input/output without changing the core drift logic.
+- Extended the native/OCSF pilot to `ingest-google-workspace-login-ocsf` and `detect-google-workspace-suspicious-login`, so the Workspace login ingestion and suspicious-login detection path now supports native or OCSF input/output without changing the underlying detection semantics.
 - Made the README honest about current schema-mode rollout, required `input_formats` / `output_formats` for every shipped skill, and documented the native output fields on the currently dual-mode skills.
 
 - `docs/COVERAGE_MODEL.md`, `docs/framework-coverage.json`, and `docs/ROADMAP.md` to make framework, provider, asset, and execution coverage measurable and auditable.

@@ -137,10 +137,12 @@ Implemented dual-mode skills today:
 - `ingest-vpc-flow-logs-ocsf`
 - `ingest-k8s-audit-ocsf`
 - `ingest-mcp-proxy-ocsf`
+- `ingest-google-workspace-login-ocsf`
 - `detect-lateral-movement`
 - `detect-privilege-escalation-k8s`
 - `detect-sensitive-secret-read-k8s`
 - `detect-mcp-tool-drift`
+- `detect-google-workspace-suspicious-login`
 
 Implemented native-first with bridge skills today:
 
