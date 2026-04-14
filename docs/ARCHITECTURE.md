@@ -125,6 +125,7 @@ For the detailed contract, see:
 
 For quick orientation, use the visual set in [`DIAGRAMS.md`](./DIAGRAMS.md):
 
+- **Runtime surfaces** — [`runtime-surfaces.svg`](./images/runtime-surfaces.svg)
 - **Repo architecture** — [`repo-architecture.svg`](./images/repo-architecture.svg)
 - **IAM departures data flow** — [`iam-departures-data-flow.svg`](./images/iam-departures-data-flow.svg)
 - **Detection pipeline** — [`detection-pipeline.svg`](./images/detection-pipeline.svg)

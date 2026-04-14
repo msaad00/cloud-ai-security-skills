@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+  <title id="title">Runtime surfaces call the same skill contract</title>
+  <desc id="desc">CLI, CI, MCP, and persistent wrappers all invoke the same skill bundle and produce the same governed outputs.</desc>
+  <rect width="1280" height="520" fill="#08111f"/>
+  <rect x="24" y="24" width="1232" height="472" rx="28" fill="#0f172a" stroke="#334155"/>
+
+  <g font-family="Arial, sans-serif">
+    <text x="56" y="72" fill="#f8fafc" font-size="32" font-weight="700">One skill contract, many runtime surfaces</text>
+    <text x="56" y="102" fill="#94a3b8" font-size="17">CLI, CI, MCP, and persistent wrappers are access paths. They do not fork the skill implementation.</text>
+
+    <rect x="56" y="152" width="220" height="240" rx="20" fill="#172554" stroke="#60a5fa"/>
+    <text x="82" y="190" fill="#dbeafe" font-size="24" font-weight="700">Runtime surfaces</text>
+    <text x="82" y="226" fill="#eff6ff" font-size="17" font-weight="700">CLI / Unix pipes</text>
+    <text x="82" y="250" fill="#cbd5e1" font-size="15">one-shot analysis and local pipelines</text>
+    <text x="82" y="286" fill="#eff6ff" font-size="17" font-weight="700">CI</text>
+    <text x="82" y="310" fill="#cbd5e1" font-size="15">PR checks, SARIF, scheduled snapshots</text>
+    <text x="82" y="346" fill="#eff6ff" font-size="17" font-weight="700">MCP</text>
+    <text x="82" y="370" fill="#cbd5e1" font-size="15">Claude, Codex, Cursor, Windsurf, Cortex</text>
+
+    <rect x="360" y="118" width="560" height="308" rx="24" fill="#111827" stroke="#94a3b8"/>
+    <text x="390" y="160" fill="#f8fafc" font-size="28" font-weight="700">Shared skill bundle</text>
+    <text x="390" y="192" fill="#94a3b8" font-size="16">Every surface calls the same repo-owned contract.</text>
+
+    <rect x="392" y="228" width="216" height="150" rx="18" fill="#083344" stroke="#2dd4bf"/>
+    <text x="418" y="262" fill="#ccfbf1" font-size="22" font-weight="700">Contract</text>
+    <text x="418" y="290" fill="#ecfeff" font-size="15">SKILL.md</text>
+    <text x="418" y="312" fill="#cbd5e1" font-size="14">approval_model</text>
+    <text x="418" y="332" fill="#cbd5e1" font-size="14">execution_modes</text>
+    <text x="418" y="352" fill="#cbd5e1" font-size="14">input_formats / output_formats</text>
+
+    <rect x="640" y="228" width="248" height="150" rx="18" fill="#3b0764" stroke="#c084fc"/>
+    <text x="668" y="262" fill="#f3e8ff" font-size="22" font-weight="700">Implementation</text>
+    <text x="668" y="290" fill="#f8fafc" font-size="15">src/ + tests/ + REFERENCES.md</text>
+    <text x="668" y="312" fill="#ddd6fe" font-size="14">same code path across wrappers</text>
+    <text x="668" y="332" fill="#ddd6fe" font-size="14">native / canonical / OCSF aware</text>
+    <text x="668" y="352" fill="#ddd6fe" font-size="14">deterministic IDs and audit rules</text>
+
+    <rect x="1004" y="152" width="220" height="240" rx="20" fill="#1f2937" stroke="#94a3b8"/>
+    <text x="1030" y="190" fill="#f8fafc" font-size="24" font-weight="700">Outputs</text>
+    <text x="1030" y="226" fill="#f8fafc" font-size="17" font-weight="700">Data streams</text>
+    <text x="1030" y="250" fill="#cbd5e1" font-size="15">native, OCSF, bridge, evidence</text>
+    <text x="1030" y="286" fill="#f8fafc" font-size="17" font-weight="700">Exports</text>
+    <text x="1030" y="310" fill="#cbd5e1" font-size="15">SARIF, Mermaid, AI BOM</text>
+    <text x="1030" y="346" fill="#f8fafc" font-size="17" font-weight="700">Guarded writes</text>
+    <text x="1030" y="370" fill="#cbd5e1" font-size="15">dry-run plan and audited actions</text>
+
+    <path d="M276 272 L360 272" stroke="#60a5fa" stroke-width="4" fill="none"/>
+    <path d="M920 272 L1004 272" stroke="#94a3b8" stroke-width="4" fill="none"/>
+
+    <rect x="56" y="420" width="1168" height="48" rx="16" fill="#111827" stroke="#475569"/>
+    <text x="82" y="450" fill="#f8fafc" font-size="17" font-weight="700">Rule:</text>
+    <text x="138" y="450" fill="#cbd5e1" font-size="16">wrappers can add gating, scheduling, caller context, or sinks; they must not create a second implementation model.</text>
+  </g>
+</svg>
