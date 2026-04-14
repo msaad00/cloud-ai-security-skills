@@ -2,12 +2,13 @@
 name: detect-privilege-escalation-k8s
 description: >-
   Detect Kubernetes privilege escalation patterns in OCSF 1.8 API Activity
-  events (class 6003) produced by ingest-k8s-audit-ocsf. Reads normalised
-  kube-apiserver audit events, groups them by actor (service account or user)
-  over a sliding window, and fires OCSF 1.8 Detection Finding (class 2004)
-  events for four patterns: (1) service-account secret enumeration followed
-  by get (MITRE T1552.007 Container API), (2) service-account exec into a pod
-  (MITRE T1611 Escape to Host), (3) creation of a ClusterRoleBinding or
+  events (class 6003) or the native enriched Kubernetes activity shape
+  produced by ingest-k8s-audit-ocsf. Reads normalised kube-apiserver audit
+  events, groups them by actor (service account or user) over a sliding
+  window, and fires OCSF 1.8 Detection Finding (class 2004) events by
+  default for four patterns: (1) service-account secret enumeration followed
+  by get (MITRE T1552.007 Container API), (2) service-account exec into a
+  pod (MITRE T1611 Escape to Host), (3) creation of a ClusterRoleBinding or
   RoleBinding by a non-admin principal (MITRE T1098 Account Manipulation),
   and (4) token-review or token-request self-grant by a service account
   (MITRE T1550.001 Application Access Token). Use when the user mentions
@@ -21,8 +22,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
-input_formats: ocsf
-output_formats: ocsf
+input_formats: canonical, native, ocsf
+output_formats: native, ocsf
 ---
 
 # detect-privilege-escalation-k8s
@@ -69,7 +70,7 @@ A service account calling `create` on the `tokenrequests` or `tokenreviews` subr
 
 ## Output contract
 
-Each finding is a full OCSF 1.8 Detection Finding matching [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md). Deterministic `finding_info.uid` of the form `det-k8s-<rule>-<actor-hash>-<target-hash>` so re-running on the same input is idempotent.
+Each finding is a full OCSF 1.8 Detection Finding matching [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) by default. Deterministic `finding_info.uid` of the form `det-k8s-<rule>-<actor-hash>-<target-hash>` so re-running on the same input is idempotent.
 
 `finding_info.attacks[]` always carries:
 - `version: "v14"`
@@ -83,11 +84,47 @@ Rule 1 uses a time window because it requires two events to correlate. The windo
 
 ## Usage
 
+## Native output format
+
+`--output-format native` emits one native detection-finding record per match with:
+
+- `schema_mode`
+- `canonical_schema_version`
+- `record_type`
+- `source_skill`
+- `output_format`
+- `finding_uid`
+- `event_uid`
+- `provider`
+- `time_ms`
+- `severity`
+- `severity_id`
+- `status`
+- `status_id`
+- `title`
+- `description`
+- `finding_types`
+- `first_seen_time_ms`
+- `last_seen_time_ms`
+- `mitre_attacks`
+- `actor_name`
+- `target`
+- `rule_name`
+- `observables`
+- `evidence_count`
+
+## Usage
+
 ```bash
-# Piped from the ingest skill
+# Piped from the ingest skill (default OCSF output)
 python ../ingest-k8s-audit-ocsf/src/ingest.py audit.log \
   | python src/detect.py \
   > findings.ocsf.jsonl
+
+# Native end-to-end path
+python ../ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
+  | python src/detect.py --output-format native \
+  > findings.native.jsonl
 
 # Standalone OCSF file
 python src/detect.py ../golden/k8s_audit_sample.ocsf.jsonl

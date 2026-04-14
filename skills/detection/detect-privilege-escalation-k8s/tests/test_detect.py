@@ -70,6 +70,35 @@ def _sa_event(
     }
 
 
+def _native_sa_event(
+    *,
+    verb: str,
+    resource_type: str,
+    time_ms: int = 1775797200000,
+    name: str = "",
+    namespace: str = "default",
+    subresource: str = "",
+    sa: str = "system:serviceaccount:default:builder",
+    groups: list[str] | None = None,
+) -> dict:
+    r: dict = {"type": resource_type}
+    if name:
+        r["name"] = name
+    if namespace:
+        r["namespace"] = namespace
+    if subresource:
+        r["subresource"] = subresource
+    return {
+        "schema_mode": "native",
+        "record_type": "api_activity",
+        "provider": "Kubernetes",
+        "time_ms": time_ms,
+        "operation": verb,
+        "actor": {"user": {"name": sa, "type": "ServiceAccount", "groups": [{"name": g} for g in (groups or [])]}},
+        "resources": [r],
+    }
+
+
 # ── Rule 1: secret enumeration ────────────────────────────────────────
 
 
@@ -81,7 +110,7 @@ class TestRule1:
         ]
         findings = list(rule1_secret_enumeration(events))
         assert len(findings) == 1
-        assert findings[0]["finding_info"]["attacks"][0]["sub_technique"]["uid"] == R1_SUB_UID
+        assert findings[0]["mitre_attacks"][0]["sub_technique_uid"] == R1_SUB_UID
         assert findings[0]["severity_id"] == SEVERITY_HIGH
 
     def test_get_without_list_does_not_fire(self):
@@ -146,9 +175,18 @@ class TestRule1:
             _sa_event(verb="list", resource_type="secrets", time_ms=1000),
             _sa_event(verb="get", resource_type="secrets", name="db", time_ms=2000),
         ]
-        a = list(rule1_secret_enumeration(events))[0]["finding_info"]["uid"]
-        b = list(rule1_secret_enumeration(events))[0]["finding_info"]["uid"]
+        a = list(rule1_secret_enumeration(events))[0]["finding_uid"]
+        b = list(rule1_secret_enumeration(events))[0]["finding_uid"]
         assert a == b
+
+    def test_native_input_fires(self):
+        events = [
+            _native_sa_event(verb="list", resource_type="secrets", time_ms=1000),
+            _native_sa_event(verb="get", resource_type="secrets", name="db", time_ms=2000),
+        ]
+        findings = list(rule1_secret_enumeration(events))
+        assert len(findings) == 1
+        assert findings[0]["rule_name"] == "r1-secret-enum"
 
 
 # ── Rule 2: pod exec ──────────────────────────────────────────────────
@@ -159,7 +197,7 @@ class TestRule2:
         events = [_sa_event(verb="create", resource_type="pods", name="web", subresource="exec")]
         findings = list(rule2_pod_exec(events))
         assert len(findings) == 1
-        assert findings[0]["finding_info"]["attacks"][0]["technique"]["uid"] == R2_TECH_UID
+        assert findings[0]["mitre_attacks"][0]["technique_uid"] == R2_TECH_UID
         assert findings[0]["severity_id"] == SEVERITY_CRITICAL
 
     def test_pod_create_without_exec_subresource_does_not_fire(self):
@@ -190,6 +228,12 @@ class TestRule2:
         ]
         assert len(list(rule2_pod_exec(events))) == 1
 
+    def test_native_input_fires(self):
+        events = [_native_sa_event(verb="create", resource_type="pods", name="web", subresource="exec")]
+        findings = list(rule2_pod_exec(events))
+        assert len(findings) == 1
+        assert findings[0]["severity"] == "critical"
+
 
 # ── Rule 3: RBAC self-grant ───────────────────────────────────────────
 
@@ -214,7 +258,7 @@ class TestRule3:
         )
         findings = list(rule3_rbac_self_grant([ev]))
         assert len(findings) == 1
-        assert findings[0]["finding_info"]["attacks"][0]["technique"]["uid"] == R3_TECH_UID
+        assert findings[0]["mitre_attacks"][0]["technique_uid"] == R3_TECH_UID
         assert findings[0]["severity_id"] == SEVERITY_CRITICAL
 
     def test_non_admin_rb_fires(self):
@@ -241,6 +285,20 @@ class TestRule3:
         events = [_sa_event(verb="create", resource_type="pods", name="web")]
         assert list(rule3_rbac_self_grant(events)) == []
 
+    def test_native_input_fires(self):
+        event = {
+            "schema_mode": "native",
+            "record_type": "api_activity",
+            "provider": "Kubernetes",
+            "time_ms": 1000,
+            "operation": "create",
+            "actor": {"user": {"name": "user-bob", "type": "User", "groups": []}},
+            "resources": [{"type": "rolebindings", "name": "attacker", "namespace": "default"}],
+        }
+        findings = list(rule3_rbac_self_grant([event]))
+        assert len(findings) == 1
+        assert findings[0]["rule_name"] == "r3-rbac-self-grant"
+
 
 # ── Rule 4: token self-grant ──────────────────────────────────────────
 
@@ -250,7 +308,7 @@ class TestRule4:
         events = [_sa_event(verb="create", resource_type="serviceaccounts", name="target-sa", subresource="token")]
         findings = list(rule4_token_self_grant(events))
         assert len(findings) == 1
-        assert findings[0]["finding_info"]["attacks"][0]["sub_technique"]["uid"] == R4_SUB_UID
+        assert findings[0]["mitre_attacks"][0]["sub_technique_uid"] == R4_SUB_UID
 
     def test_tokenrequest_subresource_fires(self):
         events = [_sa_event(verb="create", resource_type="serviceaccounts", name="target-sa", subresource="tokenrequest")]
@@ -276,6 +334,12 @@ class TestRule4:
         ]
         assert list(rule4_token_self_grant(events)) == []
 
+    def test_native_input_fires(self):
+        events = [_native_sa_event(verb="create", resource_type="serviceaccounts", name="target-sa", subresource="token")]
+        findings = list(rule4_token_self_grant(events))
+        assert len(findings) == 1
+        assert findings[0]["severity"] == "high"
+
 
 # ── Finding shape / OCSF compliance ───────────────────────────────────
 
@@ -297,6 +361,22 @@ class TestFindingShape:
         assert "attacks" not in f, "attacks[] must NOT be at event root in OCSF 1.8"
         assert "attacks" in f["finding_info"]
         assert len(f["finding_info"]["attacks"]) == 1
+
+    def test_native_output_has_no_ocsf_envelope(self):
+        events = [_sa_event(verb="create", resource_type="pods", name="web", subresource="exec")]
+        finding = list(detect(events, output_format="native"))[0]
+        assert finding["schema_mode"] == "native"
+        assert finding["record_type"] == "detection_finding"
+        assert finding["output_format"] == "native"
+        assert "class_uid" not in finding
+        assert "finding_info" not in finding
+        assert finding["rule_name"] == "r2-pod-exec"
+
+    def test_native_input_can_still_emit_ocsf(self):
+        events = [_native_sa_event(verb="create", resource_type="pods", name="web", subresource="exec")]
+        finding = list(detect(events))[0]
+        assert finding["class_uid"] == FINDING_CLASS_UID
+        assert finding["finding_info"]["uid"].startswith("det-k8s-r2-pod-exec-")
 
 
 # ── load_jsonl robustness ─────────────────────────────────────────────

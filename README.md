@@ -83,6 +83,7 @@ Each skill is a standalone Python bundle following [Anthropic's skill spec](http
   - `ingest-vpc-flow-logs-ocsf`
   - `ingest-k8s-audit-ocsf`
   - `detect-lateral-movement`
+  - `detect-privilege-escalation-k8s`
   - `detect-sensitive-secret-read-k8s`
 - native-first with optional bridge:
   - `discover-environment`

@@ -137,6 +137,7 @@ Implemented dual-mode skills today:
 - `ingest-vpc-flow-logs-ocsf`
 - `ingest-k8s-audit-ocsf`
 - `detect-lateral-movement`
+- `detect-privilege-escalation-k8s`
 - `detect-sensitive-secret-read-k8s`
 
 Implemented native-first with bridge skills today:
