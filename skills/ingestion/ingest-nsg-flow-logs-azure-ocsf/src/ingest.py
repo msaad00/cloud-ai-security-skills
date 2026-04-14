@@ -87,7 +87,7 @@ def parse_flow_tuple(value: str, version: int | str = 2) -> dict[str, str]:
     parts = [part.strip() for part in value.split(",")]
     version_num = int(version)
     if version_num >= 2 and len(parts) >= 13:
-        keys = (
+        keys: tuple[str, ...] = (
             "time",
             "src_ip",
             "dst_ip",

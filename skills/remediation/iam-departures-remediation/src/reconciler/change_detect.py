@@ -54,12 +54,12 @@ class ChangeDetector:
             # a remediation export when the underlying departure data is unchanged.
             payload.pop("last_checked_at", None)
             stable_records.append(payload)
-        payload = json.dumps(
+        canonical_payload = json.dumps(
             stable_records,
             sort_keys=True,
             default=str,
         )
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        return hashlib.sha256(canonical_payload.encode("utf-8")).hexdigest()
 
     def get_previous_hash(self) -> str | None:
         """Read the last-known hash from S3.

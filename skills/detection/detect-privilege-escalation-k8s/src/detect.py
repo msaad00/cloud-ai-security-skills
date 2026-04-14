@@ -302,8 +302,8 @@ def rule1_secret_enumeration(events: list[dict[str, Any]]) -> Iterable[dict[str,
             continue
         if event["resource_type"] != "secrets":
             continue
-        key = (event["actor_name"], event["namespace"])
-        list_events.setdefault(key, []).append((event["time_ms"], event))
+        list_key = (event["actor_name"], event["namespace"])
+        list_events.setdefault(list_key, []).append((event["time_ms"], event))
 
     seen_findings: set[str] = set()
     for event in normalized:

@@ -40,9 +40,20 @@ jobs:
       - run: python scripts/validate_framework_coverage.py
       - run: python scripts/validate_ocsf_metadata.py
 
-  safe-skill-bar:
+  type-check:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-python-deps
+        with:
+          python-version: "3.11"
+          packages: mypy
+      - run: bash scripts/run_mypy.sh
+
+  safe-skill-bar:
+    runs-on: ubuntu-latest
+    needs: [lint, skill-contract, type-check]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -61,7 +72,7 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -73,7 +84,7 @@ jobs:
   # ── Unit tests, grouped into category lanes ───────────────────
   test-compliance:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -100,7 +111,7 @@ jobs:
 
   test-remediation:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -115,7 +126,7 @@ jobs:
 
   test-detection-engineering:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -159,7 +170,7 @@ jobs:
 
   test-ai-infra-security:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     name: test-ai-infra
     steps:
       - uses: actions/checkout@v6
@@ -188,7 +199,7 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -200,7 +211,7 @@ jobs:
   # ── IaC validation (CloudFormation + Terraform in one job) ─────
   validate-iac:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -220,7 +231,7 @@ jobs:
   # ── agent-bom scans (code + skills + fs + IaC with SARIF upload) ─
   agent-bom:
     runs-on: ubuntu-latest
-    needs: [lint, skill-contract, safe-skill-bar]
+    needs: [lint, skill-contract, type-check, safe-skill-bar]
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
