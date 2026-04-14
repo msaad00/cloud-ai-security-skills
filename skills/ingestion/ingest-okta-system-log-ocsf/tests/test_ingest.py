@@ -336,6 +336,15 @@ class TestIterRawEvents:
         assert events[0]["uuid"] == "ok"
         assert "skipping line" in capsys.readouterr().err
 
+    def test_json_stderr_telemetry_for_bad_line(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        list(iter_raw_events(['{"bad"']))
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["skill"] == SKILL_NAME
+        assert payload["level"] == "warning"
+        assert payload["event"] == "json_parse_failed"
+        assert payload["line"] == 1
+
 
 class TestGoldenFixture:
     def test_golden_fixture(self):

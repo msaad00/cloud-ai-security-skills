@@ -58,6 +58,8 @@ Current pilots:
 - `detect-lateral-movement`
 - `ingest-k8s-audit-ocsf`
 - `detect-privilege-escalation-k8s`
+- `ingest-okta-system-log-ocsf`
+- `detect-okta-mfa-fatigue`
 
 ## Write-capable skills and edge components
 

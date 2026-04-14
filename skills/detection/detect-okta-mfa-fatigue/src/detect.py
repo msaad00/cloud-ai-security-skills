@@ -16,7 +16,14 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "detect-okta-mfa-fatigue"
 OCSF_VERSION = "1.8.0"
@@ -383,12 +390,25 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as exc:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {exc}", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="json_parse_failed",
+                message=f"skipping line {lineno}: json parse failed: {exc}",
+                line=lineno,
+                error=str(exc),
+            )
             continue
         if isinstance(obj, dict):
             yield obj
         else:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="invalid_json_shape",
+                message=f"skipping line {lineno}: not a JSON object",
+                line=lineno,
+            )
 
 
 def main(argv: list[str] | None = None) -> int:

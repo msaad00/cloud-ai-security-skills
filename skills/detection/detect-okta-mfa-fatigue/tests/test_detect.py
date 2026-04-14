@@ -315,3 +315,12 @@ class TestLoadJsonl:
         out = list(load_jsonl(['{"bad": ', '{"class_uid": 3002}']))
         assert out == [{"class_uid": 3002}]
         assert "skipping line 1" in capsys.readouterr().err
+
+    def test_emits_json_stderr_telemetry_when_enabled(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        list(load_jsonl(['{"bad": ']))
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["skill"] == SKILL_NAME
+        assert payload["level"] == "warning"
+        assert payload["event"] == "json_parse_failed"
+        assert payload["line"] == 1
