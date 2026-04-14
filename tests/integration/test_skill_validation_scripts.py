@@ -134,3 +134,15 @@ class TestValidationScripts:
         assert remediation.caller_roles == ("security_engineer", "incident_responder")
         assert remediation.approver_roles == ("security_lead", "cis_officer")
         assert remediation.min_approvers == 1
+
+    def test_skill_like_dirs_are_canonical_categories_only(self):
+        skill_like_dirs = COMMON.iter_skill_like_dirs()
+        assert skill_like_dirs
+        for path in skill_like_dirs:
+            assert path.parent.name in COMMON.CANONICAL_SKILL_CATEGORIES
+            assert path.name != "__pycache__"
+
+    def test_every_skill_like_dir_has_a_contract(self):
+        skill_like_dirs = COMMON.iter_skill_like_dirs()
+        missing = [path for path in skill_like_dirs if not (path / "SKILL.md").exists()]
+        assert missing == []

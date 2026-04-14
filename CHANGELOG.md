@@ -34,6 +34,7 @@ The format is loosely based on Keep a Changelog.
 - a new start-here visual and updated IAM departures data-flow visual so operators can see sources, layer choice, outputs, runtime surfaces, and the shipped-vs-optional sink boundary without reading the full architecture docs first.
 - a runtime-surfaces visual showing that CLI, CI, MCP, and persistent wrappers all call the same `SKILL.md + src/ + tests/` contract instead of creating parallel implementations.
 - expanded the vendor icon asset set with Okta plus Microsoft Entra and Google Workspace stand-ins so the visual system can represent shipped identity sources alongside cloud and data-platform vendors.
+- broadened the contract validator to fail on skill-like directories missing `SKILL.md`, and expanded the Bandit CI lane from a few hand-picked paths to `skills/`, `mcp-server/`, and `scripts/`.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed

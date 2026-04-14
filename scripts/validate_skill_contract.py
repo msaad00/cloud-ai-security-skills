@@ -12,6 +12,7 @@ from skill_validation_common import (
     ROOT,
     SIDE_EFFECT_VALUES,
     discover_skill_contracts,
+    iter_skill_like_dirs,
 )
 
 
@@ -19,11 +20,16 @@ def main() -> int:
     errors: list[str] = []
     checked = 0
 
+    for skill_dir in iter_skill_like_dirs():
+        rel = skill_dir.relative_to(ROOT)
+        if not (skill_dir / "SKILL.md").exists():
+            errors.append(f"{rel}: missing required path `SKILL.md`")
+
     for skill in discover_skill_contracts():
         checked += 1
         rel = skill.skill_dir.relative_to(ROOT)
 
-        for required in ("src", "tests", "REFERENCES.md"):
+        for required in ("SKILL.md", "src", "tests", "REFERENCES.md"):
             if not (skill.skill_dir / required).exists():
                 errors.append(f"{rel}: missing required path `{required}`")
 

@@ -7,6 +7,14 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS_ROOT = ROOT / "skills"
+CANONICAL_SKILL_CATEGORIES = {
+    "ingestion",
+    "detection",
+    "discovery",
+    "evaluation",
+    "view",
+    "remediation",
+}
 
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
@@ -131,6 +139,20 @@ class SkillContract:
 
 def iter_skill_dirs() -> list[Path]:
     return sorted(path.parent for path in SKILLS_ROOT.glob("*/*/SKILL.md"))
+
+
+def iter_skill_like_dirs() -> list[Path]:
+    skill_dirs: list[Path] = []
+    for category_dir in sorted(SKILLS_ROOT.iterdir()):
+        if not category_dir.is_dir():
+            continue
+        if category_dir.name not in CANONICAL_SKILL_CATEGORIES:
+            continue
+        for skill_dir in sorted(category_dir.iterdir()):
+            if not skill_dir.is_dir():
+                continue
+            skill_dirs.append(skill_dir)
+    return skill_dirs
 
 
 def extract_frontmatter(skill_md: Path) -> str:

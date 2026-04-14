@@ -68,7 +68,7 @@ jobs:
         with:
           python-version: "3.11"
           packages: bandit
-      - run: bandit -r skills/evaluation/cspm-aws-cis-benchmark skills/remediation/iam-departures-remediation mcp-server -c pyproject.toml --severity-level medium
+      - run: bandit -r skills mcp-server scripts -c pyproject.toml --severity-level medium
 
   # ── Unit tests, grouped into category lanes ───────────────────
   test-compliance:
