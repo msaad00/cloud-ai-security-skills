@@ -16,8 +16,10 @@ _SPEC.loader.exec_module(_INGEST)
 
 ACTIVITY_CREATE = _INGEST.ACTIVITY_CREATE
 ACTIVITY_OTHER = _INGEST.ACTIVITY_OTHER
+CANONICAL_VERSION = _INGEST.CANONICAL_VERSION
 CLASS_UID = _INGEST.CLASS_UID
 OCSF_VERSION = _INGEST.OCSF_VERSION
+OUTPUT_FORMATS = _INGEST.OUTPUT_FORMATS
 SKILL_NAME = _INGEST.SKILL_NAME
 STATUS_FAILURE = _INGEST.STATUS_FAILURE
 STATUS_SUCCESS = _INGEST.STATUS_SUCCESS
@@ -167,6 +169,24 @@ class TestConvert:
         uid = _metadata_uid(_entry(id=None, correlationId=None))
         assert len(uid) == 64
 
+    def test_native_projection_strips_ocsf_envelope(self):
+        event = convert_event(_entry(), output_format="native")
+        assert OUTPUT_FORMATS == ("ocsf", "native")
+        assert event["schema_mode"] == "native"
+        assert event["canonical_schema_version"] == CANONICAL_VERSION
+        assert event["record_type"] == "api_activity"
+        assert event["event_uid"] == "audit-evt-1"
+        assert event["provider"] == "Azure"
+        assert event["operation"] == "Add service principal credentials"
+        assert "class_uid" not in event
+        assert "metadata" not in event
+
+    def test_native_and_ocsf_keep_same_uid(self):
+        ocsf = convert_event(_entry(), output_format="ocsf")
+        native = convert_event(_entry(), output_format="native")
+        assert ocsf["metadata"]["uid"] == native["event_uid"]
+        assert ocsf["api"]["operation"] == native["operation"]
+
 
 class TestIterRawEvents:
     def test_value_wrapper(self):
@@ -194,3 +214,11 @@ class TestGoldenFixture:
         produced = list(ingest([RAW_FIXTURE.read_text()]))
         expected = _load_jsonl(OCSF_FIXTURE)
         assert produced == expected
+
+    def test_native_fixture_projection(self):
+        produced = list(ingest([RAW_FIXTURE.read_text()], output_format="native"))
+        expected = _load_jsonl(OCSF_FIXTURE)
+        assert len(produced) == len(expected)
+        assert produced[0]["schema_mode"] == "native"
+        assert produced[0]["event_uid"] == expected[0]["metadata"]["uid"]
+        assert "class_uid" not in produced[0]

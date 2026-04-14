@@ -144,6 +144,7 @@ jobs:
             skills/ingestion/ingest-mcp-proxy-ocsf \
             skills/detection/detect-mcp-tool-drift \
             skills/detection/detect-okta-mfa-fatigue \
+            skills/detection/detect-entra-credential-addition \
             skills/detection/detect-google-workspace-suspicious-login \
             skills/detection/detect-privilege-escalation-k8s \
             skills/detection/detect-sensitive-secret-read-k8s \

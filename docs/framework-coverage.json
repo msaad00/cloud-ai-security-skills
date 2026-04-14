@@ -221,6 +221,15 @@
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
     },
     {
+      "path": "skills/detection/detect-entra-credential-addition",
+      "layer": "detection",
+      "providers": ["azure", "entra", "microsoft-graph"],
+      "asset_classes": ["identities", "applications", "service-principals", "federated-credentials"],
+      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "coverage_status": "validated",
+      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+    },
+    {
       "path": "skills/detection/detect-mcp-tool-drift",
       "layer": "detection",
       "providers": ["mcp", "multi"],

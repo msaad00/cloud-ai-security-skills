@@ -50,6 +50,7 @@ Strongest current ATT&CK coverage:
 |---|---|
 | `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots |
 | `detect-okta-mfa-fatigue` | T1621 for repeated Okta Verify push challenge + deny bursts |
+| `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-google-workspace-suspicious-login` | T1110 and T1078 for provider-marked Google Workspace suspicious logins and repeated failure-then-success bursts |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
@@ -85,6 +86,7 @@ The rule stays the same across vendors:
 
 Current identity-vendor detections on top of those streams:
 - `detect-okta-mfa-fatigue`
+- `detect-entra-credential-addition`
 - `detect-google-workspace-suspicious-login`
 
 ## MITRE ATLAS
