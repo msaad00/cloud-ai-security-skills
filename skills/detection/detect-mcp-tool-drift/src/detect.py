@@ -1,8 +1,9 @@
-"""Detect MCP tool schema drift mid-session (OCSF input → OCSF Detection Finding).
+"""Detect MCP tool schema drift mid-session from OCSF or native activity streams.
 
-Reads OCSF 1.8 Application Activity events (class 6002) produced by the sibling
-ingest-mcp-proxy-ocsf skill, tracks tool fingerprints per (session, tool name),
-and emits one OCSF Detection Finding (class 2004) per drift event.
+Reads OCSF 1.8 Application Activity events (class 6002) or the native MCP
+application-activity projection produced by the sibling ingest skill, tracks
+tool fingerprints per (session, tool name), and emits one Detection Finding per
+drift event.
 
 Contract: see ../OCSF_CONTRACT.md
 """
@@ -10,6 +11,7 @@ Contract: see ../OCSF_CONTRACT.md
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -17,6 +19,8 @@ from typing import Any, Iterable
 
 SKILL_NAME = "detect-mcp-tool-drift"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
+OUTPUT_FORMATS = ("ocsf", "native")
 
 # Detection Finding (2004) — the replacement for the deprecated
 # Security Finding (2001) since OCSF 1.1.0.
@@ -43,15 +47,61 @@ MITRE_TECHNIQUE_NAME = "Supply Chain Compromise: Compromise Software Supply Chai
 # ---------------------------------------------------------------------------
 
 
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _short(value: str) -> str:
+    return hashlib.sha256((value or "").encode("utf-8")).hexdigest()[:8]
+
+
+def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    if "class_uid" in event:
+        if event.get("class_uid") != 6002:
+            return None
+        mcp = event.get("mcp") or {}
+        tool = mcp.get("tool") or {}
+        return {
+            "source_format": "ocsf",
+            "session_uid": str(mcp.get("session_uid") or "sess-unknown"),
+            "method": str(mcp.get("method") or ""),
+            "direction": str(mcp.get("direction") or ""),
+            "time_ms": _safe_int(event.get("time")),
+            "tool_name": str(tool.get("name") or ""),
+            "fingerprint": str(tool.get("fingerprint") or ""),
+            "raw_event": event,
+        }
+
+    schema_mode = str(event.get("schema_mode") or "").strip().lower()
+    if schema_mode and schema_mode not in {"canonical", "native"}:
+        return None
+    record_type = str(event.get("record_type") or "").strip().lower()
+    if record_type and record_type != "application_activity":
+        return None
+    tool = event.get("tool") or {}
+    return {
+        "source_format": schema_mode or "native",
+        "session_uid": str(event.get("session_uid") or "sess-unknown"),
+        "method": str(event.get("method") or ""),
+        "direction": str(event.get("direction") or ""),
+        "time_ms": _safe_int(event.get("time_ms") or event.get("time")),
+        "tool_name": str(tool.get("name") or event.get("tool_name") or ""),
+        "fingerprint": str(tool.get("fingerprint") or event.get("tool_fingerprint") or ""),
+        "raw_event": event,
+    }
+
+
 def _is_tools_list_response_with_fingerprint(event: dict[str, Any]) -> bool:
     """True iff the event is a tools/list response with a populated tool fingerprint."""
-    if event.get("class_uid") != 6002:
+    normalized = _normalize_event(event)
+    if not normalized:
         return False
-    mcp = event.get("mcp") or {}
-    if mcp.get("method") != "tools/list" or mcp.get("direction") != "response":
+    if normalized["method"] != "tools/list" or normalized["direction"] != "response":
         return False
-    tool = mcp.get("tool") or {}
-    return bool(tool.get("name")) and bool(tool.get("fingerprint"))
+    return bool(normalized["tool_name"]) and bool(normalized["fingerprint"])
 
 
 def _now_ms() -> int:
@@ -69,18 +119,9 @@ def _build_finding(
     before_event: dict[str, Any],
     after_event: dict[str, Any],
 ) -> dict[str, Any]:
-    """Produce one OCSF 1.8 Detection Finding (class 2004) describing a single drift.
-
-    Field layout follows OCSF 1.8:
-      - attacks[] lives INSIDE finding_info (not at event root — that was the
-        pre-1.1 Security Finding layout).
-      - status_id is recommended, not required.
-      - type_uid = class_uid * 100 + activity_id  (200401).
-    """
-    before_tool = before_event["mcp"]["tool"]
-    after_tool = after_event["mcp"]["tool"]
-    before_fp = before_tool["fingerprint"]
-    after_fp = after_tool["fingerprint"]
+    """Produce one native detection finding describing a single drift."""
+    before_fp = before_event["fingerprint"]
+    after_fp = after_event["fingerprint"]
 
     # Deterministic ID so re-running on the same input is idempotent.
     uid = f"det-mcp-drift-{session_uid}-{tool_name}-{before_fp.split(':')[-1][:8]}-{after_fp.split(':')[-1][:8]}"
@@ -94,55 +135,45 @@ def _build_finding(
     )
 
     return {
+        "schema_mode": "native",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "detection_finding",
+        "source_skill": SKILL_NAME,
+        "output_format": "native",
+        "finding_uid": uid,
+        "event_uid": uid,
+        "provider": "MCP",
+        "time_ms": after_event.get("time_ms") or _now_ms(),
+        "severity": "high",
         "activity_id": FINDING_ACTIVITY_CREATE,
-        "category_uid": FINDING_CATEGORY_UID,
-        "category_name": FINDING_CATEGORY_NAME,
-        "class_uid": FINDING_CLASS_UID,
-        "class_name": FINDING_CLASS_NAME,
-        "type_uid": FINDING_TYPE_UID,
         "severity_id": SEVERITY_HIGH,
-        "status_id": 1,  # 1 Success — recommended field, the detector ran cleanly
-        "time": after_event.get("time") or _now_ms(),
-        "metadata": {
-            "version": OCSF_VERSION,
-            "uid": uid,
-            "product": {
-                "name": "cloud-ai-security-skills",
-                "vendor_name": "msaad00/cloud-ai-security-skills",
-                "feature": {"name": SKILL_NAME},
-            },
-            "labels": ["detection-engineering", "mcp", "supply-chain", "tool-drift"],
-        },
-        "finding_info": {
-            "uid": uid,
-            "title": title,
-            "desc": desc,
-            "types": ["mcp-tool-drift"],
-            "first_seen_time": before_event.get("time"),
-            "last_seen_time": after_event.get("time"),
-            "attacks": [
-                {
-                    "version": MITRE_VERSION,
-                    "tactic": {"name": MITRE_TACTIC_NAME, "uid": MITRE_TACTIC_UID},
-                    "technique": {"name": MITRE_TECHNIQUE_NAME, "uid": MITRE_TECHNIQUE_UID},
-                }
-            ],
-        },
+        "status": "success",
+        "status_id": 1,
+        "title": title,
+        "description": desc,
+        "finding_types": ["mcp-tool-drift"],
+        "first_seen_time_ms": before_event.get("time_ms"),
+        "last_seen_time_ms": after_event.get("time_ms"),
+        "mitre_attacks": [
+            {
+                "version": MITRE_VERSION,
+                "tactic_uid": MITRE_TACTIC_UID,
+                "tactic_name": MITRE_TACTIC_NAME,
+                "technique_uid": MITRE_TECHNIQUE_UID,
+                "technique_name": MITRE_TECHNIQUE_NAME,
+            }
+        ],
+        "session_uid": session_uid,
+        "tool_name": tool_name,
+        "before_fingerprint": before_fp,
+        "after_fingerprint": after_fp,
         "observables": [
             {"name": "session.uid", "type": "Other", "value": session_uid},
             {"name": "tool.name", "type": "Other", "value": tool_name},
             {"name": "tool.before_fingerprint", "type": "Fingerprint", "value": before_fp},
             {"name": "tool.after_fingerprint", "type": "Fingerprint", "value": after_fp},
         ],
-        "evidence": {
-            "events_observed": 2,
-            "before_event_time": before_event.get("time"),
-            "after_event_time": after_event.get("time"),
-            # Intentionally empty: per the OCSF contract, raw events live in
-            # downstream storage (S3 / ClickHouse), not inside the finding body.
-            # Callers that need the raw events pivot via observables.session.uid.
-            "raw_events": [],
-        },
+        "evidence_count": 2,
     }
 
 
@@ -151,7 +182,54 @@ def _build_finding(
 # ---------------------------------------------------------------------------
 
 
-def detect(events: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
+def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
+    attack = native_finding["mitre_attacks"][0]
+    return {
+        "activity_id": FINDING_ACTIVITY_CREATE,
+        "category_uid": FINDING_CATEGORY_UID,
+        "category_name": FINDING_CATEGORY_NAME,
+        "class_uid": FINDING_CLASS_UID,
+        "class_name": FINDING_CLASS_NAME,
+        "type_uid": FINDING_TYPE_UID,
+        "severity_id": native_finding["severity_id"],
+        "status_id": native_finding["status_id"],
+        "time": native_finding["time_ms"],
+        "metadata": {
+            "version": OCSF_VERSION,
+            "uid": native_finding["event_uid"],
+            "product": {
+                "name": "cloud-ai-security-skills",
+                "vendor_name": "msaad00/cloud-ai-security-skills",
+                "feature": {"name": SKILL_NAME},
+            },
+            "labels": ["detection-engineering", "mcp", "supply-chain", "tool-drift"],
+        },
+        "finding_info": {
+            "uid": native_finding["finding_uid"],
+            "title": native_finding["title"],
+            "desc": native_finding["description"],
+            "types": native_finding["finding_types"],
+            "first_seen_time": native_finding["first_seen_time_ms"],
+            "last_seen_time": native_finding["last_seen_time_ms"],
+            "attacks": [
+                {
+                    "version": attack["version"],
+                    "tactic": {"name": attack["tactic_name"], "uid": attack["tactic_uid"]},
+                    "technique": {"name": attack["technique_name"], "uid": attack["technique_uid"]},
+                }
+            ],
+        },
+        "observables": native_finding["observables"],
+        "evidence": {
+            "events_observed": native_finding["evidence_count"],
+            "before_event_time": native_finding["first_seen_time_ms"],
+            "after_event_time": native_finding["last_seen_time_ms"],
+            "raw_events": [],
+        },
+    }
+
+
+def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     """Walk events in order; yield a finding per (session, tool) drift.
 
     State is minimal: one last-seen fingerprint per (session, tool name). We also
@@ -159,18 +237,25 @@ def detect(events: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     exact evidence.
     """
     # (session_uid, tool_name) -> (last_fingerprint, last_event)
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError(f"unsupported output_format `{output_format}`")
+
     state: dict[tuple[str, str], tuple[str, dict[str, Any]]] = {}
 
     # Materialise and stable-sort by time so out-of-order JSONL still works.
-    listed = [e for e in events if _is_tools_list_response_with_fingerprint(e)]
-    listed.sort(key=lambda e: (e.get("mcp", {}).get("session_uid", ""), e.get("time", 0)))
+    listed = []
+    for event in events:
+        if not _is_tools_list_response_with_fingerprint(event):
+            continue
+        normalized = _normalize_event(event)
+        if normalized:
+            listed.append(normalized)
+    listed.sort(key=lambda e: (e.get("session_uid", ""), e.get("time_ms", 0)))
 
     for event in listed:
-        mcp = event["mcp"]
-        session_uid = mcp.get("session_uid", "sess-unknown")
-        tool = mcp["tool"]
-        tool_name = tool["name"]
-        fingerprint = tool["fingerprint"]
+        session_uid = event["session_uid"]
+        tool_name = event["tool_name"]
+        fingerprint = event["fingerprint"]
 
         key = (session_uid, tool_name)
         prior = state.get(key)
@@ -183,7 +268,8 @@ def detect(events: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
             # Republished with same fingerprint — no drift.
             continue
 
-        yield _build_finding(session_uid, tool_name, prior_event, event)
+        finding = _build_finding(session_uid, tool_name, prior_event, event)
+        yield _render_ocsf_finding(finding) if output_format == "ocsf" else finding
         # Update state so we only raise ONCE per distinct transition.
         # A subsequent re-drift will produce a new finding because the "before"
         # fingerprint has moved forward.
@@ -207,9 +293,15 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Detect MCP tool schema drift from OCSF events.")
-    parser.add_argument("input", nargs="?", help="OCSF JSONL input. Defaults to stdin.")
-    parser.add_argument("--output", "-o", help="OCSF Detection Finding JSONL output. Defaults to stdout.")
+    parser = argparse.ArgumentParser(description="Detect MCP tool schema drift from OCSF or native activity events.")
+    parser.add_argument("input", nargs="?", help="OCSF or native JSONL input. Defaults to stdin.")
+    parser.add_argument("--output", "-o", help="Detection Finding JSONL output. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=OUTPUT_FORMATS,
+        default="ocsf",
+        help="Render OCSF Detection Finding (default) or the native canonical projection.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
@@ -217,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         events = list(load_jsonl(in_stream))
-        for finding in detect(events):
+        for finding in detect(events, output_format=args.output_format):
             out_stream.write(json.dumps(finding, separators=(",", ":")) + "\n")
     finally:
         if args.input:

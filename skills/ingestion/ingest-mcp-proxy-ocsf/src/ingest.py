@@ -1,4 +1,4 @@
-"""Convert raw MCP proxy logs to OCSF 1.8 Application Activity (class 6002).
+"""Convert raw MCP proxy logs to canonical or OCSF Application Activity records.
 
 Input:  JSONL as emitted by `agent-bom proxy --log-format jsonl`
 Output: JSONL of OCSF 1.8 Application Activity events with the
@@ -18,7 +18,9 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-mcp-proxy-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 MCP_PROFILE = "cloud_security_mcp"
+OUTPUT_FORMATS = ("ocsf", "native")
 
 # OCSF 1.8 Application Activity (6002) — unchanged from 1.3 for this class.
 CLASS_UID = 6002
@@ -90,9 +92,8 @@ def parse_ts_ms(ts: str | None) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _base_event(raw: dict[str, Any], activity_id: int) -> dict[str, Any]:
-    """Populate every OCSF field pinned in OCSF_CONTRACT.md."""
-    metadata_uid = hashlib.sha256(
+def _event_uid(raw: dict[str, Any]) -> str:
+    return hashlib.sha256(
         json.dumps(
             {
                 "timestamp": raw.get("timestamp", ""),
@@ -106,19 +107,61 @@ def _base_event(raw: dict[str, Any], activity_id: int) -> dict[str, Any]:
             separators=(",", ":"),
         ).encode("utf-8")
     ).hexdigest()
+
+
+def _activity_name(activity_id: int) -> str:
     return {
+        ACTIVITY_CREATE: "create",
+        ACTIVITY_READ: "read",
+        ACTIVITY_UNKNOWN: "unknown",
+    }.get(activity_id, "unknown")
+
+
+def _status_name(status_id: int) -> str:
+    return {1: "success", 0: "unknown"}.get(status_id, "unknown")
+
+
+def _build_canonical_event(raw: dict[str, Any], activity_id: int) -> dict[str, Any]:
+    """Populate the stable repo-owned canonical activity shape."""
+    event_uid = _event_uid(raw)
+    return {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "application_activity",
+        "source_skill": SKILL_NAME,
+        "event_uid": event_uid,
+        "provider": "MCP",
+        "time_ms": parse_ts_ms(raw.get("timestamp")),
         "activity_id": activity_id,
+        "activity_name": _activity_name(activity_id),
+        "severity": "informational",
+        "severity_id": 1,
+        "status": _status_name(1),
+        "status_id": 1,
+        "profile": MCP_PROFILE,
+        "session_uid": raw.get("session_id", "sess-unknown"),
+        "method": raw.get("method", "unknown"),
+        "direction": raw.get("direction", "unknown"),
+        "params": raw.get("params") or {},
+        "body": raw.get("body") or {},
+    }
+
+
+def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    """Project the canonical activity shape into the pinned OCSF envelope."""
+    event = {
+        "activity_id": canonical["activity_id"],
         "category_uid": CATEGORY_UID,
         "category_name": CATEGORY_NAME,
         "class_uid": CLASS_UID,
         "class_name": CLASS_NAME,
-        "type_uid": CLASS_UID * 100 + activity_id,
-        "severity_id": 1,  # Informational — ingestion events are not findings
-        "status_id": 1,  # Success — a bad line is skipped upstream, not emitted as Failure
-        "time": parse_ts_ms(raw.get("timestamp")),
+        "type_uid": CLASS_UID * 100 + canonical["activity_id"],
+        "severity_id": canonical["severity_id"],
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": metadata_uid,
+            "uid": canonical["event_uid"],
             "profiles": [MCP_PROFILE],
             "product": {
                 "name": "cloud-ai-security-skills",
@@ -128,15 +171,26 @@ def _base_event(raw: dict[str, Any], activity_id: int) -> dict[str, Any]:
             "labels": ["detection-engineering", "mcp", "ingest"],
         },
         "mcp": {
-            "session_uid": raw.get("session_id", "sess-unknown"),
-            "method": raw.get("method", "unknown"),
-            "direction": raw.get("direction", "unknown"),
+            "session_uid": canonical["session_uid"],
+            "method": canonical["method"],
+            "direction": canonical["direction"],
         },
     }
+    if canonical.get("tool"):
+        event["mcp"]["tool"] = dict(canonical["tool"])
+    return event
 
 
-def _with_tool(event: dict[str, Any], tool: dict[str, Any]) -> dict[str, Any]:
-    event["mcp"]["tool"] = {
+def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["output_format"] = "native"
+    return native
+
+
+def _with_tool(canonical: dict[str, Any], tool: dict[str, Any]) -> dict[str, Any]:
+    event = dict(canonical)
+    event["tool"] = {
         "name": tool.get("name", ""),
         "description": tool.get("description", ""),
         "input_schema_sha256": input_schema_fingerprint(tool),
@@ -145,8 +199,8 @@ def _with_tool(event: dict[str, Any], tool: dict[str, Any]) -> dict[str, Any]:
     return event
 
 
-def convert_event(raw: dict[str, Any]) -> Iterable[dict[str, Any]]:
-    """Convert one raw proxy line into zero or more OCSF events.
+def convert_event(raw: dict[str, Any], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+    """Convert one raw proxy line into zero or more application activity events.
 
     - tools/list response -> one OCSF event per tool in the response (Create)
     - tools/call request  -> one OCSF event (Read) carrying the called tool's
@@ -160,26 +214,29 @@ def convert_event(raw: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if method == "tools/list" and direction == "response":
         tools = (raw.get("body") or {}).get("tools") or []
         if not tools:
-            yield _base_event(raw, ACTIVITY_CREATE)
+            canonical = _build_canonical_event(raw, ACTIVITY_CREATE)
+            yield _render_native_event(canonical) if output_format == "native" else _render_ocsf_event(canonical)
             return
         for tool in tools:
-            yield _with_tool(_base_event(raw, ACTIVITY_CREATE), tool)
+            canonical = _with_tool(_build_canonical_event(raw, ACTIVITY_CREATE), tool)
+            yield _render_native_event(canonical) if output_format == "native" else _render_ocsf_event(canonical)
         return
 
     if method == "tools/call" and direction == "request":
         called_name = ((raw.get("params") or {}).get("name")) or ""
-        event = _base_event(raw, ACTIVITY_READ)
+        event = _build_canonical_event(raw, ACTIVITY_READ)
         if called_name:
             # Do NOT populate a fingerprint here — this is a call, not a
             # declaration. The detector pairs the call to the last-seen
             # fingerprint in the same session.
-            event["mcp"]["tool"] = {"name": called_name}
-        yield event
+            event["tool"] = {"name": called_name}
+        yield _render_native_event(event) if output_format == "native" else _render_ocsf_event(event)
         return
 
     # Anything else — emit a base event so the downstream pipeline stays
     # aware of activity on the session.
-    yield _base_event(raw, ACTIVITY_UNKNOWN)
+    canonical = _build_canonical_event(raw, ACTIVITY_UNKNOWN)
+    yield _render_native_event(canonical) if output_format == "native" else _render_ocsf_event(canonical)
 
 
 # ---------------------------------------------------------------------------
@@ -187,8 +244,10 @@ def convert_event(raw: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def ingest(lines: Iterable[str]) -> Iterable[dict[str, Any]]:
-    """Yield OCSF events for a stream of raw JSONL lines."""
+def ingest(lines: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+    """Yield activity records for a stream of raw JSONL lines."""
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError(f"unsupported output_format `{output_format}`")
     for lineno, line in enumerate(lines, start=1):
         line = line.strip()
         if not line:
@@ -202,23 +261,31 @@ def ingest(lines: Iterable[str]) -> Iterable[dict[str, Any]]:
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
             continue
         try:
-            yield from convert_event(raw)
+            yield from convert_event(raw, output_format=output_format)
         except Exception as e:  # defence-in-depth — never crash the pipeline
             print(f"[{SKILL_NAME}] skipping line {lineno}: convert error: {e}", file=sys.stderr)
             continue
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert raw MCP proxy JSONL to OCSF 1.8 Application Activity JSONL.")
+    parser = argparse.ArgumentParser(
+        description="Convert raw MCP proxy JSONL to OCSF or native Application Activity JSONL."
+    )
     parser.add_argument("input", nargs="?", help="Input JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=OUTPUT_FORMATS,
+        default="ocsf",
+        help="Render OCSF Application Activity (default) or the native canonical projection.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:

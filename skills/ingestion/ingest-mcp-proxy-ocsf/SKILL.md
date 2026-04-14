@@ -2,8 +2,9 @@
 name: ingest-mcp-proxy-ocsf
 description: >-
   Convert raw MCP proxy logs (from agent-bom proxy or any MCP JSON-RPC middleware)
-  into OCSF 1.8 Application Activity events (class 6002) with the cloud_security_mcp
-  custom profile. Every event carries session_uid, JSON-RPC method, direction, and
+  into Application Activity records. OCSF 1.8 (class 6002) is the default output,
+  with a native projection available via `--output-format native`. Every event carries
+  session_uid, JSON-RPC method, direction, and
   a stable tool fingerprint (sha256 of name + description + inputSchema + annotations)
   so downstream detection skills can spot schema drift. Use when the user mentions
   MCP proxy logs, OCSF ingestion, detection engineering pipeline, or wants to feed
@@ -16,12 +17,12 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: ocsf
+output_formats: native, ocsf
 ---
 
 # ingest-mcp-proxy-ocsf
 
-Thin, single-purpose ingestion skill: raw MCP proxy JSONL in → OCSF 1.8 Application Activity JSONL out. No detection logic, no side effects, no external calls.
+Thin, single-purpose ingestion skill: raw MCP proxy JSONL in → OCSF 1.8 Application Activity JSONL by default, or the repo-owned native application-activity projection when requested. No detection logic, no side effects, no external calls.
 
 ## Wire contract
 
@@ -42,14 +43,53 @@ Writes OCSF 1.8 Application Activity (class 6002) with the `cloud_security_mcp` 
 ## Usage
 
 ```bash
-# Single file
+# Single file, OCSF default
 python src/ingest.py mcp-proxy.jsonl > mcp-proxy.ocsf.jsonl
+
+# Native projection
+python src/ingest.py mcp-proxy.jsonl --output-format native > mcp-proxy.native.jsonl
 
 # Piped from a running proxy
 agent-bom proxy "<server cmd>" --log-format jsonl \
   | python src/ingest.py \
   | python ../detect-mcp-tool-drift/src/detect.py \
   > findings.ocsf.jsonl
+```
+
+## Native output format
+
+When `--output-format native` is selected, the skill emits the repo-owned
+canonical projection instead of the OCSF envelope. Each record includes:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "application_activity"`
+- `event_uid`
+- `provider`
+- `time_ms`
+- `session_uid`
+- `method`
+- `direction`
+- `tool` when the source event declares a tool
+
+Example:
+
+```json
+{
+  "schema_mode": "native",
+  "canonical_schema_version": "2026-04",
+  "record_type": "application_activity",
+  "event_uid": "7a1c...",
+  "provider": "MCP",
+  "time_ms": 1775797200000,
+  "session_uid": "sess-abc",
+  "method": "tools/list",
+  "direction": "response",
+  "tool": {
+    "name": "query_db",
+    "fingerprint": "sha256:..."
+  }
+}
 ```
 
 ## Fingerprint

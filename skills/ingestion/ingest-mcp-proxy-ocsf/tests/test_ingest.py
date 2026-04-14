@@ -17,9 +17,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from ingest import (  # type: ignore[import-not-found]
     ACTIVITY_CREATE,
     ACTIVITY_READ,
+    CANONICAL_VERSION,
     CATEGORY_UID,
     CLASS_UID,
     OCSF_VERSION,
+    OUTPUT_FORMATS,
     SKILL_NAME,
     convert_event,
     ingest,
@@ -168,6 +170,26 @@ class TestConvertEvent:
         events = list(convert_event(raw))
         assert all(e["mcp"]["session_uid"] == "sess-unknown" for e in events)
 
+    def test_native_output_has_no_ocsf_envelope(self):
+        raw = {
+            "timestamp": "2026-04-10T05:00:00Z",
+            "session_id": "sess-abc",
+            "method": "tools/list",
+            "direction": "response",
+            "body": {"tools": [{"name": "query_db", "description": "", "inputSchema": {}, "annotations": {}}]},
+        }
+        events = list(convert_event(raw, output_format="native"))
+        assert len(events) == 1
+        event = events[0]
+        assert event["schema_mode"] == "native"
+        assert event["canonical_schema_version"] == CANONICAL_VERSION
+        assert event["record_type"] == "application_activity"
+        assert event["output_format"] == "native"
+        assert event["provider"] == "MCP"
+        assert event["tool"]["name"] == "query_db"
+        assert "class_uid" not in event
+        assert "metadata" not in event
+
 
 # ── ingest (stream) ────────────────────────────────────────────────────
 
@@ -188,6 +210,14 @@ class TestIngest:
         events = list(ingest(lines))
         assert len(events) == 1
         assert "not a JSON object" in capsys.readouterr().err
+
+    def test_rejects_unsupported_output_format(self):
+        try:
+            list(ingest([], output_format="bridge"))
+        except ValueError as exc:
+            assert "unsupported output_format" in str(exc)
+        else:
+            raise AssertionError("expected unsupported output_format to raise")
 
 
 # ── Golden fixture parity ──────────────────────────────────────────────
@@ -225,3 +255,16 @@ class TestGoldenFixture:
         ]
         assert len(fps) == 2
         assert fps[0] == fps[1], "fixture must have stable read_file fingerprint as a negative control"
+
+    def test_native_fixture_projection_preserves_event_uid_and_tool_shape(self):
+        raw_lines = RAW_FIXTURE.read_text().splitlines()
+        native_events = list(ingest(raw_lines, output_format="native"))
+        ocsf_events = list(ingest(raw_lines, output_format="ocsf"))
+        assert OUTPUT_FORMATS == ("ocsf", "native")
+        assert len(native_events) == len(ocsf_events)
+        assert native_events[0]["event_uid"] == ocsf_events[0]["metadata"]["uid"]
+        assert native_events[0]["schema_mode"] == "native"
+        assert native_events[0]["record_type"] == "application_activity"
+        assert "class_uid" not in native_events[0]
+        assert "metadata" not in native_events[0]
+        assert native_events[0]["tool"]["fingerprint"] == ocsf_events[0]["mcp"]["tool"]["fingerprint"]

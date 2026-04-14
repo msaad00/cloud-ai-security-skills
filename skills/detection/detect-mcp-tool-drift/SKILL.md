@@ -2,8 +2,9 @@
 name: detect-mcp-tool-drift
 description: >-
   Detect MCP tool schema drift mid-session — the MCP tool-poisoning / rug-pull
-  attack pattern. Reads OCSF 1.8 Application Activity (class 6002) events produced
-  by ingest-mcp-proxy-ocsf, groups them by session, and flags any tool whose
+  attack pattern. Reads OCSF 1.8 Application Activity (class 6002) or the native
+  application-activity projection produced by ingest-mcp-proxy-ocsf, groups them
+  by session, and flags any tool whose
   fingerprint (sha256 over name + description + inputSchema + annotations) changes
   between tools/list responses in the same session. Emits OCSF 1.8 Detection
   Finding (class 2004) with MITRE ATT&CK T1195.001 (Compromise Software Supply
@@ -18,8 +19,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
-input_formats: ocsf
-output_formats: ocsf
+input_formats: canonical, native, ocsf
+output_formats: native, ocsf
 ---
 
 # detect-mcp-tool-drift
@@ -32,7 +33,12 @@ This is the **MCP tool-poisoning** / **rug-pull** pattern. It maps to MITRE ATT&
 
 ## Detection logic
 
-Walk OCSF Application Activity events (emitted by `ingest-mcp-proxy-ocsf`) in timestamp order. For each session and tool name, track the last-seen fingerprint. If a later `tools/list` entry for the same `(session, tool name)` has a different fingerprint, emit **one** Detection Finding per drift event.
+Walk MCP Application Activity events in timestamp order. The detector accepts:
+
+- OCSF Application Activity emitted by `ingest-mcp-proxy-ocsf`
+- the native or canonical activity projection emitted by the same skill when `--output-format native` is selected
+
+For each session and tool name, track the last-seen fingerprint. If a later `tools/list` entry for the same `(session, tool name)` has a different fingerprint, emit **one** Detection Finding per drift event.
 
 ```
 state[(session_uid, tool_name)] = last_fingerprint
@@ -44,7 +50,9 @@ state[(session_uid, tool_name)] = last_fingerprint
 
 ## Output contract
 
-One OCSF 1.8 Detection Finding (class `2004`) per drift event. Populates:
+One Detection Finding per drift event. By default the skill emits OCSF 1.8 Detection Finding (class `2004`). With `--output-format native`, it emits the repo-owned native finding projection.
+
+OCSF output populates:
 
 - `finding_info.attacks[]`: MITRE ATT&CK v14, tactic TA0001 (Initial Access), technique T1195.001 (Compromise Software Supply Chain).
 - `finding_info.types[]`: `["mcp-tool-drift"]` for downstream filtering.
@@ -63,8 +71,45 @@ python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
   | python src/detect.py \
   > drift-findings.ocsf.jsonl
 
+# Native input and native output
+python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl --output-format native \
+  | python src/detect.py --output-format native \
+  > drift-findings.native.jsonl
+
 # Standalone file
 python src/detect.py ../golden/mcp_proxy_sample.ocsf.jsonl
+```
+
+## Native output format
+
+When `--output-format native` is selected, the skill emits:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "detection_finding"`
+- `finding_uid` and `event_uid`
+- `provider`
+- `time_ms`
+- `session_uid`
+- `tool_name`
+- `before_fingerprint`
+- `after_fingerprint`
+- `mitre_attacks`
+
+Example:
+
+```json
+{
+  "schema_mode": "native",
+  "canonical_schema_version": "2026-04",
+  "record_type": "detection_finding",
+  "finding_uid": "det-mcp-drift-sess-abc-query_db-9b5f6e3c-7d10a2bf",
+  "provider": "MCP",
+  "session_uid": "sess-abc",
+  "tool_name": "query_db",
+  "before_fingerprint": "sha256:...",
+  "after_fingerprint": "sha256:..."
+}
 ```
 
 ## Tests

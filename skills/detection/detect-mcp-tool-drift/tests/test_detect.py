@@ -19,14 +19,17 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from detect import (  # type: ignore[import-not-found]
+    CANONICAL_VERSION,
     FINDING_CATEGORY_UID,
     FINDING_CLASS_UID,
     FINDING_TYPE_UID,
     MITRE_TACTIC_UID,
     MITRE_TECHNIQUE_UID,
+    OUTPUT_FORMATS,
     SEVERITY_HIGH,
     SKILL_NAME,
     _is_tools_list_response_with_fingerprint,
+    _normalize_event,
     detect,
     load_jsonl,
 )
@@ -69,6 +72,23 @@ class TestFilter:
         e = {"class_uid": 6002, "mcp": {"method": "tools/list", "direction": "response", "tool": {"name": "x", "fingerprint": "sha256:f"}}}
         assert _is_tools_list_response_with_fingerprint(e)
 
+    def test_accepts_valid_native(self):
+        assert _is_tools_list_response_with_fingerprint(_native_ev("s1", "x", "sha256:f", 100))
+
+
+class TestNormalize:
+    def test_normalizes_ocsf_event(self):
+        normalized = _normalize_event(_ev("s1", "x", "sha256:f", 100))
+        assert normalized is not None
+        assert normalized["source_format"] == "ocsf"
+        assert normalized["tool_name"] == "x"
+
+    def test_normalizes_native_event(self):
+        normalized = _normalize_event(_native_ev("s1", "x", "sha256:f", 100))
+        assert normalized is not None
+        assert normalized["source_format"] == "native"
+        assert normalized["tool_name"] == "x"
+
 
 # ── detect() behaviour ─────────────────────────────────────────────────
 
@@ -83,6 +103,20 @@ def _ev(session: str, tool: str, fp: str, time_ms: int) -> dict:
             "direction": "response",
             "tool": {"name": tool, "fingerprint": fp},
         },
+    }
+
+
+def _native_ev(session: str, tool: str, fp: str, time_ms: int) -> dict:
+    return {
+        "schema_mode": "native",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "application_activity",
+        "provider": "MCP",
+        "time_ms": time_ms,
+        "session_uid": session,
+        "method": "tools/list",
+        "direction": "response",
+        "tool": {"name": tool, "fingerprint": fp},
     }
 
 
@@ -188,6 +222,48 @@ class TestDetect:
         obs = {o["name"]: o["value"] for o in findings[0]["observables"]}
         assert obs["tool.before_fingerprint"] == "sha256:a"
         assert obs["tool.after_fingerprint"] == "sha256:b"
+
+    def test_native_input_can_emit_native_finding(self):
+        findings = list(
+            detect(
+                [
+                    _native_ev("s1", "t1", "sha256:a", 100),
+                    _native_ev("s1", "t1", "sha256:b", 200),
+                ],
+                output_format="native",
+            )
+        )
+        assert OUTPUT_FORMATS == ("ocsf", "native")
+        assert len(findings) == 1
+        finding = findings[0]
+        assert finding["schema_mode"] == "native"
+        assert finding["record_type"] == "detection_finding"
+        assert finding["provider"] == "MCP"
+        assert finding["session_uid"] == "s1"
+        assert "class_uid" not in finding
+
+    def test_native_input_can_emit_ocsf_finding(self):
+        findings = list(
+            detect(
+                [
+                    _native_ev("s1", "t1", "sha256:a", 100),
+                    _native_ev("s1", "t1", "sha256:b", 200),
+                ],
+                output_format="ocsf",
+            )
+        )
+        assert len(findings) == 1
+        finding = findings[0]
+        assert finding["class_uid"] == FINDING_CLASS_UID
+        assert finding["finding_info"]["uid"].startswith("det-mcp-drift-")
+
+    def test_rejects_unsupported_output_format(self):
+        try:
+            list(detect([], output_format="bridge"))
+        except ValueError as exc:
+            assert "unsupported output_format" in str(exc)
+        else:
+            raise AssertionError("expected unsupported output_format to raise")
 
 
 # ── load_jsonl robustness ──────────────────────────────────────────────
