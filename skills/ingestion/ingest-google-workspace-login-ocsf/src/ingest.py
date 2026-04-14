@@ -16,7 +16,14 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "ingest-google-workspace-login-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -227,7 +234,13 @@ def _supported_events(activity: dict[str, Any]) -> Iterable[dict[str, Any]]:
             continue
         name = str(event.get("name") or "")
         if name not in SUPPORTED_EVENT_NAMES:
-            print(f"[{SKILL_NAME}] skipping event: unsupported event name: {name}", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="unsupported_event_name",
+                message=f"skipping event: unsupported event name: {name}",
+                event_name=name,
+            )
             continue
         yield event
 
@@ -368,7 +381,14 @@ def iter_raw_activities(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as exc:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {exc}", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="json_parse_failed",
+                message=f"skipping line {lineno}: json parse failed: {exc}",
+                line=lineno,
+                error=str(exc),
+            )
             continue
         if isinstance(obj, dict) and isinstance(obj.get("items"), list):
             for item in obj["items"]:
@@ -377,7 +397,13 @@ def iter_raw_activities(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         elif isinstance(obj, dict):
             yield obj
         else:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="invalid_json_shape",
+                message=f"skipping line {lineno}: not a JSON object",
+                line=lineno,
+            )
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
@@ -386,13 +412,28 @@ def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[
     for activity in iter_raw_activities(stream):
         ok, reason = validate_activity(activity)
         if not ok:
-            print(f"[{SKILL_NAME}] skipping activity: {reason}", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="invalid_activity",
+                message=f"skipping activity: {reason}",
+                reason=reason,
+                unique_qualifier=str(((activity.get("id") or {}).get("uniqueQualifier")) or ""),
+            )
             continue
         for event in _supported_events(activity):
             try:
                 yield convert_activity_event(activity, event, output_format=output_format)
             except Exception as exc:
-                print(f"[{SKILL_NAME}] skipping event: convert error: {exc}", file=sys.stderr)
+                emit_stderr_event(
+                    SKILL_NAME,
+                    level="warning",
+                    event="convert_error",
+                    message=f"skipping event: convert error: {exc}",
+                    error=str(exc),
+                    event_name=str(event.get("name") or ""),
+                    unique_qualifier=str(((activity.get("id") or {}).get("uniqueQualifier")) or ""),
+                )
                 continue
 
 

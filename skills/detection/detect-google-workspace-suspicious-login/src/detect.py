@@ -7,7 +7,14 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "detect-google-workspace-suspicious-login"
 OCSF_VERSION = "1.8.0"
@@ -449,7 +456,13 @@ def load_jsonl(lines: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             item = json.loads(raw)
         except json.JSONDecodeError:
-            print(f"[{SKILL_NAME}] skipping line {idx}: invalid JSON", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="json_parse_failed",
+                message=f"skipping line {idx}: invalid JSON",
+                line=idx,
+            )
             continue
         if isinstance(item, dict):
             yield item

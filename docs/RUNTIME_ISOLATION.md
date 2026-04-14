@@ -60,6 +60,8 @@ Current pilots:
 - `detect-privilege-escalation-k8s`
 - `ingest-okta-system-log-ocsf`
 - `detect-okta-mfa-fatigue`
+- `ingest-google-workspace-login-ocsf`
+- `detect-google-workspace-suspicious-login`
 
 ## Write-capable skills and edge components
 
