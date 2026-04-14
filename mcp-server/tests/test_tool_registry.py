@@ -31,6 +31,7 @@ class TestDiscovery:
             "detect-lateral-movement",
             "detect-okta-mfa-fatigue",
             "detect-entra-credential-addition",
+            "detect-entra-role-grant-escalation",
             "detect-google-workspace-suspicious-login",
             "cspm-aws-cis-benchmark",
             "iam-departures-remediation",
@@ -57,6 +58,7 @@ class TestDiscovery:
         assert "detect-lateral-movement" in tools
         assert "detect-okta-mfa-fatigue" in tools
         assert "detect-entra-credential-addition" in tools
+        assert "detect-entra-role-grant-escalation" in tools
         assert "detect-google-workspace-suspicious-login" in tools
         assert "model-serving-security" in tools
         assert "discover-ai-bom" in tools

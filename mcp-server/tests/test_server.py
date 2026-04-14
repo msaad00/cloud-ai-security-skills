@@ -62,6 +62,7 @@ class TestMcpServer:
             assert "detect-lateral-movement" in names
             assert "detect-okta-mfa-fatigue" in names
             assert "detect-entra-credential-addition" in names
+            assert "detect-entra-role-grant-escalation" in names
             assert "detect-google-workspace-suspicious-login" in names
             assert "model-serving-security" in names
             assert "iam-departures-remediation" not in names

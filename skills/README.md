@@ -44,6 +44,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-lateral-movement`](detection/detect-lateral-movement/) | lateral movement / cross-cloud identity pivot + east-west traffic |
 | [`detect-okta-mfa-fatigue`](detection/detect-okta-mfa-fatigue/) | Okta Verify push bombing / MFA fatigue |
 | [`detect-entra-credential-addition`](detection/detect-entra-credential-addition/) | successful Entra application or service-principal credential additions |
+| [`detect-entra-role-grant-escalation`](detection/detect-entra-role-grant-escalation/) | successful Entra app-role grants to service principals |
 | [`detect-google-workspace-suspicious-login`](detection/detect-google-workspace-suspicious-login/) | provider-marked suspicious Workspace login or repeated failures followed by success |
 | [`detect-mcp-tool-drift`](detection/detect-mcp-tool-drift/) | T1195.001 |
 | [`detect-privilege-escalation-k8s`](detection/detect-privilege-escalation-k8s/) | T1552.007, T1611, T1098, T1550.001 |

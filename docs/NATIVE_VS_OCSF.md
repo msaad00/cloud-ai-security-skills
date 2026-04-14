@@ -144,6 +144,7 @@ Implemented dual-mode skills today:
 - `detect-sensitive-secret-read-k8s`
 - `detect-mcp-tool-drift`
 - `detect-entra-credential-addition`
+- `detect-entra-role-grant-escalation`
 - `detect-google-workspace-suspicious-login`
 
 Implemented native-first with bridge skills today:

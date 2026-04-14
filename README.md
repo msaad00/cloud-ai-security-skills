@@ -90,6 +90,7 @@ Each skill is a standalone Python bundle following [Anthropic's skill spec](http
   - `detect-sensitive-secret-read-k8s`
   - `detect-mcp-tool-drift`
   - `detect-entra-credential-addition`
+  - `detect-entra-role-grant-escalation`
   - `detect-google-workspace-suspicious-login`
 - native-first with optional bridge:
   - `discover-environment`
@@ -177,6 +178,7 @@ skills/
 │   ├── detect-lateral-movement                    → T1021 / T1078.004 cross-cloud pivot
 │   ├── detect-okta-mfa-fatigue                    → T1621 Okta Verify push fatigue
 │   ├── detect-entra-credential-addition           → T1098.001 Entra credential additions
+│   ├── detect-entra-role-grant-escalation         → T1098.003 Entra app-role grants
 │   ├── detect-google-workspace-suspicious-login   → T1110 / T1078 Workspace suspicious login
 │   ├── detect-mcp-tool-drift                      → T1195.001 Supply Chain
 │   ├── detect-privilege-escalation-k8s            → T1552.007 / T1611 / T1098 / T1550.001
