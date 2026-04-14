@@ -21,6 +21,9 @@ side_effects: writes-identity, writes-storage, writes-database, writes-audit
 input_formats: raw, canonical
 output_formats: native
 network_egress: api.workday.com, *.snowflakecomputing.com, *.databricks.com, *.clickhouse.cloud
+caller_roles: security_engineer, incident_responder
+approver_roles: security_lead, cis_officer
+min_approvers: 1
 compatibility: >-
   Requires AWS CLI, Python 3.11+, and boto3. Lambdas deploy to AWS. HR data
   source requires one of: Snowflake connector, Databricks SQL connector,

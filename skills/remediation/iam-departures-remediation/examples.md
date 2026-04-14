@@ -98,6 +98,9 @@ SELECT
     target_account_id,
     remediation_actions,
     remediated_at,
+    invoked_by,
+    approved_by,
+    approval_ticket,
     lambda_request_id
 FROM security_db.iam.remediation_audit
 WHERE remediated_at >= DATEADD(day, -7, CURRENT_DATE())

@@ -75,6 +75,9 @@ class TestSkillValidationCommon:
         assert ingest.approval_model == "none"
         assert ingest.execution_modes == ("jit", "ci", "mcp", "persistent")
         assert ingest.side_effects == ("none",)
+        assert ingest.caller_roles == ()
+        assert ingest.approver_roles == ()
+        assert ingest.min_approvers is None
 
     def test_reference_policy_accepts_known_official_hosts(self):
         assert COMMON.reference_url_allowed("https://docs.aws.amazon.com/IAM/latest/APIReference/")
@@ -128,3 +131,6 @@ class TestValidationScripts:
         assert remediation.approval_model == "human_required"
         assert remediation.execution_modes == ("jit", "persistent")
         assert "writes-identity" in remediation.side_effects
+        assert remediation.caller_roles == ("security_engineer", "incident_responder")
+        assert remediation.approver_roles == ("security_lead", "cis_officer")
+        assert remediation.min_approvers == 1

@@ -38,8 +38,10 @@ Optional:
 - `output_formats`
 
 Optional:
-
 - `network_egress`
+- `caller_roles`
+- `approver_roles`
+- `min_approvers`
 
 Rules:
 
@@ -88,6 +90,11 @@ Rules:
   - `*.snowflakecomputing.com`
   - `*.databricks.com`
   - `*.clickhouse.cloud`
+- `caller_roles`, when present, should name the human or agent roles allowed to invoke the skill
+- `approver_roles`, when present, should name the roles allowed to approve write-capable actions
+- `min_approvers`, when present, must be an integer greater than or equal to 1
+- write-capable skills should declare `approver_roles` and `min_approvers` when enterprise wrappers need machine-readable approval policy
+- write-capable skills should preserve caller, approver, and request or session identifiers in their audit trail when the runtime provides them
 
 ## Required language
 
@@ -121,6 +128,7 @@ Examples:
 - explicit input/output shape
 - defensive parsing on untrusted input
 - explicit human-in-the-loop and runtime-mode declaration in frontmatter so agents know when they must stop for approval
+- preserve caller, approver, and execution identity context when the surrounding runtime provides it
 
 ## Required validation and error handling
 

@@ -113,6 +113,21 @@ class SkillContract:
     def network_egress(self) -> tuple[str, ...]:
         return parse_modes(self.frontmatter.get("network_egress"))
 
+    @property
+    def caller_roles(self) -> tuple[str, ...]:
+        return parse_modes(self.frontmatter.get("caller_roles"))
+
+    @property
+    def approver_roles(self) -> tuple[str, ...]:
+        return parse_modes(self.frontmatter.get("approver_roles"))
+
+    @property
+    def min_approvers(self) -> int | None:
+        raw_value = self.frontmatter.get("min_approvers", "").strip()
+        if not raw_value:
+            return None
+        return int(raw_value)
+
 
 def iter_skill_dirs() -> list[Path]:
     return sorted(path.parent for path in SKILLS_ROOT.glob("*/*/SKILL.md"))

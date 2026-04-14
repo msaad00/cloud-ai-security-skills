@@ -70,6 +70,15 @@ Required controls:
 - idempotency keys or merge-on-UID behavior
 - immutable or append-only audit trail where feasible
 
+Where the runtime supports it, write-capable skills should also preserve:
+- caller identity
+- approver identity
+- session or request identifiers
+- execution principal details
+- change-control or ticket references
+
+Those fields are part of the audit contract, not optional debug noise.
+
 ## Credentials and cloud access
 
 Best practice for operators:

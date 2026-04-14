@@ -79,12 +79,31 @@ class TestToolDefinition:
         assert "Execution modes: jit, ci, mcp, persistent." in tool["description"]
         assert "Side effects: none." in tool["description"]
         assert "Network egress: none." in tool["description"]
+        assert "Caller roles: unspecified." in tool["description"]
+        assert "Approver roles: unspecified." in tool["description"]
+        assert "Min approvers: unspecified." in tool["description"]
         assert skill.input_formats == ("raw",)
         assert skill.output_formats == ("ocsf", "native")
         assert skill.approval_model == "none"
         assert skill.execution_modes == ("jit", "ci", "mcp", "persistent")
         assert skill.side_effects == ("none",)
         assert skill.network_egress == ()
+        assert skill.network_egress == ()
+        assert skill.caller_roles == ()
+        assert skill.approver_roles == ()
+        assert skill.min_approvers is None
+
+    def test_unsupported_write_skill_rbac_metadata_is_parsed(self):
+        remediation = next(skill for skill in discover_skills(REPO_ROOT) if skill.name == "iam-departures-remediation")
+        assert remediation.network_egress == (
+            "api.workday.com",
+            "*.snowflakecomputing.com",
+            "*.databricks.com",
+            "*.clickhouse.cloud",
+        )
+        assert remediation.caller_roles == ("security_engineer", "incident_responder")
+        assert remediation.approver_roles == ("security_lead", "cis_officer")
+        assert remediation.min_approvers == 1
 
     def test_build_command_uses_fixed_entrypoint(self):
         skill = tool_map(REPO_ROOT)["detect-lateral-movement"]

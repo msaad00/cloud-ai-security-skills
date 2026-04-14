@@ -156,6 +156,7 @@ The important rule is that the **skill code does not change between modes**. `SK
 For every shipped skill, the contract is:
 - exact input and output format
 - explicit `approval_model`, `execution_modes`, and `side_effects` frontmatter so agents know when to stop for human approval
+- runtime-aware caller and approver context for write-capable workflows when the wrapper provides it
 - explicit `Use when...` and `Do NOT use...`
 - official vendor docs only in `REFERENCES.md`
 - failure-safe behavior on malformed input and deprecated API shapes

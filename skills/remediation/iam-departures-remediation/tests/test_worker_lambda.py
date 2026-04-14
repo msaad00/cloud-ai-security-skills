@@ -11,6 +11,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lambda_worker.handler import (
+    _build_audit_record,
     _deactivate_access_keys,
     _delete_inline_policies,
     _delete_login_profile,
@@ -208,6 +209,31 @@ class TestWorkerHandler:
         assert result["status"] == "error"
         assert result["error"] == "Invalid remediation payload"
         mock_audit.assert_called_once()
+
+    def test_audit_record_captures_caller_and_approval_context(self, monkeypatch):
+        class _Context:
+            aws_request_id = "req-123"
+
+        monkeypatch.setenv("SKILL_CALLER_ID", "u-123")
+        monkeypatch.setenv("SKILL_CALLER_EMAIL", "user@example.com")
+        monkeypatch.setenv("SKILL_SESSION_ID", "sess-1")
+        monkeypatch.setenv("SKILL_CALLER_ROLES", "security_engineer")
+        monkeypatch.setenv("SKILL_APPROVER_ID", "a-456")
+        monkeypatch.setenv("SKILL_APPROVER_EMAIL", "approver@example.com")
+        monkeypatch.setenv("SKILL_APPROVAL_TICKET", "SEC-123")
+        monkeypatch.setenv("SKILL_APPROVAL_TIMESTAMP", "2026-04-14T12:00:00Z")
+
+        record = _build_audit_record(_make_event()["entry"], [], "remediated", context=_Context())
+
+        assert record["invoked_by"] == "u-123"
+        assert record["invoked_by_email"] == "user@example.com"
+        assert record["agent_session_id"] == "sess-1"
+        assert record["caller_roles"] == "security_engineer"
+        assert record["approved_by"] == "a-456"
+        assert record["approved_by_email"] == "approver@example.com"
+        assert record["approval_ticket"] == "SEC-123"
+        assert record["approval_timestamp"] == "2026-04-14T12:00:00Z"
+        assert record["lambda_request_id"] == "req-123"
 
 
 class TestSnowflakeIdentifierSafety:

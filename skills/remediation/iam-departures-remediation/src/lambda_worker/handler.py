@@ -97,7 +97,7 @@ def handler(event: dict, context: Any) -> dict:
             raise ValueError("recipient_account_id must be a 12-digit AWS account ID")
     except ValueError as exc:
         logger.warning("Invalid remediation payload: %s", exc)
-        audit_record = _build_audit_record(entry, [], "error", error="Invalid remediation payload")
+        audit_record = _build_audit_record(entry, [], "error", error="Invalid remediation payload", context=context)
         _write_audit(audit_record)
         return {
             "email": entry.get("email", ""),
@@ -162,7 +162,7 @@ def handler(event: dict, context: Any) -> dict:
         logger.info("Successfully deleted IAM user: %s", iam_username)
 
         # Step 12: Write audit record
-        audit_record = _build_audit_record(entry, actions_taken, "remediated")
+        audit_record = _build_audit_record(entry, actions_taken, "remediated", context=context)
         _write_audit(audit_record)
 
         return {
@@ -178,7 +178,7 @@ def handler(event: dict, context: Any) -> dict:
         logger.exception("Remediation failed for %s in %s", iam_username, account_id)
 
         # Still write audit — record the failure
-        audit_record = _build_audit_record(entry, actions_taken, "error", error=str(exc))
+        audit_record = _build_audit_record(entry, actions_taken, "error", error=str(exc), context=context)
         _write_audit(audit_record)
 
         return {
@@ -414,6 +414,7 @@ def _build_audit_record(
     actions: list[dict],
     status: str,
     error: str = "",
+    context: Any | None = None,
 ) -> dict:
     """Build a complete audit record for compliance logging."""
     return {
@@ -430,7 +431,15 @@ def _build_audit_record(
         "actions_taken": actions,
         "actions_count": len(actions),
         "lambda_function": os.environ.get("AWS_LAMBDA_FUNCTION_NAME", "unknown"),
-        "lambda_request_id": "",  # Set from context in production
+        "lambda_request_id": getattr(context, "aws_request_id", ""),
+        "invoked_by": os.environ.get("SKILL_CALLER_ID", ""),
+        "invoked_by_email": os.environ.get("SKILL_CALLER_EMAIL", ""),
+        "agent_session_id": os.environ.get("SKILL_SESSION_ID", ""),
+        "caller_roles": os.environ.get("SKILL_CALLER_ROLES", ""),
+        "approved_by": os.environ.get("SKILL_APPROVER_ID", ""),
+        "approved_by_email": os.environ.get("SKILL_APPROVER_EMAIL", ""),
+        "approval_ticket": os.environ.get("SKILL_APPROVAL_TICKET", ""),
+        "approval_timestamp": os.environ.get("SKILL_APPROVAL_TIMESTAMP", ""),
     }
 
 

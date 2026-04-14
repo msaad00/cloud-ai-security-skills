@@ -30,6 +30,9 @@ class SkillSpec:
     input_formats: tuple[str, ...]
     output_formats: tuple[str, ...]
     network_egress: tuple[str, ...]
+    caller_roles: tuple[str, ...]
+    approver_roles: tuple[str, ...]
+    min_approvers: int | None
 
     @property
     def supported(self) -> bool:
@@ -146,6 +149,10 @@ def discover_skills(root: Path | None = None) -> list[SkillSpec]:
                 input_formats=_parse_modes(metadata.get("input_formats")),
                 output_formats=_parse_modes(metadata.get("output_formats")),
                 network_egress=_parse_modes(metadata.get("network_egress")),
+                network_egress=_parse_modes(metadata.get("network_egress")),
+                caller_roles=_parse_modes(metadata.get("caller_roles")),
+                approver_roles=_parse_modes(metadata.get("approver_roles")),
+                min_approvers=int(metadata["min_approvers"]) if metadata.get("min_approvers") else None,
             )
         )
     return specs
@@ -187,12 +194,17 @@ def tool_definition(skill: SkillSpec) -> dict[str, object]:
     mode_list = ", ".join(skill.execution_modes) if skill.execution_modes else "unspecified"
     effect_list = ", ".join(skill.side_effects) if skill.side_effects else "unspecified"
     egress_list = ", ".join(skill.network_egress) if skill.network_egress else "none"
+    caller_roles = ", ".join(skill.caller_roles) if skill.caller_roles else "unspecified"
+    approver_roles = ", ".join(skill.approver_roles) if skill.approver_roles else "unspecified"
+    min_approvers = skill.min_approvers if skill.min_approvers is not None else "unspecified"
     tool: dict[str, object] = {
         "name": skill.name,
         "description": (
             f"{skill.description} Approval model: {skill.approval_model or 'unspecified'}. "
             f"Execution modes: {mode_list}. Side effects: {effect_list}. "
-            f"Network egress: {egress_list}."
+            f"Network egress: {egress_list}. "
+            f"Caller roles: {caller_roles}. Approver roles: {approver_roles}. "
+            f"Min approvers: {min_approvers}."
         ),
         "inputSchema": tool_input_schema(skill),
         "annotations": {

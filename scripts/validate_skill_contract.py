@@ -105,6 +105,19 @@ def main() -> int:
                 errors.append(f"{rel}: write-capable skills must set approval_model to `human_required`")
             if not skill.side_effects or skill.side_effects == ("none",):
                 errors.append(f"{rel}: write-capable skills must declare concrete side_effects")
+            min_approvers = skill.frontmatter.get("min_approvers")
+            if skill.frontmatter.get("caller_roles") and not skill.caller_roles:
+                errors.append(f"{rel}: caller_roles must not be empty")
+            if skill.frontmatter.get("approver_roles") and not skill.approver_roles:
+                errors.append(f"{rel}: approver_roles must not be empty")
+            if skill.approver_roles and not min_approvers:
+                errors.append(f"{rel}: approver_roles requires min_approvers")
+            if min_approvers:
+                try:
+                    if int(min_approvers) < 1:
+                        errors.append(f"{rel}: min_approvers must be >= 1")
+                except ValueError:
+                    errors.append(f"{rel}: min_approvers must be an integer")
         else:
             if skill.approval_model and skill.approval_model != "none":
                 errors.append(f"{rel}: read-only skills must set approval_model to `none`")

@@ -109,6 +109,14 @@ CREATE TABLE IF NOT EXISTS security_db.iam.remediation_audit (
   steps_completed     INTEGER,
   steps_failed        INTEGER,
   lambda_request_id   VARCHAR(255),
+  invoked_by          VARCHAR(255),
+  invoked_by_email    VARCHAR(255),
+  agent_session_id    VARCHAR(255),
+  caller_roles        VARCHAR(1024),
+  approved_by         VARCHAR(255),
+  approved_by_email   VARCHAR(255),
+  approval_ticket     VARCHAR(255),
+  approval_timestamp  TIMESTAMP_TZ,
   execution_arn       VARCHAR(512),
   ingested_at         TIMESTAMP_TZ   DEFAULT CURRENT_TIMESTAMP()
 );
@@ -122,7 +130,9 @@ AS
   COPY INTO security_db.iam.remediation_audit (
     iam_username, target_account_id, email, terminated_at,
     remediated_at, remediation_actions, steps_completed,
-    steps_failed, lambda_request_id, execution_arn
+    steps_failed, lambda_request_id, invoked_by, invoked_by_email,
+    agent_session_id, caller_roles, approved_by, approved_by_email,
+    approval_ticket, approval_timestamp, execution_arn
   )
   FROM (
     SELECT
@@ -135,6 +145,14 @@ AS
       $1:steps_completed::INTEGER,
       $1:steps_failed::INTEGER,
       $1:lambda_request_id::VARCHAR,
+      $1:invoked_by::VARCHAR,
+      $1:invoked_by_email::VARCHAR,
+      $1:agent_session_id::VARCHAR,
+      $1:caller_roles::VARCHAR,
+      $1:approved_by::VARCHAR,
+      $1:approved_by_email::VARCHAR,
+      $1:approval_ticket::VARCHAR,
+      $1:approval_timestamp::TIMESTAMP_TZ,
       $1:execution_arn::VARCHAR
     FROM @security_db.iam.audit_stage
   )
