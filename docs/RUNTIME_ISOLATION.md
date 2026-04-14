@@ -50,6 +50,7 @@ Expected controls:
 - no broad network egress outside documented API use
 - deterministic `stdout` output
 - warnings and skips only on `stderr`
+- optional structured `stderr` telemetry via `SKILL_LOG_FORMAT=json` or `AGENT_TELEMETRY=1` for wrappers and operators that need machine-readable runtime hints
 - strict input validation before parse, convert, or cloud calls
 
 ## Write-capable skills and edge components
