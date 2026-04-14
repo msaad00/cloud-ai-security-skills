@@ -39,11 +39,15 @@ flowchart LR
 
 ## Current rollout
 
-Fully dual-mode today:
+Dual-mode is now rolling out skill-by-skill rather than landing as a one-shot
+repo rewrite.
 
-- `ingest-cloudtrail-ocsf`
-- `ingest-vpc-flow-logs-ocsf`
-- `detect-lateral-movement`
+Current source of truth:
+
+- the `README.md` schema-mode section lists every currently dual-mode skill
+- each skill's `SKILL.md` frontmatter declares the supported `input_formats`
+  and `output_formats`
+- `validate_skill_contract.py` enforces that those declarations are present
 
 Native-first with optional bridge today:
 
