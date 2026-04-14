@@ -31,6 +31,7 @@ The format is loosely based on Keep a Changelog.
 - extended the same opt-in structured `stderr` telemetry pilot to `ingest-google-workspace-login-ocsf` and `detect-google-workspace-suspicious-login`, covering the Google Workspace identity ingest/detect path without changing stdout data contracts.
 - tightened the README and skill catalog entry path around use cases, skill selection, plug-in surfaces, and clearer layer guidance, plus added `docs/USE_CASES.md` as the practical crosswalk for sources, assets, frameworks, and starting skills.
 - clarified in the README and use-case guide that repo-owned remediation audit lands in DynamoDB + S3 today, while customer-controlled sinks such as Snowflake / Snowpipe belong to the planned sink / runner layer rather than the currently shipped generic path.
+- a new start-here visual and updated IAM departures data-flow visual so operators can see sources, layer choice, outputs, runtime surfaces, and the shipped-vs-optional sink boundary without reading the full architecture docs first.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed

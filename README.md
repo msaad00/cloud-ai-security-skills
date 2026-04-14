@@ -113,10 +113,13 @@ The repo keeps one source of truth:
 
 ## Visual guide
 
+![Start here guide](docs/images/start-here-guide.svg)
+
 ![IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg)
 
 | If you want to see... | Open... |
 |---|---|
+| where to start by source, layer, output, and runtime | [Start here guide](docs/images/start-here-guide.svg) |
 | the overall repo shape | [Repo architecture](docs/images/repo-architecture.svg) |
 | how ingest → detect → export fits together | [Detection pipeline](docs/images/detection-pipeline.svg) |
 | the flagship HITL remediation workflow | [IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg) |

@@ -4,6 +4,7 @@ Keep the markdown source diagrams lightweight and reviewable, then pair them wit
 
 ## Visual set
 
+- [Start here guide](images/start-here-guide.svg)
 - [IAM departures cross-cloud workflow](images/iam-departures-architecture.svg)
 - [Repository architecture](images/repo-architecture.svg)
 - [IAM departures data flow](images/iam-departures-data-flow.svg)
