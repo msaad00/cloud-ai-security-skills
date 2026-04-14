@@ -11,7 +11,7 @@
 
     <rect x="260" y="132" width="190" height="86" rx="18" fill="#1d4ed8" stroke="#93c5fd"/>
     <text x="318" y="170" fill="#eff6ff" font-size="22" font-weight="700">Ingest</text>
-    <text x="289" y="194" fill="#dbeafe" font-size="14">normalize to OCSF 1.8</text>
+    <text x="273" y="194" fill="#dbeafe" font-size="14">normalize to canonical → native / OCSF</text>
 
     <rect x="500" y="132" width="190" height="86" rx="18" fill="#0f766e" stroke="#5eead4"/>
     <text x="560" y="170" fill="#ecfeff" font-size="22" font-weight="700">Detect</text>
@@ -35,5 +35,5 @@
     <path d="M930 175 L980 175" stroke="#c4b5fd"/>
   </g>
 
-  <text x="40" y="304" fill="#cbd5e1" font-size="18" font-family="Arial, sans-serif">Contract rule: every intermediate handoff stays OCSF-native; only the final delivery edge converts to other formats.</text>
+  <text x="40" y="304" fill="#cbd5e1" font-size="18" font-family="Arial, sans-serif">Contract rule: canonical is the stable internal model; intermediate handoffs may be native or OCSF, and the final edge converts to the delivery format.</text>
 </svg>

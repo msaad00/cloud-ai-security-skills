@@ -159,6 +159,58 @@ Persistent stores should prefer canonical fields for:
 
 That avoids breaking DB schemas every time an output format changes.
 
+## Projection example
+
+The same logical event can exist in three wire shapes while preserving one
+canonical contract:
+
+```json
+{
+  "canonical": {
+    "schema_mode": "canonical",
+    "canonical_schema_version": "2026-04",
+    "record_type": "api_activity",
+    "event_uid": "evt-123",
+    "provider": "AWS",
+    "account_uid": "111122223333",
+    "time_ms": 1775797200000,
+    "operation": "AssumeRole"
+  },
+  "native": {
+    "schema_mode": "native",
+    "record_type": "api_activity",
+    "event_uid": "evt-123",
+    "provider": "AWS",
+    "account_uid": "111122223333",
+    "time_ms": 1775797200000,
+    "operation": "AssumeRole"
+  },
+  "ocsf": {
+    "class_uid": 6003,
+    "category_uid": 6,
+    "activity_id": 99,
+    "time": 1775797200000,
+    "metadata": {"uid": "evt-123"},
+    "cloud": {"provider": "AWS", "account": {"uid": "111122223333"}},
+    "api": {"operation": "AssumeRole"}
+  },
+  "bridge": {
+    "class_uid": 5040,
+    "metadata": {"uid": "evt-123"},
+    "unmapped": {
+      "canonical": {
+        "record_type": "api_activity",
+        "provider": "AWS",
+        "operation": "AssumeRole"
+      }
+    }
+  }
+}
+```
+
+The exact projected fields differ by layer, but the rule does not: one
+canonical truth, multiple wire formats.
+
 ## Current implementation note
 
 The canonical model is fully piloted today in:

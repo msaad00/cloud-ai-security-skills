@@ -14,7 +14,7 @@
   <rect x="330" y="160" width="230" height="120" rx="18" fill="#1e3a5f" stroke="#38bdf8"/>
   <text x="352" y="196" fill="#e0f2fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">Detection</text>
   <text x="352" y="226" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">Ingest → detect → convert</text>
-  <text x="352" y="248" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">OCSF 1.8 on the wire</text>
+  <text x="352" y="248" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">OCSF 1.8 by default, native available</text>
 
   <rect x="590" y="160" width="230" height="120" rx="18" fill="#1f2937" stroke="#2dd4bf"/>
   <text x="612" y="196" fill="#dcfce7" font-size="22" font-family="Arial, sans-serif" font-weight="700">Remediation</text>

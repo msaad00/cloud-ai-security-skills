@@ -33,18 +33,15 @@ The format is loosely based on Keep a Changelog.
 - Extended the native/OCSF pilot to `ingest-k8s-audit-ocsf` and `detect-sensitive-secret-read-k8s`, so Kubernetes audit ingestion and one Kubernetes detector now support the same dual-mode rollout pattern as the earlier CloudTrail / VPC / lateral-movement pilots.
 - Made the README honest about current schema-mode rollout, required `input_formats` / `output_formats` for every shipped skill, and documented the native output fields on the currently dual-mode skills.
 
-### Added
-- Added deterministic `metadata.uid` to OCSF emitters and discovery bridge events for replay-safe SIEM dedupe.
-- Added [`docs/SIEM_INDEX_GUIDE.md`](docs/SIEM_INDEX_GUIDE.md) covering index fields, timestamps, dedupe keys, and just-in-time vs persistent ingestion guidance.
-- Added Azure Entra / Microsoft Graph credential-pivot coverage to `detect-lateral-movement`, including application and service-principal password-key changes, app-role grants, and federated identity credential creation.
-- Added explicit NIST AI RMF traceability to `model-serving-security` and `discover-cloud-control-evidence`, including machine-readable benchmark metadata and an opt-in `ai-rmf` evidence mode.
-
-### Added
 - `docs/COVERAGE_MODEL.md`, `docs/framework-coverage.json`, and `docs/ROADMAP.md` to make framework, provider, asset, and execution coverage measurable and auditable.
 - `scripts/validate_framework_coverage.py` so CI can reject undocumented or drifting coverage claims.
 - explicit cross-cloud ATT&CK identity coverage metadata for `detect-lateral-movement`, covering AWS role pivots, GCP service-account pivots, and Azure role / managed-identity pivot anchors.
 - explicit MITRE ATLAS and NIST AI RMF declarations for `gpu-cluster-security`, including machine-readable benchmark metadata for wrappers and coverage tests.
 - `docs/RUNTIME_ISOLATION.md` to document sandboxing, credential scope, transport protections, integrity controls, and approval rules across CLI, CI, MCP, and persistent/serverless runs.
+- Added deterministic `metadata.uid` to OCSF emitters and discovery bridge events for replay-safe SIEM dedupe.
+- Added [`docs/SIEM_INDEX_GUIDE.md`](docs/SIEM_INDEX_GUIDE.md) covering index fields, timestamps, dedupe keys, and just-in-time vs persistent ingestion guidance.
+- Added Azure Entra / Microsoft Graph credential-pivot coverage to `detect-lateral-movement`, including application and service-principal password-key changes, app-role grants, and federated identity credential creation.
+- Added explicit NIST AI RMF traceability to `model-serving-security` and `discover-cloud-control-evidence`, including machine-readable benchmark metadata and an opt-in `ai-rmf` evidence mode.
 
 ### Changed
 - Promoted the IAM departures cross-cloud workflow visual in `README.md` and made the CI badge explicitly track the `main` branch.

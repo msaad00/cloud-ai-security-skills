@@ -9,7 +9,7 @@ That is not a soft preference. It is the repo contract.
 | Mode | Purpose | When to use it |
 |---|---|---|
 | **native** | Preserve the source payload shape and natural identifiers | source fidelity matters most, the vendor schema is the contract, or OCSF would be lossy |
-| **canonical** | Normalize into the repo's stable internal model | storage, joins, entity state, metrics, views, and cross-skill behavior must stay stable even if the output format changes |
+| **canonical** | Normalize into the repo's stable internal model | internal-only storage and join model; not emitted directly today. `native`, `ocsf`, and `bridge` are projections of canonical |
 | **ocsf** | Emit native OCSF classes, profiles, or extensions | SIEM interoperability, cross-vendor correlation, downstream OCSF consumers, or shared wire contracts between skills |
 | **bridge** | Emit an OCSF-friendly event while preserving the native or canonical artifact under `unmapped` or an explicit sidecar field | OCSF helps transport/search, but the source or evidence shape still carries important detail |
 

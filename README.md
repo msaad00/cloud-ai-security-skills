@@ -207,7 +207,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | 3 | **Least privilege** | Each skill documents the EXACT IAM / RBAC permissions it needs in `REFERENCES.md`. Minimal set only. |
 | 4 | **Defense in depth** | Posture + detection + remediation + audit + re-verify all run in parallel and back each other up. |
 | 5 | **Closed loop** | Every workflow has a verification step: detect → finding → action → audit → re-verify. Drift is itself a detection. |
-| 6 | **OCSF on the wire** | All ingest + detect skills speak OCSF 1.8 JSONL. MITRE ATT&CK lives inside `finding_info.attacks[]`. |
+| 6 | **OCSF as default wire format** | Ingest and detect skills default to OCSF 1.8 JSONL; native and bridge modes are first-class alternatives declared in each skill's `output_formats`. MITRE ATT&CK lives inside `finding_info.attacks[]` when OCSF is emitted. |
 | 7 | **Secure by design** | Security is a first-class input to the skill's architecture, not a bolt-on. |
 | 8 | **Secure code** | Defensive parsing on every input boundary. No `eval`/`exec`/`pickle.loads` on untrusted data. Parameterised SQL only. `bandit` in CI. |
 | 9 | **Secure secrets & tokens** | No hardcoded creds. Secrets from cloud secret stores. Short-lived tokens. Logs scrub creds. CI greps for `AKIA` / `sk-` / `ghp_` patterns. |

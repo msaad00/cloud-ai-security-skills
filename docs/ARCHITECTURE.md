@@ -16,12 +16,12 @@ This document is the load-bearing design contract for `cloud-ai-security-skills`
 `cloud-ai-security-skills` is a library of **composable security skills for cloud and AI systems** that can operate in native, canonical, OCSF, or bridge modes. The repository is designed to be driven by agentic tools (Claude Code, Snowflake Cortex Code CLI, Claude Agent SDK, any MCP client) *and* by traditional CI / serverless pipelines — with no code changes between the two modes.
 
 **In scope**
-- Normalising raw vendor telemetry into OCSF 1.8 wire format
-- Running deterministic detection rules on OCSF streams
-- Evaluating OCSF streams against compliance benchmarks (CIS, NIST, PCI)
+- Normalising raw vendor telemetry into canonical or OCSF wire formats
+- Running deterministic detection rules on canonical or OCSF streams
+- Evaluating raw, canonical, or OCSF telemetry against compliance benchmarks (CIS, NIST, PCI)
 - Producing remediation proposals (and, when explicitly authorised, executing them)
 - Converting OCSF into downstream wire formats (SARIF, Sigma, Jira, Mermaid)
-- Persisting OCSF into columnar / lakehouse stores (Snowflake, AWS Security Lake, ClickHouse, BigQuery)
+- Persisting canonical or OCSF records into columnar / lakehouse stores (Snowflake, AWS Security Lake, ClickHouse, BigQuery)
 - Exposing every skill as an MCP tool so the same logic runs in every agent
 
 **Out of scope (explicit non-goals)**
@@ -64,7 +64,7 @@ This is how the repo stays secure and reliable without turning every skill into 
  │ L0  SOURCES         raw vendor formats (CloudTrail, VPC Flow,     │
  │                     Okta, Ramp, Snowflake audit, K8s audit, ...)  │
  ├───────────────────────────────────────────────────────────────────┤
- │ L1  INGEST          raw → OCSF 1.8 wire format                    │
+ │ L1  INGEST          raw → canonical → native / OCSF / bridge      │
  │                     ingest-cloudtrail-ocsf, ingest-ramp-ocsf, ... │
  ├───────────────────────────────────────────────────────────────────┤
 │ L2  DISCOVER /      inventory + context                           │
@@ -74,10 +74,10 @@ This is how the repo stays secure and reliable without turning every skill into 
 │                     enrich-asset-inventory, enrich-geoip,         │
 │                     enrich-mitre-navigator, enrich-pii-redact     │
  ├───────────────────────────────────────────────────────────────────┤
- │ L3  DETECT          OCSF → OCSF Detection Finding (2004)          │
+ │ L3  DETECT          canonical / OCSF → native / OCSF findings     │
  │                     detect-lateral-movement, detect-*             │
  ├───────────────────────────────────────────────────────────────────┤
- │ L4  EVALUATE        OCSF → compliance pass/fail + evidence        │
+ │ L4  EVALUATE        raw / canonical → compliance result + evidence│
  │                     cspm-*-cis-benchmark, evaluate-nist-ai-rmf    │
  ├───────────────────────────────────────────────────────────────────┤
  │ L5  REMEDIATE       Finding → IaC patch / SOAR action             │
