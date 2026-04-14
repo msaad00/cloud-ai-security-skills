@@ -120,6 +120,7 @@ The repo keeps one source of truth:
 | If you want to see... | Open... |
 |---|---|
 | where to start by source, layer, output, and runtime | [Start here guide](docs/images/start-here-guide.svg) |
+| how CLI, CI, MCP, and persistent wrappers call the same skill contract | [Runtime surfaces](docs/images/runtime-surfaces.svg) |
 | the overall repo shape | [Repo architecture](docs/images/repo-architecture.svg) |
 | how ingest → detect → export fits together | [Detection pipeline](docs/images/detection-pipeline.svg) |
 | the flagship HITL remediation workflow | [IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg) |
