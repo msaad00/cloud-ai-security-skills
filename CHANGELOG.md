@@ -21,6 +21,7 @@ The format is loosely based on Keep a Changelog.
 - `detect-google-workspace-suspicious-login` as the first Google Workspace-native detection skill, emitting OCSF Detection Finding (2004) for provider-marked suspicious logins and repeated Workspace login failures followed by success, aligned to MITRE ATT&CK T1110 and T1078.
 - a phased native/OCSF pilot for `ingest-cloudtrail-ocsf` and `detect-lateral-movement`, including explicit `--output-format {ocsf,native}` support, native/canonical-friendly test coverage, and MCP output-format selection for supported skills.
 - repo-wide skill frontmatter for `approval_model`, `execution_modes`, and `side_effects`, plus CI enforcement and MCP tool-surface hints so human-in-the-loop expectations are explicit instead of inferred.
+- `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed
 
@@ -29,6 +30,7 @@ The format is loosely based on Keep a Changelog.
 - Reframed the repo contract so OCSF remains a first-class interoperability option, but not a mandatory storage or execution model; the stable internal contract is now explicitly source truth -> canonical model -> `native` / `ocsf` / `bridge` output.
 - Made the OCSF metadata validator format-aware so native-mode support does not weaken the OCSF path contract.
 - Extended the native/OCSF pilot to `ingest-vpc-flow-logs-ocsf`, so AWS flow logs can now emit either OCSF Network Activity or the repo's canonical native network-flow shape while preserving a compatible end-to-end lateral-movement path.
+- Made the README honest about current schema-mode rollout, required `input_formats` / `output_formats` for every shipped skill, and documented the native output fields on the currently dual-mode skills.
 
 ### Added
 - Added deterministic `metadata.uid` to OCSF emitters and discovery bridge events for replay-safe SIEM dedupe.

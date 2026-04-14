@@ -21,6 +21,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: ocsf
+output_formats: ocsf
 ---
 
 # detect-privilege-escalation-k8s

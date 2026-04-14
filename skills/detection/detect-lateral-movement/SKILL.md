@@ -107,6 +107,23 @@ The purpose of this rule is **east-west detection**. Egress to the public intern
 
 By default, the skill emits OCSF 1.8 Detection Finding (class `2004`). When `--output-format native` is selected, it emits the repo's native detection-finding shape with the same deterministic IDs and ATT&CK mappings.
 
+## Native output format
+
+`--output-format native` returns one JSON object per finding with:
+
+- `schema_mode: "native"`
+- `record_type: "detection_finding"`
+- `finding_uid`
+- `rule_id`, `title`, `description`
+- `severity_id`, `severity`
+- `provider`, `account_uid`, `session_uid`
+- `attacks`
+- `observables`
+- `evidence`
+
+The native finding preserves the same correlation result and deterministic
+identity as the OCSF projection while omitting the OCSF 2004 wrapper fields.
+
 The output includes:
 
 - `finding_info.attacks[]` — two techniques populated per MITRE v14:

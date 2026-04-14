@@ -18,6 +18,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: native, bridge
 compatibility: >-
   Requires Python 3.11+. Cloud discovery needs respective SDKs (boto3 for AWS,
   google-cloud-* for GCP, azure-* for Azure). Static config mode needs no SDKs.

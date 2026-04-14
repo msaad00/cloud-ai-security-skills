@@ -24,6 +24,7 @@
 - Runtime isolation and trust boundaries: [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md)
 - SIEM indexing and dedupe: [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md)
 - Schema modes and interoperability: [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
+- Canonical schema and data flow: [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md) and [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
 - Historical state and timeline handling: [docs/STATE_AND_TIMELINE_MODEL.md](docs/STATE_AND_TIMELINE_MODEL.md)
 - Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), and [docs/ROADMAP.md](docs/ROADMAP.md)
 
@@ -72,14 +73,27 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, explicit `Use when...`, and explicit `Do NOT use...`.
 
 **Schema mode note**
-- the repo supports `native`, `canonical`, `ocsf`, and `bridge` modes
-- `ingest`, `detect`, `evaluate`, and `view` remain OCSF-friendly, but OCSF is optional rather than mandatory
-- `discovery` prefers native OCSF inventory/evidence classes and profiles when they fit, and otherwise uses deterministic native or bridge artifacts
-- `discover-environment` supports an `ocsf-cloud-resources-inventory` bridge mode
-- discovery evidence skills support an `ocsf-live-evidence` bridge mode for Discovery-category OCSF workflows
-- the stable repo contract is now: preserve source truth, normalize into a canonical internal model, then emit `native`, `ocsf`, or `bridge` output as appropriate
+- the repo contract supports `native`, `canonical`, `ocsf`, and `bridge` modes
+- OCSF is a first-class interoperability option, not a mandatory storage format
+- the stable repo contract is: preserve source truth, normalize into a canonical internal model, then emit `native`, `ocsf`, or `bridge` as appropriate
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design, [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md) for schema-mode selection, [`docs/STATE_AND_TIMELINE_MODEL.md`](docs/STATE_AND_TIMELINE_MODEL.md) for historical-state handling, and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
+**Currently implemented**
+- dual-mode (`--output-format ocsf,native`):
+  - `ingest-cloudtrail-ocsf`
+  - `ingest-vpc-flow-logs-ocsf`
+  - `detect-lateral-movement`
+- native-first with optional bridge:
+  - `discover-environment`
+  - `discover-control-evidence`
+  - `discover-cloud-control-evidence`
+- OCSF-only today, with format metadata declared for rollout:
+  - the remaining ingestion and detection skills
+- native-only today:
+  - evaluation and view skills
+
+`-ocsf` in a skill name means OCSF is the default wire format, not necessarily the only supported mode.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full layered design, [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md) for schema-mode selection, [`docs/CANONICAL_SCHEMA.md`](docs/CANONICAL_SCHEMA.md) for the repo-owned canonical contract, [`docs/DATA_FLOW.md`](docs/DATA_FLOW.md) for the end-to-end projection flow, [`docs/STATE_AND_TIMELINE_MODEL.md`](docs/STATE_AND_TIMELINE_MODEL.md) for historical-state handling, and [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for the visual set.
 
 ## How it runs
 

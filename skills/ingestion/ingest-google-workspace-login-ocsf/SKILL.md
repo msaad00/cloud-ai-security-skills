@@ -16,6 +16,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: ocsf
 compatibility: >-
   Requires Python 3.11+. No Google SDK required when Admin SDK Reports payloads
   are already exported. Read-only — validates raw Workspace audit shape and

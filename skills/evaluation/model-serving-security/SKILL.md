@@ -18,6 +18,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: native
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files.
   Optional: PyYAML for YAML config parsing. Read-only — no write permissions,

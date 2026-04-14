@@ -14,6 +14,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: native
 compatibility: >-
   Requires Python 3.11+. No Docker daemon needed — works with config files.
   Optional: PyYAML for YAML parsing. Read-only — no image pulls or execution.

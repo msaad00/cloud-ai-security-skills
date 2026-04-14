@@ -7,6 +7,8 @@ This document is the load-bearing design contract for `cloud-ai-security-skills`
 - **Runner / streaming contract** — see [`./RUNNER_CONTRACT.md`](./RUNNER_CONTRACT.md) *(lands with PR V)*
 - **Runtime isolation and trust boundaries** — see [`./RUNTIME_ISOLATION.md`](./RUNTIME_ISOLATION.md)
 - **SIEM indexing and dedupe guidance** — see [`./SIEM_INDEX_GUIDE.md`](./SIEM_INDEX_GUIDE.md)
+- **Canonical schema contract** — see [`./CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
+- **Raw → canonical → native / OCSF / bridge flow** — see [`./DATA_FLOW.md`](./DATA_FLOW.md)
 - **Visual guide** — see [`./DIAGRAMS.md`](./DIAGRAMS.md) for the architecture and data-flow diagrams in both markdown-native and SVG-friendly form
 
 ## 1. Purpose and scope
@@ -109,6 +111,8 @@ Most current ingest, detect, evaluate, view, and sink paths are still **OCSF-fri
 For the detailed contract, see:
 
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
+- [`CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
+- [`DATA_FLOW.md`](./DATA_FLOW.md)
 - [`STATE_AND_TIMELINE_MODEL.md`](./STATE_AND_TIMELINE_MODEL.md)
 - [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-engineering/OCSF_CONTRACT.md)
 

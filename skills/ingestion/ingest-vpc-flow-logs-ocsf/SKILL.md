@@ -41,6 +41,24 @@ By default it writes OCSF 1.8 **Network Activity** (`class_uid: 4001`, `category
 
 When `--output-format native` is selected, it emits the same flow in the repo's native enriched shape with stable `event_uid`, normalized source/destination, byte counters, protocol/direction, and AWS scope fields, but without the OCSF envelope.
 
+## Native output format
+
+`--output-format native` returns one JSON object per flow with:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "network_activity"`
+- `event_uid`
+- `provider`, `account_uid`, `region`
+- `time_ms`, `start_time_ms`, `end_time_ms`
+- `activity_id`, `activity_name`
+- `status_id`, `status`
+- `src`, `dst`, `traffic`, `connection`, `cloud`, and `source`
+
+The native shape preserves the same normalized network semantics as the OCSF
+projection while omitting the OCSF envelope fields such as `class_uid`,
+`category_uid`, `type_uid`, and `metadata.product`.
+
 ## activity_id mapping
 
 VPC Flow Logs have an `action` field with two values: `ACCEPT` and `REJECT`. OCSF Network Activity activity ids map as:

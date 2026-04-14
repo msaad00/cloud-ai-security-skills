@@ -128,3 +128,22 @@ The repo can support all three operational styles:
 - **OCSF-first** for interoperability, SIEMs, and shared pipelines
 
 The correct choice depends on the skill and the downstream consumer, not on ideology.
+
+## Current rollout status
+
+Implemented dual-mode skills today:
+
+- `ingest-cloudtrail-ocsf`
+- `ingest-vpc-flow-logs-ocsf`
+- `detect-lateral-movement`
+
+Implemented native-first with bridge skills today:
+
+- `discover-environment`
+- `discover-control-evidence`
+- `discover-cloud-control-evidence`
+
+The remaining skills now declare their supported `input_formats` and
+`output_formats` explicitly in `SKILL.md`, even where only one format is
+implemented today. That keeps the contract honest while the rollout continues
+skill-by-skill.

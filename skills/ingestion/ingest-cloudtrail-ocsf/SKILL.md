@@ -38,6 +38,23 @@ By default it writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid
 
 When `--output-format native` is selected, it emits the same event in the repo's native enriched shape with stable `event_uid`, normalized provider/account/operation/status fields, and preserved actor/session/source context, but without the OCSF envelope fields.
 
+## Native output format
+
+`--output-format native` returns one JSON object per event with:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "api_activity"`
+- `event_uid`
+- `provider`, `account_uid`, `region`
+- `time_ms`
+- `activity_id`, `activity_name`
+- `status_id`, `status`, `status_detail`
+- `actor`, `api`, `src`, `cloud`, and `resources`
+
+The native shape keeps the same normalized semantics as the OCSF projection,
+but omits `class_uid`, `category_uid`, `type_uid`, and `metadata.product`.
+
 ## activity_id inference
 
 CloudTrail doesn't tell you whether an event is a Create / Read / Update / Delete — you have to infer from the verb in `eventName`. The skill uses a deterministic prefix table:

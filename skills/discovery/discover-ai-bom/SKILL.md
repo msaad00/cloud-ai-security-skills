@@ -15,6 +15,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw, canonical
+output_formats: native
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs required when inventory snapshots are
   already exported. Read-only — validates and normalizes inventory into a

@@ -12,6 +12,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: native
 compatibility: >-
   Requires Python 3.11+, google-cloud-iam, google-cloud-storage, google-cloud-compute.
   Service account needs roles/viewer + roles/iam.securityReviewer.

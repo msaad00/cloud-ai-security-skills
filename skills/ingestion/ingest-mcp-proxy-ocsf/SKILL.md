@@ -15,6 +15,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: ocsf
 ---
 
 # ingest-mcp-proxy-ocsf

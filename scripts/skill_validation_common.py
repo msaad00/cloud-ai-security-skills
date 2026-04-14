@@ -22,6 +22,8 @@ SIDE_EFFECT_VALUES = {
     "writes-database",
     "writes-audit",
 }
+INPUT_FORMAT_VALUES = {"raw", "canonical", "native", "ocsf"}
+OUTPUT_FORMAT_VALUES = {"native", "ocsf", "bridge"}
 
 ENTRYPOINT_CANDIDATES = (
     "src/ingest.py",

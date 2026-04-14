@@ -34,6 +34,8 @@ Optional:
 - `approval_model`
 - `execution_modes`
 - `side_effects`
+- `input_formats`
+- `output_formats`
 
 Rules:
 
@@ -64,6 +66,16 @@ Rules:
 - write-capable skills must set:
   - `approval_model: human_required`
   - one or more explicit write scopes in `side_effects`
+- `input_formats` must be a comma-separated subset of:
+  - `raw`
+  - `canonical`
+  - `native`
+  - `ocsf`
+- `output_formats` must be a comma-separated subset of:
+  - `native`
+  - `ocsf`
+  - `bridge`
+- every skill must declare the formats it supports today, even if only one mode is implemented
 
 ## Required language
 
@@ -126,6 +138,7 @@ CI currently validates:
 - `name` format is valid
 - `Use when` and `Do NOT use` are present
 - `approval_model`, `execution_modes`, and `side_effects` are present and valid
+- `input_formats` and `output_formats` are present and valid
 - read-only skills do not use subprocess/shell execution
 - write-capable skills document and test dry-run behavior
 - write-capable skills explicitly require human approval

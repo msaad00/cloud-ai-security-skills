@@ -5,7 +5,9 @@ import sys
 from skill_validation_common import (
     APPROVAL_MODE_VALUES,
     EXECUTION_MODE_VALUES,
+    INPUT_FORMAT_VALUES,
     NAME_RE,
+    OUTPUT_FORMAT_VALUES,
     ROOT,
     SIDE_EFFECT_VALUES,
     discover_skill_contracts,
@@ -24,7 +26,16 @@ def main() -> int:
             if not (skill.skill_dir / required).exists():
                 errors.append(f"{rel}: missing required path `{required}`")
 
-        for field in ("name", "description", "license", "approval_model", "execution_modes", "side_effects"):
+        for field in (
+            "name",
+            "description",
+            "license",
+            "approval_model",
+            "execution_modes",
+            "side_effects",
+            "input_formats",
+            "output_formats",
+        ):
             if not skill.frontmatter.get(field):
                 errors.append(f"{rel}: frontmatter missing `{field}`")
 
@@ -52,6 +63,28 @@ def main() -> int:
                 errors.append(f"{rel}: side_effects `none` must not be combined with other values")
         elif skill.frontmatter.get("side_effects"):
             errors.append(f"{rel}: side_effects must not be empty")
+
+        input_formats = skill.frontmatter.get("input_formats")
+        parsed_input_formats = tuple(
+            part.strip() for part in input_formats.split(",") if part.strip()
+        ) if input_formats else ()
+        if parsed_input_formats:
+            unknown_input_formats = [mode for mode in parsed_input_formats if mode not in INPUT_FORMAT_VALUES]
+            if unknown_input_formats:
+                errors.append(f"{rel}: invalid input_formats {unknown_input_formats}")
+        elif input_formats:
+            errors.append(f"{rel}: input_formats must not be empty")
+
+        output_formats = skill.frontmatter.get("output_formats")
+        parsed_output_formats = tuple(
+            part.strip() for part in output_formats.split(",") if part.strip()
+        ) if output_formats else ()
+        if parsed_output_formats:
+            unknown_output_formats = [mode for mode in parsed_output_formats if mode not in OUTPUT_FORMAT_VALUES]
+            if unknown_output_formats:
+                errors.append(f"{rel}: invalid output_formats {unknown_output_formats}")
+        elif output_formats:
+            errors.append(f"{rel}: output_formats must not be empty")
 
         if skill.is_write_capable:
             if skill.approval_model != "human_required":

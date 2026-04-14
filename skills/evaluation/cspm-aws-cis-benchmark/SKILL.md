@@ -13,6 +13,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: native
 compatibility: >-
   Requires Python 3.11+, boto3, and AWS credentials with SecurityAudit managed policy
   (read-only). No write permissions needed — assessment only.

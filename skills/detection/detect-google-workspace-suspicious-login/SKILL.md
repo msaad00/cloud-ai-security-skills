@@ -17,6 +17,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: ocsf
+output_formats: ocsf
 metadata:
   homepage: https://github.com/msaad00/cloud-ai-security-skills
   source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/detection/detect-google-workspace-suspicious-login

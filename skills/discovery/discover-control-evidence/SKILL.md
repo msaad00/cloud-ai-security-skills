@@ -16,6 +16,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: canonical
+output_formats: native, bridge
 compatibility: >-
   Requires Python 3.11+. Read-only. Accepts discovery-layer JSON from stdin or
   a file path. Produces deterministic JSON evidence suitable for CLI, CI, MCP,

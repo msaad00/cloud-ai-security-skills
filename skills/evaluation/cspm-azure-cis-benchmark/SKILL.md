@@ -12,6 +12,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
+input_formats: raw
+output_formats: native
 compatibility: >-
   Requires Python 3.11+, azure-identity, azure-mgmt-storage, azure-mgmt-network.
   Service principal needs Reader role. No write permissions — assessment only.
