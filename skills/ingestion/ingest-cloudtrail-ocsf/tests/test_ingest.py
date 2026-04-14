@@ -239,6 +239,16 @@ class TestIterRawEvents:
         assert out[0]["eventName"] == "Good"
         assert "skipping line" in capsys.readouterr().err
 
+    def test_skips_malformed_with_json_stderr(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        out = list(iter_raw_events(['{"not": "json"', '{"eventName": "Good"}']))
+        assert len(out) == 1
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["skill"] == SKILL_NAME
+        assert payload["level"] == "warning"
+        assert payload["event"] == "json_parse_failed"
+        assert payload["line"] == 1
+
 
 # ── Golden fixture parity ──────────────────────────────────────────────
 

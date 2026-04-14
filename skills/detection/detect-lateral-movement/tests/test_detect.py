@@ -556,6 +556,16 @@ class TestLoadJsonl:
         assert out == [{"class_uid": 6003}]
         assert "skipping line 1" in capsys.readouterr().err
 
+    def test_skips_malformed_with_json_stderr(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        out = list(load_jsonl(['{"bad": ', '{"class_uid": 6003}']))
+        assert out == [{"class_uid": 6003}]
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["skill"] == SKILL_NAME
+        assert payload["level"] == "warning"
+        assert payload["event"] == "json_parse_failed"
+        assert payload["line"] == 1
+
 
 # ── Golden fixture parity ───────────────────────────────────────
 

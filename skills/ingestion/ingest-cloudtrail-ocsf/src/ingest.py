@@ -15,7 +15,14 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "ingest-cloudtrail-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -400,7 +407,13 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as e:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="json_parse_failed",
+                message=f"skipping line {lineno}: json parse failed: {e}",
+                line=lineno,
+            )
             continue
         if isinstance(obj, dict) and "Records" in obj:
             for r in obj.get("Records") or []:
@@ -409,7 +422,13 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         elif isinstance(obj, dict):
             yield obj
         else:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object or Records wrapper", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="invalid_json_shape",
+                message=f"skipping line {lineno}: not a JSON object or Records wrapper",
+                line=lineno,
+            )
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
@@ -421,7 +440,12 @@ def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[
             else:
                 yield _render_ocsf_event(canonical)
         except Exception as e:  # defence-in-depth — never crash the pipeline
-            print(f"[{SKILL_NAME}] skipping event: convert error: {e}", file=sys.stderr)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="convert_error",
+                message=f"skipping event: convert error: {e}",
+            )
             continue
 
 
