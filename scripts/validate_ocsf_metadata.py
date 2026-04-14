@@ -14,7 +14,7 @@ def _declares_ocsf_output(raw_modes: str) -> bool:
     return "ocsf" in {part.strip() for part in raw_modes.split(",") if part.strip()}
 
 
-def _const_str(node: ast.AST) -> str | None:
+def _const_str(node: ast.AST | None) -> str | None:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
     return None

@@ -221,7 +221,7 @@ def check_4_2_no_unrestricted_ssh_rdp(compute_client, project_id: str) -> Findin
             if rule.direction != "INGRESS" or rule.disabled:
                 continue
             for allowed in rule.allowed or []:
-                ports = []
+                ports: list[int] = []
                 for p in allowed.ports or []:
                     if "-" in p:
                         low, high = p.split("-")

@@ -506,7 +506,7 @@ def _to_service(asset: dict[str, Any]) -> dict[str, Any]:
 
 
 def _metadata_properties(document: dict[str, Any], assets: list[dict[str, Any]]) -> list[dict[str, str]]:
-    counts = defaultdict(int)
+    counts: defaultdict[str, int] = defaultdict(int)
     for asset in assets:
         counts[f"cloud-security:count.{asset['provider']}.{asset['kind']}"] += 1
 
@@ -546,9 +546,9 @@ def build_bom(document: dict[str, Any]) -> dict[str, Any]:
         else:
             components.append(_to_component(asset))
 
-    dependencies = []
+    dependencies: list[dict[str, Any]] = []
     for asset in assets:
-        refs = [_string(dep) for dep in asset.get("dependencies", []) if _string(dep)]
+        refs = [dep_text for dep in asset.get("dependencies", []) if (dep_text := _string(dep))]
         if refs:
             dependencies.append({"ref": _bom_ref(asset), "dependsOn": sorted(set(refs))})
 
