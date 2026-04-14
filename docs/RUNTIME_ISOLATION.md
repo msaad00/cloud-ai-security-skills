@@ -97,6 +97,7 @@ Best practice for this repo:
 Transport expectations:
 - TLS for external API calls and remote sinks
 - local MCP uses stdio, not an unauthenticated network listener
+- MCP wrappers should emit invocation audit events that identify the tool, caller context presence, approval context presence, exit code, and a hashed argument payload without echoing secrets or raw stdin
 - any future HTTP or SSE transport must add explicit authentication, integrity, and timeout controls
 
 Storage expectations:

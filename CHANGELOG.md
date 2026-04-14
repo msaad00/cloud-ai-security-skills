@@ -24,6 +24,7 @@ The format is loosely based on Keep a Changelog.
 - a phased native/OCSF pilot for `ingest-cloudtrail-ocsf` and `detect-lateral-movement`, including explicit `--output-format {ocsf,native}` support, native/canonical-friendly test coverage, and MCP output-format selection for supported skills.
 - repo-wide skill frontmatter for `approval_model`, `execution_modes`, and `side_effects`, plus CI enforcement and MCP tool-surface hints so human-in-the-loop expectations are explicit instead of inferred.
 - optional `caller_roles`, `approver_roles`, and `min_approvers` contract metadata plus MCP caller-context propagation into write-capable skills, so remediation audit trails can record who invoked, who approved, and which request or session triggered the action.
+- stderr-based MCP invocation audit events covering tool name, caller-context presence, approval-context presence, hashed arguments, duration, and exit status without logging raw stdin payloads.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed

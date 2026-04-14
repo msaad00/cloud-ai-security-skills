@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
 import sys
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +20,20 @@ SERVER_NAME = "cloud-ai-security-skills"
 SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_TIMEOUT_SECONDS = 60
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _stable_hash(payload: Any) -> str:
+    normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def _emit_audit_event(event: dict[str, Any]) -> None:
+    sys.stderr.write(json.dumps(event, sort_keys=True) + "\n")
+    sys.stderr.flush()
 
 
 def _error_response(request_id: Any, code: int, message: str, data: Any | None = None) -> dict[str, Any]:
@@ -109,61 +126,91 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     output_format = _validate_output_format((arguments or {}).get("output_format"))
     caller_context = _validate_context((arguments or {}).get("_caller_context"), "_caller_context")
     approval_context = _validate_context((arguments or {}).get("_approval_context"), "_approval_context")
-
-    if not skill.read_only and "--dry-run" not in args:
-        raise ValueError("write-capable tools must be called with `--dry-run`")
-    if not skill.read_only and skill.approver_roles and approval_context is None:
-        raise ValueError("write-capable tools with approver_roles require `_approval_context`")
-
-    env = os.environ.copy()
-    env.setdefault("PYTHONUNBUFFERED", "1")
-    if caller_context:
-        if "user_id" in caller_context:
-            env["SKILL_CALLER_ID"] = caller_context["user_id"]
-        if "email" in caller_context:
-            env["SKILL_CALLER_EMAIL"] = caller_context["email"]
-        if "session_id" in caller_context:
-            env["SKILL_SESSION_ID"] = caller_context["session_id"]
-        if "roles" in caller_context:
-            env["SKILL_CALLER_ROLES"] = ",".join(caller_context["roles"])
-    if approval_context:
-        if "approver_id" in approval_context:
-            env["SKILL_APPROVER_ID"] = approval_context["approver_id"]
-        if "approver_email" in approval_context:
-            env["SKILL_APPROVER_EMAIL"] = approval_context["approver_email"]
-        if "ticket_id" in approval_context:
-            env["SKILL_APPROVAL_TICKET"] = approval_context["ticket_id"]
-        if "approval_timestamp" in approval_context:
-            env["SKILL_APPROVAL_TIMESTAMP"] = approval_context["approval_timestamp"]
-    timeout_seconds = int(env.get("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
-    completed = subprocess.run(
-        build_command(skill, args, output_format=output_format),
-        input=stdin_text,
-        text=True,
-        capture_output=True,
-        cwd=repo_root(),
-        env=env,
-        timeout=timeout_seconds,
-        check=False,
-    )
-
-    output_text = completed.stdout or completed.stderr or ""
-    result = {
-        "content": [{"type": "text", "text": output_text}],
-        "structuredContent": {
-            "skill": skill.name,
-            "category": skill.category,
-            "capability": skill.capability,
-            "output_format": output_format or "default",
-            "caller_context_provided": caller_context is not None,
-            "approval_context_provided": approval_context is not None,
-            "stdout": completed.stdout,
-            "stderr": completed.stderr,
-            "exit_code": completed.returncode,
-        },
-        "isError": completed.returncode != 0,
+    started = time.monotonic()
+    audit_event: dict[str, Any] = {
+        "event": "mcp_tool_call",
+        "timestamp": _now_iso(),
+        "tool": name,
+        "category": skill.category,
+        "capability": skill.capability,
+        "read_only": skill.read_only,
+        "output_format": output_format or "default",
+        "args_hash": _stable_hash(args),
+        "args_count": len(args),
+        "input_sha256": hashlib.sha256(stdin_text.encode("utf-8")).hexdigest() if stdin_text else "",
+        "input_length": len(stdin_text),
+        "caller_context_provided": caller_context is not None,
+        "approval_context_provided": approval_context is not None,
+        "caller_id": caller_context.get("user_id", "") if caller_context else "",
+        "caller_session_id": caller_context.get("session_id", "") if caller_context else "",
+        "approval_ticket": approval_context.get("ticket_id", "") if approval_context else "",
+        "result": "pending",
     }
-    return result
+
+    try:
+        if not skill.read_only and "--dry-run" not in args:
+            raise ValueError("write-capable tools must be called with `--dry-run`")
+        if not skill.read_only and skill.approver_roles and approval_context is None:
+            raise ValueError("write-capable tools with approver_roles require `_approval_context`")
+
+        env = os.environ.copy()
+        env.setdefault("PYTHONUNBUFFERED", "1")
+        if caller_context:
+            if "user_id" in caller_context:
+                env["SKILL_CALLER_ID"] = caller_context["user_id"]
+            if "email" in caller_context:
+                env["SKILL_CALLER_EMAIL"] = caller_context["email"]
+            if "session_id" in caller_context:
+                env["SKILL_SESSION_ID"] = caller_context["session_id"]
+            if "roles" in caller_context:
+                env["SKILL_CALLER_ROLES"] = ",".join(caller_context["roles"])
+        if approval_context:
+            if "approver_id" in approval_context:
+                env["SKILL_APPROVER_ID"] = approval_context["approver_id"]
+            if "approver_email" in approval_context:
+                env["SKILL_APPROVER_EMAIL"] = approval_context["approver_email"]
+            if "ticket_id" in approval_context:
+                env["SKILL_APPROVAL_TICKET"] = approval_context["ticket_id"]
+            if "approval_timestamp" in approval_context:
+                env["SKILL_APPROVAL_TIMESTAMP"] = approval_context["approval_timestamp"]
+        timeout_seconds = int(env.get("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
+        completed = subprocess.run(
+            build_command(skill, args, output_format=output_format),
+            input=stdin_text,
+            text=True,
+            capture_output=True,
+            cwd=repo_root(),
+            env=env,
+            timeout=timeout_seconds,
+            check=False,
+        )
+
+        audit_event["result"] = "error" if completed.returncode != 0 else "success"
+        audit_event["exit_code"] = completed.returncode
+        output_text = completed.stdout or completed.stderr or ""
+        return {
+            "content": [{"type": "text", "text": output_text}],
+            "structuredContent": {
+                "skill": skill.name,
+                "category": skill.category,
+                "capability": skill.capability,
+                "output_format": output_format or "default",
+                "caller_context_provided": caller_context is not None,
+                "approval_context_provided": approval_context is not None,
+                "stdout": completed.stdout,
+                "stderr": completed.stderr,
+                "exit_code": completed.returncode,
+            },
+            "isError": completed.returncode != 0,
+        }
+    except Exception as exc:
+        audit_event["result"] = "error"
+        audit_event["error_type"] = type(exc).__name__
+        audit_event["error_message"] = str(exc)
+        raise
+    finally:
+        audit_event["duration_ms"] = int((time.monotonic() - started) * 1000)
+        _emit_audit_event(audit_event)
 
 
 def _handle_request(message: dict[str, Any]) -> dict[str, Any] | None:

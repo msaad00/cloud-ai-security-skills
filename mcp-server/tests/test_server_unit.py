@@ -31,9 +31,11 @@ class _FakeSkill:
 
 def test_call_tool_injects_caller_and_approval_context(monkeypatch):
     captured: dict[str, object] = {}
+    audit_events: list[dict[str, object]] = []
 
     monkeypatch.setattr(MODULE, "tool_map", lambda: {"fake-skill": _FakeSkill(read_only=True)})
     monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
 
     def _fake_run(*args, **kwargs):
         captured["env"] = kwargs["env"]
@@ -71,14 +73,23 @@ def test_call_tool_injects_caller_and_approval_context(monkeypatch):
     assert env["SKILL_APPROVAL_TIMESTAMP"] == "2026-04-14T12:00:00Z"
     assert result["structuredContent"]["caller_context_provided"] is True
     assert result["structuredContent"]["approval_context_provided"] is True
+    assert audit_events[0]["tool"] == "fake-skill"
+    assert audit_events[0]["result"] == "success"
+    assert audit_events[0]["caller_id"] == "u-123"
+    assert audit_events[0]["approval_ticket"] == "SEC-123"
+    assert audit_events[0]["args_count"] == 0
+    assert audit_events[0]["input_length"] == 0
 
 
 def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
+    audit_events: list[dict[str, object]] = []
+
     monkeypatch.setattr(
         MODULE,
         "tool_map",
         lambda: {"fake-skill": _FakeSkill(read_only=False, approver_roles=("security_lead",))},
     )
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
 
     try:
         MODULE._call_tool("fake-skill", {"args": ["--dry-run"]})
@@ -86,3 +97,8 @@ def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
         assert "require `_approval_context`" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+    assert audit_events[0]["tool"] == "fake-skill"
+    assert audit_events[0]["result"] == "error"
+    assert audit_events[0]["error_type"] == "ValueError"
+    assert audit_events[0]["args_hash"] == MODULE._stable_hash(["--dry-run"])
+    assert audit_events[0]["approval_context_provided"] is False
