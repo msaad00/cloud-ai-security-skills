@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import sys
-import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
+
+from defusedxml import ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_XML = ROOT / "coverage.xml"

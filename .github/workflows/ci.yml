@@ -205,7 +205,7 @@ jobs:
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: pytest pytest-cov
+          packages: pytest pytest-cov defusedxml
       - run: pytest tests/integration/ mcp-server/tests/ -v -o "testpaths=tests"
 
   coverage:
@@ -218,6 +218,7 @@ jobs:
           python-version: "3.11"
           packages: >-
             boto3 moto pytest pytest-cov
+            defusedxml
             google-cloud-compute google-cloud-iam google-cloud-resource-manager google-cloud-storage
             azure-identity azure-mgmt-network azure-mgmt-resource azure-mgmt-storage
             google-api-python-client
