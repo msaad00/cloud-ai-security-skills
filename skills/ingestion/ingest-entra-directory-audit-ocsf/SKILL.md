@@ -16,11 +16,12 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: ocsf
+output_formats: native, ocsf
 compatibility: >-
   Requires Python 3.11+. No Graph SDK required when directoryAudit payloads are
   already exported. Read-only — validates raw Entra audit shape and emits OCSF
-  JSONL only. Never calls write APIs.
+  JSONL by default or the repo-owned native projection when requested. Never
+  calls write APIs.
 metadata:
   author: msaad00
   homepage: https://github.com/msaad00/cloud-ai-security-skills
@@ -39,7 +40,7 @@ Activity records with deterministic IDs and source-preserving correlation keys.
 
 ## Use when
 
-- You have Microsoft Graph `directoryAudit` exports from `/auditLogs/directoryAudits` and need OCSF output
+- You have Microsoft Graph `directoryAudit` exports from `/auditLogs/directoryAudits` and need OCSF or native output
 - You want to normalize Entra application, service-principal, and federated-credential audit activity for SIEM, lake, MCP, or downstream detection use
 - You need a portable Entra identity event stream that preserves Graph `id`, `correlationId`, `activityDateTime`, and target resource IDs
 - You want Graph audit events represented as OCSF API Activity before feeding them into cross-cloud identity detections
@@ -97,7 +98,8 @@ Unsupported `activityDisplayName` values are skipped with a warning to `stderr`.
 
 ## Output contract
 
-Emits OCSF 1.8 JSONL as **API Activity (6003)**.
+Emits OCSF 1.8 JSONL as **API Activity (6003)** by default. With
+`--output-format native`, emits the repo-owned native API-activity projection.
 
 Each output record includes:
 
@@ -118,6 +120,9 @@ cat entra-audit.jsonl | python src/ingest.py > entra.ocsf.jsonl
 
 # explicit output file
 python src/ingest.py entra.json --output entra.ocsf.jsonl
+
+# native output
+python src/ingest.py entra.json --output-format native > entra.native.jsonl
 ```
 
 ## Security guardrails
@@ -126,6 +131,25 @@ python src/ingest.py entra.json --output entra.ocsf.jsonl
 - Keeps Graph natural IDs for dedupe and correlation instead of inventing random IDs.
 - Uses verified raw fields from official Microsoft Graph docs only; unsupported activities are skipped rather than guessed.
 - Normalizes into OCSF only where the class fit is explicit. Unmapped vendor-specific detail stays under `unmapped`.
+
+## Native output format
+
+When `--output-format native` is selected, the skill emits:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "api_activity"`
+- `source_skill`
+- `event_uid`
+- `provider`
+- `time_ms`
+- `activity_id`
+- `status` / `status_id`
+- `operation`
+- `service_name`
+- `correlation_uid`
+- `actor`, `src_endpoint`, and `resources`
+- `unmapped.entra`
 
 ## See also
 

@@ -1,8 +1,10 @@
-"""Convert Microsoft Entra directoryAudit events to OCSF 1.8 API Activity.
+"""Convert Microsoft Entra directoryAudit events to native or OCSF API Activity.
 
 Input:  Microsoft Graph directoryAudit JSON objects from /auditLogs/directoryAudits.
         Supports top-level {"value": [...]}, arrays, or JSONL of objects.
-Output: JSONL of OCSF 1.8 API Activity events (class 6003).
+Output: JSONL of either:
+        - OCSF 1.8 API Activity events (class 6003), or
+        - repo-owned native API activity records.
 
 Contract: see ../OCSF_CONTRACT.md
 """
@@ -18,6 +20,8 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-entra-directory-audit-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
+OUTPUT_FORMATS = ("ocsf", "native")
 
 CLASS_UID = 6003
 CLASS_NAME = "API Activity"
@@ -102,6 +106,14 @@ def _status_id_and_detail(entry: dict[str, Any]) -> tuple[int, str | None]:
     return STATUS_UNKNOWN, reason
 
 
+def _status_name(status_id: int) -> str:
+    return {
+        STATUS_SUCCESS: "success",
+        STATUS_FAILURE: "failure",
+        STATUS_UNKNOWN: "unknown",
+    }.get(status_id, "unknown")
+
+
 def _build_actor(entry: dict[str, Any]) -> dict[str, Any]:
     initiated = entry.get("initiatedBy") or {}
     actor: dict[str, Any] = {}
@@ -147,19 +159,6 @@ def _build_src_endpoint(entry: dict[str, Any]) -> dict[str, Any]:
     return src
 
 
-def _build_api(entry: dict[str, Any]) -> dict[str, Any]:
-    operation = str(entry.get("activityDisplayName") or "")
-    service_name = str(entry.get("loggedByService") or "Microsoft Entra ID")
-    api: dict[str, Any] = {
-        "operation": operation,
-        "service": {"name": service_name},
-    }
-    correlation_id = entry.get("correlationId")
-    if correlation_id:
-        api["request"] = {"uid": str(correlation_id)}
-    return api
-
-
 def _target_resources(entry: dict[str, Any]) -> list[dict[str, Any]]:
     raw = entry.get("targetResources")
     if isinstance(raw, list):
@@ -181,10 +180,6 @@ def _build_resources(entry: dict[str, Any]) -> list[dict[str, Any]]:
             resource["uid"] = str(target["id"])
         resources.append(resource)
     return resources
-
-
-def _build_cloud() -> dict[str, Any]:
-    return {"provider": "Azure"}
 
 
 def _metadata_uid(entry: dict[str, Any]) -> str:
@@ -221,35 +216,33 @@ def validate_event(entry: dict[str, Any]) -> tuple[bool, str]:
     return True, ""
 
 
-def convert_event(entry: dict[str, Any]) -> dict[str, Any]:
+def _build_canonical_event(entry: dict[str, Any]) -> dict[str, Any]:
     status_id, status_detail = _status_id_and_detail(entry)
-    activity_id = infer_activity_id(str(entry.get("activityDisplayName") or ""), entry.get("operationType"))
+    operation = str(entry.get("activityDisplayName") or "")
+    service_name = str(entry.get("loggedByService") or "Microsoft Entra ID")
+    correlation_uid = str(entry.get("correlationId") or "")
+    activity_id = infer_activity_id(operation, entry.get("operationType"))
     actor = _build_actor(entry)
     src_endpoint = _build_src_endpoint(entry)
     resources = _build_resources(entry)
-
-    event: dict[str, Any] = {
+    canonical: dict[str, Any] = {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "api_activity",
+        "source_skill": SKILL_NAME,
+        "event_uid": _metadata_uid(entry),
+        "provider": "Azure",
+        "time_ms": parse_ts_ms(entry.get("activityDateTime")),
         "activity_id": activity_id,
-        "category_uid": CATEGORY_UID,
-        "category_name": CATEGORY_NAME,
-        "class_uid": CLASS_UID,
-        "class_name": CLASS_NAME,
-        "type_uid": CLASS_UID * 100 + activity_id,
-        "severity_id": SEVERITY_INFORMATIONAL,
+        "status": _status_name(status_id),
         "status_id": status_id,
-        "time": parse_ts_ms(entry.get("activityDateTime")),
-        "metadata": {
-            "version": OCSF_VERSION,
-            "uid": _metadata_uid(entry),
-            "product": {
-                "name": "cloud-ai-security-skills",
-                "vendor_name": "msaad00/cloud-ai-security-skills",
-                "feature": {"name": SKILL_NAME},
-            },
-            "labels": ["identity", "entra", "graph", "directory-audit", "ingest"],
-        },
-        "api": _build_api(entry),
-        "cloud": _build_cloud(),
+        "severity_id": SEVERITY_INFORMATIONAL,
+        "operation": operation,
+        "service_name": service_name,
+        "correlation_uid": correlation_uid,
+        "actor": actor,
+        "src_endpoint": src_endpoint,
+        "resources": resources,
         "unmapped": {
             "entra": {
                 "category": entry.get("category"),
@@ -260,15 +253,64 @@ def convert_event(entry: dict[str, Any]) -> dict[str, Any]:
             }
         },
     }
-    if actor:
-        event["actor"] = actor
-    if src_endpoint:
-        event["src_endpoint"] = src_endpoint
-    if resources:
-        event["resources"] = resources
     if status_detail:
-        event["status_detail"] = status_detail
+        canonical["status_detail"] = status_detail
+    return canonical
+
+
+def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["output_format"] = "native"
+    return native
+
+
+def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    event: dict[str, Any] = {
+        "activity_id": canonical["activity_id"],
+        "category_uid": CATEGORY_UID,
+        "category_name": CATEGORY_NAME,
+        "class_uid": CLASS_UID,
+        "class_name": CLASS_NAME,
+        "type_uid": CLASS_UID * 100 + int(canonical["activity_id"]),
+        "severity_id": canonical["severity_id"],
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
+        "metadata": {
+            "version": OCSF_VERSION,
+            "uid": canonical["event_uid"],
+            "product": {
+                "name": "cloud-ai-security-skills",
+                "vendor_name": "msaad00/cloud-ai-security-skills",
+                "feature": {"name": SKILL_NAME},
+            },
+            "labels": ["identity", "entra", "graph", "directory-audit", "ingest"],
+        },
+        "api": {
+            "operation": canonical["operation"],
+            "service": {"name": canonical["service_name"]},
+        },
+        "cloud": {"provider": canonical["provider"]},
+        "unmapped": canonical["unmapped"],
+    }
+    if canonical.get("correlation_uid"):
+        event["api"]["request"] = {"uid": canonical["correlation_uid"]}
+    if canonical.get("actor"):
+        event["actor"] = canonical["actor"]
+    if canonical.get("src_endpoint"):
+        event["src_endpoint"] = canonical["src_endpoint"]
+    if canonical.get("resources"):
+        event["resources"] = canonical["resources"]
+    if canonical.get("status_detail"):
+        event["status_detail"] = canonical["status_detail"]
     return event
+
+
+def convert_event(entry: dict[str, Any], output_format: str = "ocsf") -> dict[str, Any]:
+    canonical = _build_canonical_event(entry)
+    if output_format == "native":
+        return _render_native_event(canonical)
+    return _render_ocsf_event(canonical)
 
 
 def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -318,30 +360,33 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError(f"unsupported output_format: {output_format}")
     for raw in iter_raw_events(stream):
         ok, reason = validate_event(raw)
         if not ok:
             print(f"[{SKILL_NAME}] skipping event: {reason}", file=sys.stderr)
             continue
         try:
-            yield convert_event(raw)
+            yield convert_event(raw, output_format=output_format)
         except Exception as exc:
             print(f"[{SKILL_NAME}] skipping event: convert error: {exc}", file=sys.stderr)
             continue
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert raw Entra directoryAudit JSON to OCSF 1.8 API Activity JSONL.")
+    parser = argparse.ArgumentParser(description="Convert raw Entra directoryAudit JSON to native or OCSF API Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON/JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument("--output-format", choices=OUTPUT_FORMATS, default="ocsf", help="Output format.")
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:

@@ -57,6 +57,7 @@ class TestSkillValidationCommon:
         names = {skill.name for skill in skills}
         assert "detect-lateral-movement" in names
         assert "detect-okta-mfa-fatigue" in names
+        assert "detect-entra-credential-addition" in names
         assert "detect-google-workspace-suspicious-login" in names
         assert "ingest-entra-directory-audit-ocsf" in names
         assert "ingest-google-workspace-login-ocsf" in names

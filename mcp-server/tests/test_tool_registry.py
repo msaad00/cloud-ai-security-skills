@@ -30,6 +30,7 @@ class TestDiscovery:
             "ingest-google-workspace-login-ocsf",
             "detect-lateral-movement",
             "detect-okta-mfa-fatigue",
+            "detect-entra-credential-addition",
             "detect-google-workspace-suspicious-login",
             "cspm-aws-cis-benchmark",
             "iam-departures-remediation",
@@ -55,6 +56,7 @@ class TestDiscovery:
         assert "ingest-google-workspace-login-ocsf" in tools
         assert "detect-lateral-movement" in tools
         assert "detect-okta-mfa-fatigue" in tools
+        assert "detect-entra-credential-addition" in tools
         assert "detect-google-workspace-suspicious-login" in tools
         assert "model-serving-security" in tools
         assert "discover-ai-bom" in tools
