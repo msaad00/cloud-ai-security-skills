@@ -26,6 +26,7 @@ The format is loosely based on Keep a Changelog.
 - optional `caller_roles`, `approver_roles`, and `min_approvers` contract metadata plus MCP caller-context propagation into write-capable skills, so remediation audit trails can record who invoked, who approved, and which request or session triggered the action.
 - stderr-based MCP invocation audit events covering tool name, caller-context presence, approval-context presence, hashed arguments, duration, and exit status without logging raw stdin payloads.
 - a shared opt-in `stderr` telemetry helper plus pilot JSON telemetry in `ingest-cloudtrail-ocsf` and `detect-lateral-movement`, enabled by `SKILL_LOG_FORMAT=json` or `AGENT_TELEMETRY=1` while preserving existing plain-text warnings by default.
+- extended the structured `stderr` telemetry pilot to `ingest-k8s-audit-ocsf` and `detect-privilege-escalation-k8s`, so the Kubernetes ingest/detect path now has the same opt-in machine-readable runtime hints as the CloudTrail/lateral-movement path.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed
