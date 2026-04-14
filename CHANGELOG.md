@@ -28,6 +28,8 @@ The format is loosely based on Keep a Changelog.
 - a shared opt-in `stderr` telemetry helper plus pilot JSON telemetry in `ingest-cloudtrail-ocsf` and `detect-lateral-movement`, enabled by `SKILL_LOG_FORMAT=json` or `AGENT_TELEMETRY=1` while preserving existing plain-text warnings by default.
 - extended the structured `stderr` telemetry pilot to `ingest-k8s-audit-ocsf` and `detect-privilege-escalation-k8s`, so the Kubernetes ingest/detect path now has the same opt-in machine-readable runtime hints as the CloudTrail/lateral-movement path.
 - extended the same opt-in structured `stderr` telemetry pilot to `ingest-okta-system-log-ocsf` and `detect-okta-mfa-fatigue`, covering the Okta identity ingest/detect path without changing stdout data contracts.
+- tightened the README and skill catalog entry path around use cases, skill selection, plug-in surfaces, and clearer layer guidance, plus added `docs/USE_CASES.md` as the practical crosswalk for sources, assets, frameworks, and starting skills.
+- clarified in the README and use-case guide that repo-owned remediation audit lands in DynamoDB + S3 today, while customer-controlled sinks such as Snowflake / Snowpipe belong to the planned sink / runner layer rather than the currently shipped generic path.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 
 ### Changed

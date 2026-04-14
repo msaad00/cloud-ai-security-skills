@@ -1,12 +1,12 @@
 # Skills Catalog
 
-Skills are grouped by **layered function**, not by vendor. An agent or operator chooses the layer that matches the job, then picks the skill inside that layer.
+Skills are grouped by **layered function**, not by vendor. Start with the problem you are solving, then pick the layer and skill that match it. If you want a guided entry point instead of a catalog, read [`docs/USE_CASES.md`](../docs/USE_CASES.md) first.
 
 | Category | Question it answers | Output shape |
 |---|---|---|
-| [`ingestion/`](ingestion/) | "How do I normalize this raw source into OCSF?" | OCSF 1.8 JSONL |
+| [`ingestion/`](ingestion/) | "How do I normalize this raw source into a stable event stream?" | native or OCSF JSONL, depending on the skill |
 | [`discovery/`](discovery/) | "What does this cloud / AI estate look like right now?" | deterministic inventory / graph JSON |
-| [`detection/`](detection/) | "What attack pattern does this event stream show?" | OCSF Detection Finding (class 2004) |
+| [`detection/`](detection/) | "What attack pattern does this event stream show?" | native or OCSF detection finding |
 | [`evaluation/`](evaluation/) | "Does this posture or event stream meet a benchmark?" | Compliance / posture result |
 | [`view/`](view/) | "How should I render or export this OCSF output?" | SARIF, Mermaid, other review formats |
 | [`remediation/`](remediation/) | "Something is wrong. How do I fix it safely?" | Audited action + re-verification |

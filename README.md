@@ -37,9 +37,52 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
   > findings.native.jsonl
 ```
 
-## Quick start
+## Start by use case
 
-**Start here**
+| If you need to... | Start with... | Common sources / assets | Typical output |
+|---|---|---|---|
+| Normalize raw cloud, identity, Kubernetes, or MCP logs | `ingest-*` | CloudTrail, VPC Flow, Azure Activity, GCP Audit, K8s audit, Okta, Entra, Workspace, MCP proxy | native or OCSF JSONL |
+| Detect an attack pattern in event streams | `ingest-*` + `detect-*` | identity pivots, suspicious logins, MFA fatigue, K8s abuse, MCP drift, east-west traffic | Detection Finding (OCSF 2004) or native finding JSON |
+| Check posture or benchmark compliance | `evaluation/*` | AWS, Azure, GCP, K8s, containers, GPU clusters, model serving | benchmark / control results |
+| Inventory cloud or AI assets | `discover-environment` or `discover-ai-bom` | cloud resources, AI services, endpoints, registries, datasets | graph JSON, AI BOM, OCSF bridge |
+| Build evidence for audits and reviews | `discover-control-evidence` or `discover-cloud-control-evidence` | discovery output, live cloud inventory | evidence JSON, OCSF bridge events |
+| Export findings into review tools | `view/*` | OCSF findings | SARIF, Mermaid attack flow |
+| Fix offboarding and access drift safely | `iam-departures-remediation` | HR departure feeds, AWS, Entra, GCP, Snowflake, Databricks | audited dry run or remediation plan |
+
+For the full source / asset / framework crosswalk, see [docs/USE_CASES.md](docs/USE_CASES.md).
+
+## What it plugs into
+
+| Surface | Use it when... | Typical fit |
+|---|---|---|
+| **CLI / Unix pipes** | you want one-shot analysis or a reproducible local pipeline | local triage, fixture testing, ad-hoc conversions |
+| **MCP** | you want Claude, Codex, Cursor, Windsurf, or Cortex Code CLI to call the same skills | agent workflows, tool-driven investigations, guarded remediation |
+| **CI** | you want the same skills in pull requests or scheduled checks | SARIF generation, benchmark snapshots, policy gates |
+| **SIEM / lakehouse** | you want normalized findings, evidence, or audit records in an existing store | Splunk, Sentinel, Chronicle, Elastic, Snowflake, ClickHouse |
+| **Persistent runner** | you want scheduled or event-driven operation | serverless, queue-driven, or batch runners around the same stateless skills |
+
+The important distinction is:
+- **shipped today**: stateless skills, MCP wrapper, CI paths, and the repo-owned IAM departures audit path in DynamoDB + S3
+- **supported integration pattern**: customer-controlled sinks like Snowflake / Snowpipe, Security Lake, ClickHouse, or BigQuery via append-only runners and sink layers
+- **not shipped yet**: a generic sink / runner framework for every skill family
+
+## Start here
+
+- New to the repo: start with this README, then [docs/USE_CASES.md](docs/USE_CASES.md) and [skills/README.md](skills/README.md).
+- Using an agent or MCP client: read [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), [docs/agent-integrations.md](docs/agent-integrations.md), and [`.mcp.json`](.mcp.json).
+- Need the architecture and schema contract: read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md), [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md), and [docs/DATA_FLOW.md](docs/DATA_FLOW.md).
+- Need operational trust and rollout status: read [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md), [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md), [docs/DEBUGGING.md](docs/DEBUGGING.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
+
+| Role | Read first |
+|---|---|
+| **Security engineer / detection engineer** | [docs/USE_CASES.md](docs/USE_CASES.md), [skills/README.md](skills/README.md), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) |
+| **Platform / cloud engineer** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md), [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md) |
+| **Agent / MCP integrator** | [AGENTS.md](AGENTS.md), [docs/agent-integrations.md](docs/agent-integrations.md), [`.mcp.json`](.mcp.json) |
+| **Compliance / GRC reviewer** | [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) |
+
+<details>
+<summary><b>Full docs index</b></summary>
+
 - Agents: [AGENTS.md](AGENTS.md)
 - Claude Code memory: [CLAUDE.md](CLAUDE.md)
 - MCP usage: [docs/agent-integrations.md](docs/agent-integrations.md) and [`.mcp.json`](.mcp.json)
@@ -50,7 +93,9 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
 - Canonical schema and data flow: [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md) and [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
 - Historical state and timeline handling: [docs/STATE_AND_TIMELINE_MODEL.md](docs/STATE_AND_TIMELINE_MODEL.md)
 - Debugging and troubleshooting: [docs/DEBUGGING.md](docs/DEBUGGING.md) and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-- Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), and [docs/ROADMAP.md](docs/ROADMAP.md)
+- Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md), and [docs/ROADMAP.md](docs/ROADMAP.md)
+
+</details>
 
 | Tool | Best integration path | What to rely on |
 |---|---|---|
@@ -66,15 +111,21 @@ The repo keeps one source of truth:
 - `SKILL.md` for each skill contract
 - MCP as the access layer, not a second implementation
 
-## Flagship workflow
+## Visual guide
 
 ![IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg)
 
-**Visuals**
-- [IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg)
-- [Repo architecture](docs/images/repo-architecture.svg)
-- [IAM departures flow](docs/images/iam-departures-data-flow.svg)
-- [Detection pipeline](docs/images/detection-pipeline.svg)
+| If you want to see... | Open... |
+|---|---|
+| the overall repo shape | [Repo architecture](docs/images/repo-architecture.svg) |
+| how ingest → detect → export fits together | [Detection pipeline](docs/images/detection-pipeline.svg) |
+| the flagship HITL remediation workflow | [IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg) |
+| the remediation data path and audit trail | [IAM departures flow](docs/images/iam-departures-data-flow.svg) |
+
+For the IAM departures flow specifically:
+- **shipped default audit path**: DynamoDB + S3
+- **supported customer pattern**: forward or sink the same audit trail into Snowflake, Security Lake, ClickHouse, or another customer-controlled store via a dedicated sink / runner layer
+- **current repo state**: that external sink pattern is part of the architecture contract, not a shipped generic sink yet
 
 ```bash
 python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
@@ -85,14 +136,14 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 
 ## Layers
 
-| Layer | Role | Output |
-|---|---|---|
-| **Ingest** | Per-source raw payload → canonical model, with optional native / OCSF / bridge output | native JSON, OCSF API / Network / HTTP / Application Activity, or bridge JSON |
-| **Discover** | point-in-time inventory / graph / evidence / AI BOM | deterministic JSON graph, canonical evidence, OCSF inventory/evidence bridge events, or CycloneDX-aligned BOM |
-| **Detect** | canonical or OCSF telemetry → finding + MITRE ATT&CK | Detection Finding (class 2004) or documented native/canonical finding output |
-| **Evaluate** | canonical or OCSF telemetry → framework check | Compliance Finding (class 2003) or documented evidence/check output |
-| **View** | canonical or OCSF → SARIF / Mermaid / graph | GitHub Security tab, PR comments, dashboards |
-| **Remediate** | Finding → action (HITL-gated, audited) | Dual-write audit row |
+| Layer | Use it when... | Start with... | Common output |
+|---|---|---|---|
+| **Ingest** | you have one raw source and need a stable event stream | a source-specific `ingest-*` skill | native JSONL, OCSF JSONL, or bridge output |
+| **Discover** | you need current inventory, graph context, or evidence | `discover-environment`, `discover-ai-bom`, or evidence discovery skills | graph JSON, evidence JSON, AI BOM, OCSF bridge |
+| **Detect** | you want deterministic attack-pattern findings | the matching `detect-*` skill after ingest | native finding JSON or OCSF Detection Finding |
+| **Evaluate** | you want benchmark or posture checks | the relevant evaluation skill for cloud, K8s, container, GPU, or model serving | benchmark / control results |
+| **View** | you need findings in another tool’s format | `convert-ocsf-to-sarif` or `convert-ocsf-to-mermaid-attack-flow` | SARIF, Mermaid |
+| **Remediate** | you need a guarded write path with HITL and audit | `iam-departures-remediation` | dry-run plan or audited action log |
 
 Each skill is a standalone Python bundle following [Anthropic's skill spec](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, explicit `Use when...`, and explicit `Do NOT use...`.
 
