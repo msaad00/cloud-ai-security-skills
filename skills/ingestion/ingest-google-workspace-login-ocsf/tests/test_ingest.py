@@ -20,7 +20,9 @@ ACCOUNT_CHANGE_MFA_ENABLE = _INGEST.ACCOUNT_CHANGE_MFA_ENABLE
 AUTH_ACTIVITY_LOGOFF = _INGEST.AUTH_ACTIVITY_LOGOFF
 AUTH_ACTIVITY_LOGON = _INGEST.AUTH_ACTIVITY_LOGON
 AUTH_CLASS_UID = _INGEST.AUTH_CLASS_UID
+CANONICAL_VERSION = _INGEST.CANONICAL_VERSION
 OCSF_VERSION = _INGEST.OCSF_VERSION
+OUTPUT_FORMATS = _INGEST.OUTPUT_FORMATS
 SKILL_NAME = _INGEST.SKILL_NAME
 STATUS_FAILURE = _INGEST.STATUS_FAILURE
 STATUS_SUCCESS = _INGEST.STATUS_SUCCESS
@@ -158,6 +160,18 @@ class TestConvert:
         assert event["class_uid"] == ACCOUNT_CHANGE_CLASS_UID
         assert event["activity_id"] == ACCOUNT_CHANGE_MFA_DISABLE
 
+    def test_native_output_has_no_ocsf_envelope(self):
+        activity = _activity()
+        event = convert_activity_event(activity, activity["events"][0], output_format="native")
+        assert event["schema_mode"] == "native"
+        assert event["canonical_schema_version"] == CANONICAL_VERSION
+        assert event["record_type"] == "authentication"
+        assert event["provider"] == "Google Workspace"
+        assert event["event_name"] == "login_success"
+        assert event["event_uid"]
+        assert "class_uid" not in event
+        assert "metadata" not in event
+
 
 class TestIterRawActivities:
     def test_items_wrapper(self):
@@ -181,3 +195,12 @@ class TestGoldenFixture:
         produced = list(ingest([RAW_FIXTURE.read_text()]))
         expected = _load_jsonl(OCSF_FIXTURE)
         assert produced == expected
+
+    def test_native_projection_preserves_event_uid(self):
+        native = list(ingest([RAW_FIXTURE.read_text()], output_format="native"))
+        ocsf = list(ingest([RAW_FIXTURE.read_text()], output_format="ocsf"))
+        assert OUTPUT_FORMATS == ("ocsf", "native")
+        assert len(native) == len(ocsf)
+        assert native[0]["event_uid"] == ocsf[0]["metadata"]["uid"]
+        assert native[0]["schema_mode"] == "native"
+        assert "class_uid" not in native[0]

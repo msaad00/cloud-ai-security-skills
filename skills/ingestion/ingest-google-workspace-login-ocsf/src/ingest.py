@@ -1,4 +1,4 @@
-"""Convert Google Workspace login audit activities to OCSF 1.8 IAM events.
+"""Convert Google Workspace login audit activities to native or OCSF IAM events.
 
 Input:  Admin SDK Reports API activities.list JSON objects for applicationName=login.
         Supports top-level {"items": [...]}, arrays, single activities, or JSONL.
@@ -20,6 +20,8 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-google-workspace-login-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
+OUTPUT_FORMATS = ("ocsf", "native")
 
 CATEGORY_UID = 3
 CATEGORY_NAME = "Identity & Access Management"
@@ -189,6 +191,21 @@ def _metadata_uid(activity: dict[str, Any], event_name: str) -> str:
     return hashlib.sha256(json.dumps(stable, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
+def _status_name(status_id: int) -> str:
+    return {
+        STATUS_SUCCESS: "success",
+        STATUS_FAILURE: "failure",
+        STATUS_UNKNOWN: "unknown",
+    }.get(status_id, "unknown")
+
+
+def _record_type(class_uid: int) -> str:
+    return {
+        AUTH_CLASS_UID: "authentication",
+        ACCOUNT_CHANGE_CLASS_UID: "account_change",
+    }.get(class_uid, "iam_activity")
+
+
 def validate_activity(activity: dict[str, Any]) -> tuple[bool, str]:
     if not isinstance(activity, dict):
         return False, "not a dict"
@@ -215,7 +232,7 @@ def _supported_events(activity: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield event
 
 
-def convert_activity_event(activity: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
+def _build_canonical_event(activity: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
     event_name = str(event.get("name") or "")
     class_uid, class_name, activity_id = _classify(event_name)
     status_id, severity_id = _status_and_severity(event_name)
@@ -227,35 +244,25 @@ def convert_activity_event(activity: dict[str, Any], event: dict[str, Any]) -> d
     message = _message(activity, event_name)
 
     out: dict[str, Any] = {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": _record_type(class_uid),
+        "source_skill": SKILL_NAME,
+        "event_uid": _metadata_uid(activity, event_name),
+        "provider": "Google Workspace",
         "activity_id": activity_id,
-        "category_uid": CATEGORY_UID,
-        "category_name": CATEGORY_NAME,
-        "class_uid": class_uid,
-        "class_name": class_name,
-        "type_uid": class_uid * 100 + activity_id,
+        "activity_name": event_name,
         "severity_id": severity_id,
+        "severity": "low" if severity_id == SEVERITY_LOW else "informational" if severity_id == SEVERITY_INFORMATIONAL else "unknown",
         "status_id": status_id,
-        "time": parse_ts_ms((activity.get("id") or {}).get("time")),
-        "metadata": {
-            "version": OCSF_VERSION,
-            "uid": _metadata_uid(activity, event_name),
-            "product": {
-                "name": "cloud-ai-security-skills",
-                "vendor_name": "msaad00/cloud-ai-security-skills",
-                "feature": {"name": SKILL_NAME},
-            },
-            "labels": ["identity", "google-workspace", "login-audit", "ingest"],
-        },
-        "unmapped": {
-            "google_workspace_login": {
-                "application_name": ((activity.get("id") or {}).get("applicationName") or "login"),
-                "customer_id": (activity.get("id") or {}).get("customerId"),
-                "event_type": event.get("type"),
-                "event_name": event_name,
-                "owner_domain": activity.get("ownerDomain"),
-                "parameters": params,
-            }
-        },
+        "status": _status_name(status_id),
+        "time_ms": parse_ts_ms((activity.get("id") or {}).get("time")),
+        "application_name": ((activity.get("id") or {}).get("applicationName") or "login"),
+        "customer_id": (activity.get("id") or {}).get("customerId"),
+        "event_type": event.get("type"),
+        "event_name": event_name,
+        "owner_domain": activity.get("ownerDomain"),
+        "parameters": params,
     }
     if actor:
         out["actor"] = actor
@@ -272,6 +279,58 @@ def convert_activity_event(activity: dict[str, Any], event: dict[str, Any]) -> d
         if failure:
             out["status_detail"] = str(failure)
     return out
+
+
+def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "activity_id": canonical["activity_id"],
+        "category_uid": CATEGORY_UID,
+        "category_name": CATEGORY_NAME,
+        "class_uid": AUTH_CLASS_UID if canonical["record_type"] == "authentication" else ACCOUNT_CHANGE_CLASS_UID,
+        "class_name": "Authentication" if canonical["record_type"] == "authentication" else "Account Change",
+        "type_uid": (AUTH_CLASS_UID if canonical["record_type"] == "authentication" else ACCOUNT_CHANGE_CLASS_UID) * 100 + canonical["activity_id"],
+        "severity_id": canonical["severity_id"],
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
+        "metadata": {
+            "version": OCSF_VERSION,
+            "uid": canonical["event_uid"],
+            "product": {
+                "name": "cloud-ai-security-skills",
+                "vendor_name": "msaad00/cloud-ai-security-skills",
+                "feature": {"name": SKILL_NAME},
+            },
+            "labels": ["identity", "google-workspace", "login-audit", "ingest"],
+        },
+        "unmapped": {
+            "google_workspace_login": {
+                "application_name": canonical["application_name"],
+                "customer_id": canonical.get("customer_id"),
+                "event_type": canonical.get("event_type"),
+                "event_name": canonical["event_name"],
+                "owner_domain": canonical.get("owner_domain"),
+                "parameters": canonical.get("parameters") or {},
+            }
+        },
+    }
+    for field in ("actor", "user", "src_endpoint", "session", "message", "status_detail"):
+        if canonical.get(field):
+            out[field] = canonical[field]
+    return out
+
+
+def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["output_format"] = "native"
+    return native
+
+
+def convert_activity_event(activity: dict[str, Any], event: dict[str, Any], output_format: str = "ocsf") -> dict[str, Any]:
+    canonical = _build_canonical_event(activity, event)
+    if output_format == "native":
+        return _render_native_event(canonical)
+    return _render_ocsf_event(canonical)
 
 
 def iter_raw_activities(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -321,7 +380,9 @@ def iter_raw_activities(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError(f"unsupported output_format `{output_format}`")
     for activity in iter_raw_activities(stream):
         ok, reason = validate_activity(activity)
         if not ok:
@@ -329,23 +390,29 @@ def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             continue
         for event in _supported_events(activity):
             try:
-                yield convert_activity_event(activity, event)
+                yield convert_activity_event(activity, event, output_format=output_format)
             except Exception as exc:
                 print(f"[{SKILL_NAME}] skipping event: convert error: {exc}", file=sys.stderr)
                 continue
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert raw Google Workspace login audit JSON to OCSF 1.8 IAM JSONL.")
+    parser = argparse.ArgumentParser(description="Convert raw Google Workspace login audit JSON to OCSF or native IAM JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON/JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=OUTPUT_FORMATS,
+        default="ocsf",
+        help="Render OCSF IAM events (default) or the native canonical projection.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for record in ingest(in_stream):
+        for record in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:
         if args.input:

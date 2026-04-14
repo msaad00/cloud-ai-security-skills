@@ -17,11 +17,11 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: ocsf
+output_formats: native, ocsf
 compatibility: >-
   Requires Python 3.11+. No Google SDK required when Admin SDK Reports payloads
   are already exported. Read-only — validates raw Workspace audit shape and
-  emits OCSF JSONL only. Never calls write APIs.
+  emits OCSF or native JSONL. Never calls write APIs.
 metadata:
   author: msaad00
   homepage: https://github.com/msaad00/cloud-ai-security-skills
@@ -36,7 +36,8 @@ metadata:
 # ingest-google-workspace-login-ocsf
 
 Convert verified Google Workspace Admin SDK Reports login audit payloads into
-OCSF 1.8 IAM records with deterministic IDs and source-preserving parameters.
+OCSF 1.8 IAM records by default, or the repo-owned native IAM projection when
+`--output-format native` is selected.
 
 ## Use when
 
@@ -120,7 +121,7 @@ Emits OCSF 1.8 JSONL with verified class mappings:
 - **Authentication (3002)** for `login_success`, `login_failure`, and `logout`
 - **Account Change (3001)** for `2sv_enroll` and `2sv_disable`
 
-Each output record includes:
+Each OCSF output record includes:
 
 - deterministic `metadata.uid` based on `applicationName`, `time`, `uniqueQualifier`, and event name
 - UTC epoch-millisecond `time` from `id.time`
@@ -130,15 +131,33 @@ Each output record includes:
 ## Usage
 
 ```bash
-# activities.list export
+# activities.list export, OCSF default
 python src/ingest.py workspace-login.json > workspace-login.ocsf.jsonl
 
 # JSONL stream from stdin
 cat workspace-login.jsonl | python src/ingest.py > workspace-login.ocsf.jsonl
 
+# Native projection
+python src/ingest.py workspace-login.json --output-format native > workspace-login.native.jsonl
+
 # explicit output file
 python src/ingest.py workspace-login.json --output workspace-login.ocsf.jsonl
 ```
+
+## Native output format
+
+When `--output-format native` is selected, the skill emits the canonical
+projection with:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "authentication"` or `"account_change"`
+- `event_uid`
+- `provider`
+- `time_ms`
+- `event_name`
+- `parameters`
+- preserved `actor`, `user`, `src_endpoint`, and `session` blocks
 
 ## Security guardrails
 

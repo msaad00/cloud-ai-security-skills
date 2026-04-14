@@ -2,7 +2,8 @@
 name: detect-google-workspace-suspicious-login
 description: >-
   Detect suspicious Google Workspace login bursts from OCSF 1.8 Authentication
-  (3002) events produced by ingest-google-workspace-login-ocsf. The first
+  (3002) events or the native authentication projection produced by
+  ingest-google-workspace-login-ocsf. The first
   slice stays narrow and verified: it fires when Google Workspace already marks
   a login event as suspicious, or when the same user shows a short burst of
   repeated login failures followed by a successful login from the same source
@@ -17,8 +18,8 @@ license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
-input_formats: ocsf
-output_formats: ocsf
+input_formats: canonical, native, ocsf
+output_formats: native, ocsf
 metadata:
   homepage: https://github.com/msaad00/cloud-ai-security-skills
   source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/detection/detect-google-workspace-suspicious-login
@@ -47,8 +48,9 @@ travel, geovelocity, or every login anomaly in the catalog.
 
 ## Detection logic
 
-One pass over OCSF Authentication (3002) events from
-`ingest-google-workspace-login-ocsf`:
+One pass over Google Workspace authentication events from
+`ingest-google-workspace-login-ocsf`, whether they arrive as OCSF Authentication
+records or the native authentication projection:
 
 1. Keep only Workspace auth events from the Workspace ingester
 2. Group by `user.uid` and `src_endpoint.ip`
@@ -61,7 +63,10 @@ One pass over OCSF Authentication (3002) events from
 
 ## Output contract
 
-Emits OCSF 1.8 Detection Finding (class `2004`) with:
+Emits OCSF 1.8 Detection Finding (class `2004`) by default. With
+`--output-format native`, emits the repo-owned native finding projection.
+
+OCSF output includes:
 
 - deterministic `metadata.uid` and `finding_info.uid`
 - `finding_info.types[] = ["google-workspace-suspicious-login"]`
@@ -77,6 +82,10 @@ Emits OCSF 1.8 Detection Finding (class `2004`) with:
 python ../ingest-google-workspace-login-ocsf/src/ingest.py workspace-login.json \
   | python src/detect.py \
   > workspace-suspicious-login-findings.ocsf.jsonl
+
+python ../ingest-google-workspace-login-ocsf/src/ingest.py workspace-login.json --output-format native \
+  | python src/detect.py --output-format native \
+  > workspace-suspicious-login-findings.native.jsonl
 ```
 
 ## Do NOT use
@@ -96,3 +105,18 @@ The test suite covers:
 - exact window-boundary behavior
 - duplicate event suppression by `metadata.uid`
 - a frozen golden fixture for detector parity
+
+## Native output format
+
+When `--output-format native` is selected, the skill emits:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "detection_finding"`
+- `finding_uid` and `event_uid`
+- `provider`
+- `time_ms`
+- `user_uid` / `user_name`
+- `src_ip`
+- `mitre_attacks`
+- `evidence`
