@@ -51,3 +51,6 @@ or directly by email if a contact is listed on the maintainer profile. Include:
 - redact sensitive values if they appear in bug reports, examples, screenshots, or operator-provided input
 
 See [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md) for the repo-wide credential hierarchy, current exceptions, and the rationale for keeping a narrow direct Workday `httpx` path in remediation.
+
+See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for the repo's asset,
+adversary, trust-boundary, and mitigation model.
