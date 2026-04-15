@@ -61,6 +61,7 @@ class TestSkillValidationCommon:
         names = {skill.name for skill in skills}
         assert "source-snowflake-query" in names
         assert "sink-snowflake-jsonl" in names
+        assert "sink-clickhouse-jsonl" in names
         assert "detect-lateral-movement" in names
         assert "detect-okta-mfa-fatigue" in names
         assert "detect-entra-credential-addition" in names
@@ -214,6 +215,16 @@ class TestValidationScripts:
     def test_sink_skill_declares_human_approval(self):
         skills = {skill.name: skill for skill in COMMON.discover_skill_contracts()}
         sink = skills["sink-snowflake-jsonl"]
+        assert sink.approval_model == "human_required"
+        assert sink.execution_modes == ("jit", "mcp", "persistent")
+        assert sink.side_effects == ("writes-database",)
+        assert sink.caller_roles == ("security_engineer", "platform_engineer")
+        assert sink.approver_roles == ("security_lead", "data_platform_owner")
+        assert sink.min_approvers == 1
+
+    def test_clickhouse_sink_declares_human_approval(self):
+        skills = {skill.name: skill for skill in COMMON.discover_skill_contracts()}
+        sink = skills["sink-clickhouse-jsonl"]
         assert sink.approval_model == "human_required"
         assert sink.execution_modes == ("jit", "mcp", "persistent")
         assert sink.side_effects == ("writes-database",)
