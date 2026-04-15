@@ -1,12 +1,4 @@
-"""Convert raw GCP Cloud Audit Logs to OCSF 1.8 API Activity (class 6003).
-
-Input:  GCP audit log JSON entries (the LogEntry envelope with a
-        google.cloud.audit.AuditLog protoPayload). Reads JSONL or a
-        top-level array.
-Output: JSONL of OCSF 1.8 API Activity events.
-
-Contract: see ../OCSF_CONTRACT.md
-"""
+"""Convert raw GCP Cloud Audit Logs to OCSF or repo-native API Activity."""
 
 from __future__ import annotations
 
@@ -19,6 +11,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-gcp-audit-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 CLASS_UID = 6003
 CLASS_NAME = "API Activity"
@@ -40,7 +33,6 @@ SEVERITY_INFORMATIONAL = 1
 
 AUDIT_LOG_TYPE = "type.googleapis.com/google.cloud.audit.AuditLog"
 
-# gRPC canonical error codes (subset)
 _GRPC_CODE_NAMES = {
     0: "OK",
     1: "CANCELLED",
@@ -57,11 +49,6 @@ _GRPC_CODE_NAMES = {
     16: "UNAUTHENTICATED",
 }
 
-
-# ---------------------------------------------------------------------------
-# Verb → activity_id (applied to the LAST dotted segment of methodName)
-# ---------------------------------------------------------------------------
-
 _VERB_TABLE = (
     (("Create", "Insert", "Generate", "Issue", "Provision", "Allocate"), ACTIVITY_CREATE),
     (("Get", "List", "Search", "Lookup", "BatchGet", "Test", "Validate", "Aggregate"), ACTIVITY_READ),
@@ -71,35 +58,16 @@ _VERB_TABLE = (
 
 
 def infer_activity_id(method_name: str) -> int:
-    """Map a GCP methodName to an OCSF API Activity activity_id.
-
-    Method names look like 'google.iam.admin.v1.CreateServiceAccountKey' — we
-    take the LAST dotted segment ('CreateServiceAccountKey') and match against
-    the verb prefix table.
-
-    >>> infer_activity_id("google.iam.admin.v1.CreateServiceAccountKey")
-    1
-    >>> infer_activity_id("google.cloud.compute.v1.Instances.List")
-    2
-    >>> infer_activity_id("storage.objects.delete")
-    4
-    """
     if not method_name:
         return ACTIVITY_OTHER
     last = method_name.rsplit(".", 1)[-1]
-    # Title-case the first character so 'storage.objects.delete' matches 'Delete'
     if last and last[0].islower():
         last = last[0].upper() + last[1:]
     for prefixes, activity in _VERB_TABLE:
-        for p in prefixes:
-            if last.startswith(p):
+        for prefix in prefixes:
+            if last.startswith(prefix):
                 return activity
     return ACTIVITY_OTHER
-
-
-# ---------------------------------------------------------------------------
-# Time
-# ---------------------------------------------------------------------------
 
 
 def parse_ts_ms(ts: str | None) -> int:
@@ -107,7 +75,6 @@ def parse_ts_ms(ts: str | None) -> int:
         return int(datetime.now(timezone.utc).timestamp() * 1000)
     try:
         cleaned = ts.replace("Z", "+00:00")
-        # GCP timestamps may have nanosecond precision; trim to 6 digits
         if "." in cleaned:
             head, _, tail = cleaned.partition(".")
             frac, sep, tz = tail.partition("+")
@@ -124,13 +91,7 @@ def parse_ts_ms(ts: str | None) -> int:
         return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
-
 def _status_id_and_detail(proto_status: dict[str, Any] | None) -> tuple[int, str | None]:
-    """GCP status is empty {} on success, populated with code/message on failure."""
     if not proto_status:
         return STATUS_SUCCESS, None
     code = proto_status.get("code", 0)
@@ -140,11 +101,6 @@ def _status_id_and_detail(proto_status: dict[str, Any] | None) -> tuple[int, str
     name = _GRPC_CODE_NAMES.get(code, f"CODE_{code}")
     detail = f"{name}: {msg}".strip(": ").strip()
     return STATUS_FAILURE, detail or None
-
-
-# ---------------------------------------------------------------------------
-# Field builders
-# ---------------------------------------------------------------------------
 
 
 def _build_actor(auth_info: dict[str, Any]) -> dict[str, Any]:
@@ -201,17 +157,7 @@ def _build_cloud(log_entry: dict[str, Any]) -> dict[str, Any]:
     return cloud
 
 
-# ---------------------------------------------------------------------------
-# Event builder
-# ---------------------------------------------------------------------------
-
-
-def convert_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
-    """Convert one GCP LogEntry into one OCSF API Activity event.
-
-    Returns None if the entry is not an audit log (e.g. a generic Cloud Logging
-    entry from an application).
-    """
+def _build_canonical_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
     proto = log_entry.get("protoPayload") or {}
     if proto.get("@type") != AUDIT_LOG_TYPE:
         return None
@@ -219,7 +165,7 @@ def convert_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
     method_name = proto.get("methodName", "")
     activity_id = infer_activity_id(method_name)
     status_id, status_detail = _status_id_and_detail(proto.get("status"))
-    metadata_uid = str(log_entry.get("insertId") or "").strip() or hashlib.sha256(
+    event_uid = str(log_entry.get("insertId") or "").strip() or hashlib.sha256(
         json.dumps(
             {
                 "timestamp": log_entry.get("timestamp", ""),
@@ -233,19 +179,55 @@ def convert_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
         ).encode("utf-8")
     ).hexdigest()
 
-    event: dict[str, Any] = {
+    cloud = _build_cloud(log_entry)
+    account_uid = ((cloud.get("account") or {}).get("uid")) or ""
+    region = cloud.get("region") or ""
+
+    canonical: dict[str, Any] = {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "api_activity",
+        "event_uid": event_uid,
+        "provider": "GCP",
+        "account_uid": account_uid,
+        "region": region,
+        "time_ms": parse_ts_ms(log_entry.get("timestamp")),
+        "event_name": method_name,
+        "operation": method_name,
+        "service_name": proto.get("serviceName", ""),
         "activity_id": activity_id,
+        "activity_name": {1: "create", 2: "read", 3: "update", 4: "delete", 99: "other"}.get(activity_id, "unknown"),
+        "status_id": status_id,
+        "status": "failure" if status_id == STATUS_FAILURE else "success",
+        "status_detail": status_detail or "",
+        "actor": _build_actor(proto.get("authenticationInfo") or {}),
+        "src": _build_src_endpoint(proto.get("requestMetadata") or {}),
+        "api": _build_api(proto, log_entry),
+        "resources": _build_resources(proto, log_entry),
+        "cloud": cloud,
+        "source": {
+            "kind": "gcp.audit-log",
+            "log_name": log_entry.get("logName", ""),
+            "insert_id": log_entry.get("insertId", ""),
+        },
+    }
+    return canonical
+
+
+def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    event: dict[str, Any] = {
+        "activity_id": canonical["activity_id"],
         "category_uid": CATEGORY_UID,
         "category_name": CATEGORY_NAME,
         "class_uid": CLASS_UID,
         "class_name": CLASS_NAME,
-        "type_uid": CLASS_UID * 100 + activity_id,
+        "type_uid": CLASS_UID * 100 + canonical["activity_id"],
         "severity_id": SEVERITY_INFORMATIONAL,
-        "status_id": status_id,
-        "time": parse_ts_ms(log_entry.get("timestamp")),
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": metadata_uid,
+            "uid": canonical["event_uid"],
             "product": {
                 "name": "cloud-ai-security-skills",
                 "vendor_name": "msaad00/cloud-ai-security-skills",
@@ -253,26 +235,40 @@ def convert_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
             },
             "labels": ["detection-engineering", "gcp", "audit-log", "ingest"],
         },
-        "actor": _build_actor(proto.get("authenticationInfo") or {}),
-        "src_endpoint": _build_src_endpoint(proto.get("requestMetadata") or {}),
-        "api": _build_api(proto, log_entry),
-        "resources": _build_resources(proto, log_entry),
-        "cloud": _build_cloud(log_entry),
+        "actor": canonical["actor"],
+        "src_endpoint": canonical["src"],
+        "api": canonical["api"],
+        "resources": canonical["resources"],
+        "cloud": canonical["cloud"],
     }
-
-    if status_detail:
-        event["status_detail"] = status_detail
-
+    if canonical["status_detail"]:
+        event["status_detail"] = canonical["status_detail"]
     return event
 
 
-# ---------------------------------------------------------------------------
-# Stream processing
-# ---------------------------------------------------------------------------
+def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
+    canonical = _build_canonical_event(log_entry)
+    if canonical is None:
+        return None
+    return _render_ocsf_event(canonical)
+
+
+def convert_event_native(log_entry: dict[str, Any]) -> dict[str, Any] | None:
+    canonical = _build_canonical_event(log_entry)
+    if canonical is None:
+        return None
+    return _render_native_event(canonical)
 
 
 def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    """Yield LogEntry dicts from JSONL or a top-level array."""
     buf: list[str] = list(stream)
     if not buf:
         return
@@ -287,9 +283,9 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         whole = None
 
     if isinstance(whole, list):
-        for r in whole:
-            if isinstance(r, dict):
-                yield r
+        for record in whole:
+            if isinstance(record, dict):
+                yield record
         return
     if isinstance(whole, dict):
         yield whole
@@ -301,8 +297,8 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             continue
         try:
             obj = json.loads(line)
-        except json.JSONDecodeError as e:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
+        except json.JSONDecodeError as exc:
+            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {exc}", file=sys.stderr)
             continue
         if isinstance(obj, dict):
             yield obj
@@ -310,12 +306,12 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for raw in iter_raw_entries(stream):
         try:
-            event = convert_event(raw)
-        except Exception as e:
-            print(f"[{SKILL_NAME}] skipping entry: convert error: {e}", file=sys.stderr)
+            event = convert_event_native(raw) if output_format == "native" else convert_event(raw)
+        except Exception as exc:
+            print(f"[{SKILL_NAME}] skipping entry: convert error: {exc}", file=sys.stderr)
             continue
         if event is None:
             print(f"[{SKILL_NAME}] skipping entry: not a google.cloud.audit.AuditLog", file=sys.stderr)
@@ -324,16 +320,22 @@ def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert raw GCP audit logs to OCSF 1.8 API Activity JSONL.")
+    parser = argparse.ArgumentParser(description="Convert raw GCP audit logs to API Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON/JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=("ocsf", "native"),
+        default="ocsf",
+        help="Output wire format. Default: ocsf.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:
