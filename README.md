@@ -338,6 +338,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | [`DIAGRAMS.md`](docs/DIAGRAMS.md) | Architecture map, IAM departures workflow/data flow, and detection pipeline visuals |
 | [`CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) | CI lane layout, dedupe rules, and follow-up simplification plan |
 | [`CHANGELOG.md`](CHANGELOG.md) | Repo-level release notes and material skill changes |
+| [`RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) | Repo-level semver rules and pre-tag release checklist |
 | [`COVERAGE_MODEL.md`](docs/COVERAGE_MODEL.md) | What framework coverage means and how it is measured |
 | [`framework-coverage.json`](docs/framework-coverage.json) | Machine-readable framework, provider, and asset coverage registry |
 | [`FRAMEWORK_MAPPINGS.md`](docs/FRAMEWORK_MAPPINGS.md) | Where ATT&CK, ATLAS, CIS, NIST, OWASP, SOC 2, ISO, and PCI coverage lives today |
