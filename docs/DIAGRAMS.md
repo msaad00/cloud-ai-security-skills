@@ -20,3 +20,4 @@ Keep markdown diagrams lightweight and reviewable, then pair them with polished 
 - Prefer 2-3 high-signal diagrams over a large diagram dump.
 - One diagram should answer one question. Do not mix repo structure, runtime surfaces, and roadmap detail in the same visual.
 - The flagship remediation diagram can be more detailed than the repo overview, but the repo overview should stay readable in GitHub preview without zooming.
+- Treat text overlap or zoom-dependent readability as a documentation bug, not a cosmetic issue.

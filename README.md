@@ -99,6 +99,7 @@ Read next:
 - [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md)
 - [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
+- [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
 
 ## Core Surfaces
 
@@ -176,6 +177,8 @@ Operator and contributor docs:
 - [AGENTS.md](AGENTS.md)
 - [CLAUDE.md](CLAUDE.md)
 - [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)
+- [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
+- [docs/LOSSY_MAPPINGS.md](docs/LOSSY_MAPPINGS.md)
 - [docs/agent-integrations.md](docs/agent-integrations.md)
 - [skills/README.md](skills/README.md)
 - [docs/DEBUGGING.md](docs/DEBUGGING.md)

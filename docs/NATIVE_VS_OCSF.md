@@ -17,6 +17,11 @@ The short version:
 - use `bridge` when OCSF helps but would otherwise lose detail
 - remember that `canonical` is internal and `raw` is pre-normalized input
 
+Related docs:
+
+- [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md)
+- [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md)
+
 ## The five shapes
 
 | Shape | What it is | Where it shows up |
@@ -242,6 +247,8 @@ edges, not normalizers.
 Query packs emit OCSF-compatible finding rows, but they also need warehouse
 specific type locking, result contracts, and SQL-level guarantees that are
 outside a pure OCSF schema decision.
+
+For source-by-source detail, see [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md).
 
 ## Practical decision tree
 

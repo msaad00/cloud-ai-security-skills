@@ -31,6 +31,9 @@ Current repo-wide canonical schema version:
 
 - `2026-04`
 
+See [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md) for bump rules, OCSF pin
+semantics, and upgrade guidance.
+
 ## Shared core fields
 
 These are the minimum fields every canonical record should preserve where the
@@ -213,10 +216,11 @@ canonical truth, multiple wire formats.
 
 ## Current implementation note
 
-The canonical model is fully piloted today in:
+The canonical model is now the repo-wide normalization contract:
 
-- `ingest-cloudtrail-ocsf`
-- `ingest-vpc-flow-logs-ocsf`
-- `detect-lateral-movement`
+- ingest and detect are fully dual-mode across the shipped skill set
+- discovery is native-first with bridge where useful
+- evaluation remains native-first
+- sinks and remediation use native repo-owned operational contracts
 
-The rest of the repo is being rolled into the same pattern skill-by-skill.
+The repo is no longer in a one-skill pilot stage for canonical-first design.

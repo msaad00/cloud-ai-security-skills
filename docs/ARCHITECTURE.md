@@ -6,6 +6,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 
 - **Wire format contract** — see [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-engineering/OCSF_CONTRACT.md)
 - **Design rationale and product decisions** — see [`./DESIGN_DECISIONS.md`](./DESIGN_DECISIONS.md)
+- **Schema versioning and upgrade rules** — see [`./SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md)
 - **Sink / persistence contract** — see [`./SINK_CONTRACT.md`](./SINK_CONTRACT.md)
 - **Runner / streaming contract** — see [`./RUNNER_CONTRACT.md`](./RUNNER_CONTRACT.md)
 - **Runtime isolation and trust boundaries** — see [`./RUNTIME_ISOLATION.md`](./RUNTIME_ISOLATION.md)
@@ -108,6 +109,7 @@ Execution-mode note:
 For the detailed contract, see:
 
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
+- [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md)
 - [`CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
 - [`DATA_FLOW.md`](./DATA_FLOW.md)
 - [`STATE_AND_TIMELINE_MODEL.md`](./STATE_AND_TIMELINE_MODEL.md)
