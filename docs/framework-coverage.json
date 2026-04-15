@@ -41,6 +41,15 @@
       "coverage_status": "validated"
     },
     {
+      "path": "skills/ingestion/source-s3-select",
+      "layer": "ingestion",
+      "providers": ["aws"],
+      "asset_classes": ["object-storage", "query-results", "audit-logs"],
+      "execution_modes": ["cli", "ci", "mcp", "persistent"],
+      "frameworks": ["ocsf-1.8"],
+      "coverage_status": "validated"
+    },
+    {
       "path": "skills/ingestion/ingest-cloudtrail-ocsf",
       "layer": "ingestion",
       "providers": ["aws"],
