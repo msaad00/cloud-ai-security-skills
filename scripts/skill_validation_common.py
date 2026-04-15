@@ -40,6 +40,7 @@ ENTRYPOINT_CANDIDATES = (
     "src/convert.py",
     "src/checks.py",
     "src/discover.py",
+    "src/sink.py",
 )
 
 OFFICIAL_REFERENCE_HOSTS = {

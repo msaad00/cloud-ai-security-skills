@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "updated": "2026-04-13",
+  "updated": "2026-04-15",
   "repo_version": "0.4.0",
   "frameworks": [
     { "id": "ocsf-1.8", "name": "OCSF", "version": "1.8.0", "scope": "wire-contract" },
@@ -363,6 +363,15 @@
       "frameworks": ["mitre-attack-v14", "nist-csf-2.0", "cis-controls-v8", "soc2-tsc"],
       "coverage_status": "validated",
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
+    },
+    {
+      "path": "skills/remediation/sink-snowflake-jsonl",
+      "layer": "remediation",
+      "providers": ["snowflake"],
+      "asset_classes": ["findings", "evidence", "audit-logs", "lakehouse"],
+      "frameworks": ["ocsf-1.8", "soc2-tsc"],
+      "coverage_status": "validated",
+      "execution_modes": ["cli", "mcp", "persistent"]
     }
   ],
   "coverage_targets": [
