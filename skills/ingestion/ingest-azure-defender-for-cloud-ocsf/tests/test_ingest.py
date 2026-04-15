@@ -23,6 +23,7 @@ SEVERITY_MEDIUM = _INGEST.SEVERITY_MEDIUM
 SKILL_NAME = _INGEST.SKILL_NAME
 TYPE_UID = _INGEST.TYPE_UID
 convert_alert = _INGEST.convert_alert
+convert_alert_native = _INGEST.convert_alert_native
 ingest = _INGEST.ingest
 iter_raw_alerts = _INGEST.iter_raw_alerts
 severity_to_id = _INGEST.severity_to_id
@@ -53,6 +54,7 @@ def _alert(**property_overrides) -> dict:
         "resourceDetails": {"location": "eastus"},
         "remediationSteps": ["Review running containers", "Rotate affected credentials"],
         "alertType": "KubernetesSuspiciousProcess",
+        "status": "Active",
     }
     props.update(property_overrides)
     return {"id": "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Security/alerts/alert-1", "name": "alert-1", "properties": props}
@@ -77,6 +79,11 @@ class TestValidation:
         assert not ok
         assert "properties" in reason
 
+    def test_missing_title(self):
+        ok, reason = validate_alert(_alert(alertDisplayName="", displayName=""))
+        assert not ok
+        assert "title" in reason
+
 
 class TestConvert:
     def test_pinned_fields(self):
@@ -90,6 +97,30 @@ class TestConvert:
         assert event["cloud"]["region"] == "eastus"
         assert event["cloud"]["account"]["uid"] == "00000000-0000-0000-0000-000000000000"
 
+    def test_native_output_has_no_ocsf_envelope(self):
+        native = convert_alert_native(_alert())
+        assert native["schema_mode"] == "native"
+        assert native["record_type"] == "detection_finding"
+        assert native["provider"] == "Azure"
+        assert native["title"] == "Suspicious process launched in container"
+        assert "class_uid" not in native
+        assert "category_uid" not in native
+        assert "metadata" not in native
+
+    def test_native_and_ocsf_share_same_uid_basis(self):
+        raw = _alert()
+        native = convert_alert_native(raw)
+        ocsf = convert_alert(raw)
+        assert native["event_uid"] == ocsf["metadata"]["uid"] == raw["id"]
+        assert native["finding_uid"] == ocsf["finding_info"]["uid"]
+
+    def test_compliance_lifted_to_observables(self):
+        alert = _alert(compliance={"status": "Failed", "securityControlId": "LT-1"})
+        event = convert_alert(alert)
+        observables = {o["name"]: o["value"] for o in event["observables"]}
+        assert observables["defender.compliance_status"] == "Failed"
+        assert observables["defender.compliance_control"] == "LT-1"
+
 
 class TestStream:
     def test_value_wrapper(self):
@@ -100,3 +131,10 @@ class TestStream:
         produced = list(ingest([RAW_FIXTURE.read_text()]))
         expected = _load_jsonl(OCSF_FIXTURE)
         assert produced == expected
+
+    def test_native_output_mode(self):
+        wrapped = {"value": [_alert()]}
+        out = list(ingest([json.dumps(wrapped)], output_format="native"))
+        assert len(out) == 1
+        assert out[0]["schema_mode"] == "native"
+        assert "metadata" not in out[0]

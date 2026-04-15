@@ -1,4 +1,4 @@
-"""Convert Azure Defender for Cloud alerts to OCSF 1.8 Detection Finding."""
+"""Convert Azure Defender for Cloud alerts to OCSF or repo-native findings."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-azure-defender-for-cloud-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 CLASS_UID = 2004
 CLASS_NAME = "Detection Finding"
@@ -71,6 +72,10 @@ def _extract_subscription_id(resource_id: str) -> str:
     return ""
 
 
+def _short(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()[:8]
+
+
 def validate_alert(alert: dict[str, Any]) -> tuple[bool, str]:
     if not isinstance(alert, dict):
         return False, "not a dict"
@@ -96,18 +101,106 @@ def _resource_id(alert: dict[str, Any]) -> str:
     return resource_details.get("id") or resource_details.get("source") or ""
 
 
-def convert_alert(alert: dict[str, Any]) -> dict[str, Any]:
+def _build_canonical_alert(alert: dict[str, Any]) -> dict[str, Any]:
     props = alert.get("properties") or {}
     alert_id = str(alert.get("id") or alert.get("name") or "")
     title = str(props.get("alertDisplayName") or props.get("displayName") or alert.get("name") or "Defender for Cloud alert")
     description = str(props.get("description") or title)
-    severity = str(props.get("severity") or "Informational")
+    severity_label = str(props.get("severity") or "Informational")
     resource_id = _resource_id(alert)
     compromised_entity = str(props.get("compromisedEntity") or "")
     remediation_steps = props.get("remediationSteps") or []
+    finding_type = str(props.get("alertType") or title)
     event_time = parse_ts_ms(props.get("timeGeneratedUtc") or props.get("startTimeUtc"))
-    uid = f"det-defender-{hashlib.sha256(alert_id.encode()).hexdigest()[:8]}"
+    finding_uid = f"det-defender-{_short(alert_id or title)}"
+    subscription_id = _extract_subscription_id(resource_id)
+    region = str(((props.get("resourceDetails") or {}).get("location")) or "")
 
+    resources: list[dict[str, Any]] = []
+    if resource_id:
+        resource: dict[str, Any] = {
+            "name": resource_id,
+            "type": "azure-resource",
+            "uid": resource_id,
+        }
+        if region:
+            resource["region"] = region
+        resources.append(resource)
+
+    compliance = props.get("compliance") or {}
+    status = str(props.get("status") or "success")
+
+    return {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "detection_finding",
+        "event_uid": alert_id or finding_uid,
+        "finding_uid": finding_uid,
+        "provider": "Azure",
+        "account_uid": subscription_id,
+        "region": region,
+        "time_ms": event_time,
+        "severity_id": severity_to_id(severity_label),
+        "severity_label": severity_label,
+        "status_id": STATUS_SUCCESS,
+        "status": status,
+        "title": title,
+        "description": description,
+        "finding_types": [finding_type],
+        "attacks": [],
+        "resources": resources,
+        "cloud": {
+            "provider": "Azure",
+            "account": {"uid": subscription_id} if subscription_id else {},
+            "region": region,
+        },
+        "source": {
+            "kind": "azure.defender-for-cloud",
+            "alert_id": alert_id,
+            "compromised_entity": compromised_entity,
+            "remediation_steps": remediation_steps if isinstance(remediation_steps, list) else [str(remediation_steps)],
+        },
+        "compliance": {
+            "status": str(compliance.get("status") or ""),
+            "control_id": str(compliance.get("securityControlId") or ""),
+        },
+        "evidence": {
+            "events_observed": 1,
+            "first_seen_time": event_time,
+            "last_seen_time": event_time,
+            "raw_events": [{"uid": alert_id, "product": "azure-defender-for-cloud"}],
+        },
+    }
+
+
+def _build_observables(canonical: dict[str, Any]) -> list[dict[str, Any]]:
+    observables = [
+        {"name": "defender.alert_id", "type": "Other", "value": canonical["source"]["alert_id"]},
+        {"name": "defender.severity", "type": "Other", "value": canonical["severity_label"]},
+        {
+            "name": "defender.compromised_entity",
+            "type": "Other",
+            "value": canonical["source"]["compromised_entity"],
+        },
+        {
+            "name": "defender.remediation_steps",
+            "type": "Other",
+            "value": " | ".join(canonical["source"]["remediation_steps"]),
+        },
+    ]
+    if canonical["compliance"]["status"]:
+        observables.append(
+            {"name": "defender.compliance_status", "type": "Other", "value": canonical["compliance"]["status"]}
+        )
+    if canonical["compliance"]["control_id"]:
+        observables.append(
+            {"name": "defender.compliance_control", "type": "Other", "value": canonical["compliance"]["control_id"]}
+        )
+    return observables
+
+
+def _render_ocsf_alert(canonical: dict[str, Any]) -> dict[str, Any]:
+    resources = [{"name": item["name"], "type": item["type"]} for item in canonical["resources"]]
     event: dict[str, Any] = {
         "activity_id": ACTIVITY_CREATE,
         "category_uid": CATEGORY_UID,
@@ -115,12 +208,12 @@ def convert_alert(alert: dict[str, Any]) -> dict[str, Any]:
         "class_uid": CLASS_UID,
         "class_name": CLASS_NAME,
         "type_uid": TYPE_UID,
-        "severity_id": severity_to_id(severity),
-        "status_id": STATUS_SUCCESS,
-        "time": event_time,
+        "severity_id": canonical["severity_id"],
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": alert_id or uid,
+            "uid": canonical["event_uid"],
             "product": {
                 "name": "cloud-ai-security-skills",
                 "vendor_name": "msaad00/cloud-ai-security-skills",
@@ -129,34 +222,40 @@ def convert_alert(alert: dict[str, Any]) -> dict[str, Any]:
             "labels": ["detection-engineering", "azure", "defender-for-cloud", "ingest", "passthrough"],
         },
         "finding_info": {
-            "uid": uid,
-            "title": title,
-            "desc": description,
-            "types": [str(props.get("alertType") or title)],
-            "first_seen_time": event_time,
-            "last_seen_time": event_time,
-            "attacks": [],
+            "uid": canonical["finding_uid"],
+            "title": canonical["title"],
+            "desc": canonical["description"],
+            "types": canonical["finding_types"],
+            "first_seen_time": canonical["time_ms"],
+            "last_seen_time": canonical["time_ms"],
+            "attacks": canonical["attacks"],
         },
-        "resources": [{"name": resource_id, "type": "azure-resource"}] if resource_id else [],
-        "cloud": {"provider": "Azure"},
-        "observables": [
-            {"name": "defender.alert_id", "type": "Other", "value": alert_id},
-            {"name": "defender.severity", "type": "Other", "value": severity},
-            {"name": "defender.compromised_entity", "type": "Other", "value": compromised_entity},
-            {"name": "defender.remediation_steps", "type": "Other", "value": " | ".join(remediation_steps) if isinstance(remediation_steps, list) else str(remediation_steps)},
-        ],
-        "evidence": {
-            "events_observed": 1,
-            "first_seen_time": event_time,
-            "last_seen_time": event_time,
-            "raw_events": [{"uid": alert_id, "product": "azure-defender-for-cloud"}],
-        },
+        "resources": resources,
+        "cloud": {"provider": canonical["provider"]},
+        "observables": _build_observables(canonical),
+        "evidence": canonical["evidence"],
     }
-    if subscription_id := _extract_subscription_id(resource_id):
-        event["cloud"]["account"] = {"uid": subscription_id}
-    if location := ((props.get("resourceDetails") or {}).get("location")):
-        event["cloud"]["region"] = location
+    if canonical["account_uid"]:
+        event["cloud"]["account"] = {"uid": canonical["account_uid"]}
+    if canonical["region"]:
+        event["cloud"]["region"] = canonical["region"]
     return event
+
+
+def _render_native_alert(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_alert(alert: dict[str, Any]) -> dict[str, Any]:
+    return _render_ocsf_alert(_build_canonical_alert(alert))
+
+
+def convert_alert_native(alert: dict[str, Any]) -> dict[str, Any]:
+    return _render_native_alert(_build_canonical_alert(alert))
 
 
 def iter_raw_alerts(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -195,25 +294,34 @@ def iter_raw_alerts(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             yield item
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for alert in iter_raw_alerts(stream):
         valid, reason = validate_alert(alert)
         if not valid:
             print(f"[{SKILL_NAME}] skipping alert: {reason}", file=sys.stderr)
             continue
-        yield convert_alert(alert)
+        if output_format == "native":
+            yield convert_alert_native(alert)
+        else:
+            yield convert_alert(alert)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Convert Azure Defender for Cloud alerts to OCSF 1.8 Detection Finding JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON or JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=("ocsf", "native"),
+        default="ocsf",
+        help="Output wire format. Default: ocsf.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:
