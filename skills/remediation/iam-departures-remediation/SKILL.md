@@ -177,6 +177,12 @@ the runtime interface, not the recommended storage mechanism. In production,
 inject them from AWS Secrets Manager, SSM Parameter Store, Vault, workload
 identity, or an equivalent secret store.
 
+This skill is secret-minimizing, not password-free. Prefer workload identity,
+storage integrations, or short-lived scoped tokens where the platform supports
+them. The remaining password and client-secret paths below are supported for
+vendor compatibility and should be treated as secret material: never log them,
+persist them in audit rows, or store them in source-controlled config.
+
 | Source | Required Env Vars |
 |--------|-------------------|
 | Snowflake | `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD` |
@@ -185,7 +191,7 @@ identity, or an equivalent secret store.
 | ClickHouse | `CLICKHOUSE_HOST`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD` |
 | Workday API | `WORKDAY_API_URL`, `WORKDAY_CLIENT_ID`, `WORKDAY_CLIENT_SECRET` |
 
-Prefer the storage-integration or federation path where the source platform supports it.
+Prefer the storage-integration or federation path where the source platform supports it. Use direct password or client-secret auth only when the source platform does not expose a stronger operational path in your environment.
 
 ## Security Principles
 
