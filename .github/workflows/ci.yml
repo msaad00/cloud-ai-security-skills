@@ -236,7 +236,7 @@ jobs:
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: uv
+          packages: uv==0.10.9
       - name: Export full-lock CycloneDX SBOM
         run: |
           uv export \
