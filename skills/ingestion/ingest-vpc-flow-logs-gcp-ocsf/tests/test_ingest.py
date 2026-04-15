@@ -20,6 +20,7 @@ OCSF_VERSION = _INGEST.OCSF_VERSION
 SKILL_NAME = _INGEST.SKILL_NAME
 activity_id_for_disposition = _INGEST.activity_id_for_disposition
 convert_entry = _INGEST.convert_entry
+convert_entry_native = _INGEST.convert_entry_native
 ingest = _INGEST.ingest
 iter_raw_entries = _INGEST.iter_raw_entries
 parse_ts_ms = _INGEST.parse_ts_ms
@@ -103,6 +104,16 @@ class TestConvertEntry:
     def test_skips_non_flow_record(self):
         assert convert_entry({"jsonPayload": {"foo": "bar"}}) is None
 
+    def test_native_output_keeps_canonical_fields_without_ocsf_envelope(self):
+        event = convert_entry_native(_entry())
+        assert event["schema_mode"] == "native"
+        assert event["record_type"] == "network_activity"
+        assert event["provider"] == "GCP"
+        assert event["event_uid"]
+        assert event["connection"]["boundary"] == "prod-vpc"
+        assert "class_uid" not in event
+        assert "metadata" not in event
+
 
 class TestStream:
     def test_iter_jsonl(self):
@@ -113,3 +124,13 @@ class TestStream:
         produced = list(ingest(RAW_FIXTURE.read_text().splitlines(True)))
         expected = _load_jsonl(OCSF_FIXTURE)
         assert produced == expected
+
+    def test_native_output_mode(self):
+        produced = list(ingest(RAW_FIXTURE.read_text().splitlines(True), output_format="native"))
+        assert len(produced) == 1
+        event = produced[0]
+        assert event["schema_mode"] == "native"
+        assert event["record_type"] == "network_activity"
+        assert event["provider"] == "GCP"
+        assert "class_uid" not in event
+        assert "metadata" not in event

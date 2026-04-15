@@ -1,4 +1,4 @@
-"""Convert raw GCP VPC Flow Logs to OCSF 1.8 Network Activity (class 4001)."""
+"""Convert raw GCP VPC Flow Logs to OCSF or repo-native Network Activity."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-vpc-flow-logs-gcp-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 CLASS_UID = 4001
 CLASS_NAME = "Network Activity"
@@ -178,7 +179,7 @@ def _connection_info(connection: dict[str, Any], payload: dict[str, Any]) -> dic
     return info
 
 
-def convert_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+def _build_canonical_record(entry: dict[str, Any]) -> dict[str, Any] | None:
     payload = _payload(entry)
     connection = payload.get("connection") or {}
     if not isinstance(connection, dict) or not connection:
@@ -188,7 +189,7 @@ def convert_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
     start_ms = parse_ts_ms(payload.get("start_time"))
     end_ms = parse_ts_ms(payload.get("end_time"))
     event_time = end_ms or start_ms or parse_ts_ms(entry.get("timestamp")) or int(datetime.now(timezone.utc).timestamp() * 1000)
-    metadata_uid = hashlib.sha256(
+    event_uid = hashlib.sha256(
         json.dumps(
             {
                 "project_id": (((payload.get("src_vpc") or {}).get("project_id")) or ((payload.get("dest_vpc") or {}).get("project_id")) or (((entry.get("resource") or {}).get("labels")) or {}).get("project_id", "")),
@@ -207,19 +208,53 @@ def convert_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
         ).encode("utf-8")
     ).hexdigest()
 
-    event: dict[str, Any] = {
+    cloud = _cloud(entry, payload)
+    return {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "network_activity",
+        "event_uid": event_uid,
+        "provider": "GCP",
+        "account_uid": ((cloud.get("account") or {}).get("uid")) or "",
+        "region": cloud.get("region") or "",
+        "time_ms": event_time,
+        "start_time_ms": start_ms,
+        "end_time_ms": end_ms,
         "activity_id": activity_id,
+        "activity_name": {ACTIVITY_TRAFFIC: "traffic", ACTIVITY_DENIED: "denied", ACTIVITY_UNKNOWN: "unknown"}.get(
+            activity_id, "unknown"
+        ),
+        "status_id": STATUS_SUCCESS,
+        "status": "success",
+        "src": _endpoint(connection, "src", payload),
+        "dst": _endpoint(connection, "dst", payload),
+        "traffic": _traffic(payload),
+        "connection": _connection_info(connection, payload),
+        "cloud": cloud,
+        "disposition": (payload.get("disposition") or "").upper() or "UNKNOWN",
+        "source": {
+            "kind": "gcp.vpc-flow-logs",
+            "reporter": payload.get("reporter") or "",
+            "src_vpc": ((payload.get("src_vpc") or {}).get("vpc_name")) or "",
+            "dest_vpc": ((payload.get("dest_vpc") or {}).get("vpc_name")) or "",
+        },
+    }
+
+
+def _render_ocsf_record(canonical: dict[str, Any]) -> dict[str, Any]:
+    event: dict[str, Any] = {
+        "activity_id": canonical["activity_id"],
         "category_uid": CATEGORY_UID,
         "category_name": CATEGORY_NAME,
         "class_uid": CLASS_UID,
         "class_name": CLASS_NAME,
-        "type_uid": CLASS_UID * 100 + activity_id,
+        "type_uid": CLASS_UID * 100 + canonical["activity_id"],
         "severity_id": SEVERITY_INFORMATIONAL,
         "status_id": STATUS_SUCCESS,
-        "time": event_time,
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": metadata_uid,
+            "uid": canonical["event_uid"],
             "product": {
                 "name": "cloud-ai-security-skills",
                 "vendor_name": "msaad00/cloud-ai-security-skills",
@@ -227,17 +262,39 @@ def convert_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
             },
             "labels": ["detection-engineering", "gcp", "vpc-flow-logs", "ingest"],
         },
-        "src_endpoint": _endpoint(connection, "src", payload),
-        "dst_endpoint": _endpoint(connection, "dst", payload),
-        "traffic": _traffic(payload),
-        "connection_info": _connection_info(connection, payload),
-        "cloud": _cloud(entry, payload),
+        "src_endpoint": canonical["src"],
+        "dst_endpoint": canonical["dst"],
+        "traffic": canonical["traffic"],
+        "connection_info": canonical["connection"],
+        "cloud": canonical["cloud"],
     }
-    if start_ms is not None:
-        event["start_time"] = start_ms
-    if end_ms is not None:
-        event["end_time"] = end_ms
+    if canonical.get("start_time_ms") is not None:
+        event["start_time"] = canonical["start_time_ms"]
+    if canonical.get("end_time_ms") is not None:
+        event["end_time"] = canonical["end_time_ms"]
     return event
+
+
+def _render_native_record(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    canonical = _build_canonical_record(entry)
+    if canonical is None:
+        return None
+    return _render_ocsf_record(canonical)
+
+
+def convert_entry_native(entry: dict[str, Any]) -> dict[str, Any] | None:
+    canonical = _build_canonical_record(entry)
+    if canonical is None:
+        return None
+    return _render_native_record(canonical)
 
 
 def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -269,23 +326,32 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         yield parsed
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for entry in iter_raw_entries(stream):
-        event = convert_entry(entry)
-        if event is not None:
-            yield event
+        canonical = _build_canonical_record(entry)
+        if canonical is not None:
+            if output_format == "native":
+                yield _render_native_record(canonical)
+            else:
+                yield _render_ocsf_record(canonical)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Convert GCP VPC Flow Logs to OCSF 1.8 Network Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON or JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=("ocsf", "native"),
+        default="ocsf",
+        help="Render OCSF network activity or the native enriched network-activity shape.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:
