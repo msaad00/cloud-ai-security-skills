@@ -231,6 +231,9 @@ jobs:
   sbom:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract, type-check, safe-skill-bar]
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-python-deps
@@ -244,10 +247,20 @@ jobs:
             --format cyclonedx1.5 \
             --all-groups \
             --output-file cloud-ai-security-skills-full-lock.cdx.json
+      - uses: sigstore/cosign-installer@v3.8.1
+      - name: Sign SBOM with GitHub OIDC
+        run: |
+          cosign sign-blob --yes \
+            --output-signature cloud-ai-security-skills-full-lock.cdx.json.sig \
+            --output-certificate cloud-ai-security-skills-full-lock.cdx.json.pem \
+            cloud-ai-security-skills-full-lock.cdx.json
       - uses: actions/upload-artifact@v4
         with:
           name: cyclonedx-sbom
-          path: cloud-ai-security-skills-full-lock.cdx.json
+          path: |
+            cloud-ai-security-skills-full-lock.cdx.json
+            cloud-ai-security-skills-full-lock.cdx.json.sig
+            cloud-ai-security-skills-full-lock.cdx.json.pem
 
   # ── IaC validation (CloudFormation + Terraform in one job) ─────
   validate-iac:

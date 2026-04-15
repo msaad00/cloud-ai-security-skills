@@ -27,7 +27,7 @@ The CI pipeline is split into independent lanes so failures point at the right k
 - `coverage`
   - repo coverage gates for overall, detection, and evaluation floors
 - `sbom`
-  - publishes a CycloneDX artifact for the full locked dependency graph
+  - publishes a signed CycloneDX artifact set for the full locked dependency graph
 - `validate-iac`
   - CloudFormation and Terraform validation
 - `agent-bom`

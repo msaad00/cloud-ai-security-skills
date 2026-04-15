@@ -84,12 +84,24 @@ We do **not** add dependencies casually for:
 The CI pipeline now publishes a CycloneDX SBOM artifact generated from the
 locked dependency graph.
 
+That artifact is now accompanied by a Sigstore keyless signature and
+certificate generated from GitHub Actions OIDC during the `sbom` lane.
+
 That artifact is intended to support:
 
 - auditor review
 - release review
 - dependency provenance discussion
 - downstream customer ingest into their own supply-chain tooling
+
+The uploaded artifact set contains:
+
+- `cloud-ai-security-skills-full-lock.cdx.json`
+- `cloud-ai-security-skills-full-lock.cdx.json.sig`
+- `cloud-ai-security-skills-full-lock.cdx.json.pem`
+
+This gives consumers both the SBOM itself and the materials needed to verify
+that the CI workflow, not an out-of-band process, produced it.
 
 See:
 
@@ -101,6 +113,6 @@ See:
 
 - export a runtime-group SBOM artifact once the repo's non-package group layout
   supports a clean grouped CycloneDX export without workarounds
-- attach the CycloneDX artifact to tagged releases
-- add signed provenance or release attestations if the release flow grows beyond
-  the current repo-level tag process
+- attach the signed CycloneDX artifact set to tagged releases
+- add broader signed provenance or release attestations if the release flow
+  grows beyond the current repo-level tag process

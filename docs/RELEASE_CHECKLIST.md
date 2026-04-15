@@ -69,7 +69,7 @@ git push origin vX.Y.Z
 4. Verify GitHub Actions passed on the tagged commit if a release workflow uses
    tag triggers.
 5. If a release artifact is published, include or reference the latest
-   CycloneDX SBOM artifact from CI.
+   signed CycloneDX SBOM artifact set from CI.
 
 ## Post-Release
 
