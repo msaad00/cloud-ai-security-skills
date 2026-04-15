@@ -26,6 +26,7 @@ from ingest import (  # type: ignore[import-not-found]
     _service_name_from_operation,
     _status_id_and_detail,
     convert_event,
+    convert_event_native,
     infer_activity_id,
     ingest,
     iter_raw_entries,
@@ -233,6 +234,16 @@ class TestConvertEvent:
         assert e["status_id"] == STATUS_FAILURE
         assert e["status_detail"] == "Forbidden.AuthorizationFailed"
 
+    def test_native_output_keeps_canonical_fields_without_ocsf_envelope(self):
+        e = convert_event_native(self._entry())
+        assert e["schema_mode"] == "native"
+        assert e["record_type"] == "api_activity"
+        assert e["provider"] == "Azure"
+        assert e["operation"] == "MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE"
+        assert e["event_uid"] == "corr-1"
+        assert "class_uid" not in e
+        assert "metadata" not in e
+
 
 # ── Stream wrappers ───────────────────────────────────────────────────
 
@@ -248,6 +259,22 @@ class TestIterRawEntries:
     def test_top_level_array(self):
         out = list(iter_raw_entries([json.dumps([{"operationName": "X"}, {"operationName": "Y"}])]))
         assert len(out) == 2
+
+    def test_native_output_mode(self):
+        payload = json.dumps(
+            {
+                "time": "2026-04-10T05:00:00.0000000Z",
+                "operationName": "MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE",
+                "correlationId": "n1",
+                "resourceId": "/SUBSCRIPTIONS/00000000-0000-0000-0000-000000000000/RESOURCEGROUPS/RG/PROVIDERS/MICROSOFT.STORAGE/STORAGEACCOUNTS/STG",
+            }
+        )
+        out = list(ingest([payload], output_format="native"))
+        assert len(out) == 1
+        first = out[0]
+        assert first["schema_mode"] == "native"
+        assert first["record_type"] == "api_activity"
+        assert "class_uid" not in first
 
 
 # ── Golden fixture parity ──────────────────────────────────────────────
