@@ -21,6 +21,7 @@ SKILL_NAME = _INGEST.SKILL_NAME
 _extract_subscription_id = _INGEST._extract_subscription_id
 activity_id_for_decision = _INGEST.activity_id_for_decision
 convert_tuple = _INGEST.convert_tuple
+convert_tuple_native = _INGEST.convert_tuple_native
 ingest = _INGEST.ingest
 iter_raw_records = _INGEST.iter_raw_records
 parse_flow_tuple = _INGEST.parse_flow_tuple
@@ -73,6 +74,22 @@ class TestConvert:
         assert event["cloud"]["provider"] == "Azure"
         assert event["cloud"]["region"] == "eastus"
 
+    def test_native_output_keeps_canonical_fields_without_ocsf_envelope(self):
+        event = convert_tuple_native(
+            parse_flow_tuple("1775797320000,10.0.1.4,10.0.2.7,49812,3306,T,O,A,B,12,4500,10,3200", 2),
+            resource_id="/SUBSCRIPTIONS/00000000-0000-0000-0000-000000000000/RESOURCEGROUPS/rg/providers/MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/web-nsg",
+            rule="AllowDb",
+            mac="000D3A1B2C3D",
+            location="eastus",
+        )
+        assert event["schema_mode"] == "native"
+        assert event["record_type"] == "network_activity"
+        assert event["provider"] == "Azure"
+        assert event["event_uid"]
+        assert event["connection"]["boundary"].endswith("/web-nsg")
+        assert "class_uid" not in event
+        assert "metadata" not in event
+
 
 class TestStream:
     def test_iter_records(self):
@@ -83,3 +100,13 @@ class TestStream:
         produced = list(ingest([RAW_FIXTURE.read_text()]))
         expected = _load_jsonl(OCSF_FIXTURE)
         assert produced == expected
+
+    def test_native_output_mode(self):
+        produced = list(ingest([RAW_FIXTURE.read_text()], output_format="native"))
+        assert len(produced) == 1
+        event = produced[0]
+        assert event["schema_mode"] == "native"
+        assert event["record_type"] == "network_activity"
+        assert event["provider"] == "Azure"
+        assert "class_uid" not in event
+        assert "metadata" not in event
