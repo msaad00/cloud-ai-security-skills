@@ -8,7 +8,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO, cast
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
@@ -47,7 +47,7 @@ def _result_response(request_id: Any, result: Any) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-def _read_message(stream) -> dict[str, Any] | None:
+def _read_message(stream: BinaryIO) -> dict[str, Any] | None:
     headers: dict[str, str] = {}
     while True:
         line = stream.readline()
@@ -62,10 +62,13 @@ def _read_message(stream) -> dict[str, Any] | None:
     if length <= 0:
         return None
     payload = stream.read(length)
-    return json.loads(payload.decode("utf-8"))
+    decoded = json.loads(payload.decode("utf-8"))
+    if not isinstance(decoded, dict):
+        raise ValueError("JSON-RPC message payload must be an object")
+    return cast(dict[str, Any], decoded)
 
 
-def _write_message(stream, message: dict[str, Any]) -> None:
+def _write_message(stream: BinaryIO, message: dict[str, Any]) -> None:
     payload = json.dumps(message).encode("utf-8")
     stream.write(f"Content-Length: {len(payload)}\r\n\r\n".encode("utf-8"))
     stream.write(payload)
@@ -109,7 +112,7 @@ def _validate_context(raw_context: Any, field_name: str) -> dict[str, Any] | Non
             validated[key] = value
             continue
         if isinstance(value, list) and all(isinstance(item, str) for item in value):
-            validated[key] = value
+            validated[key] = cast(list[str], value)
             continue
         raise ValueError(f"`{field_name}.{key}` must be a string or array of strings")
     return validated

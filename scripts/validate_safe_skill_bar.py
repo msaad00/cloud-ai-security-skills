@@ -23,12 +23,16 @@ WILDCARD_PATTERNS = (
 POLICY_SUFFIXES = (".json", ".tf", ".yaml", ".yml")
 
 
-def validate_read_only_no_subprocess(skill) -> list[str]:
+def validate_read_only_no_subprocess(skill: object) -> list[str]:
     errors: list[str] = []
-    if skill.is_write_capable:
+    skill_dir = getattr(skill, "skill_dir")
+    is_write_capable = bool(getattr(skill, "is_write_capable"))
+    approval_model = getattr(skill, "approval_model")
+    side_effects = getattr(skill, "side_effects")
+    if is_write_capable:
         return errors
 
-    for path in sorted((skill.skill_dir / "src").rglob("*.py")):
+    for path in sorted((skill_dir / "src").rglob("*.py")):
         text = path.read_text()
         for pattern in SUBPROCESS_PATTERNS:
             if pattern in text:
@@ -36,28 +40,31 @@ def validate_read_only_no_subprocess(skill) -> list[str]:
                 errors.append(
                     f"{rel}: read-only skill must not use subprocess/shell pattern `{pattern}`"
                 )
-    if skill.approval_model != "none":
-        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: read-only skill must keep approval_model `none`")
-    if skill.side_effects != ("none",):
-        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: read-only skill must keep side_effects `none`")
+    if approval_model != "none":
+        errors.append(f"{skill_dir.relative_to(ROOT)}: read-only skill must keep approval_model `none`")
+    if side_effects != ("none",):
+        errors.append(f"{skill_dir.relative_to(ROOT)}: read-only skill must keep side_effects `none`")
     return errors
 
 
-def validate_write_skill_dry_run(skill) -> list[str]:
+def validate_write_skill_dry_run(skill: object) -> list[str]:
     errors: list[str] = []
-    if not skill.is_write_capable:
+    skill_dir = getattr(skill, "skill_dir")
+    is_write_capable = bool(getattr(skill, "is_write_capable"))
+    approval_model = getattr(skill, "approval_model")
+    if not is_write_capable:
         return errors
 
-    skill_md = (skill.skill_dir / "SKILL.md").read_text().lower()
+    skill_md = (skill_dir / "SKILL.md").read_text().lower()
     if "dry-run" not in skill_md and "dry_run" not in skill_md:
-        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: write-capable skill must document dry-run in SKILL.md")
+        errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must document dry-run in SKILL.md")
 
-    tests_dir = skill.skill_dir / "tests"
+    tests_dir = skill_dir / "tests"
     test_text = "\n".join(path.read_text() for path in sorted(tests_dir.rglob("*.py")))
     if "dry_run" not in test_text and "--dry-run" not in test_text and "dry-run" not in test_text:
-        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: write-capable skill must exercise dry-run in tests")
-    if skill.approval_model != "human_required":
-        errors.append(f"{skill.skill_dir.relative_to(ROOT)}: write-capable skill must require human approval")
+        errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must exercise dry-run in tests")
+    if approval_model != "human_required":
+        errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must require human approval")
 
     return errors
 

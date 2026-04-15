@@ -4,6 +4,7 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
+from typing import Protocol
 
 from skill_validation_common import (
     ROOT,
@@ -12,7 +13,7 @@ from skill_validation_common import (
     reference_url_allowed,
 )
 
-DANGEROUS_CODE_PATTERNS = {
+DANGEROUS_CODE_PATTERNS: dict[str, str] = {
     r"\beval\(": "eval() is not allowed in shipped skill code",
     r"(?<!\.)\bexec\(": "exec() is not allowed in shipped skill code",
     r"\bpickle\.loads\(": "pickle.loads() is not allowed in shipped skill code",
@@ -21,7 +22,17 @@ DANGEROUS_CODE_PATTERNS = {
 }
 
 
-def _load_tool_registry():
+class _ToolRegistryModule(Protocol):
+    def discover_skills(self, root: Path) -> list["_RegistrySkill"]: ...
+
+
+class _RegistrySkill(Protocol):
+    name: str
+    description: str
+    supported: bool
+
+
+def _load_tool_registry() -> _ToolRegistryModule:
     path = ROOT / "mcp-server" / "src" / "tool_registry.py"
     spec = importlib.util.spec_from_file_location("cloud_security_tool_registry_integrity", path)
     assert spec and spec.loader

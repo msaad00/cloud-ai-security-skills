@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import TypedDict
 
 from skill_validation_common import ROOT, discover_skill_contracts
 
@@ -10,9 +11,36 @@ ALLOWED_STATUSES = {"gap", "mapped", "implemented", "tested", "validated"}
 ALLOWED_EXECUTION_MODES = {"cli", "ci", "mcp", "persistent"}
 
 
-def load_registry() -> dict:
+class CoverageSkillEntry(TypedDict, total=False):
+    path: str
+    layer: str
+    coverage_status: str
+    providers: list[str]
+    asset_classes: list[str]
+    execution_modes: list[str]
+    frameworks: list[str]
+
+
+class CoverageTargetEntry(TypedDict, total=False):
+    framework: str
+
+
+class CoverageFrameworkEntry(TypedDict, total=False):
+    id: str
+
+
+class CoverageRegistry(TypedDict, total=False):
+    frameworks: list[CoverageFrameworkEntry]
+    skills: list[CoverageSkillEntry]
+    coverage_targets: list[CoverageTargetEntry]
+
+
+def load_registry() -> CoverageRegistry:
     path = ROOT / "docs" / "framework-coverage.json"
-    return json.loads(path.read_text())
+    raw = json.loads(path.read_text())
+    if not isinstance(raw, dict):
+        raise ValueError("docs/framework-coverage.json must contain a top-level object")
+    return raw  # type: ignore[return-value]
 
 
 def main() -> int:
@@ -26,7 +54,7 @@ def main() -> int:
     expected_paths = {
         str(skill.skill_dir.relative_to(ROOT)): skill for skill in discover_skill_contracts()
     }
-    registered_paths: dict[str, dict] = {}
+    registered_paths: dict[str, CoverageSkillEntry] = {}
 
     for entry in registry.get("skills", []):
         path = entry.get("path", "")
