@@ -23,6 +23,7 @@ SEVERITY_MEDIUM = _INGEST.SEVERITY_MEDIUM
 SKILL_NAME = _INGEST.SKILL_NAME
 TYPE_UID = _INGEST.TYPE_UID
 convert_finding = _INGEST.convert_finding
+convert_finding_native = _INGEST.convert_finding_native
 ingest = _INGEST.ingest
 iter_raw_findings = _INGEST.iter_raw_findings
 severity_to_id = _INGEST.severity_to_id
@@ -85,6 +86,23 @@ class TestConvert:
         assert event["cloud"]["account"]["uid"] == "prod-project"
         assert event["finding_info"]["title"] == "PUBLIC_BUCKET"
 
+    def test_native_output_has_no_ocsf_envelope(self):
+        native = convert_finding_native(_finding())
+        assert native["schema_mode"] == "native"
+        assert native["record_type"] == "detection_finding"
+        assert native["provider"] == "GCP"
+        assert native["title"] == "PUBLIC_BUCKET"
+        assert "class_uid" not in native
+        assert "category_uid" not in native
+        assert "metadata" not in native
+
+    def test_native_and_ocsf_share_same_uid_basis(self):
+        raw = _finding(name="organizations/123/sources/456/findings/finding-same")
+        native = convert_finding_native(raw)
+        ocsf = convert_finding(raw)
+        assert native["event_uid"] == ocsf["metadata"]["uid"] == raw["name"]
+        assert native["finding_uid"] == ocsf["finding_info"]["uid"]
+
 
 class TestStream:
     def test_wrapper_parsing(self):
@@ -95,3 +113,13 @@ class TestStream:
         produced = list(ingest([RAW_FIXTURE.read_text()]))
         expected = _load_jsonl(OCSF_FIXTURE)
         assert produced == expected
+
+    def test_native_output_mode_emits_enriched_findings(self):
+        produced = list(ingest([RAW_FIXTURE.read_text()], output_format="native"))
+        assert produced
+        first = produced[0]
+        assert first["schema_mode"] == "native"
+        assert first["record_type"] == "detection_finding"
+        assert first["provider"] == "GCP"
+        assert "class_uid" not in first
+        assert "metadata" not in first
