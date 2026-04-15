@@ -13,6 +13,7 @@
 - Cross-cloud and AI security skills, not just CSPM
 - Read-only by default, least-privilege, zero-trust
 - Deterministic, auditable, and grounded in official vendor docs
+- Secret-minimizing by default: prefer workload identity and short-lived creds, with documented secret-bearing exceptions only where vendor paths still require them
 
 ## 1-minute hello world
 
@@ -72,30 +73,8 @@ The important distinction is:
 - Using an agent or MCP client: read [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), [docs/agent-integrations.md](docs/agent-integrations.md), and [`.mcp.json`](.mcp.json).
 - Need the architecture and schema contract: read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md), [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md), and [docs/DATA_FLOW.md](docs/DATA_FLOW.md).
 - Need operational trust and rollout status: read [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md), [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md), [docs/DEBUGGING.md](docs/DEBUGGING.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
-- Need the dependency, trust, and transparency story: read [SECURITY_BAR.md](SECURITY_BAR.md), [SECURITY.md](SECURITY.md), and [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md).
-
-| Role | Read first |
-|---|---|
-| **Security engineer / detection engineer** | [docs/USE_CASES.md](docs/USE_CASES.md), [skills/README.md](skills/README.md), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) |
-| **Platform / cloud engineer** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md), [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md) |
-| **Agent / MCP integrator** | [AGENTS.md](AGENTS.md), [docs/agent-integrations.md](docs/agent-integrations.md), [`.mcp.json`](.mcp.json) |
-| **Compliance / GRC reviewer** | [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) |
-
-<details>
-<summary><b>Full docs index</b></summary>
-
-- Agents: [AGENTS.md](AGENTS.md)
-- Claude Code memory: [CLAUDE.md](CLAUDE.md)
-- MCP usage: [docs/agent-integrations.md](docs/agent-integrations.md) and [`.mcp.json`](.mcp.json)
-- Architecture and visuals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DIAGRAMS.md](docs/DIAGRAMS.md)
-- Runtime isolation and trust boundaries: [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md)
-- SIEM indexing and dedupe: [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md)
-- Schema modes and interoperability: [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
-- Canonical schema and data flow: [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md) and [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
-- Historical state and timeline handling: [docs/STATE_AND_TIMELINE_MODEL.md](docs/STATE_AND_TIMELINE_MODEL.md)
-- Debugging and troubleshooting: [docs/DEBUGGING.md](docs/DEBUGGING.md) and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-- Coverage and roadmap: [docs/COVERAGE_MODEL.md](docs/COVERAGE_MODEL.md), [docs/framework-coverage.json](docs/framework-coverage.json), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md), and [docs/ROADMAP.md](docs/ROADMAP.md)
-
+- Need the credential, dependency, trust, and transparency story: read [SECURITY.md](SECURITY.md), [SECURITY_BAR.md](SECURITY_BAR.md), [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md), and [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md).
+ - Need the credential, dependency, trust, and transparency story: read [SECURITY.md](SECURITY.md), [SECURITY_BAR.md](SECURITY_BAR.md), [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md), and [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md).
 </details>
 
 | Tool | Best integration path | What to rely on |

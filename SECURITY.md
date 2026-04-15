@@ -28,6 +28,7 @@ or directly by email if a contact is listed on the maintainer profile. Include:
 - never commit credentials, tokens, or customer data
 - source runtime secrets from AWS Secrets Manager, SSM Parameter Store, Vault, or workload identity
 - prefer federation and short-lived credentials over static passwords or long-lived API tokens
+- treat the repo as secret-minimizing, not password-free: a few vendor paths still require injected client secrets, passwords, or scoped tokens today
 - keep CSPM execution roles read-only unless the skill is explicitly remediation-oriented
 - run CI checks before merging changes that affect IAM, cloud auth, or infrastructure templates
 - keep S3 artifacts KMS-encrypted and scope cross-account trust by `aws:PrincipalOrgID`
@@ -40,3 +41,13 @@ or directly by email if a contact is listed on the maintainer profile. Include:
 - review direct runtime dependency additions as security-relevant changes
 - use the published CycloneDX CI artifact and [`docs/SUPPLY_CHAIN.md`](docs/SUPPLY_CHAIN.md)
   as the source of truth for dependency transparency
+
+## Credential Posture
+
+- prefer workload identity, STS, impersonation, OIDC, or other short-lived execution identity first
+- prefer official vendor-issued tokens second
+- use manager-injected passwords or client secrets only where the vendor path still requires them
+- never log, echo, or persist secret values in findings, evidence, stderr telemetry, or audit records
+- redact sensitive values if they appear in bug reports, examples, screenshots, or operator-provided input
+
+See [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md) for the repo-wide credential hierarchy, current exceptions, and the rationale for keeping a narrow direct Workday `httpx` path in remediation.

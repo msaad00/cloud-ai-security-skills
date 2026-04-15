@@ -21,6 +21,7 @@ from ingest import (  # type: ignore[import-not-found]
     SKILL_NAME,
     TYPE_UID,
     convert_finding,
+    convert_finding_native,
     ingest,
     iter_raw_findings,
     map_type_to_attacks,
@@ -295,6 +296,23 @@ class TestConvertFinding:
         assert ev["severity_id"] == SEVERITY_MEDIUM
         assert ev["finding_info"]["uid"].startswith("det-gd-")
 
+    def test_native_output_has_no_ocsf_envelope(self):
+        native = convert_finding_native(_minimal_finding())
+        assert native["schema_mode"] == "native"
+        assert native["record_type"] == "detection_finding"
+        assert native["provider"] == "AWS"
+        assert native["title"] == "Unauthorized API call from outside AWS"
+        assert "class_uid" not in native
+        assert "category_uid" not in native
+        assert "metadata" not in native
+
+    def test_native_and_ocsf_share_same_uid_basis(self):
+        raw = _minimal_finding(gd_id="FID-SAME")
+        native = convert_finding_native(raw)
+        ocsf = convert_finding(raw)
+        assert native["event_uid"] == ocsf["metadata"]["uid"] == "FID-SAME"
+        assert native["finding_uid"] == ocsf["finding_info"]["uid"]
+
 
 # ── Stream parsing ───────────────────────────────────────────────
 
@@ -360,6 +378,19 @@ class TestIngestEndToEnd:
         out = list(ingest(lines))
         assert len(out) == 2
         assert {o["finding_info"]["uid"] for o in out} == {"det-gd-" + o["finding_info"]["uid"].removeprefix("det-gd-") for o in out}
+
+    def test_native_output_mode_emits_enriched_findings(self):
+        lines = [
+            json.dumps({"Findings": [_minimal_finding(gd_id="E1"), _minimal_finding(gd_id="E2")]}),
+        ]
+        out = list(ingest(lines, output_format="native"))
+        assert len(out) == 2
+        first = out[0]
+        assert first["schema_mode"] == "native"
+        assert first["record_type"] == "detection_finding"
+        assert first["provider"] == "AWS"
+        assert "class_uid" not in first
+        assert "metadata" not in first
 
 
 # ── Golden fixture parity ────────────────────────────────────────

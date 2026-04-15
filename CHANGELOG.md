@@ -39,6 +39,7 @@ The format is loosely based on Keep a Changelog.
 - `scripts/validate_test_coverage.py` plus a dedicated CI coverage lane that now enforces real repo-level thresholds: `overall >= 70%`, `detection >= 80%`, and `evaluation >= 60%`.
 - `runners/aws-s3-sqs-detect`, a repo-owned AWS reference runner template for `S3 -> ingest Lambda -> SQS -> detect Lambda -> DynamoDB dedupe -> SNS`, so persistent execution is no longer docs-only outside the IAM departures workflow.
 - `docs/RELEASE_CHECKLIST.md` plus explicit repo-level semver bump rules, and aligned local pre-commit Bandit scope with the same `skills/`, `mcp-server/`, and `scripts/` surface enforced in CI.
+- `docs/CREDENTIAL_PROVENANCE.md` plus README / security-doc updates to make the repo's secret-minimizing credential posture explicit, document the remaining password/client-secret compatibility paths, and explain why direct Workday `httpx` access remains a narrow documented exception instead of a hidden supply-chain surprise.
 - `docs/CANONICAL_SCHEMA.md` and `docs/DATA_FLOW.md` to pin the repo-owned canonical model and the raw → canonical → native / ocsf / bridge flow.
 - `docs/SUPPLY_CHAIN.md` plus a new CI CycloneDX SBOM artifact, making the dependency-provenance, lockfile-ceiling, and runtime-surface story explicit for operators and auditors.
 

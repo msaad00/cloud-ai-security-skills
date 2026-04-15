@@ -3,7 +3,8 @@
 Input:  GuardDuty finding JSON — single findings, `{"Findings": [...]}` wrapper,
         or EventBridge envelopes with `{"detail": {...}, "detail-type": "GuardDuty Finding"}`.
         Auto-detected.
-Output: JSONL of OCSF 1.8 Detection Finding events.
+Output: JSONL of OCSF 1.8 Detection Finding events by default, or the repo's
+        native enriched finding shape when --output-format native is selected.
 
 GuardDuty is already a detection engine; this skill is a *passthrough* ingester
 that normalises its native finding format into the OCSF wire contract shared by
@@ -25,6 +26,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-guardduty-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 # OCSF 1.8 Detection Finding (2004)
 CLASS_UID = 2004
@@ -308,8 +310,8 @@ def _short(s: str) -> str:
     return hashlib.sha256((s or "").encode()).hexdigest()[:8]
 
 
-def convert_finding(raw: dict[str, Any]) -> dict[str, Any]:
-    """Convert one raw GuardDuty finding into one OCSF Detection Finding event."""
+def _build_canonical_finding(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one raw GuardDuty finding into the repo's canonical finding shape."""
     gd_id = raw.get("Id", "") or ""
     finding_type = raw.get("Type", "") or ""
     title = raw.get("Title", "") or finding_type
@@ -328,51 +330,41 @@ def convert_finding(raw: dict[str, Any]) -> dict[str, Any]:
 
     attacks = map_type_to_attacks(finding_type)
 
-    uid = f"det-gd-{_short(gd_id)}"
+    finding_uid = f"det-gd-{_short(gd_id)}"
 
-    finding: dict[str, Any] = {
-        "activity_id": ACTIVITY_CREATE,
-        "category_uid": CATEGORY_UID,
-        "category_name": CATEGORY_NAME,
-        "class_uid": CLASS_UID,
-        "class_name": CLASS_NAME,
-        "type_uid": TYPE_UID,
+    return {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "detection_finding",
+        "event_uid": gd_id or finding_uid,
+        "finding_uid": finding_uid,
+        "provider": "AWS",
+        "account_uid": account_id,
+        "region": region,
+        "time_ms": parse_ts_ms(updated),
         "severity_id": severity_to_id(severity_float),
+        "severity": str(severity_float) if severity_float is not None else "",
         "status_id": STATUS_SUCCESS,
-        "time": parse_ts_ms(updated),
-        "metadata": {
-            "version": OCSF_VERSION,
-            "uid": gd_id or uid,
-            "product": {
-                "name": "cloud-ai-security-skills",
-                "vendor_name": "msaad00/cloud-ai-security-skills",
-                "feature": {"name": SKILL_NAME},
-            },
-            "labels": ["detection-engineering", "aws", "guardduty", "ingest", "passthrough"],
-        },
-        "finding_info": {
-            "uid": uid,
-            "title": title,
-            "desc": desc,
-            "types": [finding_type] if finding_type else [],
-            "first_seen_time": parse_ts_ms(first_seen),
-            "last_seen_time": parse_ts_ms(last_seen),
-            "attacks": attacks,
-        },
+        "status": "success",
+        "title": title,
+        "description": desc,
+        "finding_types": [finding_type] if finding_type else [],
+        "first_seen_time_ms": parse_ts_ms(first_seen),
+        "last_seen_time_ms": parse_ts_ms(last_seen),
+        "attacks": attacks,
         "resources": _build_resources(resource),
         "cloud": {
             "provider": "AWS",
             "account": {"uid": account_id},
             "region": region,
         },
-        "observables": [
-            {"name": "gd.finding_id", "type": "Other", "value": gd_id},
-            {"name": "gd.type", "type": "Other", "value": finding_type},
-            {"name": "gd.severity", "type": "Other", "value": str(severity_float) if severity_float is not None else ""},
-            {"name": "resource.type", "type": "Other", "value": resource_type},
-            {"name": "aws.account", "type": "Other", "value": account_id},
-            {"name": "aws.region", "type": "Other", "value": region},
-        ],
+        "source": {
+            "kind": "aws.guardduty",
+            "finding_id": gd_id,
+            "finding_arn": raw.get("Arn", "") or "",
+            "finding_type": finding_type,
+            "resource_type": resource_type,
+        },
         "evidence": {
             "events_observed": int(service.get("Count") or 1),
             "first_seen_time": parse_ts_ms(first_seen),
@@ -387,7 +379,77 @@ def convert_finding(raw: dict[str, Any]) -> dict[str, Any]:
         },
     }
 
+
+def _render_ocsf_finding(canonical: dict[str, Any]) -> dict[str, Any]:
+    """Render the canonical GuardDuty finding as OCSF Detection Finding."""
+    finding: dict[str, Any] = {
+        "activity_id": ACTIVITY_CREATE,
+        "category_uid": CATEGORY_UID,
+        "category_name": CATEGORY_NAME,
+        "class_uid": CLASS_UID,
+        "class_name": CLASS_NAME,
+        "type_uid": TYPE_UID,
+        "severity_id": canonical["severity_id"],
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
+        "metadata": {
+            "version": OCSF_VERSION,
+            "uid": canonical["event_uid"],
+            "product": {
+                "name": "cloud-ai-security-skills",
+                "vendor_name": "msaad00/cloud-ai-security-skills",
+                "feature": {"name": SKILL_NAME},
+            },
+            "labels": ["detection-engineering", "aws", "guardduty", "ingest", "passthrough"],
+        },
+        "finding_info": {
+            "uid": canonical["finding_uid"],
+            "title": canonical["title"],
+            "desc": canonical["description"],
+            "types": canonical["finding_types"],
+            "first_seen_time": canonical["first_seen_time_ms"],
+            "last_seen_time": canonical["last_seen_time_ms"],
+            "attacks": canonical["attacks"],
+        },
+        "resources": canonical["resources"],
+        "cloud": {
+            "provider": canonical["provider"],
+            "account": {"uid": canonical["account_uid"]},
+            "region": canonical["region"],
+        },
+        "evidence": canonical["evidence"],
+        "observables": [
+            {"name": "gd.finding_id", "type": "Other", "value": canonical["source"]["finding_id"]},
+            {"name": "gd.type", "type": "Other", "value": canonical["source"]["finding_type"]},
+            {"name": "gd.severity", "type": "Other", "value": canonical["severity"]},
+            {"name": "resource.type", "type": "Other", "value": canonical["source"]["resource_type"]},
+            {"name": "aws.account", "type": "Other", "value": canonical["account_uid"]},
+            {"name": "aws.region", "type": "Other", "value": canonical["region"]},
+        ],
+    }
+
+    if not canonical["account_uid"]:
+        finding["cloud"].pop("account")
     return finding
+
+
+def _render_native_finding(canonical: dict[str, Any]) -> dict[str, Any]:
+    """Render the canonical GuardDuty finding as the repo's native enriched shape."""
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_finding(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one raw GuardDuty finding into one OCSF Detection Finding event."""
+    return _render_ocsf_finding(_build_canonical_finding(raw))
+
+
+def convert_finding_native(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one raw GuardDuty finding into the native enriched finding shape."""
+    return _render_native_finding(_build_canonical_finding(raw))
 
 
 # ---------------------------------------------------------------------------
@@ -453,10 +515,14 @@ def iter_raw_findings(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         yield from _unwrap(obj)
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for raw in iter_raw_findings(stream):
         try:
-            yield convert_finding(raw)
+            canonical = _build_canonical_finding(raw)
+            if output_format == "native":
+                yield _render_native_finding(canonical)
+            else:
+                yield _render_ocsf_finding(canonical)
         except Exception as e:  # defence-in-depth — never crash the pipeline
             print(f"[{SKILL_NAME}] skipping finding: convert error: {e}", file=sys.stderr)
             continue
@@ -466,13 +532,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Convert raw GuardDuty findings to OCSF 1.8 Detection Finding JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON/JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument("--output-format", choices=("ocsf", "native"), default="ocsf", help="Output shape. Defaults to ocsf.")
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for finding in ingest(in_stream):
+        for finding in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(finding, separators=(",", ":")) + "\n")
     finally:
         if args.input:

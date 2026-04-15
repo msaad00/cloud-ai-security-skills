@@ -19,12 +19,12 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: ocsf
+output_formats: ocsf, native
 ---
 
 # ingest-guardduty-ocsf
 
-Thin passthrough ingestion skill: raw GuardDuty finding JSON in → OCSF 1.8 Detection Finding (2004) JSONL out. GuardDuty is already a detection engine — this skill normalises its findings into the same wire format everything else in `detection-engineering/` speaks, so downstream converters (`convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow`) and evaluators consume them uniformly alongside detections from the custom `detect-*` skills.
+Thin passthrough ingestion skill: raw GuardDuty finding JSON in → canonical finding projection → OCSF 1.8 Detection Finding (2004) JSONL or native enriched finding JSONL out. GuardDuty is already a detection engine — this skill normalises its findings into the same wire format everything else in `detection-engineering/` speaks, so downstream converters (`convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow`) and evaluators consume them uniformly alongside detections from the custom `detect-*` skills.
 
 ## Wire contract
 
@@ -35,6 +35,25 @@ Reads any of the three shapes the GuardDuty service emits:
 3. **EventBridge event envelope** — top-level `{"detail": {...}, "detail-type": "GuardDuty Finding", ...}`; the skill auto-unwraps `detail`.
 
 Writes OCSF 1.8 **Detection Finding** (`class_uid: 2004`, `category_uid: 2`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning that every event matches.
+
+When `--output-format native` is selected, it emits the same finding in the repo's native enriched shape with stable `event_uid`, normalized provider/account/severity fields, MITRE ATT&CK annotations, and preserved evidence/resource context, but without the OCSF envelope fields.
+
+## Native output format
+
+`--output-format native` returns one JSON object per GuardDuty finding with:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "detection_finding"`
+- `event_uid` and `finding_uid`
+- `provider`, `account_uid`, `region`
+- `time_ms`
+- `severity_id`, `severity`, `status_id`, `status`
+- `title`, `description`, `finding_types`
+- `attacks`, `resources`, `cloud`, `source`, and `evidence`
+
+The native shape keeps the same normalized semantics as the OCSF projection,
+but omits `class_uid`, `category_uid`, `type_uid`, and `metadata.product`.
 
 ## GuardDuty Type → MITRE ATT&CK mapping
 
@@ -89,6 +108,9 @@ The raw float is also preserved as an observable (`gd.severity`) so rules don't 
 ```bash
 # Single finding
 python src/ingest.py guardduty.json > guardduty.ocsf.jsonl
+
+# Same input, native enriched output
+python src/ingest.py guardduty.json --output-format native > guardduty.native.jsonl
 
 # From EventBridge stream
 aws guardduty get-findings --detector-id abc --finding-ids f1 f2 | python src/ingest.py
