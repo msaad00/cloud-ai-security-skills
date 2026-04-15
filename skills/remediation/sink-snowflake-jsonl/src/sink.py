@@ -118,7 +118,9 @@ def _connect() -> Any:
         value = os.environ.get(env_name)
         if value:
             kwargs[key] = value
-    return snowflake.connector.connect(**kwargs)
+    conn = snowflake.connector.connect(**kwargs)
+    conn.autocommit(False)
+    return conn
 
 
 def _insert_rows(table_name: str, rows: list[PreparedRow]) -> int:
@@ -136,7 +138,11 @@ def _insert_rows(table_name: str, rows: list[PreparedRow]) -> int:
                 ),
                 [(row.payload_json, row.schema_mode, row.event_uid, row.finding_uid) for row in rows],
             )
+            conn.commit()
             inserted = len(rows)
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             cursor.close()
     finally:

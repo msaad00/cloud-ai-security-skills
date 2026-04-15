@@ -51,6 +51,11 @@ variable "dedupe_collection" {
   default = "runner_dedupe"
 }
 
+variable "max_instance_count" {
+  type    = number
+  default = 50
+}
+
 resource "google_pubsub_topic" "detect" {
   name = "cloud-security-detect"
 }
@@ -123,6 +128,7 @@ resource "google_cloudfunctions2_function" "ingest" {
 
   service_config {
     available_memory      = "512M"
+    max_instance_count    = var.max_instance_count
     timeout_seconds       = 300
     service_account_email = google_service_account.ingest.email
     environment_variables = {
@@ -159,6 +165,7 @@ resource "google_cloudfunctions2_function" "detect" {
 
   service_config {
     available_memory      = "512M"
+    max_instance_count    = var.max_instance_count
     timeout_seconds       = 300
     service_account_email = google_service_account.detect.email
     environment_variables = {

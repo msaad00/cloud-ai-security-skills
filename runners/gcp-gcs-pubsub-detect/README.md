@@ -60,8 +60,15 @@ The Terraform template expects:
 - one GCS bucket for Cloud Function source archives
 - one object name for the ingest function archive
 - one object name for the detect function archive
+- an explicit `max_instance_count` ceiling (defaults to `50`)
 
 That keeps the template deployable without assuming a build system.
+
+## Concurrency ceiling
+
+The template exposes `max_instance_count` and defaults it to `50` for both the
+ingest and detect Cloud Functions. Operators should lower or raise that ceiling
+based on cost, quota, and downstream sink pressure for their environment.
 
 ## Security model
 

@@ -70,6 +70,14 @@ The template itself provisions:
 - a fan-out topic
 - a Table Storage account for replay-safe dedupe state
 
+## Concurrency ceiling
+
+The Bicep template exports `recommendedMaxInstances` and defaults it to `50`.
+Because this runner intentionally does not provision the Function App or
+Container Apps packaging layer, the ceiling is an operator-facing contract: wire
+the same value into your chosen Azure runtime so queue-driven scale does not run
+unbounded.
+
 ## Security model
 
 - no shell invocation; skill commands are tokenized with `shlex.split`

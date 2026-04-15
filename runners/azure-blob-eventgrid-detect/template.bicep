@@ -27,6 +27,9 @@ param dedupeStorageAccountName string
 @description('Table name used for replay-safe dedupe state.')
 param dedupeTableName string = 'runnerdedupe'
 
+@description('Recommended maximum concurrent runtime instances for the operator-managed ingest and detect compute. The template does not provision the Function App or Container App itself, so this value is exported as an operator contract rather than enforced infrastructure.')
+param recommendedMaxInstances int = 50
+
 resource sourceStorage 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
   name: sourceStorageAccountName
 }
@@ -125,3 +128,4 @@ output alertsTopicName string = alertsTopicName
 output dedupeStorageAccountName string = dedupeStorageAccountName
 output dedupeTableName string = dedupeTableName
 output blobCreatedSubscriptionName string = blobCreatedToIngestQueue.name
+output recommendedMaxInstances int = recommendedMaxInstances

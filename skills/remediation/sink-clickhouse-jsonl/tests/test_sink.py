@@ -22,11 +22,14 @@ main = _SINK.main
 
 
 class _FakeClient:
-    def __init__(self) -> None:
+    def __init__(self, *, should_fail: bool = False) -> None:
+        self.should_fail = should_fail
         self.calls = []
         self.closed = False
 
     def insert(self, *, table, data, column_names) -> None:
+        if self.should_fail:
+            raise RuntimeError("insert failed")
         self.calls.append(
             {
                 "table": table,
@@ -87,6 +90,22 @@ class TestInsertAndMain:
         ]
         assert fake.closed is True
 
+    def test_insert_closes_client_when_insert_fails(self, monkeypatch):
+        fake = _FakeClient(should_fail=True)
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+
+        try:
+            _SINK._insert_rows(
+                "security.findings_sink",
+                _prepare_rows(['{"schema_mode":"native","event_uid":"evt-1","finding_uid":"f-1"}\n']),
+            )
+        except RuntimeError as exc:
+            assert "insert failed" in str(exc)
+        else:
+            raise AssertionError("expected RuntimeError")
+
+        assert fake.closed is True
+
     def test_summary_reports_dry_run(self):
         rows = _prepare_rows(['{"schema_mode":"native","event_uid":"evt-1"}\n'])
         result = _summary("security.findings_sink", rows, True, 0)
@@ -117,6 +136,17 @@ class TestInsertAndMain:
         assert payload["dry_run"] is False
         assert payload["inserted_records"] == 1
         assert fake.calls
+
+    def test_main_apply_returns_error_when_insert_fails(self, monkeypatch, capsys):
+        fake = _FakeClient(should_fail=True)
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO('{"metadata":{"uid":"evt-2"}}\n'))
+
+        exit_code = main(["--table", "security.findings_sink", "--apply"])
+
+        assert exit_code == 1
+        assert "insert failed" in capsys.readouterr().err
+        assert fake.closed is True
 
     def test_main_requires_records(self, monkeypatch, capsys):
         monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(""))

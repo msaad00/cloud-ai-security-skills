@@ -22,7 +22,9 @@ main = _SINK.main
 
 
 class _FakeCursor:
-    def __init__(self) -> None:
+    def __init__(self, should_fail: bool = False) -> None:
+        self.should_fail = should_fail
+        self.raise_message = "insert failed"
         self.executemany_sql = ""
         self.executemany_params = []
         self.closed = False
@@ -30,18 +32,32 @@ class _FakeCursor:
     def executemany(self, sql, params) -> None:
         self.executemany_sql = sql
         self.executemany_params = list(params)
+        if self.should_fail:
+            raise RuntimeError(self.raise_message)
 
     def close(self) -> None:
         self.closed = True
 
 
 class _FakeConnection:
-    def __init__(self) -> None:
-        self.cursor_instance = _FakeCursor()
+    def __init__(self, *, should_fail: bool = False) -> None:
+        self.cursor_instance = _FakeCursor(should_fail=should_fail)
         self.closed = False
+        self.autocommit_calls = []
+        self.commit_called = False
+        self.rollback_called = False
+
+    def autocommit(self, value) -> None:
+        self.autocommit_calls.append(value)
 
     def cursor(self):
         return self.cursor_instance
+
+    def commit(self) -> None:
+        self.commit_called = True
+
+    def rollback(self) -> None:
+        self.rollback_called = True
 
     def close(self) -> None:
         self.closed = True
@@ -101,6 +117,27 @@ class TestInsertAndMain:
         assert fake.cursor_instance.executemany_params == [
             ('{"event_uid":"evt-1","finding_uid":"f-1","schema_mode":"native"}', "native", "evt-1", "f-1")
         ]
+        assert fake.commit_called is True
+        assert fake.rollback_called is False
+        assert fake.cursor_instance.closed is True
+        assert fake.closed is True
+
+    def test_insert_rolls_back_when_executemany_fails(self, monkeypatch):
+        fake = _FakeConnection(should_fail=True)
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+
+        try:
+            _SINK._insert_rows(
+                '"security_db"."ops"."findings_sink"',
+                _prepare_rows(['{"schema_mode":"native","event_uid":"evt-1","finding_uid":"f-1"}\n']),
+            )
+        except RuntimeError as exc:
+            assert "insert failed" in str(exc)
+        else:
+            raise AssertionError("expected RuntimeError")
+
+        assert fake.commit_called is False
+        assert fake.rollback_called is True
         assert fake.cursor_instance.closed is True
         assert fake.closed is True
 
@@ -135,6 +172,18 @@ class TestInsertAndMain:
         assert payload["dry_run"] is False
         assert payload["inserted_records"] == 1
         assert fake.cursor_instance.executemany_params
+
+    def test_main_apply_returns_error_when_insert_fails(self, monkeypatch, capsys):
+        fake = _FakeConnection(should_fail=True)
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO('{"metadata":{"uid":"evt-2"}}\n'))
+
+        exit_code = main(["--table", "security_db.ops.findings_sink", "--apply"])
+
+        assert exit_code == 1
+        assert "insert failed" in capsys.readouterr().err
+        assert fake.commit_called is False
+        assert fake.rollback_called is True
 
     def test_main_requires_records(self, monkeypatch, capsys):
         monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(""))
