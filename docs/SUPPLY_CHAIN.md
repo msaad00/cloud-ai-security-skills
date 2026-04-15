@@ -109,10 +109,23 @@ See:
 - [`SECURITY_BAR.md`](../SECURITY_BAR.md)
 - [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)
 
+## Release Distribution
+
+Published GitHub Releases now rebuild and attach the same signed CycloneDX
+artifact set that CI produces:
+
+- `cloud-ai-security-skills-full-lock.cdx.json`
+- `cloud-ai-security-skills-full-lock.cdx.json.sig`
+- `cloud-ai-security-skills-full-lock.cdx.json.pem`
+
+That keeps the release surface self-contained for buyers, auditors, and
+downstream automation that reads release assets instead of CI artifacts.
+
 ## Future Tightenings
 
 - export a runtime-group SBOM artifact once the repo's non-package group layout
   supports a clean grouped CycloneDX export without workarounds
-- attach the signed CycloneDX artifact set to tagged releases
 - add broader signed provenance or release attestations if the release flow
   grows beyond the current repo-level tag process
+- emit SPDX alongside CycloneDX if a customer or procurement workflow requires
+  both formats

@@ -28,6 +28,8 @@ The CI pipeline is split into independent lanes so failures point at the right k
   - repo coverage gates for overall, detection, and evaluation floors
 - `sbom`
   - publishes a signed CycloneDX artifact set for the full locked dependency graph
+- `release-assets`
+  - rebuilds and attaches the signed CycloneDX SBOM set to published GitHub Releases
 - `validate-iac`
   - CloudFormation and Terraform validation
 - `agent-bom`
