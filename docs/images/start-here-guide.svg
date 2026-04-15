@@ -1,68 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
   <title id="title">Start here guide for cloud-ai-security-skills</title>
-  <desc id="desc">A guided operator map from common sources and goals to skill layers, outputs, and runtime surfaces.</desc>
-  <rect width="1280" height="620" fill="#08111f"/>
-  <rect x="24" y="24" width="1232" height="572" rx="28" fill="#0f172a" stroke="#334155"/>
+  <desc id="desc">A simplified operator map showing inputs, skill layers, outputs, and runtime surfaces.</desc>
+  <rect width="1280" height="520" fill="#08111f"/>
+  <rect x="24" y="24" width="1232" height="472" rx="28" fill="#0f172a" stroke="#334155"/>
 
   <g font-family="Arial, sans-serif">
     <text x="56" y="72" fill="#f8fafc" font-size="32" font-weight="700">Start here</text>
-    <text x="56" y="102" fill="#94a3b8" font-size="17">Choose a source or goal, pick the layer, then run the same skill from CLI, CI, MCP, or a persistent wrapper.</text>
+    <text x="56" y="102" fill="#94a3b8" font-size="18">Pick an input, choose a skill layer, then decide whether you need repo-native or OCSF output.</text>
 
-    <rect x="56" y="136" width="250" height="332" rx="20" fill="#172554" stroke="#60a5fa"/>
-    <text x="82" y="176" fill="#dbeafe" font-size="24" font-weight="700">1. Start with</text>
-    <text x="82" y="210" fill="#eff6ff" font-size="17" font-weight="700">Raw event sources</text>
-    <text x="82" y="236" fill="#cbd5e1" font-size="15">CloudTrail, VPC Flow, Azure Activity</text>
-    <text x="82" y="258" fill="#cbd5e1" font-size="15">GCP Audit, K8s audit, MCP proxy</text>
-    <text x="82" y="290" fill="#eff6ff" font-size="17" font-weight="700">Identity sources</text>
-    <text x="82" y="316" fill="#cbd5e1" font-size="15">Okta, Entra, Google Workspace</text>
-    <text x="82" y="348" fill="#eff6ff" font-size="17" font-weight="700">Inventory / evidence</text>
-    <text x="82" y="374" fill="#cbd5e1" font-size="15">Cloud assets, AI services, controls</text>
-    <text x="82" y="406" fill="#eff6ff" font-size="17" font-weight="700">Operational goal</text>
-    <text x="82" y="432" fill="#cbd5e1" font-size="15">Detect, evaluate, export, remediate</text>
+    <rect x="56" y="144" width="300" height="240" rx="22" fill="#172554" stroke="#60a5fa"/>
+    <text x="84" y="184" fill="#dbeafe" font-size="24" font-weight="700">1. Inputs</text>
+    <text x="84" y="220" fill="#eff6ff" font-size="18" font-weight="700">Raw logs</text>
+    <text x="84" y="246" fill="#cbd5e1" font-size="16">CloudTrail, Azure Activity, GCP Audit</text>
+    <text x="84" y="268" fill="#cbd5e1" font-size="16">VPC / NSG flow, K8s audit, MCP proxy</text>
+    <text x="84" y="304" fill="#eff6ff" font-size="18" font-weight="700">Identity and inventory</text>
+    <text x="84" y="330" fill="#cbd5e1" font-size="16">Okta, Entra, Workspace, cloud assets, AI services</text>
 
-    <rect x="356" y="136" width="250" height="332" rx="20" fill="#083344" stroke="#2dd4bf"/>
-    <text x="382" y="176" fill="#ccfbf1" font-size="24" font-weight="700">2. Pick a layer</text>
-    <text x="382" y="212" fill="#f8fafc" font-size="17" font-weight="700">Ingest</text>
-    <text x="382" y="236" fill="#cbd5e1" font-size="15">normalize one source into native or OCSF</text>
-    <text x="382" y="268" fill="#f8fafc" font-size="17" font-weight="700">Discover</text>
-    <text x="382" y="292" fill="#cbd5e1" font-size="15">inventory, graph context, AI BOM, evidence</text>
-    <text x="382" y="324" fill="#f8fafc" font-size="17" font-weight="700">Detect / Evaluate</text>
-    <text x="382" y="348" fill="#cbd5e1" font-size="15">MITRE-tagged findings or benchmark results</text>
-    <text x="382" y="380" fill="#f8fafc" font-size="17" font-weight="700">View / Remediate</text>
-    <text x="382" y="404" fill="#cbd5e1" font-size="15">SARIF, Mermaid, or guarded write workflow</text>
-    <text x="382" y="444" fill="#99f6e4" font-size="14">Use cases and source crosswalks live in docs/USE_CASES.md</text>
+    <rect x="490" y="120" width="300" height="288" rx="22" fill="#083344" stroke="#2dd4bf"/>
+    <text x="518" y="160" fill="#ccfbf1" font-size="24" font-weight="700">2. Skill layers</text>
+    <text x="518" y="198" fill="#f8fafc" font-size="18" font-weight="700">Ingest</text>
+    <text x="518" y="222" fill="#cbd5e1" font-size="16">normalize one source</text>
+    <text x="518" y="254" fill="#f8fafc" font-size="18" font-weight="700">Discover / detect / evaluate</text>
+    <text x="518" y="278" fill="#cbd5e1" font-size="16">inventory, findings, benchmarks, evidence</text>
+    <text x="518" y="310" fill="#f8fafc" font-size="18" font-weight="700">View / remediate</text>
+    <text x="518" y="334" fill="#cbd5e1" font-size="16">exports or guarded write workflows</text>
+    <text x="518" y="376" fill="#99f6e4" font-size="15">The same `SKILL.md + src/ + tests/` bundle runs everywhere.</text>
 
-    <rect x="656" y="136" width="250" height="332" rx="20" fill="#3b0764" stroke="#c084fc"/>
-    <text x="682" y="176" fill="#f3e8ff" font-size="24" font-weight="700">3. Get output</text>
-    <text x="682" y="212" fill="#f8fafc" font-size="17" font-weight="700">Event streams</text>
-    <text x="682" y="236" fill="#ddd6fe" font-size="15">native JSONL, OCSF JSONL, bridge output</text>
-    <text x="682" y="268" fill="#f8fafc" font-size="17" font-weight="700">Findings / evidence</text>
-    <text x="682" y="292" fill="#ddd6fe" font-size="15">detection findings, benchmark results, evidence JSON</text>
-    <text x="682" y="324" fill="#f8fafc" font-size="17" font-weight="700">Exports</text>
-    <text x="682" y="348" fill="#ddd6fe" font-size="15">SARIF, Mermaid attack flow, AI BOM</text>
-    <text x="682" y="380" fill="#f8fafc" font-size="17" font-weight="700">Guarded actions</text>
-    <text x="682" y="404" fill="#ddd6fe" font-size="15">dry-run plan, audited remediation, dual audit trail</text>
-    <text x="682" y="444" fill="#e9d5ff" font-size="14">Canonical is internal; native, OCSF, and bridge are projections.</text>
+    <rect x="924" y="144" width="300" height="240" rx="22" fill="#3b0764" stroke="#c084fc"/>
+    <text x="952" y="184" fill="#f3e8ff" font-size="24" font-weight="700">3. Outputs</text>
+    <text x="952" y="220" fill="#f8fafc" font-size="18" font-weight="700">repo-native JSONL</text>
+    <text x="952" y="246" fill="#ddd6fe" font-size="16">stable repo schema with deterministic UIDs</text>
+    <text x="952" y="282" fill="#f8fafc" font-size="18" font-weight="700">OCSF JSONL</text>
+    <text x="952" y="308" fill="#ddd6fe" font-size="16">interoperable wire format for downstream tools</text>
+    <text x="952" y="344" fill="#f8fafc" font-size="18" font-weight="700">Exports and actions</text>
+    <text x="952" y="370" fill="#ddd6fe" font-size="16">SARIF, Mermaid, evidence, audited remediation</text>
 
-    <rect x="956" y="136" width="250" height="332" rx="20" fill="#1f2937" stroke="#94a3b8"/>
-    <text x="982" y="176" fill="#f8fafc" font-size="24" font-weight="700">4. Run it from</text>
-    <text x="982" y="212" fill="#f8fafc" font-size="17" font-weight="700">CLI / Unix pipes</text>
-    <text x="982" y="236" fill="#cbd5e1" font-size="15">local triage and repeatable pipelines</text>
-    <text x="982" y="268" fill="#f8fafc" font-size="17" font-weight="700">CI</text>
-    <text x="982" y="292" fill="#cbd5e1" font-size="15">policy gates, SARIF, benchmark snapshots</text>
-    <text x="982" y="324" fill="#f8fafc" font-size="17" font-weight="700">MCP / agents</text>
-    <text x="982" y="348" fill="#cbd5e1" font-size="15">Claude, Codex, Cursor, Windsurf, Cortex</text>
-    <text x="982" y="380" fill="#f8fafc" font-size="17" font-weight="700">Persistent wrappers</text>
-    <text x="982" y="404" fill="#cbd5e1" font-size="15">serverless, queue, or scheduler around the same skill</text>
-    <text x="982" y="444" fill="#cbd5e1" font-size="14">Shipped today: stateless skills and one event-driven remediation workflow.</text>
+    <path d="M356 264 L490 264" stroke="#60a5fa" stroke-width="5" fill="none"/>
+    <path d="M790 264 L924 264" stroke="#2dd4bf" stroke-width="5" fill="none"/>
 
-    <path d="M306 302 L356 302" stroke="#60a5fa" stroke-width="4" fill="none"/>
-    <path d="M606 302 L656 302" stroke="#2dd4bf" stroke-width="4" fill="none"/>
-    <path d="M906 302 L956 302" stroke="#c084fc" stroke-width="4" fill="none"/>
-
-    <rect x="56" y="500" width="1150" height="60" rx="18" fill="#111827" stroke="#475569"/>
-    <text x="82" y="536" fill="#f8fafc" font-size="18" font-weight="700">Shipped vs optional sink pattern</text>
-    <text x="315" y="536" fill="#cbd5e1" font-size="16">Shipped today: stdout data paths plus DynamoDB + S3 audit for IAM departures.</text>
-    <text x="820" y="536" fill="#cbd5e1" font-size="16">Optional customer pattern: Snowflake / Snowpipe, Security Lake, ClickHouse, BigQuery via a sink or runner layer.</text>
+    <rect x="56" y="426" width="1168" height="42" rx="14" fill="#111827" stroke="#475569"/>
+    <text x="84" y="453" fill="#f8fafc" font-size="17" font-weight="700">Run the same skill from:</text>
+    <text x="310" y="453" fill="#cbd5e1" font-size="17">CLI</text>
+    <text x="352" y="453" fill="#64748b" font-size="17">|</text>
+    <text x="372" y="453" fill="#cbd5e1" font-size="17">CI</text>
+    <text x="401" y="453" fill="#64748b" font-size="17">|</text>
+    <text x="421" y="453" fill="#cbd5e1" font-size="17">MCP</text>
+    <text x="468" y="453" fill="#64748b" font-size="17">|</text>
+    <text x="488" y="453" fill="#cbd5e1" font-size="17">persistent runner</text>
+    <text x="668" y="453" fill="#64748b" font-size="17">|</text>
+    <text x="688" y="453" fill="#cbd5e1" font-size="17">customer sink pattern</text>
   </g>
 </svg>

@@ -17,8 +17,8 @@ Security skills for cloud and AI systems. Use source-specific ingest, discovery,
 
 | If you need to... | Start with... | Typical output |
 |---|---|---|
-| Normalize one raw source | `ingest-*` | `native` or OCSF JSONL |
-| Detect suspicious behavior | `ingest-*` + `detect-*` | native finding JSON or OCSF Detection Finding |
+| Normalize one raw source | `ingest-*` | repo-native JSONL or OCSF JSONL |
+| Detect suspicious behavior | `ingest-*` + `detect-*` | repo-native finding JSON or OCSF Detection Finding |
 | Benchmark posture | `evaluation/*` | benchmark or control results |
 | Inventory cloud or AI assets | `discover-environment` or `discover-ai-bom` | graph JSON, AI BOM, OCSF bridge |
 | Build evidence for audits | `discover-control-evidence` or `discover-cloud-control-evidence` | evidence JSON |
@@ -56,11 +56,36 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
   > findings.native.jsonl
 ```
 
-`native` means the repo emits its own stable schema with fields like `schema_mode`, `canonical_schema_version`, `record_type`, and stable UIDs. It is not raw vendor JSON and not an OCSF envelope with fields stripped out.
+## Native vs OCSF
 
-## One Visual
+| Mode | What it means | Use it when... |
+|---|---|---|
+| `native` | repo-owned JSONL with fields like `schema_mode`, `canonical_schema_version`, `record_type`, and stable UIDs | you want the repo's stable schema without an interoperability envelope |
+| `ocsf` | OCSF JSONL pinned to the repo's OCSF contract | you want a standard external schema for SIEMs, exports, or downstream tooling |
+| `canonical` | internal-only normalization model | you are reading the docs or implementation, not choosing a CLI output mode |
+| `bridge` | interoperable output with native context preserved | you need both standard fields and repo context in one payload |
 
-![Start here guide](docs/images/start-here-guide.svg)
+`native` is not raw vendor JSON and not an OCSF envelope with fields stripped out.
+
+## Flagship Example
+
+The flagship example skill family is IAM departures remediation: a guarded, event-driven workflow with a dual audit trail and clear trust boundaries.
+
+![IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg)
+
+## Trust, Security, And Supply Chain
+
+- Read-only by default; write paths require human approval and audit.
+- No hardcoded secrets; prefer workload identity and short-lived credentials.
+- Official vendor SDKs first, repo-owned code second, canonical OSS only when needed.
+- CI validates skill contracts, integrity, safe-skill bar, coverage, type checking, and SBOM generation.
+
+Read next:
+- [SECURITY.md](SECURITY.md)
+- [SECURITY_BAR.md](SECURITY_BAR.md)
+- [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md)
+- [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
+- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 
 ## Core Surfaces
 
@@ -124,26 +149,10 @@ Read next:
 </details>
 
 <details>
-<summary><b>Trust, Security, And Supply Chain</b></summary>
-
-- Read-only by default; write paths require human approval and audit.
-- No hardcoded secrets; prefer workload identity and short-lived credentials.
-- Official vendor SDKs first, repo-owned code second, canonical OSS only when needed.
-- CI validates skill contracts, integrity, safe-skill bar, coverage, type checking, and SBOM generation.
-
-Read next:
-- [SECURITY.md](SECURITY.md)
-- [SECURITY_BAR.md](SECURITY_BAR.md)
-- [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md)
-- [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
-- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
-
-</details>
-
-<details>
 <summary><b>More Diagrams And Docs</b></summary>
 
 High-signal visuals:
+- [Start here guide](docs/images/start-here-guide.svg)
 - [Runtime surfaces](docs/images/runtime-surfaces.svg)
 - [Repository architecture](docs/images/repo-architecture.svg)
 - [Detection engineering pipeline](docs/images/detection-pipeline.svg)
