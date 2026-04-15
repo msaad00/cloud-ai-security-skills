@@ -8,9 +8,10 @@ description: >-
   actor, requestMetadata.callerIp to src_endpoint, methodName to api.operation,
   serviceName to api.service.name, and infers activity_id (Create / Read /
   Update / Delete) from the GCP method verb. Sets status_id to Failure when
-  the protoPayload carries a non-OK status. Use when the user mentions GCP
-  audit logs, GCP Cloud Logging ingestion, OCSF pipeline for GCP, or feeding
-  GCP audit data into a SIEM. Do NOT use for AWS CloudTrail (use
+  the protoPayload carries a non-OK status. Supports `--output-format ocsf`
+  and `--output-format native` from the same canonical internal event shape.
+  Use when the user mentions GCP audit logs, GCP Cloud Logging ingestion, OCSF
+  pipeline for GCP, or feeding GCP audit data into a SIEM. Do NOT use for AWS CloudTrail (use
   ingest-cloudtrail-ocsf), Azure Activity Logs (use ingest-azure-activity-ocsf),
   or Kubernetes audit logs (use ingest-k8s-audit-ocsf). Do NOT use as a
   detection skill — this only normalises events.
@@ -19,12 +20,14 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: ocsf
+output_formats: ocsf, native
 ---
 
 # ingest-gcp-audit-ocsf
 
-Thin, single-purpose ingestion skill: raw GCP Cloud Audit Logs in → OCSF 1.8 API Activity JSONL out. No detection logic, no GCP API calls, no side effects.
+Thin, single-purpose ingestion skill: raw GCP Cloud Audit Logs in -> canonical
+API activity projection -> OCSF 1.8 API Activity JSONL or native enriched API
+activity JSONL out. No detection logic, no GCP API calls, no side effects.
 
 ## Wire contract
 
@@ -54,7 +57,27 @@ GCP Cloud Audit Logs use the [`google.cloud.audit.AuditLog`](https://cloud.googl
 
 The `protoPayload.@type` is the contract: only entries that are `google.cloud.audit.AuditLog` are processed; anything else is skipped with a `stderr` warning.
 
-Writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`).
+Writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`) by
+default.
+
+## Native output format
+
+`--output-format native` returns one JSON object per audit log entry with:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "api_activity"`
+- `event_uid`
+- `provider`, `account_uid`, `region`
+- `time_ms`
+- `event_name`, `operation`, `service_name`
+- `activity_id`, `activity_name`
+- `status_id`, `status`, `status_detail`
+- `actor`, `src`, `api`, `resources`, `cloud`, and `source`
+
+The native shape keeps the same normalized semantics as the OCSF projection,
+but omits OCSF envelope fields such as `class_uid`, `category_uid`, and
+`metadata.product`.
 
 ## activity_id inference
 
@@ -99,6 +122,9 @@ GCP audit log `protoPayload.status` is empty `{}` on success and populated with 
 ```bash
 # Single file
 python src/ingest.py gcp-audit.json > gcp-audit.ocsf.jsonl
+
+# Same input, native enriched output
+python src/ingest.py gcp-audit.json --output-format native > gcp-audit.native.jsonl
 
 # Piped from gcloud logging
 gcloud logging read 'logName=~"cloudaudit.googleapis.com"' --format=json --limit=1000 \

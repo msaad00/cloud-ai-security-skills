@@ -24,6 +24,7 @@ from ingest import (  # type: ignore[import-not-found]
     STATUS_SUCCESS,
     _status_id_and_detail,
     convert_event,
+    convert_event_native,
     infer_activity_id,
     ingest,
     parse_ts_ms,
@@ -214,6 +215,16 @@ class TestConvertEvent:
         e = {"protoPayload": {"@type": "type.googleapis.com/something.else.LogEntry", "methodName": "x"}}
         assert convert_event(e) is None
 
+    def test_native_output_keeps_canonical_fields_without_ocsf_envelope(self):
+        e = convert_event_native(self._entry())
+        assert e["schema_mode"] == "native"
+        assert e["record_type"] == "api_activity"
+        assert e["provider"] == "GCP"
+        assert e["operation"] == "google.iam.admin.v1.CreateServiceAccountKey"
+        assert e["event_uid"] == "e1"
+        assert "class_uid" not in e
+        assert "metadata" not in e
+
 
 # ── ingest stream ──────────────────────────────────────────────────────
 
@@ -233,6 +244,17 @@ class TestIngestStream:
         out = list(ingest([bad, good]))
         assert len(out) == 1
         assert "not a google.cloud.audit.AuditLog" in capsys.readouterr().err
+
+    def test_native_output_mode(self):
+        payload = json.dumps(
+            {"protoPayload": {"@type": AUDIT_LOG_TYPE, "methodName": "x.y.GetThing"}, "insertId": "n1", "timestamp": "2026-04-10T05:00:00Z"}
+        )
+        out = list(ingest([payload], output_format="native"))
+        assert len(out) == 1
+        first = out[0]
+        assert first["schema_mode"] == "native"
+        assert first["record_type"] == "api_activity"
+        assert "class_uid" not in first
 
 
 # ── Golden fixture parity ──────────────────────────────────────────────
