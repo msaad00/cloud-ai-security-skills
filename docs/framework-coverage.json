@@ -390,6 +390,15 @@
       "frameworks": ["ocsf-1.8", "soc2-tsc"],
       "coverage_status": "validated",
       "execution_modes": ["cli", "mcp", "persistent"]
+    },
+    {
+      "path": "skills/remediation/sink-s3-jsonl",
+      "layer": "remediation",
+      "providers": ["aws"],
+      "asset_classes": ["findings", "evidence", "audit-logs", "object-storage"],
+      "frameworks": ["ocsf-1.8", "soc2-tsc"],
+      "coverage_status": "validated",
+      "execution_modes": ["cli", "mcp", "persistent"]
     }
   ],
   "coverage_targets": [

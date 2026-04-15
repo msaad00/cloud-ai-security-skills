@@ -26,6 +26,7 @@ class TestDiscovery:
         assert {skill.name for skill in skills} >= {
             "source-databricks-query",
             "source-snowflake-query",
+            "sink-s3-jsonl",
             "sink-snowflake-jsonl",
             "sink-clickhouse-jsonl",
             "ingest-cloudtrail-ocsf",
@@ -57,6 +58,7 @@ class TestDiscovery:
         tools = tool_map(REPO_ROOT)
         assert "source-databricks-query" in tools
         assert "source-snowflake-query" in tools
+        assert "sink-s3-jsonl" in tools
         assert "sink-snowflake-jsonl" in tools
         assert "sink-clickhouse-jsonl" in tools
         assert "ingest-cloudtrail-ocsf" in tools
@@ -135,6 +137,16 @@ class TestToolDefinition:
         assert skill.output_formats == ("native",)
         assert skill.capability == "write-sink"
         assert skill.approver_roles == ("security_lead", "data_platform_owner")
+
+    def test_sink_s3_jsonl_exposes_write_metadata(self):
+        skill = tool_map(REPO_ROOT)["sink-s3-jsonl"]
+        tool = tool_definition(skill)
+        assert tool["annotations"]["readOnlyHint"] is False
+        assert tool["annotations"]["destructiveHint"] is True
+        assert tool["inputSchema"]["properties"]["output_format"]["enum"] == ["native"]
+        assert skill.output_formats == ("native",)
+        assert skill.capability == "write-sink"
+        assert skill.network_egress == ("*.amazonaws.com",)
 
     def test_sink_clickhouse_jsonl_exposes_write_metadata(self):
         skill = tool_map(REPO_ROOT)["sink-clickhouse-jsonl"]
