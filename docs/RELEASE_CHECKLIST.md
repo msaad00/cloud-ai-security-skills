@@ -53,6 +53,7 @@ If a change mixes categories, bump to the highest applicable level.
    - [`docs/COVERAGE_MODEL.md`](COVERAGE_MODEL.md)
    - [`docs/USE_CASES.md`](USE_CASES.md)
    - [`docs/DIAGRAMS.md`](DIAGRAMS.md)
+   - [`docs/SUPPLY_CHAIN.md`](SUPPLY_CHAIN.md)
 
 ## Tag And Publish
 
@@ -67,6 +68,8 @@ git push origin vX.Y.Z
 3. Verify the tag points at the intended merge commit.
 4. Verify GitHub Actions passed on the tagged commit if a release workflow uses
    tag triggers.
+5. If a release artifact is published, include or reference the latest
+   CycloneDX SBOM artifact from CI.
 
 ## Post-Release
 

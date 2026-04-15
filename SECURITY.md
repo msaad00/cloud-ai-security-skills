@@ -31,3 +31,12 @@ or directly by email if a contact is listed on the maintainer profile. Include:
 - keep CSPM execution roles read-only unless the skill is explicitly remediation-oriented
 - run CI checks before merging changes that affect IAM, cloud auth, or infrastructure templates
 - keep S3 artifacts KMS-encrypted and scope cross-account trust by `aws:PrincipalOrgID`
+
+## Dependency Trust And SBOM
+
+- prefer official vendor SDKs and repo-owned code over convenience wrappers
+- add a third-party runtime dependency only when the vendor has no usable SDK or
+  the stdlib would materially worsen the implementation
+- review direct runtime dependency additions as security-relevant changes
+- use the published CycloneDX CI artifact and [`docs/SUPPLY_CHAIN.md`](docs/SUPPLY_CHAIN.md)
+  as the source of truth for dependency transparency

@@ -26,6 +26,8 @@ The CI pipeline is split into independent lanes so failures point at the right k
   - cross-skill contracts and pipe-level regression tests
 - `coverage`
   - repo coverage gates for overall, detection, and evaluation floors
+- `sbom`
+  - publishes a CycloneDX artifact for the full locked dependency graph
 - `validate-iac`
   - CloudFormation and Terraform validation
 - `agent-bom`
@@ -59,3 +61,6 @@ Use the dependency hygiene skill spec as the review contract for those batches.
 The `skill-contract` lane also enforces repo-level dependency/import consistency so cloud SDK imports cannot drift away from the declared dependency groups in `pyproject.toml`.
 
 Release cuts should follow [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) so version bumps, changelog updates, and tag creation stay consistent with the CI bar.
+
+For dependency transparency and provenance language, see
+[`docs/SUPPLY_CHAIN.md`](SUPPLY_CHAIN.md).

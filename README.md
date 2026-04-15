@@ -72,6 +72,7 @@ The important distinction is:
 - Using an agent or MCP client: read [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), [docs/agent-integrations.md](docs/agent-integrations.md), and [`.mcp.json`](.mcp.json).
 - Need the architecture and schema contract: read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md), [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md), and [docs/DATA_FLOW.md](docs/DATA_FLOW.md).
 - Need operational trust and rollout status: read [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md), [docs/SIEM_INDEX_GUIDE.md](docs/SIEM_INDEX_GUIDE.md), [docs/DEBUGGING.md](docs/DEBUGGING.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md), [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
+- Need the dependency, trust, and transparency story: read [SECURITY_BAR.md](SECURITY_BAR.md), [SECURITY.md](SECURITY.md), and [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md).
 
 | Role | Read first |
 |---|---|
@@ -339,6 +340,7 @@ This is a security tool. Trustworthiness is the first feature, not an afterthoug
 | [`CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) | CI lane layout, dedupe rules, and follow-up simplification plan |
 | [`CHANGELOG.md`](CHANGELOG.md) | Repo-level release notes and material skill changes |
 | [`RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) | Repo-level semver rules and pre-tag release checklist |
+| [`SUPPLY_CHAIN.md`](docs/SUPPLY_CHAIN.md) | Dependency trust policy, SBOM transparency, and runtime-vs-lockfile guidance |
 | [`COVERAGE_MODEL.md`](docs/COVERAGE_MODEL.md) | What framework coverage means and how it is measured |
 | [`framework-coverage.json`](docs/framework-coverage.json) | Machine-readable framework, provider, and asset coverage registry |
 | [`FRAMEWORK_MAPPINGS.md`](docs/FRAMEWORK_MAPPINGS.md) | Where ATT&CK, ATLAS, CIS, NIST, OWASP, SOC 2, ISO, and PCI coverage lives today |
