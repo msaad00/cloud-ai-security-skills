@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+import json
+import os
+import shlex
+import subprocess
+from datetime import UTC, datetime
+from hashlib import sha256
+from typing import Any
+
+SKILL_NAME = "azure-blob-eventgrid-detect"
+
+
+def _skill_command() -> list[str]:
+    raw = os.environ.get("DETECT_SKILL_CMD", "").strip()
+    if not raw:
+        raise ValueError("DETECT_SKILL_CMD is required")
+    return shlex.split(raw)
+
+
+def _service_bus_fqdn() -> str:
+    fqdn = os.environ.get("SERVICE_BUS_FQDN", "").strip()
+    if not fqdn:
+        raise ValueError("SERVICE_BUS_FQDN is required")
+    return fqdn
+
+
+def _alert_topic_name() -> str:
+    topic = os.environ.get("ALERT_TOPIC_NAME", "").strip()
+    if not topic:
+        raise ValueError("ALERT_TOPIC_NAME is required")
+    return topic
+
+
+def _dedupe_table_name() -> str:
+    table_name = os.environ.get("DEDUPE_TABLE_NAME", "").strip()
+    if not table_name:
+        raise ValueError("DEDUPE_TABLE_NAME is required")
+    return table_name
+
+
+def _table_account_url() -> str:
+    url = os.environ.get("TABLE_ACCOUNT_URL", "").strip()
+    if not url:
+        raise ValueError("TABLE_ACCOUNT_URL is required")
+    return url
+
+
+def _run_skill(lines: list[str]) -> list[str]:
+    completed = subprocess.run(
+        _skill_command(),
+        input="\n".join(lines) + ("\n" if lines else ""),
+        text=True,
+        capture_output=True,
+        check=False,
+        shell=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(completed.stderr.strip() or "detect skill failed")
+    return [line for line in completed.stdout.splitlines() if line.strip()]
+
+
+def _extract_uid(record: dict[str, Any]) -> str:
+    finding_info = record.get("finding_info")
+    if isinstance(finding_info, dict):
+        uid = finding_info.get("uid")
+        if isinstance(uid, str) and uid:
+            return uid
+
+    metadata = record.get("metadata")
+    if isinstance(metadata, dict):
+        uid = metadata.get("uid")
+        if isinstance(uid, str) and uid:
+            return uid
+
+    event_uid = record.get("event_uid")
+    if isinstance(event_uid, str) and event_uid:
+        return event_uid
+
+    raise ValueError("record is missing finding_info.uid, metadata.uid, and event_uid")
+
+
+def _dedupe_table():
+    from azure.data.tables import TableServiceClient
+    from azure.identity import DefaultAzureCredential
+
+    service = TableServiceClient(
+        endpoint=_table_account_url(),
+        credential=DefaultAzureCredential(),
+    )
+    table = service.get_table_client(table_name=_dedupe_table_name())
+    table.create_table_if_not_exists()
+    return table
+
+
+def _put_if_new(uid: str, payload: str) -> bool:
+    from azure.core.exceptions import ResourceExistsError
+
+    table = _dedupe_table()
+    item = {
+        "PartitionKey": "finding",
+        "RowKey": uid,
+        "seen_at": datetime.now(UTC).isoformat(),
+        "payload_sha256": sha256(payload.encode("utf-8")).hexdigest(),
+    }
+    try:
+        table.create_entity(entity=item)
+        return True
+    except ResourceExistsError:
+        return False
+
+
+def _publish_finding(line: str, uid: str) -> None:
+    from azure.identity import DefaultAzureCredential
+    from azure.servicebus import ServiceBusClient, ServiceBusMessage
+
+    client = ServiceBusClient(
+        fully_qualified_namespace=_service_bus_fqdn(),
+        credential=DefaultAzureCredential(),
+    )
+    with client:
+        sender = client.get_topic_sender(topic_name=_alert_topic_name())
+        with sender:
+            sender.send_messages(ServiceBusMessage(line, subject=f"skill-finding:{uid}"))
+
+
+def handle_detect_messages(messages: list[str]) -> dict[str, int]:
+    findings = _run_skill(messages)
+    published = 0
+    duplicates = 0
+    for line in findings:
+        record = json.loads(line)
+        uid = _extract_uid(record)
+        if _put_if_new(uid, line):
+            _publish_finding(line, uid)
+            published += 1
+        else:
+            duplicates += 1
+    return {
+        "messages_processed": len(messages),
+        "published": published,
+        "duplicates": duplicates,
+    }
