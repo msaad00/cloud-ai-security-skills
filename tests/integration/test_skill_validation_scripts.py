@@ -59,6 +59,7 @@ class TestSkillValidationCommon:
         skills = COMMON.discover_skill_contracts()
         assert len(skills) >= 32
         names = {skill.name for skill in skills}
+        assert "source-databricks-query" in names
         assert "source-snowflake-query" in names
         assert "sink-snowflake-jsonl" in names
         assert "sink-clickhouse-jsonl" in names
