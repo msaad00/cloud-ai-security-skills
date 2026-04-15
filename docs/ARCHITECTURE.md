@@ -82,7 +82,7 @@ The repo is easiest to read as **six shipped skill layers**, plus **three edge/r
 |---|---|---|
 | L0 | external sources and vendor APIs | outside the repo boundary |
 | L7 | sinks and persistence edges | contract and patterns documented; generic sink family not fully shipped |
-| L8 | query packs and warehouse-native analytics | planned |
+| L8 | query packs and warehouse-native analytics | partial shipping |
 | L9 | agent/runtime surface (`mcp-server`, runners, wrappers) | shipped as thin wrappers around the same skill contract |
 
 The repo operates across four schema modes:
@@ -126,7 +126,7 @@ For the detailed contract, see:
 | L5 remediate | shipping | IAM departures is the current flagship write path |
 | L6 view | shipping | SARIF and Mermaid attack-flow exports |
 | L7 sinks | planned / partial patterns | customer-controlled persistence patterns are documented; generic sink family is not fully shipped |
-| L8 query packs | planned | warehouse-native SQL packs remain future work |
+| L8 query packs | partial shipping | first Snowflake pack shipped under `packs/`; broader warehouse-native pack framework remains future work |
 | L9 agent/runtime surfaces | shipping | `mcp-server`, CLI, CI, and runners call the same skill contract |
 
 ## 4. Two execution modes
@@ -237,10 +237,10 @@ cloud-ai-security-skills/
 │   ├── src/server.py
 │   ├── src/tool_registry.py
 │   └── tests/
-├── query/                    # L8 — SQL packs, Cortex prompts, Grafana JSON
-│   ├── snowflake/
-│   ├── clickhouse/
-│   └── grafana/
+├── packs/                    # L8 — SQL packs and warehouse-native analytics
+│   ├── lateral-movement/
+│   ├── privilege-escalation-k8s/
+│   └── clickhouse/
 ├── tests/integration/
 └── docs/
     ├── ARCHITECTURE.md
@@ -249,7 +249,7 @@ cloud-ai-security-skills/
     └── RUNNER_CONTRACT.md     # new, PR V
 ```
 
-**Rationale for separating `sinks/`, `runners/`, `mcp-server/`, `query/` from `skills/`:** the "skills are pure, edges have side effects" mental model becomes visible in the directory tree. A reviewer can tell at a glance whether a change touches pure code or effectful code. This is cheap documentation that pays for itself on every PR.
+**Rationale for separating `sinks/`, `runners/`, `mcp-server/`, and `packs/` from `skills/`:** the "skills are pure, edges have side effects" mental model becomes visible in the directory tree. A reviewer can tell at a glance whether a change touches pure code or effectful code. This is cheap documentation that pays for itself on every PR.
 
 The layered skill directories are now canonical. `skills/detection-engineering/`
 remains only as the shared OCSF contract and frozen-fixture namespace used by

@@ -1,0 +1,22 @@
+[
+  "finding_uid",
+  "event_uid",
+  "provider",
+  "account_uid",
+  "session_uid",
+  "actor_name",
+  "anchor_operation",
+  "src_instance_uid",
+  "src_ip",
+  "dst_ip",
+  "dst_port",
+  "traffic_bytes",
+  "first_seen_time_ms",
+  "last_seen_time_ms",
+  "finding_time_ms",
+  "correlation_window_seconds",
+  "finding_type",
+  "primary_technique_uid",
+  "secondary_technique_uid",
+  "finding_json"
+]
