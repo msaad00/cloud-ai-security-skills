@@ -1,4 +1,4 @@
-"""Convert Azure NSG Flow Logs to OCSF 1.8 Network Activity (class 4001)."""
+"""Convert Azure NSG Flow Logs to OCSF or repo-native Network Activity."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-nsg-flow-logs-azure-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 CLASS_UID = 4001
 CLASS_NAME = "Network Activity"
@@ -116,7 +117,7 @@ def _int_or_none(value: str | None) -> int | None:
         return None
 
 
-def convert_tuple(
+def _build_canonical_record(
     tuple_data: dict[str, str],
     *,
     resource_id: str,
@@ -128,7 +129,7 @@ def convert_tuple(
     bytes_total = sum(value for value in (_int_or_none(tuple_data.get("bytes_out")), _int_or_none(tuple_data.get("bytes_in"))) if value is not None)
     packets_total = sum(value for value in (_int_or_none(tuple_data.get("packets_out")), _int_or_none(tuple_data.get("packets_in"))) if value is not None)
     activity_id = activity_id_for_decision(tuple_data.get("decision"))
-    metadata_uid = hashlib.sha256(
+    event_uid = hashlib.sha256(
         json.dumps(
             {
                 "resource_id": resource_id,
@@ -147,19 +148,87 @@ def convert_tuple(
         ).encode("utf-8")
     ).hexdigest()
 
-    event: dict[str, Any] = {
+    src: dict[str, Any] = {"ip": tuple_data.get("src_ip", "")}
+    if tuple_data.get("src_port", "").isdigit():
+        src["port"] = int(tuple_data["src_port"])
+    if mac:
+        src["interface_uid"] = mac
+
+    dst: dict[str, Any] = {"ip": tuple_data.get("dst_ip", "")}
+    if tuple_data.get("dst_port", "").isdigit():
+        dst["port"] = int(tuple_data["dst_port"])
+
+    connection: dict[str, Any] = {
+        "direction": "egress" if tuple_data.get("direction") == "O" else "ingress",
+        "boundary": resource_id,
+    }
+    if protocol := tuple_data.get("protocol"):
+        if protocol == "T":
+            connection["protocol_num"] = 6
+        elif protocol == "U":
+            connection["protocol_num"] = 17
+        elif protocol == "I":
+            connection["protocol_num"] = 1
+    if protocol_name(tuple_data.get("protocol")):
+        connection["protocol_name"] = protocol_name(tuple_data.get("protocol"))
+
+    traffic: dict[str, Any] = {}
+    if bytes_total:
+        traffic["bytes"] = bytes_total
+    if packets_total:
+        traffic["packets"] = packets_total
+
+    cloud: dict[str, Any] = {"provider": "Azure"}
+    if subscription_id := _extract_subscription_id(resource_id):
+        cloud["account"] = {"uid": subscription_id}
+    if location:
+        cloud["region"] = location
+
+    return {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "network_activity",
+        "event_uid": event_uid,
+        "provider": "Azure",
+        "account_uid": ((cloud.get("account") or {}).get("uid")) or "",
+        "region": cloud.get("region") or "",
+        "time_ms": time_ms,
         "activity_id": activity_id,
+        "activity_name": {ACTIVITY_TRAFFIC: "traffic", ACTIVITY_DENIED: "denied", ACTIVITY_UNKNOWN: "unknown"}.get(
+            activity_id, "unknown"
+        ),
+        "status_id": STATUS_SUCCESS,
+        "status": "success",
+        "src": src,
+        "dst": dst,
+        "traffic": traffic,
+        "connection": connection,
+        "cloud": cloud,
+        "disposition": (tuple_data.get("decision") or "").upper() or "UNKNOWN",
+        "source": {
+            "kind": "azure.nsg-flow-logs",
+            "resource_id": resource_id,
+            "rule": rule,
+            "mac": mac,
+            "flow_state": tuple_data.get("flow_state", ""),
+        },
+    }
+
+
+def _render_ocsf_record(canonical: dict[str, Any]) -> dict[str, Any]:
+    event: dict[str, Any] = {
+        "activity_id": canonical["activity_id"],
         "category_uid": CATEGORY_UID,
         "category_name": CATEGORY_NAME,
         "class_uid": CLASS_UID,
         "class_name": CLASS_NAME,
-        "type_uid": CLASS_UID * 100 + activity_id,
+        "type_uid": CLASS_UID * 100 + canonical["activity_id"],
         "severity_id": SEVERITY_INFORMATIONAL,
         "status_id": STATUS_SUCCESS,
-        "time": time_ms,
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": metadata_uid,
+            "uid": canonical["event_uid"],
             "product": {
                 "name": "cloud-ai-security-skills",
                 "vendor_name": "msaad00/cloud-ai-security-skills",
@@ -167,43 +236,49 @@ def convert_tuple(
             },
             "labels": ["detection-engineering", "azure", "nsg-flow-logs", "ingest"],
         },
-        "src_endpoint": {
-            "ip": tuple_data.get("src_ip", ""),
-            **({"port": int(tuple_data["src_port"])} if tuple_data.get("src_port", "").isdigit() else {}),
-            **({"interface_uid": mac} if mac else {}),
-        },
-        "dst_endpoint": {
-            "ip": tuple_data.get("dst_ip", ""),
-            **({"port": int(tuple_data["dst_port"])} if tuple_data.get("dst_port", "").isdigit() else {}),
-        },
-        "traffic": {},
-        "connection_info": {
-            **({"protocol_name": protocol_name(tuple_data.get("protocol"))} if protocol_name(tuple_data.get("protocol")) else {}),
-            "direction": "egress" if tuple_data.get("direction") == "O" else "ingress",
-            "boundary": resource_id,
-        },
-        "cloud": {"provider": "Azure"},
+        "src_endpoint": canonical["src"],
+        "dst_endpoint": canonical["dst"],
+        "traffic": canonical["traffic"],
+        "connection_info": canonical["connection"],
+        "cloud": canonical["cloud"],
         "observables": [
-            {"name": "azure.nsg.rule", "type": "Other", "value": rule},
-            {"name": "azure.flow_state", "type": "Other", "value": tuple_data.get("flow_state", "")},
+            {"name": "azure.nsg.rule", "type": "Other", "value": canonical["source"]["rule"]},
+            {"name": "azure.flow_state", "type": "Other", "value": canonical["source"]["flow_state"]},
         ],
     }
-    if protocol := tuple_data.get("protocol"):
-        if protocol == "T":
-            event["connection_info"]["protocol_num"] = 6
-        elif protocol == "U":
-            event["connection_info"]["protocol_num"] = 17
-        elif protocol == "I":
-            event["connection_info"]["protocol_num"] = 1
-    if bytes_total:
-        event["traffic"]["bytes"] = bytes_total
-    if packets_total:
-        event["traffic"]["packets"] = packets_total
-    if subscription_id := _extract_subscription_id(resource_id):
-        event["cloud"]["account"] = {"uid": subscription_id}
-    if location:
-        event["cloud"]["region"] = location
     return event
+
+
+def _render_native_record(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_tuple(
+    tuple_data: dict[str, str],
+    *,
+    resource_id: str,
+    rule: str,
+    mac: str,
+    location: str = "",
+) -> dict[str, Any]:
+    canonical = _build_canonical_record(tuple_data, resource_id=resource_id, rule=rule, mac=mac, location=location)
+    return _render_ocsf_record(canonical)
+
+
+def convert_tuple_native(
+    tuple_data: dict[str, str],
+    *,
+    resource_id: str,
+    rule: str,
+    mac: str,
+    location: str = "",
+) -> dict[str, Any]:
+    canonical = _build_canonical_record(tuple_data, resource_id=resource_id, rule=rule, mac=mac, location=location)
+    return _render_native_record(canonical)
 
 
 def iter_raw_records(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -238,7 +313,7 @@ def iter_raw_records(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             yield item
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for record in iter_raw_records(stream):
         properties = record.get("properties") or {}
         version = properties.get("Version") or properties.get("version") or 2
@@ -251,19 +326,29 @@ def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
                 for tuple_value in flow.get("flowTuples") or []:
                     tuple_data = parse_flow_tuple(tuple_value, version)
                     if tuple_data:
-                        yield convert_tuple(tuple_data, resource_id=resource_id, rule=rule, mac=mac, location=location)
+                        canonical = _build_canonical_record(tuple_data, resource_id=resource_id, rule=rule, mac=mac, location=location)
+                        if output_format == "native":
+                            yield _render_native_record(canonical)
+                        else:
+                            yield _render_ocsf_record(canonical)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Convert Azure NSG Flow Logs to OCSF 1.8 Network Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON or JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=("ocsf", "native"),
+        default="ocsf",
+        help="Render OCSF network activity or the native enriched network-activity shape.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:
