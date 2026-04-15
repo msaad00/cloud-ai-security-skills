@@ -7,9 +7,11 @@ description: >-
   to Event Hubs, Storage, or Log Analytics. Maps caller / claims to OCSF actor,
   callerIpAddress to src_endpoint, operationName to api.operation, infers
   activity_id (Create / Read / Update / Delete) from the Azure operation verb,
-  and sets status_id from properties.statusCode. Use when the user mentions
-  Azure activity logs, Azure Monitor ingestion, OCSF pipeline for Azure, or
-  feeding Azure audit data into a SIEM. Do NOT use for AWS CloudTrail (use
+  and sets status_id from properties.statusCode. Supports
+  `--output-format ocsf` and `--output-format native` from the same canonical
+  internal event shape. Use when the user mentions Azure activity logs, Azure
+  Monitor ingestion, OCSF pipeline for Azure, or feeding Azure audit data into
+  a SIEM. Do NOT use for AWS CloudTrail (use
   ingest-cloudtrail-ocsf), GCP audit logs (use ingest-gcp-audit-ocsf), or
   Kubernetes audit logs (use ingest-k8s-audit-ocsf). Do NOT use for Azure
   diagnostic / metric logs — those are different pipelines. Do NOT use as a
@@ -19,12 +21,14 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: ocsf
+output_formats: ocsf, native
 ---
 
 # ingest-azure-activity-ocsf
 
-Thin, single-purpose ingestion skill: raw Azure Activity Logs in → OCSF 1.8 API Activity JSONL out. No detection logic, no Azure API calls, no side effects.
+Thin, single-purpose ingestion skill: raw Azure Activity Logs in -> canonical
+API activity projection -> OCSF 1.8 API Activity JSONL or native enriched API
+activity JSONL out. No detection logic, no Azure API calls, no side effects.
 
 ## Wire contract
 
@@ -56,7 +60,27 @@ Azure Activity Logs are emitted by Azure Monitor in this shape (the JSON form de
 }
 ```
 
-Writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`).
+Writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`) by
+default.
+
+## Native output format
+
+`--output-format native` returns one JSON object per activity log entry with:
+
+- `schema_mode: "native"`
+- `canonical_schema_version`
+- `record_type: "api_activity"`
+- `event_uid`
+- `provider`, `account_uid`, `region`
+- `time_ms`
+- `event_name`, `operation`, `service_name`
+- `activity_id`, `activity_name`
+- `status_id`, `status`, `status_detail`
+- `actor`, `src`, `api`, `resources`, `cloud`, and `source`
+
+The native shape keeps the same normalized semantics as the OCSF projection,
+but omits OCSF envelope fields such as `class_uid`, `category_uid`, and
+`metadata.product`.
 
 ## activity_id inference
 
@@ -104,6 +128,9 @@ Azure populates `resultType` (Success / Failure / Started) and `properties.statu
 ```bash
 # Single file
 python src/ingest.py azure-activity.json > azure-activity.ocsf.jsonl
+
+# Same input, native enriched output
+python src/ingest.py azure-activity.json --output-format native > azure-activity.native.jsonl
 
 # Piped from az monitor
 az monitor activity-log list --offset 1h --output json \

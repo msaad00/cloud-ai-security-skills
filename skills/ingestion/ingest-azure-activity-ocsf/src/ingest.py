@@ -1,11 +1,4 @@
-"""Convert raw Azure Activity Logs to OCSF 1.8 API Activity (class 6003).
-
-Input:  Azure Activity Log JSON entries (the shape Azure Monitor exports to
-        Event Hubs / Storage / Log Analytics). Reads JSONL or a top-level array.
-Output: JSONL of OCSF 1.8 API Activity events.
-
-Contract: see ../OCSF_CONTRACT.md
-"""
+"""Convert raw Azure Activity Logs to OCSF or repo-native API Activity."""
 
 from __future__ import annotations
 
@@ -18,6 +11,7 @@ from typing import Any, Iterable
 
 SKILL_NAME = "ingest-azure-activity-ocsf"
 OCSF_VERSION = "1.8.0"
+CANONICAL_VERSION = "2026-04"
 
 CLASS_UID = 6003
 CLASS_NAME = "API Activity"
@@ -37,34 +31,22 @@ STATUS_FAILURE = 2
 
 SEVERITY_INFORMATIONAL = 1
 
-
-# ---------------------------------------------------------------------------
-# Verb → activity_id
-# ---------------------------------------------------------------------------
-
-# Azure operationName looks like 'PROVIDER/RESOURCETYPE/ACTION', e.g.
-# 'MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE'. We classify by the LAST segment.
-
 _VERB_MAP = {
-    # Create
-    "WRITE": ACTIVITY_CREATE,  # Azure overloads WRITE for both create + update; treat as Create
+    "WRITE": ACTIVITY_CREATE,
     "CREATE": ACTIVITY_CREATE,
     "REGENERATE": ACTIVITY_CREATE,
     "GENERATEKEY": ACTIVITY_CREATE,
-    # Read
     "READ": ACTIVITY_READ,
     "LIST": ACTIVITY_READ,
     "GET": ACTIVITY_READ,
     "LISTKEYS": ACTIVITY_READ,
     "LISTACCOUNTSAS": ACTIVITY_READ,
     "LISTSERVICESAS": ACTIVITY_READ,
-    "VALIDATE": ACTIVITY_READ,  # validate is read-only despite the name
-    # Update
+    "VALIDATE": ACTIVITY_READ,
     "UPDATE": ACTIVITY_UPDATE,
     "MOVE": ACTIVITY_UPDATE,
     "RESTART": ACTIVITY_UPDATE,
     "START": ACTIVITY_UPDATE,
-    # Delete
     "DELETE": ACTIVITY_DELETE,
     "STOP": ACTIVITY_DELETE,
     "DEALLOCATE": ACTIVITY_DELETE,
@@ -72,27 +54,9 @@ _VERB_MAP = {
 
 
 def infer_activity_id(operation_name: str) -> int:
-    """Map an Azure operationName to an OCSF API Activity activity_id.
-
-    Azure uses `/ACTION` as a generic suffix on operations that don't fit
-    standard CRUD (e.g. `RESTART/ACTION`, `LISTSNAPSHOTS/ACTION`). When we see
-    that suffix the meaningful verb is the segment before it; we walk
-    backwards and try each segment until we hit something we recognise.
-
-    >>> infer_activity_id("MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE")
-    1
-    >>> infer_activity_id("MICROSOFT.COMPUTE/VIRTUALMACHINES/READ")
-    2
-    >>> infer_activity_id("MICROSOFT.COMPUTE/VIRTUALMACHINES/DELETE")
-    4
-    >>> infer_activity_id("MICROSOFT.COMPUTE/VIRTUALMACHINES/RESTART/ACTION")
-    3
-    """
     if not operation_name:
         return ACTIVITY_OTHER
     segments = [s.upper() for s in operation_name.split("/") if s]
-    # Walk backwards, skipping the generic ACTION suffix until we find a
-    # segment in the verb table.
     for segment in reversed(segments):
         if segment == "ACTION":
             continue
@@ -102,29 +66,16 @@ def infer_activity_id(operation_name: str) -> int:
 
 
 def _service_name_from_operation(operation_name: str) -> str:
-    """Extract a service-like name from the provider segment of operationName.
-
-    'MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE' -> 'microsoft.storage'
-    """
     if not operation_name:
         return ""
     return operation_name.split("/", 1)[0].lower()
 
 
 def _resource_type_from_operation(operation_name: str) -> str:
-    """Extract the resource type segment.
-
-    'MICROSOFT.STORAGE/STORAGEACCOUNTS/WRITE' -> 'storageAccounts'
-    """
     parts = operation_name.split("/")
     if len(parts) >= 2:
         return parts[1].lower()
     return ""
-
-
-# ---------------------------------------------------------------------------
-# Time
-# ---------------------------------------------------------------------------
 
 
 def parse_ts_ms(ts: str | None) -> int:
@@ -132,7 +83,6 @@ def parse_ts_ms(ts: str | None) -> int:
         return int(datetime.now(timezone.utc).timestamp() * 1000)
     try:
         cleaned = ts.replace("Z", "+00:00")
-        # Azure can emit 7-digit fractional seconds (.0000000); trim to 6
         if "." in cleaned:
             head, _, tail = cleaned.partition(".")
             frac, sep, tz = tail.partition("+")
@@ -149,13 +99,7 @@ def parse_ts_ms(ts: str | None) -> int:
         return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
-
 def _status_id_and_detail(entry: dict[str, Any]) -> tuple[int, str | None]:
-    """Derive status_id from resultType, falling back to properties.statusCode."""
     result_type = (entry.get("resultType") or "").lower()
     result_signature = entry.get("resultSignature") or ""
 
@@ -164,7 +108,6 @@ def _status_id_and_detail(entry: dict[str, Any]) -> tuple[int, str | None]:
     if result_type == "failure":
         return STATUS_FAILURE, result_signature or None
 
-    # Fall back to properties.statusCode
     props = entry.get("properties") or {}
     code = props.get("statusCode") or ""
     if isinstance(code, str):
@@ -182,34 +125,22 @@ def _status_id_and_detail(entry: dict[str, Any]) -> tuple[int, str | None]:
     return STATUS_UNKNOWN, None
 
 
-# ---------------------------------------------------------------------------
-# Field builders
-# ---------------------------------------------------------------------------
-
-
 def _build_actor(entry: dict[str, Any]) -> dict[str, Any]:
     actor: dict[str, Any] = {}
     user: dict[str, Any] = {}
-
     identity = entry.get("identity") or {}
     claims = identity.get("claims") or {}
-
-    # Try UPN claim, then 'name', then 'appid', then top-level 'caller'
     upn_key = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn"
     name = claims.get(upn_key) or claims.get("upn") or claims.get("name") or claims.get("appid") or entry.get("caller", "")
     if name:
         user["name"] = name
-
     appid = claims.get("appid")
     if appid:
         user["uid"] = appid
-        # If only an appid is present (no UPN), this is a service principal
         if not (claims.get(upn_key) or claims.get("upn") or claims.get("name")):
             user["type"] = "ServicePrincipal"
-
     if user:
         actor["user"] = user
-
     return actor
 
 
@@ -241,10 +172,6 @@ def _build_resources(entry: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _extract_subscription_id(resource_id: str) -> str:
-    """Pull the subscription UUID out of an Azure resourceId.
-
-    /SUBSCRIPTIONS/<uuid>/RESOURCEGROUPS/... → <uuid>
-    """
     if not resource_id:
         return ""
     parts = resource_id.upper().split("/")
@@ -262,25 +189,17 @@ def _build_cloud(entry: dict[str, Any]) -> dict[str, Any]:
     sub = _extract_subscription_id(entry.get("resourceId") or "")
     if sub:
         cloud["account"] = {"uid": sub}
-    # Azure region usually lives in properties or in the resourceId for some
-    # resource types, but not consistently — leave unset unless we find it
     props = entry.get("properties") or {}
     if isinstance(props, dict) and "location" in props:
         cloud["region"] = props["location"]
     return cloud
 
 
-# ---------------------------------------------------------------------------
-# Event builder
-# ---------------------------------------------------------------------------
-
-
-def convert_event(entry: dict[str, Any]) -> dict[str, Any]:
-    """Convert one Azure Activity Log entry into one OCSF API Activity event."""
+def _build_canonical_event(entry: dict[str, Any]) -> dict[str, Any]:
     operation_name = entry.get("operationName", "")
     activity_id = infer_activity_id(operation_name)
     status_id, status_detail = _status_id_and_detail(entry)
-    metadata_uid = str(entry.get("eventDataId") or entry.get("correlationId") or "").strip() or hashlib.sha256(
+    event_uid = str(entry.get("eventDataId") or entry.get("correlationId") or "").strip() or hashlib.sha256(
         json.dumps(
             {
                 "time": entry.get("time", ""),
@@ -294,19 +213,54 @@ def convert_event(entry: dict[str, Any]) -> dict[str, Any]:
         ).encode("utf-8")
     ).hexdigest()
 
-    event: dict[str, Any] = {
+    cloud = _build_cloud(entry)
+    account_uid = ((cloud.get("account") or {}).get("uid")) or ""
+    region = cloud.get("region") or ""
+
+    return {
+        "schema_mode": "canonical",
+        "canonical_schema_version": CANONICAL_VERSION,
+        "record_type": "api_activity",
+        "event_uid": event_uid,
+        "provider": "Azure",
+        "account_uid": account_uid,
+        "region": region,
+        "time_ms": parse_ts_ms(entry.get("time")),
+        "event_name": operation_name,
+        "operation": operation_name,
+        "service_name": _service_name_from_operation(operation_name),
         "activity_id": activity_id,
+        "activity_name": {1: "create", 2: "read", 3: "update", 4: "delete", 99: "other"}.get(activity_id, "unknown"),
+        "status_id": status_id,
+        "status": {STATUS_SUCCESS: "success", STATUS_FAILURE: "failure"}.get(status_id, "unknown"),
+        "status_detail": status_detail or "",
+        "actor": _build_actor(entry),
+        "src": _build_src_endpoint(entry),
+        "api": _build_api(entry),
+        "resources": _build_resources(entry),
+        "cloud": cloud,
+        "source": {
+            "kind": "azure.activity-log",
+            "category": entry.get("category", ""),
+            "correlation_id": entry.get("correlationId", ""),
+        },
+    }
+
+
+def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    event: dict[str, Any] = {
+        "activity_id": canonical["activity_id"],
         "category_uid": CATEGORY_UID,
         "category_name": CATEGORY_NAME,
         "class_uid": CLASS_UID,
         "class_name": CLASS_NAME,
-        "type_uid": CLASS_UID * 100 + activity_id,
+        "type_uid": CLASS_UID * 100 + canonical["activity_id"],
         "severity_id": SEVERITY_INFORMATIONAL,
-        "status_id": status_id,
-        "time": parse_ts_ms(entry.get("time")),
+        "status_id": canonical["status_id"],
+        "time": canonical["time_ms"],
         "metadata": {
             "version": OCSF_VERSION,
-            "uid": metadata_uid,
+            "uid": canonical["event_uid"],
             "product": {
                 "name": "cloud-ai-security-skills",
                 "vendor_name": "msaad00/cloud-ai-security-skills",
@@ -314,26 +268,34 @@ def convert_event(entry: dict[str, Any]) -> dict[str, Any]:
             },
             "labels": ["detection-engineering", "azure", "activity-log", "ingest"],
         },
-        "actor": _build_actor(entry),
-        "src_endpoint": _build_src_endpoint(entry),
-        "api": _build_api(entry),
-        "resources": _build_resources(entry),
-        "cloud": _build_cloud(entry),
+        "actor": canonical["actor"],
+        "src_endpoint": canonical["src"],
+        "api": canonical["api"],
+        "resources": canonical["resources"],
+        "cloud": canonical["cloud"],
     }
-
-    if status_detail:
-        event["status_detail"] = status_detail
-
+    if canonical["status_detail"]:
+        event["status_detail"] = canonical["status_detail"]
     return event
 
 
-# ---------------------------------------------------------------------------
-# Stream processing
-# ---------------------------------------------------------------------------
+def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
+    native = dict(canonical)
+    native["schema_mode"] = "native"
+    native["source_skill"] = SKILL_NAME
+    native["output_format"] = "native"
+    return native
+
+
+def convert_event(entry: dict[str, Any]) -> dict[str, Any]:
+    return _render_ocsf_event(_build_canonical_event(entry))
+
+
+def convert_event_native(entry: dict[str, Any]) -> dict[str, Any]:
+    return _render_native_event(_build_canonical_event(entry))
 
 
 def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    """Yield Activity Log entry dicts from JSONL or a top-level array."""
     buf: list[str] = list(stream)
     if not buf:
         return
@@ -348,16 +310,15 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         whole = None
 
     if isinstance(whole, list):
-        for r in whole:
-            if isinstance(r, dict):
-                yield r
+        for record in whole:
+            if isinstance(record, dict):
+                yield record
         return
     if isinstance(whole, dict):
-        # Some Azure exports wrap the entries in {"records": [...]}
         if "records" in whole and isinstance(whole["records"], list):
-            for r in whole["records"]:
-                if isinstance(r, dict):
-                    yield r
+            for record in whole["records"]:
+                if isinstance(record, dict):
+                    yield record
             return
         yield whole
         return
@@ -368,8 +329,8 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             continue
         try:
             obj = json.loads(line)
-        except json.JSONDecodeError as e:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
+        except json.JSONDecodeError as exc:
+            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {exc}", file=sys.stderr)
             continue
         if isinstance(obj, dict):
             yield obj
@@ -377,26 +338,33 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
 
 
-def ingest(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
+def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     for raw in iter_raw_entries(stream):
         try:
-            yield convert_event(raw)
-        except Exception as e:
-            print(f"[{SKILL_NAME}] skipping entry: convert error: {e}", file=sys.stderr)
+            event = convert_event_native(raw) if output_format == "native" else convert_event(raw)
+        except Exception as exc:
+            print(f"[{SKILL_NAME}] skipping entry: convert error: {exc}", file=sys.stderr)
             continue
+        yield event
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert raw Azure Activity Logs to OCSF 1.8 API Activity JSONL.")
+    parser = argparse.ArgumentParser(description="Convert raw Azure Activity Logs to API Activity JSONL.")
     parser.add_argument("input", nargs="?", help="Input JSON/JSONL file. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="Output JSONL file. Defaults to stdout.")
+    parser.add_argument(
+        "--output-format",
+        choices=("ocsf", "native"),
+        default="ocsf",
+        help="Output wire format. Default: ocsf.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for event in ingest(in_stream):
+        for event in ingest(in_stream, output_format=args.output_format):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:
