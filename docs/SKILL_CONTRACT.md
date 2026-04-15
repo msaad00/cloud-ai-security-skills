@@ -81,6 +81,7 @@ Rules:
   - `native`
   - `ocsf`
 - `output_formats` must be a comma-separated subset of:
+  - `raw`
   - `native`
   - `ocsf`
   - `bridge`

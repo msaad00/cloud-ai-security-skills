@@ -24,6 +24,7 @@ class TestDiscovery:
         skills = discover_skills(REPO_ROOT)
         assert len(skills) >= 35
         assert {skill.name for skill in skills} >= {
+            "source-snowflake-query",
             "ingest-cloudtrail-ocsf",
             "ingest-entra-directory-audit-ocsf",
             "ingest-okta-system-log-ocsf",
@@ -51,6 +52,7 @@ class TestDiscovery:
 
     def test_supported_tools_include_ingest_detect_and_evaluate(self):
         tools = tool_map(REPO_ROOT)
+        assert "source-snowflake-query" in tools
         assert "ingest-cloudtrail-ocsf" in tools
         assert "ingest-entra-directory-audit-ocsf" in tools
         assert "ingest-okta-system-log-ocsf" in tools
@@ -103,6 +105,13 @@ class TestToolDefinition:
         assert remediation.caller_roles == ("security_engineer", "incident_responder")
         assert remediation.approver_roles == ("security_lead", "cis_officer")
         assert remediation.min_approvers == 1
+
+    def test_source_snowflake_query_exposes_raw_output(self):
+        skill = tool_map(REPO_ROOT)["source-snowflake-query"]
+        tool = tool_definition(skill)
+        assert tool["inputSchema"]["properties"]["output_format"]["enum"] == ["raw"]
+        assert skill.output_formats == ("raw",)
+        assert skill.network_egress == ("*.snowflakecomputing.com",)
 
     def test_build_command_uses_fixed_entrypoint(self):
         skill = tool_map(REPO_ROOT)["detect-lateral-movement"]

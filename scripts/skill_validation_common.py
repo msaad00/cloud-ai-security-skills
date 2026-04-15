@@ -31,7 +31,7 @@ SIDE_EFFECT_VALUES = {
     "writes-audit",
 }
 INPUT_FORMAT_VALUES = {"raw", "canonical", "native", "ocsf"}
-OUTPUT_FORMAT_VALUES = {"native", "ocsf", "bridge"}
+OUTPUT_FORMAT_VALUES = {"raw", "native", "ocsf", "bridge"}
 NETWORK_EGRESS_RE = re.compile(r"^(?:\*\.)?(?:[A-Za-z0-9-]+\.)+[A-Za-z0-9-]+$")
 
 ENTRYPOINT_CANDIDATES = (

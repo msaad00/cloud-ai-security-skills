@@ -59,6 +59,7 @@ class TestSkillValidationCommon:
         skills = COMMON.discover_skill_contracts()
         assert len(skills) >= 32
         names = {skill.name for skill in skills}
+        assert "source-snowflake-query" in names
         assert "detect-lateral-movement" in names
         assert "detect-okta-mfa-fatigue" in names
         assert "detect-entra-credential-addition" in names
