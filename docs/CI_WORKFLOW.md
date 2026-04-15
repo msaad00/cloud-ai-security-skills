@@ -6,8 +6,12 @@ The CI pipeline is split into independent lanes so failures point at the right k
 
 - `lint`
   - fast repo-wide Ruff gate
+- `skill-contract`
+  - shipped-skill metadata, integrity, dependency, framework, and OCSF contract validation
+- `type-check`
+  - repo-aware `mypy` run that checks each skill `src/` tree in isolation plus `mcp-server/` and `scripts/`
 - `security-scan`
-  - scoped Bandit for the currently enforced high-risk paths
+  - Bandit across `skills/`, `mcp-server/`, and `scripts/`
 - `safe-skill-bar`
   - policy lane for abuse resistance, write-path guardrails, wildcard IAM exceptions, secrets scan, and dependency audit against the repo's declared project dependencies
 - `test-compliance`
@@ -20,6 +24,8 @@ The CI pipeline is split into independent lanes so failures point at the right k
   - discovery, cross-cloud evidence, model serving, GPU, and AI inventory/BOM skills in one grouped lane
 - `test-integration`
   - cross-skill contracts and pipe-level regression tests
+- `coverage`
+  - repo coverage gates for overall, detection, and evaluation floors
 - `validate-iac`
   - CloudFormation and Terraform validation
 - `agent-bom`
@@ -51,3 +57,5 @@ Dependency refreshes should land in grouped batches, not one-package PR spam:
 Use the dependency hygiene skill spec as the review contract for those batches.
 
 The `skill-contract` lane also enforces repo-level dependency/import consistency so cloud SDK imports cannot drift away from the declared dependency groups in `pyproject.toml`.
+
+Release cuts should follow [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) so version bumps, changelog updates, and tag creation stay consistent with the CI bar.
