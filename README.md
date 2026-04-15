@@ -9,7 +9,8 @@
 
 Security skills for cloud and AI systems. Use source-specific ingest, discovery, detection, evaluation, view, and remediation skills from the CLI, CI, MCP, or persistent runners without changing the skill code.
 
-- OCSF is supported, not mandatory.
+- OCSF 1.8 is the default interoperable wire format for event and finding streams.
+- Native is the repo-owned operational format for evaluation, discovery, sinks, remediation, and domains where OCSF would be lossy.
 - Read-only by default; write paths stay HITL and audited.
 - Trust, schema, and runtime behavior are documented and validated in CI.
 

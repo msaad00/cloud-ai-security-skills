@@ -2,9 +2,14 @@
 
 ## Why does a skill name still end in `-ocsf` if OCSF is optional?
 
-`-ocsf` means OCSF is the default wire format for that skill family. It does
-not mean OCSF is the only supported mode. Check the skill's `output_formats`
-frontmatter for the current truth.
+`-ocsf` means OCSF is the default interoperable wire format for that skill
+family. It does not mean OCSF is the only supported mode. The repo uses:
+
+- OCSF by default for event and finding streams
+- native by default for evaluation, discovery/evidence, sinks, remediation,
+  and domains where OCSF would be lossy
+
+Check the skill's `output_formats` frontmatter for the current truth.
 
 ## Why doesn't every skill support `native` yet?
 

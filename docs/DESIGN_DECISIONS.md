@@ -97,7 +97,7 @@ Why:
 - risky behavior is isolated and auditable
 - blast radius stays obvious in code review
 
-### 3. Treat OCSF as a first-class option, not a mandatory ceiling
+### 3. OCSF by default for streams, native-first for operational artifacts
 
 The repo operates across four schema modes:
 
@@ -116,10 +116,20 @@ In practice:
 
 Why:
 
-- some artifacts fit OCSF cleanly
-- some do not
+- event and finding streams benefit from a standard wire format, so OCSF is the
+  default there
+- operational artifacts such as evaluation results, discovery/evidence output,
+  sink summaries, and remediation plans are repo-owned contracts and stay
+  native-first
+- some source domains fit OCSF well, others need `bridge` or `unmapped` detail
 - forcing everything into OCSF increases loss and confusion
 - enterprise teams need both interoperability and source fidelity
+
+This is why the repo is neither “OCSF-only” nor “two equal random options.”
+The actual posture is:
+
+- OCSF-default for event and finding streams
+- native-first for operational artifacts
 
 ### 4. Keep canonical internal, stable, and boring
 
@@ -139,6 +149,7 @@ Why:
 
 - native findings
 - evaluation results
+- discovery and evidence artifacts
 - sink summaries
 - remediation plans and audit artifacts
 

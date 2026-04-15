@@ -1,6 +1,11 @@
 # Native vs OCSF
 
-`cloud-ai-security-skills` is **not OCSF-only**.
+`cloud-ai-security-skills` is **not OCSF-only**, but it is also not undecided.
+
+The repo position is:
+
+- **OCSF 1.8 by default for event and finding streams**
+- **native by default for repo-owned operational artifacts**
 
 The repo supports:
 
@@ -12,8 +17,8 @@ The repo supports:
 
 The short version:
 
+- use `ocsf` when you want the default interoperable wire format for streams
 - use `native` when you want the repo’s own stable operational contract
-- use `ocsf` when you want interoperability
 - use `bridge` when OCSF helps but would otherwise lose detail
 - remember that `canonical` is internal and `raw` is pre-normalized input
 
@@ -60,6 +65,33 @@ It does **not** mean:
 - raw vendor JSON
 - a lightly edited OCSF event
 - an unstable implementation detail
+
+## Two rules, not one
+
+The repo is making two different decisions:
+
+### 1. For event and finding streams
+
+Use **OCSF by default** because it improves:
+
+- SIEM and lake interoperability
+- shared pipelines between skills
+- downstream correlation across tools
+
+Keep `native` available where OCSF is incomplete or unnecessarily lossy.
+
+### 2. For operational artifacts
+
+Use **native by default** because these outputs are repo-owned contracts, not
+clean OCSF event families:
+
+- evaluation results
+- discovery and evidence artifacts
+- sink results
+- remediation plans and audit summaries
+
+These were never strong OCSF fits, and forcing them into OCSF would make the
+contract less clear, not more standard.
 
 ## Event example
 
@@ -186,6 +218,64 @@ The same normalized event can be projected two ways.
 }
 ```
 
+## Example where OCSF is thinner
+
+Okta is a better example of the trade-off than CloudTrail because the skill
+preserves some vendor detail under `unmapped.okta.*` rather than pretending it
+cleanly fits first-class OCSF fields.
+
+### Native Okta event
+
+```json
+{
+  "schema_mode": "native",
+  "canonical_schema_version": "2026-04",
+  "record_type": "authentication",
+  "event_uid": "b9ab9263-a4ae-4780-9981-377ec8f2da86",
+  "provider": "Okta",
+  "event_type": "user.session.start",
+  "session": {
+    "uid": "sess-123"
+  },
+  "unmapped": {
+    "okta": {
+      "transaction_id": "trn-456",
+      "root_session_id": "root-789"
+    }
+  }
+}
+```
+
+### OCSF Okta event
+
+```json
+{
+  "category_uid": 3,
+  "class_uid": 3002,
+  "time": 1713206400000,
+  "metadata": {
+    "version": "1.8.0",
+    "uid": "b9ab9263-a4ae-4780-9981-377ec8f2da86"
+  },
+  "session": {
+    "uid": "sess-123"
+  },
+  "unmapped": {
+    "okta": {
+      "transaction_id": "trn-456",
+      "root_session_id": "root-789"
+    }
+  }
+}
+```
+
+What this shows:
+
+- the event is still usable in OCSF mode
+- the most vendor-specific correlation fields survive under `unmapped`
+- the loss is not “OCSF destroys everything”; it is that some detail is no
+  longer first-class standard schema
+
 ## Column-level mental model
 
 | Concern | Native | OCSF |
@@ -254,10 +344,10 @@ For source-by-source detail, see [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md).
 
 Choose the mode based on the consumer:
 
-- want the repo’s own operational contract:
-  - use `native`
 - want the standard transport format:
   - use `ocsf`
+- want the repo’s own operational contract:
+  - use `native`
 - want both transport and preserved detail:
   - use `bridge`
 - starting from vendor payloads:
@@ -267,7 +357,8 @@ Choose the mode based on the consumer:
 
 What the repo ships today:
 
-- ingest and detect are fully dual-mode across the shipped skill set
+- ingest and detect are fully dual-mode across the shipped skill set, with OCSF
+  as the default interoperable stream format
 - discovery is native-first with bridge where useful
 - evaluation is native
 - view skills convert OCSF into downstream artifacts
