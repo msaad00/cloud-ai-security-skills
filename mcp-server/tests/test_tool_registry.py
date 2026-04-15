@@ -24,6 +24,7 @@ class TestDiscovery:
         skills = discover_skills(REPO_ROOT)
         assert len(skills) >= 35
         assert {skill.name for skill in skills} >= {
+            "source-databricks-query",
             "source-snowflake-query",
             "sink-snowflake-jsonl",
             "sink-clickhouse-jsonl",
@@ -54,6 +55,7 @@ class TestDiscovery:
 
     def test_supported_tools_include_ingest_detect_and_evaluate(self):
         tools = tool_map(REPO_ROOT)
+        assert "source-databricks-query" in tools
         assert "source-snowflake-query" in tools
         assert "sink-snowflake-jsonl" in tools
         assert "sink-clickhouse-jsonl" in tools
@@ -116,6 +118,13 @@ class TestToolDefinition:
         assert tool["inputSchema"]["properties"]["output_format"]["enum"] == ["raw"]
         assert skill.output_formats == ("raw",)
         assert skill.network_egress == ("*.snowflakecomputing.com",)
+
+    def test_source_databricks_query_exposes_raw_output(self):
+        skill = tool_map(REPO_ROOT)["source-databricks-query"]
+        tool = tool_definition(skill)
+        assert tool["inputSchema"]["properties"]["output_format"]["enum"] == ["raw"]
+        assert skill.output_formats == ("raw",)
+        assert skill.network_egress == ("*.databricks.com",)
 
     def test_sink_snowflake_jsonl_exposes_write_metadata(self):
         skill = tool_map(REPO_ROOT)["sink-snowflake-jsonl"]
