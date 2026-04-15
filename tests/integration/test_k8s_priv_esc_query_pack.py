@@ -7,6 +7,7 @@ PACK_DIR = ROOT / "packs" / "privilege-escalation-k8s"
 PACK_SQL = PACK_DIR / "snowflake.sql"
 PACK_README = PACK_DIR / "README.md"
 EXPECTED_COLUMNS = PACK_DIR / "golden" / "expected_columns.json"
+EXPECTED_COLUMN_TYPES = PACK_DIR / "golden" / "expected_column_types.json"
 
 
 def test_k8s_priv_esc_pack_files_exist() -> None:
@@ -14,6 +15,7 @@ def test_k8s_priv_esc_pack_files_exist() -> None:
     assert PACK_SQL.is_file()
     assert PACK_README.is_file()
     assert EXPECTED_COLUMNS.is_file()
+    assert EXPECTED_COLUMN_TYPES.is_file()
 
 
 def test_k8s_priv_esc_pack_keeps_detector_contract() -> None:
@@ -46,6 +48,18 @@ def test_k8s_priv_esc_pack_emits_expected_columns() -> None:
 
     for column in expected_columns:
         assert re.search(rf"\bAS\s+{re.escape(column)}\b", sql, re.IGNORECASE), column
+
+
+def test_k8s_priv_esc_pack_locks_expected_column_types() -> None:
+    sql = PACK_SQL.read_text()
+    expected_column_types = json.loads(EXPECTED_COLUMN_TYPES.read_text())
+
+    for column, column_type in expected_column_types.items():
+        assert re.search(
+            rf"::\s*{re.escape(column_type)}\s+AS\s+{re.escape(column)}\b",
+            sql,
+            re.IGNORECASE,
+        ), column
 
 
 def test_k8s_priv_esc_readme_describes_rules_and_window() -> None:

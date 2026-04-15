@@ -52,7 +52,9 @@ The query returns one row per deterministic `(provider, session_uid, dst_ip, dst
 - ATT&CK `T1021` and `T1078.004`
 - `finding_json` as an OCSF-compatible Detection Finding object
 
-The locked output columns are listed in [`golden/expected_columns.json`](./golden/expected_columns.json).
+The locked output columns and types are listed in:
+- [`golden/expected_columns.json`](./golden/expected_columns.json)
+- [`golden/expected_column_types.json`](./golden/expected_column_types.json)
 
 ## Notes
 

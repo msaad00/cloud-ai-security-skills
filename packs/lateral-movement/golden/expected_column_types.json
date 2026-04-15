@@ -1,0 +1,22 @@
+{
+  "finding_uid": "varchar",
+  "event_uid": "varchar",
+  "provider": "varchar",
+  "account_uid": "varchar",
+  "session_uid": "varchar",
+  "actor_name": "varchar",
+  "anchor_operation": "varchar",
+  "src_instance_uid": "varchar",
+  "src_ip": "varchar",
+  "dst_ip": "varchar",
+  "dst_port": "number",
+  "traffic_bytes": "number",
+  "first_seen_time_ms": "number",
+  "last_seen_time_ms": "number",
+  "finding_time_ms": "number",
+  "correlation_window_seconds": "number",
+  "finding_type": "varchar",
+  "primary_technique_uid": "varchar",
+  "secondary_technique_uid": "varchar",
+  "finding_json": "object"
+}

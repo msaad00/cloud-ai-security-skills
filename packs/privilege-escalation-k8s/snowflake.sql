@@ -217,21 +217,21 @@ final_findings AS (
     FROM combined
 )
 SELECT
-    finding_uid AS finding_uid,
-    finding_uid AS event_uid,
-    rule_name AS rule_name,
-    severity_id AS severity_id,
-    actor_name AS actor_name,
-    namespace AS namespace,
-    target_name AS target_name,
-    resource_type AS resource_type,
-    subresource AS subresource,
-    first_seen_time_ms AS first_seen_time_ms,
-    last_seen_time_ms AS last_seen_time_ms,
-    finding_time_ms AS finding_time_ms,
-    mitre_technique_uid AS mitre_technique_uid,
-    mitre_subtechnique_uid AS mitre_subtechnique_uid,
-    finding_type AS finding_type,
+    finding_uid::varchar AS finding_uid,
+    finding_uid::varchar AS event_uid,
+    rule_name::varchar AS rule_name,
+    severity_id::number AS severity_id,
+    actor_name::varchar AS actor_name,
+    namespace::varchar AS namespace,
+    target_name::varchar AS target_name,
+    resource_type::varchar AS resource_type,
+    subresource::varchar AS subresource,
+    first_seen_time_ms::number AS first_seen_time_ms,
+    last_seen_time_ms::number AS last_seen_time_ms,
+    finding_time_ms::number AS finding_time_ms,
+    mitre_technique_uid::varchar AS mitre_technique_uid,
+    mitre_subtechnique_uid::varchar AS mitre_subtechnique_uid,
+    finding_type::varchar AS finding_type,
     OBJECT_CONSTRUCT(
         'activity_id', 1,
         'category_uid', 2,
@@ -318,6 +318,6 @@ SELECT
             'last_seen_time', last_seen_time_ms,
             'raw_events', ARRAY_CONSTRUCT()
         )
-    ) AS finding_json
+    )::object AS finding_json
 FROM final_findings
 ORDER BY finding_time_ms, rule_name, actor_name, target_name;

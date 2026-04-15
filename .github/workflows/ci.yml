@@ -23,8 +23,9 @@ jobs:
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: ruff
+          packages: ruff sqlfluff
       - run: ruff check skills/ tests/ mcp-server/ scripts/ --config pyproject.toml
+      - run: sqlfluff lint packs
 
   skill-contract:
     runs-on: ubuntu-latest

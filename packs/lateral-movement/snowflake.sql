@@ -164,25 +164,25 @@ findings AS (
     FROM candidate_pairs
 )
 SELECT
-    finding_uid AS finding_uid,
-    finding_uid AS event_uid,
-    provider AS provider,
-    account_uid AS account_uid,
-    session_uid AS session_uid,
-    actor_name AS actor_name,
-    anchor_operation AS anchor_operation,
-    src_instance_uid AS src_instance_uid,
-    src_ip AS src_ip,
-    dst_ip AS dst_ip,
-    dst_port AS dst_port,
-    traffic_bytes AS traffic_bytes,
-    first_seen_time_ms AS first_seen_time_ms,
-    last_seen_time_ms AS last_seen_time_ms,
-    finding_time_ms AS finding_time_ms,
-    900 AS correlation_window_seconds,
-    'cloud-lateral-movement' AS finding_type,
-    'T1021' AS primary_technique_uid,
-    'T1078.004' AS secondary_technique_uid,
+    finding_uid::varchar AS finding_uid,
+    finding_uid::varchar AS event_uid,
+    provider::varchar AS provider,
+    account_uid::varchar AS account_uid,
+    session_uid::varchar AS session_uid,
+    actor_name::varchar AS actor_name,
+    anchor_operation::varchar AS anchor_operation,
+    src_instance_uid::varchar AS src_instance_uid,
+    src_ip::varchar AS src_ip,
+    dst_ip::varchar AS dst_ip,
+    dst_port::number AS dst_port,
+    traffic_bytes::number AS traffic_bytes,
+    first_seen_time_ms::number AS first_seen_time_ms,
+    last_seen_time_ms::number AS last_seen_time_ms,
+    finding_time_ms::number AS finding_time_ms,
+    900::number AS correlation_window_seconds,
+    'cloud-lateral-movement'::varchar AS finding_type,
+    'T1021'::varchar AS primary_technique_uid,
+    'T1078.004'::varchar AS secondary_technique_uid,
     OBJECT_CONSTRUCT(
         'activity_id', 1,
         'category_uid', 2,
@@ -248,6 +248,6 @@ SELECT
             'last_seen_time', last_seen_time_ms,
             'raw_events', ARRAY_CONSTRUCT()
         )
-    ) AS finding_json
+    )::object AS finding_json
 FROM findings
 ORDER BY provider, session_uid, dst_ip, dst_port;
