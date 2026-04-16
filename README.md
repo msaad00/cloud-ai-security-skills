@@ -186,6 +186,7 @@ Operator and contributor docs:
 - [docs/LOSSY_MAPPINGS.md](docs/LOSSY_MAPPINGS.md)
 - [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
+- [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
 - [docs/agent-integrations.md](docs/agent-integrations.md)
 - [skills/README.md](skills/README.md)
 - [docs/DEBUGGING.md](docs/DEBUGGING.md)

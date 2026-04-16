@@ -3,6 +3,8 @@
 Use this doc when a skill runs but the output is empty, malformed, or not in
 the schema mode you expected.
 
+For the repo-wide exit-code contract, see [ERROR_CODES.md](ERROR_CODES.md).
+
 ## Fast checklist
 
 1. Confirm the skill contract:
