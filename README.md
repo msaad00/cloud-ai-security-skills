@@ -19,7 +19,7 @@ Security skills for cloud and AI systems. Use source-specific ingest, discovery,
 
 Start here if you want the shortest true picture of the repo:
 
-![Repository architecture showing external sources, six shipped skill layers, the shared skill contract, and the edge/runtime layers around the same skills.](docs/images/repo-architecture.svg)
+![Repository architecture showing external sources feeding three action bands — Intake (Ingest and Discover), Analyze (Detect and Evaluate), and Act (View and Remediate) — that share one skill bundle contract, with edge persistence, warehouse query packs, and runtime surfaces wrapping the same skills.](docs/images/repo-architecture.svg)
 
 The mental model:
 

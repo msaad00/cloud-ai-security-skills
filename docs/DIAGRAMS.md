@@ -30,7 +30,7 @@ review, and PR discussions where opening the SVG is inconvenient.
 - `iam-departures-architecture.svg`
   - Shows the flagship write path in four stages: actionable-set selection, guarded orchestration, scoped target writes, and dual audit with drift verification.
 - `repo-architecture.svg`
-  - Shows the six shipped skill layers plus the surrounding source, sink, query-pack, and runtime surfaces that compose around them.
+  - Shows external sources feeding three action bands — Intake (Ingest and Discover), Analyze (Detect and Evaluate), and Act (View and Remediate) — that share one skill bundle contract, with edge persistence, warehouse query packs, and runtime surfaces wrapping the same skills.
 - `iam-departures-data-flow.svg`
   - Shows the remediation workflow data path from source manifests through planning, approval, execution, and audit artifacts.
 - `detection-pipeline.svg`
