@@ -263,6 +263,16 @@ planner/worker flow, the reconciler writes an S3 manifest, EventBridge starts
 the Step Function, human approval gates the write edge, and the final action
 trail lands in both operational storage and durable audit outputs.
 
+The artwork is intentionally staged into:
+
+- actionable selection
+- guarded orchestration
+- scoped writes
+- dual audit and drift verification
+
+The detailed examples, failure notes, and role tables stay in markdown so the
+visual stays readable in GitHub preview.
+
 Important accuracy notes:
 
 - rehire and primary eligibility logic happen in the reconciler/export path before actionable entries are written to the S3 manifest

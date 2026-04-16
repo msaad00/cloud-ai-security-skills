@@ -69,40 +69,42 @@ for deployment walkthroughs and usage scenarios.
 
 ```mermaid
 flowchart TD
-    HR["HR Source<br/>Workday / Snowflake / Databricks / ClickHouse"]
-    REC{"Reconciler<br/>rehire-aware SHA-256 change detect"}
-    EXIT["EXIT — no changes"]
-    S3["S3 Manifest<br/>KMS · versioned<br/>EventBridge enabled"]
-    EB["EventBridge Rule<br/>Object Created<br/>prefix departures/"]
+    HR["HR source<br/>Workday / Snowflake / Databricks / ClickHouse"]
+    REC["Reconciler<br/>rehire filter + grace check + SHA-256 diff"]
+    EXIT["No actionable change"]
+    S3["S3 manifest<br/>KMS-encrypted actionable set"]
+    EB["EventBridge rule"]
 
-    subgraph SFN["Step Function — VPC isolated"]
-        L1["Lambda 1 — Parser<br/>validate manifest,<br/>recheck grace + IAM state"]
-        L2["Lambda 2 — Worker<br/>13-step IAM cleanup"]
+    subgraph SFN["Step Function"]
+        L1["Parser Lambda<br/>recheck manifest + IAM state"]
+        L2["Worker Lambda<br/>13-step cleanup"]
     end
 
-    AUDIT["Audit Trail<br/>DynamoDB + S3"]
-    WH["Warehouse Ingest-Back<br/>remediation_log table"]
-    VERIFY["Next Reconciler Run<br/>verify state == closed<br/>flag drift"]
-    DLQ["DLQ + SNS<br/>Lambda async failures<br/>SFN ExecutionFailed"]
+    TGT["Targets<br/>AWS IAM / Entra / GCP / Snowflake / Databricks"]
+    AUDIT["Audit<br/>DynamoDB + S3"]
+    WH["Warehouse ingest-back"]
+    VERIFY["Next reconciler run"]
+    FAIL["DLQ + SNS"]
 
     HR --> REC
-    REC -->|no change| EXIT
-    REC -->|change detected| S3
+    REC -->|no changes| EXIT
+    REC -->|actionable rows only| S3
     S3 --> EB
-    EB --> L1
+    EB --> SFN
+    SFN --> L1
     L1 --> L2
-    L2 --> AUDIT
+    L2 --> TGT
+    TGT --> AUDIT
     AUDIT --> WH
     WH --> VERIFY
-    VERIFY -. drift .-> REC
-    SFN -. failure .-> DLQ
-    DLQ -. replay .-> EB
+    VERIFY -. drift check .-> REC
+    SFN -. failure .-> FAIL
 
     style SFN fill:#172554,stroke:#3b82f6,color:#e2e8f0
     style REC fill:#1e3a5f,stroke:#60a5fa,color:#e2e8f0
     style EB fill:#172554,stroke:#3b82f6,color:#e2e8f0
     style VERIFY fill:#1a2e35,stroke:#2dd4bf,color:#e2e8f0
-    style DLQ fill:#3f1d1d,stroke:#f87171,color:#fecaca
+    style FAIL fill:#3f1d1d,stroke:#f87171,color:#fecaca
 ```
 
 ## Security Guardrails
