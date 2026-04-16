@@ -89,6 +89,6 @@ Use it when the README feels too high-level and `skills/README.md` feels too cat
 - Need the big picture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Need the skill inventory: [../skills/README.md](../skills/README.md)
 - Need trust and runtime controls: [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)
-- Need troubleshooting: [DEBUGGING.md](DEBUGGING.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- Need troubleshooting: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 </details>

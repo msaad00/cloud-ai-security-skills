@@ -392,7 +392,6 @@ Operator and contributor docs:
 - [docs/COMPLIANCE_MAPPINGS.md](docs/COMPLIANCE_MAPPINGS.md)
 - [docs/agent-integrations.md](docs/agent-integrations.md)
 - [skills/README.md](skills/README.md)
-- [docs/DEBUGGING.md](docs/DEBUGGING.md)
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md)
 - [docs/ROADMAP.md](docs/ROADMAP.md)
