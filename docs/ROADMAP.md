@@ -7,8 +7,8 @@ The operating model is:
 
 - **OCSF-first** where the schema fits
 - **deterministic bridge artifacts** where it does not
-- **read-only by default**
-- **least privilege and zero trust**
+- **read-only by default**, with write paths gated by HITL approval and dual audit
+- **least privilege**: scoped execution identities, short-lived credentials where the platform supports them, manager-injected secrets only where a vendor path still requires them
 - **same skill code across CLI, CI, MCP, and persistent/serverless execution**
 
 ## Current focus

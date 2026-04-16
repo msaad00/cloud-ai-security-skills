@@ -217,7 +217,7 @@ Prefer the storage-integration or federation path where the source platform supp
 
 - **Least privilege**: Each role has only the permissions it needs
 - **Defense in depth**: Deny policies on protected users (root, break-glass-*, emergency-*)
-- **Zero trust**: Cross-account access scoped by `aws:PrincipalOrgID`
+- **Scoped cross-account trust**: Cross-account access is gated by `aws:PrincipalOrgID`, so role assumption fails from outside the organization even if a role ARN is leaked
 - **Encryption**: S3 KMS, DynamoDB encryption at rest, Lambda env var encryption
 - **Audit trail**: Dual-write to DynamoDB + S3, ingest-back to source warehouse
 - **Deployment**: All infra in Organization Security OU management account
