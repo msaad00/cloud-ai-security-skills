@@ -4,9 +4,13 @@ import json
 import os
 import shlex
 import subprocess
+import time
 from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Any
+
+_DEFAULT_DEDUPE_TTL_DAYS = 30
+_SECONDS_PER_DAY = 86_400
 
 try:
     import boto3
@@ -78,6 +82,24 @@ def _dedupe_table():
     return _dynamodb_resource().Table(table_name)
 
 
+def _dedupe_ttl_days() -> int:
+    raw = os.environ.get("DEDUPE_TTL_DAYS", "").strip()
+    if not raw:
+        return _DEFAULT_DEDUPE_TTL_DAYS
+    try:
+        days = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"DEDUPE_TTL_DAYS must be an integer, got {raw!r}") from exc
+    if days < 1 or days > 365:
+        raise ValueError(f"DEDUPE_TTL_DAYS must be between 1 and 365, got {days}")
+    return days
+
+
+def _expires_at(now: float | None = None) -> int:
+    current = time.time() if now is None else now
+    return int(current) + _dedupe_ttl_days() * _SECONDS_PER_DAY
+
+
 def _sns_topic() -> str:
     topic = os.environ.get("SNS_TOPIC_ARN", "").strip()
     if not topic:
@@ -91,6 +113,7 @@ def _put_if_new(uid: str, payload: str) -> bool:
         "pk": uid,
         "seen_at": datetime.now(UTC).isoformat(),
         "payload_sha256": sha256(payload.encode("utf-8")).hexdigest(),
+        "expires_at": _expires_at(),
     }
     try:
         table.put_item(Item=item, ConditionExpression="attribute_not_exists(pk)")
