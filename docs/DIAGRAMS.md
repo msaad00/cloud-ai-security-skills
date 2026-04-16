@@ -21,7 +21,7 @@ Use these descriptions as the text companion for screen readers, plain-text
 review, and PR discussions where opening the SVG is inconvenient.
 
 - `data-handling-paths.svg`
-  - Shows the main runtime choices: live cloud posture, raw log ingest, OCSF-ready lake detection, raw lake detection through ingest, persistence via sinks, and guarded remediation.
+  - Shows the main data-entry choices, the first skill family for each, the resulting outputs, and the control boundary that applies on each path.
 - `start-here-guide.svg`
   - Shows the shortest decision tree for choosing a first layer: discover for inventory/evidence, ingest for raw logs, detect for normalized events, evaluate for posture, sink for persistence, and remediate for guarded writes.
 - `runtime-surfaces.svg`

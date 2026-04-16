@@ -12,6 +12,16 @@ Use this doc when you need to answer:
 - when `native`, `ocsf`, `canonical`, or `bridge` matters
 - what security controls apply on each path
 
+## Quick Visual
+
+Start with the real input you have, then follow the first skill family, the
+output shape, and the control boundary:
+
+![Data handling paths showing live API paths, raw log paths, lake paths, and the separate guarded remediation path, with outputs and controls called out per lane.](images/data-handling-paths.svg)
+
+The visual is intentionally short. The details stay below in tables and worked
+examples.
+
 ## One Skill Bundle, Many Access Paths
 
 The repo ships skill bundles, not just standalone scripts.
