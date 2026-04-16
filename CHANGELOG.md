@@ -11,6 +11,10 @@ The format is loosely based on Keep a Changelog.
 
 ## Unreleased
 
+### Added
+
+- [`scripts/benchmark_runtime_profiles.py`](scripts/benchmark_runtime_profiles.py) plus a checked-in runtime snapshot at [`docs/benchmarks/runtime-profiles-2026-04-16.json`](docs/benchmarks/runtime-profiles-2026-04-16.json) so the representative sizing tables in [`docs/RUNTIME_PROFILES.md`](docs/RUNTIME_PROFILES.md) can be regenerated from code instead of drifting as prose.
+
 ### Planned for v0.5.1
 
 - add parser-hardening follow-up tests on the highest-volume ingestion paths so malformed mixed-shape input keeps failing closed without breaking valid records in the same batch
