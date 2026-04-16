@@ -30,14 +30,22 @@ For the full source, asset, framework, and runtime crosswalk, see [docs/USE_CASE
 
 ## Quick Run
 
-These skills are plain executable Python entrypoints first, and agent-usable
-skills second.
+Each shipped skill is a bundle:
+
+- `SKILL.md` for routing, guardrails, and approval model
+- `REFERENCES.md` for the official source-of-truth docs
+- `src/` for the executable implementation
+- `tests/` for contract and regression coverage
+
+The Python file is the execution core. The full skill that agents use is the
+whole bundle.
 
 Why the README shows `python skills/.../src/<entry>.py`:
 
-- that is the direct shipped entrypoint
+- that is the direct execution path for the skill implementation
 - MCP, CI, and runners call the same skill code
-- the wrapper changes the access path, not the implementation
+- agent clients add the `SKILL.md` contract, routing hints, and guardrails on top
+- the wrapper changes the access path, not the underlying skill implementation
 
 Start with the bundled Kubernetes audit fixture and generate SARIF in one shot:
 
@@ -126,8 +134,8 @@ The skill code stays the same across all of these:
 - runner:
   - the runner template wraps the same skill in an event-driven path
 
-Agent clients do not require a second implementation of the skill. They call
-the same code through a different entrypoint.
+Agent clients do not require a second implementation of the skill. They use the
+same skill bundle through a different access path.
 
 ## Native vs OCSF
 

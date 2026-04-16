@@ -12,24 +12,34 @@ Use this doc when you need to answer:
 - when `native`, `ocsf`, `canonical`, or `bridge` matters
 - what security controls apply on each path
 
-## One Skill, Many Access Paths
+## One Skill Bundle, Many Access Paths
 
-The repo ships executable Python skills. Agent tools and wrappers call those
-same entrypoints; they do not replace them.
+The repo ships skill bundles, not just standalone scripts.
+
+Each bundle includes:
+
+- `SKILL.md`
+- `REFERENCES.md`
+- `src/`
+- `tests/`
+
+The executable Python entrypoint is the runtime core inside that bundle. Agent
+tools and wrappers call the same skill bundle; they do not replace it.
 
 | Access path | What is actually running |
 |---|---|
-| direct CLI | `python skills/<layer>/<skill>/src/<entry>.py` |
-| MCP | local wrapper in `mcp-server/` calling the same skill |
-| CI | workflow step invoking the same skill code |
-| runner | serverless or queue wrapper invoking the same skill code |
+| direct CLI | the skill's `src/<entry>.py` execution core |
+| MCP | local wrapper plus the skill bundle contract from `SKILL.md` |
+| CI | workflow step invoking the same skill bundle and validating its output |
+| runner | serverless or queue wrapper invoking the same skill bundle |
 | query pack | SQL equivalent for selected warehouse-native detections |
 
 Short rule:
 
 - these are agent-usable skills
 - they are not agent-only skills
-- the direct Python entrypoint is the most truthful wrapper-free example
+- the direct Python entrypoint is the clearest wrapper-free execution example
+- the full skill contract still lives in the bundle, not just the script file
 
 Read next:
 
