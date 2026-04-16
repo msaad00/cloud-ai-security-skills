@@ -26,6 +26,7 @@ Related docs:
 
 - [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md)
 - [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md)
+- [`NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md)
 
 ## The five shapes
 

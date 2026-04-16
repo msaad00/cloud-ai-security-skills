@@ -13,6 +13,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 - **Threats, actors, and mitigations** — see [`./THREAT_MODEL.md`](./THREAT_MODEL.md)
 - **SIEM indexing and dedupe guidance** — see [`./SIEM_INDEX_GUIDE.md`](./SIEM_INDEX_GUIDE.md)
 - **Canonical schema contract** — see [`./CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
+- **Vendor and OCSF normalization reference** — see [`./NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md)
 - **Raw → canonical → native / OCSF / bridge flow** — see [`./DATA_FLOW.md`](./DATA_FLOW.md)
 - **Visual guide** — see [`./DIAGRAMS.md`](./DIAGRAMS.md) for the architecture and data-flow diagrams in both markdown-native and SVG-friendly form
 

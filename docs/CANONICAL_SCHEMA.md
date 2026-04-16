@@ -32,7 +32,9 @@ Current repo-wide canonical schema version:
 - `2026-04`
 
 See [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md) for bump rules, OCSF pin
-semantics, and upgrade guidance.
+semantics, and upgrade guidance. See
+[`NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md) for the source-by-source
+mapping and identifier reference.
 
 ## Shared core fields
 

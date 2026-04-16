@@ -14,6 +14,7 @@ Use this doc together with:
 
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
 - [`CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
+- [`NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md)
 - the affected skill’s `SKILL.md`
 
 ## Reading the tables
