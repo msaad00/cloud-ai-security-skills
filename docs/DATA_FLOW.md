@@ -3,6 +3,10 @@
 This repo supports raw-source fidelity, a stable canonical model, and optional
 OCSF interoperability.
 
+For the scenario-by-scenario operator guide, including source adapters,
+warehouse paths, sinks, remediation edges, and the guardrails on each lane, see
+[DATA_HANDLING.md](DATA_HANDLING.md).
+
 ```mermaid
 flowchart LR
     RAW["Raw vendor payload\nCloudTrail / VPC Flow / Okta / Entra / Workspace / K8s"]

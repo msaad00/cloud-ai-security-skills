@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Data handling paths and guardrails</title>
+  <desc id="desc">A simplified view of how data enters cloud-ai-security-skills, which paths it can take, and which guardrails apply on each path.</desc>
+  <rect width="1280" height="760" fill="#08111f"/>
+  <rect x="24" y="24" width="1232" height="712" rx="28" fill="#0f172a" stroke="#334155"/>
+
+  <g font-family="Arial, sans-serif">
+    <text x="56" y="74" fill="#f8fafc" font-size="32" font-weight="700">How data moves and where controls apply</text>
+    <text x="56" y="106" fill="#94a3b8" font-size="18">One lane per real shipped scenario. Read-only analysis stays separate from sinks, runners, and remediation.</text>
+
+    <rect x="56" y="148" width="220" height="106" rx="18" fill="#172554" stroke="#60a5fa"/>
+    <text x="82" y="184" fill="#dbeafe" font-size="22" font-weight="700">Start here</text>
+    <text x="82" y="214" fill="#eff6ff" font-size="16">live cloud APIs</text>
+    <text x="82" y="236" fill="#eff6ff" font-size="16">raw logs and files</text>
+
+    <rect x="56" y="282" width="220" height="106" rx="18" fill="#172554" stroke="#60a5fa"/>
+    <text x="82" y="318" fill="#dbeafe" font-size="22" font-weight="700">Or start here</text>
+    <text x="82" y="348" fill="#eff6ff" font-size="16">warehouse rows</text>
+    <text x="82" y="370" fill="#eff6ff" font-size="16">lake objects</text>
+
+    <rect x="332" y="136" width="568" height="128" rx="22" fill="#083344" stroke="#2dd4bf"/>
+    <text x="364" y="174" fill="#ccfbf1" font-size="24" font-weight="700">Lane 1: live state and posture</text>
+    <text x="364" y="208" fill="#ecfeff" font-size="17">discover-* or evaluation/*</text>
+    <text x="364" y="234" fill="#cbd5e1" font-size="16">read-only APIs, least-privilege creds, native or bridge outputs</text>
+
+    <rect x="332" y="288" width="568" height="128" rx="22" fill="#083344" stroke="#2dd4bf"/>
+    <text x="364" y="326" fill="#ccfbf1" font-size="24" font-weight="700">Lane 2: raw event analysis</text>
+    <text x="364" y="360" fill="#ecfeff" font-size="17">ingest-* -&gt; detect-* -&gt; view/*</text>
+    <text x="364" y="386" fill="#cbd5e1" font-size="16">defensive parsing, canonical internal model, native or OCSF streams</text>
+
+    <rect x="332" y="440" width="568" height="128" rx="22" fill="#083344" stroke="#2dd4bf"/>
+    <text x="364" y="478" fill="#ccfbf1" font-size="24" font-weight="700">Lane 3: lake and warehouse paths</text>
+    <text x="364" y="512" fill="#ecfeff" font-size="17">source-* -&gt; detect-* or source-* -&gt; ingest-* -&gt; detect-*</text>
+    <text x="364" y="538" fill="#cbd5e1" font-size="16">read-only query adapters, query guardrails, skip ingest only when rows are already shaped</text>
+
+    <rect x="952" y="136" width="252" height="188" rx="22" fill="#3b0764" stroke="#c084fc"/>
+    <text x="982" y="174" fill="#f3e8ff" font-size="24" font-weight="700">Outputs</text>
+    <text x="982" y="210" fill="#f8fafc" font-size="18" font-weight="700">native</text>
+    <text x="982" y="234" fill="#ddd6fe" font-size="16">repo-owned operational format</text>
+    <text x="982" y="270" fill="#f8fafc" font-size="18" font-weight="700">ocsf</text>
+    <text x="982" y="294" fill="#ddd6fe" font-size="16">interoperable event and finding streams</text>
+
+    <rect x="952" y="352" width="252" height="216" rx="22" fill="#3b0764" stroke="#c084fc"/>
+    <text x="982" y="390" fill="#f3e8ff" font-size="24" font-weight="700">Write edges</text>
+    <text x="982" y="426" fill="#f8fafc" font-size="18" font-weight="700">sink-*</text>
+    <text x="982" y="450" fill="#ddd6fe" font-size="16">append-only or idempotent persistence</text>
+    <text x="982" y="486" fill="#f8fafc" font-size="18" font-weight="700">remediation/*</text>
+    <text x="982" y="510" fill="#ddd6fe" font-size="16">HITL, dry-run, audit trail</text>
+    <text x="982" y="546" fill="#f8fafc" font-size="18" font-weight="700">runners</text>
+    <text x="982" y="570" fill="#ddd6fe" font-size="16">queues, retries, dedupe, bounded concurrency</text>
+
+    <path d="M276 200 L332 200" stroke="#60a5fa" stroke-width="5" fill="none"/>
+    <path d="M276 334 L332 504" stroke="#60a5fa" stroke-width="5" fill="none"/>
+    <path d="M900 200 L952 200" stroke="#2dd4bf" stroke-width="5" fill="none"/>
+    <path d="M900 352 L952 352" stroke="#2dd4bf" stroke-width="5" fill="none"/>
+    <path d="M900 504 L952 504" stroke="#2dd4bf" stroke-width="5" fill="none"/>
+
+    <rect x="56" y="616" width="1148" height="74" rx="16" fill="#111827" stroke="#475569"/>
+    <text x="84" y="646" fill="#f8fafc" font-size="18" font-weight="700">Available today</text>
+    <text x="246" y="646" fill="#cbd5e1" font-size="16">CLI · CI · MCP · AWS runner · GCP runner template · Azure runner template · source-* · sink-* · packs/</text>
+    <text x="84" y="676" fill="#f8fafc" font-size="18" font-weight="700">Guardrails</text>
+    <text x="186" y="676" fill="#cbd5e1" font-size="16">read-only by default · least-privilege credentials · no arbitrary shell passthrough · fixed schemas · explicit approval for destructive actions</text>
+  </g>
+</svg>

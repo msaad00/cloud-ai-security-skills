@@ -138,6 +138,7 @@ Read next:
 - [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
 - [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md)
 - [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
+- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/OCSF_CONTRACT.md](docs/OCSF_CONTRACT.md)
 
 </details>
@@ -158,6 +159,7 @@ The skill contract stays the same across runtime surfaces: `SKILL.md + src/ + te
 
 Read next:
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md)
 - [docs/DIAGRAMS.md](docs/DIAGRAMS.md)
 - [docs/images/runtime-surfaces.svg](docs/images/runtime-surfaces.svg)
@@ -168,6 +170,7 @@ Read next:
 <summary><b>More Diagrams And Docs</b></summary>
 
 High-signal visuals:
+- [Data handling paths](docs/images/data-handling-paths.svg)
 - [Start here guide](docs/images/start-here-guide.svg)
 - [Runtime surfaces](docs/images/runtime-surfaces.svg)
 - [Repository architecture](docs/images/repo-architecture.svg)
@@ -182,6 +185,7 @@ Operator and contributor docs:
 - [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
 - [docs/LOSSY_MAPPINGS.md](docs/LOSSY_MAPPINGS.md)
 - [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
+- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/agent-integrations.md](docs/agent-integrations.md)
 - [skills/README.md](skills/README.md)
 - [docs/DEBUGGING.md](docs/DEBUGGING.md)

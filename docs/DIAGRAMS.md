@@ -6,6 +6,7 @@ Keep markdown diagrams lightweight and reviewable, then pair them with polished 
 
 ## Visual set
 
+- [Data handling paths](images/data-handling-paths.svg)
 - [Start here guide](images/start-here-guide.svg)
 - [Runtime surfaces](images/runtime-surfaces.svg)
 - [IAM departures cross-cloud workflow](images/iam-departures-architecture.svg)
