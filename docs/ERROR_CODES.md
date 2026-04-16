@@ -132,7 +132,7 @@ Use `stderr` for:
 - environment or dependency errors
 - permission or approval failures
 - machine-readable telemetry when `SKILL_LOG_FORMAT=json` or
-  `AGENT_TELEMETRY=1` is enabled
+  `AGENT_TELEMETRY=1` is enabled; see [STDERR_TELEMETRY_CONTRACT.md](STDERR_TELEMETRY_CONTRACT.md)
 
 Do not use `stderr` for:
 

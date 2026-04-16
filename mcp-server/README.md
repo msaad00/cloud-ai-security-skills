@@ -15,6 +15,12 @@ Design rules:
 - fixed local repo-owned entrypoints only
 - direct CLI usage of skills stays unchanged
 
+Audit behavior:
+
+- the wrapper emits one JSON audit line per resolved tool call
+- the audit record contract lives in [../docs/MCP_AUDIT_CONTRACT.md](../docs/MCP_AUDIT_CONTRACT.md)
+- wrapper diagnostics stay on `stderr`; wrapped skill output stays on `stdout`
+
 Run locally:
 
 ```bash

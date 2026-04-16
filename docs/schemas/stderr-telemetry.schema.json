@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/msaad00/cloud-ai-security-skills/docs/schemas/stderr-telemetry.schema.json",
+  "title": "Skill stderr telemetry event",
+  "description": "JSONL event emitted by skills/_shared/runtime_telemetry.py when structured stderr mode is enabled.",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "skill",
+    "level",
+    "event",
+    "message"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "description": "UTC ISO-8601 timestamp with millisecond precision and trailing Z."
+    },
+    "skill": {
+      "type": "string",
+      "description": "Stable skill name."
+    },
+    "level": {
+      "type": "string",
+      "description": "Caller-supplied severity such as warning or error."
+    },
+    "event": {
+      "type": "string",
+      "description": "Machine-friendly event identifier."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable diagnostic summary."
+    }
+  },
+  "additionalProperties": true
+}

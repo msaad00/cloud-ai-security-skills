@@ -90,7 +90,7 @@ Common evidence sources used below:
 | `A.5.36` compliance with policies and standards | real | contract docs, framework mappings, CI validation | repo demonstrates enforcement of its own standards |
 | `A.8.9` configuration management | strong | `SKILL.md`, versioned docs, fixed repo contracts, CI validation | supports repo configuration discipline |
 | `A.8.12` data leakage prevention | strong | no-telemetry stance, secret handling, sink and runtime guardrails | strongest for repo behavior, not for customer exfiltration controls outside the repo |
-| `A.8.15` logging | strong | stderr telemetry, MCP audit events, sink/remediation audit posture | schema docs for stderr and MCP audit are separate follow-up work |
+| `A.8.15` logging | strong | stderr telemetry, MCP audit events, sink/remediation audit posture | see [MCP_AUDIT_CONTRACT.md](MCP_AUDIT_CONTRACT.md) for the wrapper audit schema |
 | `A.8.16` monitoring activities | strong | detection, posture, evidence, and runner surfaces | central monitoring platform remains external |
 | `A.8.20` network security | real | documented transport expectations, no generic network passthrough, sink/egress restrictions | operator still owns real network segmentation and firewalls |
 | `A.8.24` use of cryptography | partial but real | TLS expectations, signed SBOM, documented encryption-at-rest expectations | customer key management remains external |
