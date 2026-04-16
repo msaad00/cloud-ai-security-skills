@@ -46,6 +46,26 @@ For the full contract, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the
 
 For the full source, asset, framework, and runtime crosswalk, see [docs/USE_CASES.md](docs/USE_CASES.md).
 
+## Common Shipped Flows
+
+Use this as the quick mental model for how data moves through the repo:
+
+![End-to-end skill compositions showing three shipped paths: raw logs through ingest, detect, and view; lake rows through source, detect, and sink; and live API or HR-driven paths through discovery or evaluation with optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
+
+The visual is intentionally short. The exact examples live in markdown:
+
+- raw logs:
+  - `ingest-* -> detect-* -> view/*`
+  - example: `ingest-cloudtrail-ocsf -> detect-lateral-movement -> convert-ocsf-to-sarif`
+- warehouse or object rows:
+  - `source-* -> detect-* -> sink-*`
+  - example: `source-snowflake-query -> detect-lateral-movement -> sink-snowflake-jsonl`
+- live cloud or SaaS state:
+  - `discover-*` or `evaluation/*`, with optional guarded `remediation/*`
+  - example: `discover-control-evidence`, `cspm-aws-cis-benchmark`, or `iam-departures-remediation`
+
+For the longer runtime and data-path explanation, see [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md) and [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
+
 ## Install And Trust Model
 
 This repo is not primarily distributed as a single PyPI-installed application.
@@ -249,22 +269,6 @@ Important accuracy notes:
 - the parser Lambda is a second safety gate that rechecks manifest validity, grace period, and current IAM state before the worker runs
 - EventBridge, Step Function, parser Lambda, and worker Lambda each use separate execution roles
 - the flagship orchestration is AWS-native on purpose; equivalent GCP and Azure workflows should keep the same control contract but use native event and orchestration services for those clouds
-
-## End-to-End Skill Flows
-
-The flagship remediation path is one family. The repo also ships standard
-end-to-end read paths across raw logs, warehouses, and live APIs.
-
-![End-to-end skill compositions showing raw logs through ingest and detection, warehouse rows through source and sink, and live discovery or evaluation through native outputs and optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
-
-Use this as the quick mental model:
-
-- raw logs:
-  - `ingest-* -> detect-* -> view/*`
-- warehouse or object rows:
-  - `source-* -> detect-* -> sink-*`
-- live cloud or SaaS state:
-  - `discover-*` or `evaluation/*`, with optional guarded `remediation/*` on approved write paths
 
 ## Trust, Security, And Supply Chain
 
