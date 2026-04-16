@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+  <title id="title">End-to-end skill flows</title>
+  <desc id="desc">Three concrete shipped end-to-end compositions: raw log ingest to detect to export, warehouse source to detect to sink, and live cloud discovery or evaluation to native evidence.</desc>
+  <rect width="1280" height="620" fill="#08111f"/>
+  <rect x="24" y="24" width="1232" height="572" rx="28" fill="#0f172a" stroke="#334155"/>
+
+  <g font-family="Arial, sans-serif">
+    <text x="56" y="72" fill="#f8fafc" font-size="32" font-weight="700">End-to-end skill flows</text>
+    <text x="56" y="104" fill="#94a3b8" font-size="18">Real shipped compositions. One lane per common path, with the skill families shown in order.</text>
+
+    <rect x="56" y="138" width="1168" height="126" rx="22" fill="#0b2538" stroke="#22d3ee"/>
+    <text x="86" y="174" fill="#ccfbf1" font-size="24" font-weight="700">1. Raw log detection and export</text>
+    <text x="86" y="204" fill="#e2e8f0" font-size="17">CloudTrail / K8s audit / Okta raw payload</text>
+    <rect x="372" y="160" width="176" height="58" rx="16" fill="#1d4ed8" stroke="#93c5fd"/>
+    <text x="420" y="196" fill="#eff6ff" font-size="19" font-weight="700">ingest-*</text>
+    <rect x="604" y="160" width="176" height="58" rx="16" fill="#0f766e" stroke="#5eead4"/>
+    <text x="654" y="196" fill="#ecfeff" font-size="19" font-weight="700">detect-*</text>
+    <rect x="836" y="160" width="176" height="58" rx="16" fill="#7c3aed" stroke="#c4b5fd"/>
+    <text x="892" y="196" fill="#f5f3ff" font-size="19" font-weight="700">view/*</text>
+    <text x="1044" y="204" fill="#e2e8f0" font-size="17">SARIF / Mermaid / JSON</text>
+    <path d="M250 188 L372 188" stroke="#67e8f9" stroke-width="4" fill="none"/>
+    <path d="M548 188 L604 188" stroke="#93c5fd" stroke-width="4" fill="none"/>
+    <path d="M780 188 L836 188" stroke="#5eead4" stroke-width="4" fill="none"/>
+    <text x="86" y="238" fill="#94a3b8" font-size="15">Example: ingest-cloudtrail-ocsf → detect-lateral-movement → convert-ocsf-to-sarif</text>
+
+    <rect x="56" y="286" width="1168" height="126" rx="22" fill="#10243a" stroke="#60a5fa"/>
+    <text x="86" y="322" fill="#dbeafe" font-size="24" font-weight="700">2. Lake or warehouse analysis with persistence</text>
+    <text x="86" y="352" fill="#e2e8f0" font-size="17">Snowflake / Databricks / S3 object rows</text>
+    <rect x="372" y="308" width="176" height="58" rx="16" fill="#155e75" stroke="#67e8f9"/>
+    <text x="418" y="344" fill="#ecfeff" font-size="19" font-weight="700">source-*</text>
+    <rect x="604" y="308" width="176" height="58" rx="16" fill="#0f766e" stroke="#5eead4"/>
+    <text x="654" y="344" fill="#ecfeff" font-size="19" font-weight="700">detect-*</text>
+    <rect x="836" y="308" width="176" height="58" rx="16" fill="#4c1d95" stroke="#c084fc"/>
+    <text x="889" y="344" fill="#f3e8ff" font-size="19" font-weight="700">sink-*</text>
+    <text x="1044" y="352" fill="#e2e8f0" font-size="17">Snowflake / ClickHouse / S3</text>
+    <path d="M268 336 L372 336" stroke="#60a5fa" stroke-width="4" fill="none"/>
+    <path d="M548 336 L604 336" stroke="#67e8f9" stroke-width="4" fill="none"/>
+    <path d="M780 336 L836 336" stroke="#5eead4" stroke-width="4" fill="none"/>
+    <text x="86" y="386" fill="#94a3b8" font-size="15">Example: source-snowflake-query → detect-lateral-movement → sink-snowflake-jsonl</text>
+
+    <rect x="56" y="434" width="1168" height="126" rx="22" fill="#083344" stroke="#2dd4bf"/>
+    <text x="86" y="470" fill="#ccfbf1" font-size="24" font-weight="700">3. Live posture, discovery, and guarded action</text>
+    <text x="86" y="500" fill="#e2e8f0" font-size="17">Cloud APIs / SaaS APIs / HR changes</text>
+    <rect x="372" y="456" width="176" height="58" rx="16" fill="#0f766e" stroke="#5eead4"/>
+    <text x="411" y="492" fill="#ecfeff" font-size="19" font-weight="700">discover-* / evaluation/*</text>
+    <rect x="604" y="456" width="176" height="58" rx="16" fill="#4338ca" stroke="#a78bfa"/>
+    <text x="650" y="492" fill="#eef2ff" font-size="19" font-weight="700">native outputs</text>
+    <rect x="836" y="456" width="176" height="58" rx="16" fill="#7f1d1d" stroke="#fca5a5"/>
+    <text x="876" y="492" fill="#fee2e2" font-size="19" font-weight="700">remediation/*</text>
+    <text x="1044" y="500" fill="#e2e8f0" font-size="17">audit trail + approval gate</text>
+    <path d="M254 484 L372 484" stroke="#2dd4bf" stroke-width="4" fill="none"/>
+    <path d="M548 484 L604 484" stroke="#5eead4" stroke-width="4" fill="none"/>
+    <path d="M780 484 L836 484" stroke="#a78bfa" stroke-width="4" fill="none"/>
+    <text x="86" y="534" fill="#94a3b8" font-size="15">Example: discover-control-evidence or cspm-aws-cis-benchmark; IAM departures is the flagship guarded write path</text>
+  </g>
+</svg>

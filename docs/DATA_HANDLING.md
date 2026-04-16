@@ -48,6 +48,7 @@ Read next:
 - [RUNTIME_PROFILES.md](RUNTIME_PROFILES.md)
 - [NATIVE_VS_OCSF.md](NATIVE_VS_OCSF.md)
 - [images/data-handling-paths.svg](images/data-handling-paths.svg)
+- [images/end-to-end-skill-flows.svg](images/end-to-end-skill-flows.svg)
 
 ## The Main Scenarios
 

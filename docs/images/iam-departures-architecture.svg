@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 520" role="img" aria-label="IAM Departures Remediation — closed-loop, event-driven pipeline architecture">
   <title>IAM Departures Remediation — closed-loop event-driven pipeline</title>
-  <desc>Six numbered stages across two deployment domains: HR sources and Reconciler inside the AWS Corporate Security OU, Parser and Worker Lambdas inside a VPC-isolated Step Function, then five cloud targets and a dual-write audit trail. A dashed verification loop runs from the audit back to the reconciler for drift detection.</desc>
+  <desc>Six numbered stages across two deployment domains: HR sources and Reconciler inside the AWS Corporate Security OU, then an S3 manifest plus EventBridge trigger into Parser and Worker Lambdas inside a VPC-isolated Step Function, then five cloud targets and a dual-write audit trail. A dashed verification loop runs from the audit back to the reconciler for drift detection.</desc>
 
   <defs>
     <!-- Canvas background -->
@@ -58,6 +58,8 @@
       .box-t  { font-size: 15px; font-weight: 600; fill: #e2e8f0; }
       .box-b  { font-size: 11px; fill: #cbd5e1; }
       .box-i  { font-size: 10px; fill: #64748b; font-style: italic; }
+      .mini   { font-size: 9px; fill: #cbd5e1; }
+      .mini-t { font-size: 10px; font-weight: 600; fill: #e2e8f0; }
       .step-n { font-size: 11px; font-weight: 700; text-anchor: middle; }
       .drift  { font-size: 11px; fill: #22d3ee; font-style: italic; }
       .foot   { font-size: 10px; fill: #475569; }
@@ -131,7 +133,17 @@
     <text x="286" y="186" class="box-t">Reconciler</text>
     <text x="258" y="216" class="box-b">SHA-256 row diff</text>
     <text x="258" y="234" class="box-b">→ S3 manifest (KMS)</text>
-    <text x="258" y="282" class="box-i">→ EventBridge rule</text>
+    <text x="258" y="282" class="box-i">schedule + EventBridge handoff</text>
+  </g>
+
+  <!-- ─── Handoff details: S3 manifest + EventBridge ───────── -->
+  <g filter="url(#shadow)" class="ttl">
+    <rect x="392" y="118" width="96" height="40" rx="9" fill="#111827" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="440" y="136" text-anchor="middle" class="mini-t">S3 manifest</text>
+    <text x="440" y="149" text-anchor="middle" class="mini">KMS object + row diff</text>
+
+    <rect x="410" y="246" width="126" height="34" rx="16" fill="#0b1120" stroke="#60a5fa" stroke-width="1.2"/>
+    <text x="473" y="267" text-anchor="middle" class="mini-t">EventBridge starts Step Function</text>
   </g>
 
   <!-- ─── Station 3 : Parser Lambda ───────────────────────── -->
@@ -194,6 +206,9 @@
     <line x1="623" y1="230" x2="657" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
     <line x1="823" y1="230" x2="857" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
     <line x1="1023" y1="230" x2="1037" y2="230" stroke="#60a5fa" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <line x1="400" y1="190" x2="430" y2="156" stroke="#22d3ee" stroke-width="1.8" stroke-dasharray="5 4"/>
+    <line x1="446" y1="158" x2="468" y2="244" stroke="#60a5fa" stroke-width="1.8" stroke-dasharray="5 4"/>
+    <line x1="536" y1="263" x2="560" y2="230" stroke="#60a5fa" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
   </g>
 
   <!-- ─── Drift verification loop ─────────────────────────── -->

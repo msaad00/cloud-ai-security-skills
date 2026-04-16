@@ -66,7 +66,11 @@ This is how the repo stays secure and reliable without turning every skill into 
 
 The repo is easiest to read as **six shipped skill layers**, plus **three edge/runtime layers** that sit around the pure skills.
 
-![Repository architecture](./images/repo-architecture.svg)
+![Repository architecture showing source inputs, shipped skill layers, persistence edges, query packs, and runtime wrappers around the same contract.](./images/repo-architecture.svg)
+
+The diagram is a layer index, not a second contract: sources feed ingest or
+discover paths, pure skills stay in the middle, and sinks/query packs/runtimes
+sit at the edges around the same bundle contract.
 
 ### Shipped skill layers
 

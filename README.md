@@ -177,7 +177,12 @@ same skill bundle through a different access path.
 
 The flagship example skill family is IAM departures remediation: a guarded, event-driven workflow with a dual audit trail and clear trust boundaries.
 
-![IAM departures cross-cloud workflow](docs/images/iam-departures-architecture.svg)
+![IAM departures workflow showing HR and identity inputs flowing through guarded approval and remediation steps into dual audit outputs.](docs/images/iam-departures-architecture.svg)
+
+The diagram shows the flagship write path only: source events feed a guarded
+planner/worker flow, the reconciler writes an S3 manifest, EventBridge starts
+the Step Function, human approval gates the write edge, and the final action
+trail lands in both operational storage and durable audit outputs.
 
 ## Trust, Security, And Supply Chain
 
@@ -269,6 +274,7 @@ High-signal visuals:
 - [Runtime surfaces](docs/images/runtime-surfaces.svg)
 - [Repository architecture](docs/images/repo-architecture.svg)
 - [Detection engineering pipeline](docs/images/detection-pipeline.svg)
+- [End-to-end skill flows](docs/images/end-to-end-skill-flows.svg)
 - [IAM departures workflow](docs/images/iam-departures-architecture.svg)
 - [IAM departures data flow](docs/images/iam-departures-data-flow.svg)
 
