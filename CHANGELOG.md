@@ -17,6 +17,7 @@ The format is loosely based on Keep a Changelog.
 
 ### Changed
 
+- CI now checks `uv.lock` freshness with `uv lock --check`, and the checked-in lockfile was refreshed to match the current `pyproject.toml` so local `uv` workflows fail on real dependency drift instead of stale metadata.
 - optimized `detect-lateral-movement` to index candidate flows instead of repeatedly rescanning the full flow set per anchor, and added a duplicate-heavy regression test so the faster path preserves the same findings while keeping the benchmarked 10x case in line with the documented runtime envelope.
 
 ### Planned for v0.5.1
