@@ -34,7 +34,9 @@ Current repo-wide canonical schema version:
 See [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md) for bump rules, OCSF pin
 semantics, and upgrade guidance. See
 [`NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md) for the source-by-source
-mapping and identifier reference.
+mapping and identifier reference, and
+[`NORMALIZATION_EXAMPLES.md`](./NORMALIZATION_EXAMPLES.md) for concrete
+side-by-side payload examples.
 
 ## Shared core fields
 
