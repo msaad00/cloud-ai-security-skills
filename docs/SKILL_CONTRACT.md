@@ -138,6 +138,7 @@ Examples:
 - write machine-usable results to `stdout` and human debugging detail to `stderr`
 - return non-zero exit codes on contract-breaking failures
 - surface partial-data / skipped-record behavior explicitly rather than silently dropping it
+- follow the repo-wide exit-code meanings in [`ERROR_CODES.md`](ERROR_CODES.md) when the skill documents or adopts codes beyond `0` and `1`
 
 ## API drift and deprecation handling
 
