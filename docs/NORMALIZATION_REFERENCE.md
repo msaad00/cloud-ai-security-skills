@@ -19,6 +19,7 @@ Use this together with:
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
 - [`CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
 - [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md)
+- [`NORMALIZATION_EXAMPLES.md`](./NORMALIZATION_EXAMPLES.md)
 - the relevant ingest skill's `SKILL.md`
 
 ## Mental model

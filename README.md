@@ -213,7 +213,7 @@ same skill bundle through a different access path.
 | `bridge` | interoperable output with native context preserved | you need both standard fields and repo context in one payload |
 
 `native` is not raw vendor JSON and not an OCSF envelope with fields stripped out.
-`native` = repo-owned external wire format. See [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md), [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md), and [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md).
+`native` = repo-owned external wire format. See [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md), [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md), [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md), and [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md).
 
 ## Flagship Example
 
@@ -302,6 +302,7 @@ Read next:
 - [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
 - [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md)
 - [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md)
+- [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
 - [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
 - [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/OCSF_CONTRACT.md](docs/OCSF_CONTRACT.md)
@@ -351,6 +352,7 @@ Operator and contributor docs:
 - [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
 - [docs/LOSSY_MAPPINGS.md](docs/LOSSY_MAPPINGS.md)
 - [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md)
+- [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
 - [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
