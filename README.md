@@ -393,6 +393,7 @@ Operator and contributor docs:
 - [AGENTS.md](AGENTS.md)
 - [skills/README.md](skills/README.md)
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- [docs/FRAMEWORK_COVERAGE.md](docs/FRAMEWORK_COVERAGE.md)
 - [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md)
 - [docs/ROADMAP.md](docs/ROADMAP.md)
 - [CONTRIBUTING.md](CONTRIBUTING.md)

@@ -57,7 +57,7 @@ Use it when the README feels too high-level and `skills/README.md` feels too cat
 |---|---|
 | OCSF transport and interoperability | [NATIVE_VS_OCSF.md](NATIVE_VS_OCSF.md), [CANONICAL_SCHEMA.md](CANONICAL_SCHEMA.md), [NORMALIZATION_REFERENCE.md](NORMALIZATION_REFERENCE.md), [DATA_FLOW.md](DATA_FLOW.md) |
 | MITRE ATT&CK / ATLAS mapping | [FRAMEWORK_MAPPINGS.md](FRAMEWORK_MAPPINGS.md) |
-| Coverage depth and current status | [framework-coverage.json](framework-coverage.json), [COVERAGE_MODEL.md](COVERAGE_MODEL.md) |
+| Coverage depth and current status | [FRAMEWORK_COVERAGE.md](FRAMEWORK_COVERAGE.md) (have-vs-target matrix), [framework-coverage.json](framework-coverage.json), [COVERAGE_MODEL.md](COVERAGE_MODEL.md) |
 | Compliance and roadmap gaps | [ROADMAP.md](ROADMAP.md) |
 
 ## What it plugs into
