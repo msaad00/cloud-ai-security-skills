@@ -256,6 +256,28 @@ class TestIngestStream:
         assert first["record_type"] == "api_activity"
         assert "class_uid" not in first
 
+    def test_mixed_malformed_batch_keeps_valid_entries(self, capsys):
+        read_event = json.dumps(
+            {
+                "protoPayload": {"@type": AUDIT_LOG_TYPE, "methodName": "x.y.GetThing"},
+                "insertId": "good-read",
+                "timestamp": "2026-04-10T05:00:00Z",
+            }
+        )
+        delete_event = json.dumps(
+            {
+                "protoPayload": {"@type": AUDIT_LOG_TYPE, "methodName": "x.y.DeleteThing"},
+                "insertId": "good-delete",
+                "timestamp": "2026-04-10T05:01:00Z",
+            }
+        )
+        out = list(ingest([read_event, '{"bad"', "[]", delete_event]))
+        assert len(out) == 2
+        assert [event["activity_id"] for event in out] == [ACTIVITY_READ, ACTIVITY_DELETE]
+        stderr = capsys.readouterr().err
+        assert "skipping line 2: json parse failed" in stderr
+        assert "skipping line 3: not a JSON object" in stderr
+
 
 # ── Golden fixture parity ──────────────────────────────────────────────
 

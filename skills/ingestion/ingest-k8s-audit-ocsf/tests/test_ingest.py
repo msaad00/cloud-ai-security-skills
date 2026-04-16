@@ -314,3 +314,34 @@ class TestStderrTelemetry:
         assert payload["level"] == "warning"
         assert payload["event"] == "json_parse_failed"
         assert payload["line"] == 1
+
+    def test_mixed_batch_keeps_valid_events(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        read_event = {
+            "kind": "Event",
+            "apiVersion": "audit.k8s.io/v1",
+            "stage": "ResponseComplete",
+            "auditID": "k8s-read",
+            "verb": "list",
+            "user": {"username": "system:serviceaccount:default:builder"},
+            "objectRef": {"resource": "secrets", "namespace": "default"},
+            "responseStatus": {"code": 200},
+            "requestReceivedTimestamp": "2026-04-10T05:00:00Z",
+        }
+        delete_event = {
+            "kind": "Event",
+            "apiVersion": "audit.k8s.io/v1",
+            "stage": "ResponseComplete",
+            "auditID": "k8s-delete",
+            "verb": "delete",
+            "user": {"username": "system:serviceaccount:default:builder"},
+            "objectRef": {"resource": "deployments", "namespace": "default"},
+            "responseStatus": {"code": 403, "reason": "Forbidden"},
+            "requestReceivedTimestamp": "2026-04-10T05:01:00Z",
+        }
+        out = list(ingest([json.dumps(read_event), '{"bad": ', "[]", json.dumps(delete_event)]))
+        assert len(out) == 2
+        assert [event["metadata"]["uid"] for event in out] == ["k8s-read", "k8s-delete"]
+        stderr_lines = [json.loads(line) for line in capsys.readouterr().err.splitlines() if line.strip()]
+        assert [payload["event"] for payload in stderr_lines] == ["json_parse_failed", "invalid_json_shape"]
+        assert [payload["line"] for payload in stderr_lines] == [2, 3]

@@ -345,6 +345,14 @@ class TestIterRawEvents:
         assert payload["event"] == "json_parse_failed"
         assert payload["line"] == 1
 
+    def test_mixed_batch_keeps_valid_events(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        out = list(ingest([json.dumps(_event(uuid="okta-good-1")), '{"bad"', "[]", json.dumps(_event(uuid="okta-good-2"))]))
+        assert [event["metadata"]["uid"] for event in out] == ["okta-good-1", "okta-good-2"]
+        stderr_lines = [json.loads(line) for line in capsys.readouterr().err.splitlines() if line.strip()]
+        assert [payload["event"] for payload in stderr_lines] == ["json_parse_failed", "invalid_json_shape"]
+        assert [payload["line"] for payload in stderr_lines] == [2, 3]
+
 
 class TestGoldenFixture:
     def test_golden_fixture(self):
