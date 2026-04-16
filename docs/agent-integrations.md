@@ -27,8 +27,9 @@ Use the docs in this order:
 
 Important clarification:
 
-- the repo ships normal executable Python skills
-- agent clients call those skills through MCP or other wrappers
+- the repo ships skill bundles with `SKILL.md`, `REFERENCES.md`, `src/`, and `tests/`
+- the executable Python file is only one part of that bundle
+- agent clients call those same skill bundles through MCP or other wrappers
 - agents do not require a separate implementation model to use them
 
 ## Client quick map
