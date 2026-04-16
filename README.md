@@ -30,6 +30,15 @@ For the full source, asset, framework, and runtime crosswalk, see [docs/USE_CASE
 
 ## Quick Run
 
+These skills are plain executable Python entrypoints first, and agent-usable
+skills second.
+
+Why the README shows `python skills/.../src/<entry>.py`:
+
+- that is the direct shipped entrypoint
+- MCP, CI, and runners call the same skill code
+- the wrapper changes the access path, not the implementation
+
 Start with the bundled Kubernetes audit fixture and generate SARIF in one shot:
 
 ```bash
@@ -40,23 +49,25 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
   > findings.sarif
 ```
 
-If you want to inspect each stage separately, use throwaway files under `/tmp`:
+If you want to inspect each stage separately, write local scratch files in the
+current directory:
 
 ```bash
 python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
   skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  > /tmp/k8s-events.jsonl
+  > k8s-events.ocsf.jsonl
 
 python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-  /tmp/k8s-events.jsonl \
-  > /tmp/k8s-findings.jsonl
+  k8s-events.ocsf.jsonl \
+  > k8s-findings.ocsf.jsonl
 
 python skills/view/convert-ocsf-to-sarif/src/convert.py \
-  /tmp/k8s-findings.jsonl \
+  k8s-findings.ocsf.jsonl \
   > findings.sarif
 ```
 
-`/tmp` here just means scratch files for debugging. The final output you keep is `findings.sarif`.
+Those intermediate files are only for debugging. The final output you usually
+keep is `findings.sarif`.
 
 If you want the repo-owned native wire format instead of OCSF:
 
@@ -68,6 +79,55 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
       --output-format native \
   > findings.native.jsonl
 ```
+
+### Real input and output
+
+Input fixture line, abbreviated:
+
+```json
+{"kind":"Event","stage":"ResponseComplete","verb":"list","auditID":"k1-list-secrets","user":{"username":"system:serviceaccount:default:builder"}}
+```
+
+OCSF event output, abbreviated:
+
+```json
+{"class_uid":6003,"class_name":"API Activity","metadata":{"uid":"k1-list-secrets"},"api":{"operation":"list"},"resources":[{"type":"secrets","namespace":"default"}]}
+```
+
+Native event output, abbreviated:
+
+```json
+{"schema_mode":"native","record_type":"api_activity","event_uid":"k1-list-secrets","operation":"list","resources":[{"type":"secrets","namespace":"default"}]}
+```
+
+OCSF finding output, abbreviated:
+
+```json
+{"class_uid":2004,"class_name":"Detection Finding","finding_info":{"title":"Service account enumerated and read a Kubernetes secret"}}
+```
+
+Native finding output, abbreviated:
+
+```json
+{"schema_mode":"native","record_type":"detection_finding","title":"Service account enumerated and read a Kubernetes secret"}
+```
+
+### Same skill, different access path
+
+The skill code stays the same across all of these:
+
+- direct CLI:
+  - `python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py ...`
+- MCP / agent:
+  - Claude, Codex, Cursor, Windsurf, or Cortex call the same skill through
+    `mcp-server/`
+- CI:
+  - GitHub Actions or another pipeline invokes the same script and checks its output
+- runner:
+  - the runner template wraps the same skill in an event-driven path
+
+Agent clients do not require a second implementation of the skill. They call
+the same code through a different entrypoint.
 
 ## Native vs OCSF
 

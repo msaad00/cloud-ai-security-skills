@@ -25,6 +25,12 @@ Use the docs in this order:
 - A native local MCP server under [`mcp-server/`](../mcp-server/README.md)
 - Project-scoped MCP config in [`.mcp.json`](../.mcp.json) for Claude Code and similar clients
 
+Important clarification:
+
+- the repo ships normal executable Python skills
+- agent clients call those skills through MCP or other wrappers
+- agents do not require a separate implementation model to use them
+
 ## Client quick map
 
 | Tool | Best integration path | What to rely on |

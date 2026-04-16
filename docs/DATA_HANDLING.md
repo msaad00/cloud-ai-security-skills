@@ -12,6 +12,25 @@ Use this doc when you need to answer:
 - when `native`, `ocsf`, `canonical`, or `bridge` matters
 - what security controls apply on each path
 
+## One Skill, Many Access Paths
+
+The repo ships executable Python skills. Agent tools and wrappers call those
+same entrypoints; they do not replace them.
+
+| Access path | What is actually running |
+|---|---|
+| direct CLI | `python skills/<layer>/<skill>/src/<entry>.py` |
+| MCP | local wrapper in `mcp-server/` calling the same skill |
+| CI | workflow step invoking the same skill code |
+| runner | serverless or queue wrapper invoking the same skill code |
+| query pack | SQL equivalent for selected warehouse-native detections |
+
+Short rule:
+
+- these are agent-usable skills
+- they are not agent-only skills
+- the direct Python entrypoint is the most truthful wrapper-free example
+
 Read next:
 
 - [DATA_FLOW.md](DATA_FLOW.md)
@@ -179,6 +198,12 @@ Use when:
 - you need a point-in-time benchmark or control result
 - the data does not already exist in a lake
 
+Example shape:
+
+```json
+{"control_id":"1.1","status":"PASS","severity":"HIGH"}
+```
+
 ### 2. Raw log detection
 
 ```text
@@ -189,6 +214,26 @@ Use when:
 
 - you have raw CloudTrail, Okta, Entra, K8s audit, or similar payloads
 - you want a deterministic repo-owned transform before detection
+
+Example:
+
+Input:
+
+```json
+{"kind":"Event","stage":"ResponseComplete","verb":"list","auditID":"k1-list-secrets"}
+```
+
+OCSF event out:
+
+```json
+{"class_uid":6003,"metadata":{"uid":"k1-list-secrets"},"api":{"operation":"list"}}
+```
+
+Native finding out after detection:
+
+```json
+{"schema_mode":"native","record_type":"detection_finding","rule_name":"r1-secret-enum"}
+```
 
 ### 3. Lake detection on already-shaped rows
 
@@ -201,6 +246,12 @@ Use when:
 - the warehouse already stores OCSF-shaped or repo-native rows
 - you want to skip the ingest step
 
+Example:
+
+```text
+source-snowflake-query -> detect-lateral-movement
+```
+
 ### 4. Lake detection on raw rows
 
 ```text
@@ -211,6 +262,12 @@ Use when:
 
 - the warehouse stores raw vendor JSON
 - you still want the repo's tested normalization logic
+
+Example:
+
+```text
+source-databricks-query -> ingest-cloudtrail-ocsf -> detect-lateral-movement
+```
 
 ### 5. Persisting findings or evidence
 
@@ -223,6 +280,12 @@ Use when:
 - you need durable storage in Snowflake, ClickHouse, S3, or a customer-owned sink
 - the sink path is append-only or otherwise explicitly documented
 
+Example sink result:
+
+```json
+{"record_type":"sink_result","written_records":3,"written_objects":1}
+```
+
 ### 6. Guarded action path
 
 ```text
@@ -233,6 +296,12 @@ Use when:
 
 - the task is operational, not just analytical
 - a human approval and audit trail are part of the contract
+
+Example result:
+
+```json
+{"record_type":"remediation_result","status":"dry_run","actions_planned":13}
+```
 
 ## What This Repo Does Not Assume
 
