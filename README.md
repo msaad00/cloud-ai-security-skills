@@ -247,6 +247,7 @@ Operator and contributor docs:
 - [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
+- [docs/COMPLIANCE_MAPPINGS.md](docs/COMPLIANCE_MAPPINGS.md)
 - [docs/agent-integrations.md](docs/agent-integrations.md)
 - [skills/README.md](skills/README.md)
 - [docs/DEBUGGING.md](docs/DEBUGGING.md)

@@ -157,6 +157,9 @@ Recommended next step:
 | **PCI DSS 4.0** | AWS evaluation |
 | **NIST AI RMF** | model-serving docs and roadmap expansion |
 
+For procurement-focused mappings to SOC 2 common criteria and ISO/IEC
+27001:2022 Annex A, see [COMPLIANCE_MAPPINGS.md](COMPLIANCE_MAPPINGS.md).
+
 ## AI BOM
 
 AI BOM is **not** the identity of the repo, but it is now a shipped discovery capability.
