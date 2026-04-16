@@ -25,7 +25,7 @@ The short version:
 Related docs:
 
 - [`SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md)
-- [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md)
+- [`SCHEMA_COVERAGE.md`](./SCHEMA_COVERAGE.md)
 - [`NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md)
 - [`NORMALIZATION_EXAMPLES.md`](./NORMALIZATION_EXAMPLES.md)
 
@@ -340,7 +340,7 @@ Query packs emit OCSF-compatible finding rows, but they also need warehouse
 specific type locking, result contracts, and SQL-level guarantees that are
 outside a pure OCSF schema decision.
 
-For source-by-source detail, see [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md).
+For source-by-source detail, see [`SCHEMA_COVERAGE.md`](./SCHEMA_COVERAGE.md).
 
 ## Practical decision tree
 

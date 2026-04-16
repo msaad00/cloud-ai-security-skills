@@ -1,9 +1,9 @@
-# Lossy Mappings
+# Schema Coverage
 
-This file documents where a source payload loses detail when normalized for the
-repo’s native or OCSF projections.
+This file documents, per source, which raw fields land cleanly in OCSF, which
+are preserved as repo-native detail, and which are deliberately omitted.
 
-The goal is not to claim “OCSF always loses fields.” The honest questions are:
+The intent is coverage honesty, not a "lossy" label:
 
 - what is preserved from raw input
 - what is normalized
@@ -22,7 +22,7 @@ Use this doc together with:
 | Column | Meaning |
 |---|---|
 | Field / context | the original source field or structure |
-| Lost at raw -> normalized | detail dropped before either native or OCSF output |
+| Dropped at raw -> normalized | detail omitted before either native or OCSF output |
 | Preserved in `unmapped.*` | vendor detail kept, but not as first-class normalized fields |
 | Native-only | detail kept only in repo-native output |
 | Clean in OCSF | detail represented cleanly as standard OCSF fields |
@@ -33,7 +33,7 @@ This skill is intentionally selective. It preserves the fields most useful for
 cross-cloud activity analysis, but it does not try to serialize the full
 CloudTrail payload into either native or OCSF output.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `eventID`, `eventName`, `eventSource`, `eventTime`, `recipientAccountId`, `awsRegion` | no | no | no | yes |
 | `requestParameters` top-level keys | partial | no | no | partial via `resources[]` |
@@ -56,7 +56,7 @@ output should not be treated as an archival substitute for raw CloudTrail.
 This skill preserves more vendor detail than the CloudTrail ingester because it
 keeps Okta-specific correlation data under `unmapped`.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `uuid`, `published`, `eventType`, outcome result | no | no | no | yes |
 | `transaction.id` and `authenticationContext.rootSessionId` | no | yes | no | not first-class |
@@ -71,15 +71,15 @@ keeps Okta-specific correlation data under `unmapped`.
 
 Okta session and transaction identifiers survive both modes because the skill
 keeps them under `unmapped.okta.*`. That means this skill is not a good example
-of “OCSF drops everything vendor-specific.” The real loss is from the raw Okta
-payload to the normalized contract, not mostly from native to OCSF.
+of “OCSF drops everything vendor-specific.” The real narrowing happens from the
+raw Okta payload to the normalized contract, not mostly from native to OCSF.
 
 ## ingest-entra-directory-audit-ocsf
 
 The Entra ingester also preserves a useful vendor-specific tail under
 `unmapped.entra`, but it still flattens some target and initiator detail.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `id`, `correlationId`, `activityDateTime`, `activityDisplayName`, `result` | no | no | no | yes |
 | `additionalDetails` | no | yes | no | not first-class |
@@ -95,7 +95,7 @@ AWS VPC Flow Logs are tuple-based rather than request-shaped. The ingester keeps
 the fields needed for flow correlation and disposition, but it does not try to
 preserve the full raw line shape.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `account-id`, `interface-id`, `srcaddr`, `dstaddr`, `srcport`, `dstport`, `protocol`, `start`, `end`, `action` | no | no | no | yes |
 | `bytes`, `packets` | no | no | no | yes |
@@ -107,10 +107,10 @@ preserve the full raw line shape.
 ## ingest-guardduty-ocsf
 
 GuardDuty is already a finding-shaped feed, so the OCSF fit is good. The main
-loss is the long tail of provider-specific fields that are summarized into
+trade-off is the long tail of provider-specific fields that are summarized into
 normalized finding metadata rather than preserved verbatim.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `Id`, `Arn`, `Type`, `Title`, `Description`, `AccountId`, `Region` | no | no | no | yes |
 | `Severity`, `CreatedAt`, `UpdatedAt`, `Service.EventFirstSeen`, `Service.EventLastSeen` | no | no | no | yes |
@@ -124,7 +124,7 @@ normalized finding metadata rather than preserved verbatim.
 Security Hub findings also fit OCSF Detection Finding well. The main selective
 projection happens inside the richer ASFF compliance and provider metadata.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `Id`, `AwsAccountId`, `Title`, `Description`, `Types`, `CreatedAt`, `UpdatedAt` | no | no | no | yes |
 | `Severity.Label`, `Severity.Normalized` | no | no | no | yes |
@@ -141,7 +141,7 @@ The GCP audit ingester is selective in the same way as CloudTrail: it keeps the
 parts needed for cross-cloud API activity correlation, not the full raw
 `protoPayload`.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `insertId`, `timestamp`, `serviceName`, `methodName`, `resourceName`, `resource.labels.project_id`, `resource.labels.location` | no | no | no | yes |
 | `authenticationInfo.principalEmail`, `principalSubject`, `serviceAccountKeyName` | no | no | no | yes |
@@ -155,7 +155,7 @@ parts needed for cross-cloud API activity correlation, not the full raw
 GCP VPC flow exports are also tuple-shaped. The ingester keeps the fields
 needed for network activity analysis and drops the rest of the exporter shape.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | connection tuple fields such as `src_ip`, `dest_ip`, `src_port`, `dest_port`, `protocol`, `start_time`, `end_time`, `disposition` | no | no | no | yes |
 | project, VPC, subnet, reporter, region context | no | no | no | partial via normalized cloud and source context |
@@ -169,7 +169,7 @@ needed for network activity analysis and drops the rest of the exporter shape.
 Security Command Center findings are normalized cleanly at the headline level,
 but the broader SCC finding document is much richer than the current contract.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `name`, `category`, `description`, `eventTime` / `createTime`, `severity`, `state`, `findingClass`, `resourceName` | no | no | no | yes |
 | project identity derived from the finding name or resource path | no | no | no | partial via normalized cloud/account fields |
@@ -182,7 +182,7 @@ but the broader SCC finding document is much richer than the current contract.
 Azure Activity Log maps well to API Activity, but the raw `properties` object is
 larger than the normalized contract.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `eventDataId`, `correlationId`, `time`, `operationName`, `resourceId`, subscription and region context | no | no | no | yes |
 | actor fields from `claims` / `caller` and source IP | no | no | no | yes |
@@ -195,7 +195,7 @@ larger than the normalized contract.
 Defender for Cloud findings preserve the key alert identity and compliance
 signals, but not the full raw alert body.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | alert ID, title, description, severity, time, `resourceDetails.id`, `resourceDetails.location` | no | no | no | yes |
 | `compromisedEntity`, `remediationSteps`, compliance status, compliance control ID | no | no | no | partial via normalized source/compliance context |
@@ -208,7 +208,7 @@ signals, but not the full raw alert body.
 Azure NSG flow logs are normalized the same way as the other flow exports: keep
 the tuple and boundary context, drop the rest of the exporter shape.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | tuple fields such as source, destination, ports, protocol, decision, flow state, bytes and packets | no | no | no | yes |
 | NSG resource ID, rule, MAC, location, subscription context | no | no | no | partial via normalized cloud and source context |
@@ -219,10 +219,10 @@ the tuple and boundary context, drop the rest of the exporter shape.
 ## ingest-k8s-audit-ocsf
 
 Kubernetes audit maps well to API Activity for verb, actor, and object
-identity. The main loss is the full request / response body and the long tail
-of raw audit metadata.
+identity. The main trade-off is the full request / response body and the long
+tail of raw audit metadata.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `auditID`, `verb`, `requestURI`, `user.*`, `sourceIPs`, `userAgent`, `objectRef.*`, `responseStatus.code` | no | no | no | yes |
 | service-account namespace derivation and normalized authz labels | no | no | yes, some fields are native-first | partial |
@@ -235,7 +235,7 @@ of raw audit metadata.
 Workspace login audit is one of the better examples of vendor context preserved
 under `unmapped` rather than dropped outright.
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `id.time`, `id.uniqueQualifier`, `applicationName`, supported login event names | no | no | no | yes |
 | actor, subject user, source IP, session handle | no | no | no | yes |
@@ -247,11 +247,11 @@ under `unmapped` rather than dropped outright.
 ## ingest-mcp-proxy-ocsf
 
 MCP proxy telemetry is intentionally normalized into the repo's custom MCP
-profile over OCSF Application Activity. That means the loss question is less
-"OCSF vs native" and more "generic OCSF vs custom MCP profile vs full raw
+profile over OCSF Application Activity. That means the coverage question is
+less "OCSF vs native" and more "generic OCSF vs custom MCP profile vs full raw
 JSON-RPC body."
 
-| Field / context | Lost at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
+| Field / context | Dropped at raw -> normalized | Preserved in `unmapped.*` | Native-only | Clean in OCSF |
 |---|---|---|---|---|
 | `timestamp`, `session_id`, `method`, `direction` | no | no | no | yes via the MCP custom profile |
 | tool name, description, schema fingerprint, tool fingerprint | no | no | no | yes via the MCP custom profile |
@@ -268,4 +268,4 @@ not normalize vendor payloads into native or OCSF contracts. They are raw
 query / extraction edges, not schema-projection skills.
 
 When a new ingest skill ships, update this file in the same change so the
-auditable loss story stays complete.
+auditable coverage story stays complete.

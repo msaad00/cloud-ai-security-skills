@@ -18,7 +18,7 @@ Use this together with:
 
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
 - [`CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
-- [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md)
+- [`SCHEMA_COVERAGE.md`](./SCHEMA_COVERAGE.md)
 - [`NORMALIZATION_EXAMPLES.md`](./NORMALIZATION_EXAMPLES.md)
 - the relevant ingest skill's `SKILL.md`
 
@@ -89,7 +89,7 @@ Short rule:
 | Main operation mapping | `eventName -> api.operation` |
 | Resource mapping | selected top-level `requestParameters` keys -> `resources[]` |
 | Stable ID rule | preserve `eventID` as the primary event identity |
-| Known loss / caveat | nested `requestParameters`, `responseElements`, and `additionalEventData` are intentionally selective; see [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md) |
+| Known trade-off / caveat | nested `requestParameters`, `responseElements`, and `additionalEventData` are intentionally selective; see [`SCHEMA_COVERAGE.md`](./SCHEMA_COVERAGE.md) |
 
 Abbreviated example:
 

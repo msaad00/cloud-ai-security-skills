@@ -16,7 +16,7 @@ Use this together with:
 - [`NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md)
 - [`NATIVE_VS_OCSF.md`](./NATIVE_VS_OCSF.md)
 - [`CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
-- [`LOSSY_MAPPINGS.md`](./LOSSY_MAPPINGS.md)
+- [`SCHEMA_COVERAGE.md`](./SCHEMA_COVERAGE.md)
 
 The examples here are abbreviated on purpose. They show the placement of the
 important fields, not every field the full output may include.
