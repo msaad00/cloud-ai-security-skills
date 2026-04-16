@@ -15,7 +15,7 @@ Read next:
 - [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)
 - [THREAT_MODEL.md](THREAT_MODEL.md)
 - [ERROR_CODES.md](ERROR_CODES.md)
-- [agent-integrations.md](agent-integrations.md)
+- [../AGENTS.md](../AGENTS.md)
 
 ## Scope
 

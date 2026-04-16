@@ -390,7 +390,7 @@ Operator and contributor docs:
 - [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 - [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
 - [docs/COMPLIANCE_MAPPINGS.md](docs/COMPLIANCE_MAPPINGS.md)
-- [docs/agent-integrations.md](docs/agent-integrations.md)
+- [AGENTS.md](AGENTS.md)
 - [skills/README.md](skills/README.md)
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - [docs/FRAMEWORK_COVERAGE.md](docs/FRAMEWORK_COVERAGE.md)
