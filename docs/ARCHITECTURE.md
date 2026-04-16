@@ -10,6 +10,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 - **Sink / persistence contract** — see [`./SINK_CONTRACT.md`](./SINK_CONTRACT.md)
 - **Runner / streaming contract** — see [`./RUNNER_CONTRACT.md`](./RUNNER_CONTRACT.md)
 - **Runtime isolation and trust boundaries** — see [`./RUNTIME_ISOLATION.md`](./RUNTIME_ISOLATION.md)
+- **Threats, actors, and mitigations** — see [`./THREAT_MODEL.md`](./THREAT_MODEL.md)
 - **SIEM indexing and dedupe guidance** — see [`./SIEM_INDEX_GUIDE.md`](./SIEM_INDEX_GUIDE.md)
 - **Canonical schema contract** — see [`./CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
 - **Raw → canonical → native / OCSF / bridge flow** — see [`./DATA_FLOW.md`](./DATA_FLOW.md)

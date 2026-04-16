@@ -97,6 +97,7 @@ The flagship example skill family is IAM departures remediation: a guarded, even
 Read next:
 - [SECURITY.md](SECURITY.md)
 - [SECURITY_BAR.md](SECURITY_BAR.md)
+- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md)
 - [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
@@ -180,6 +181,7 @@ Operator and contributor docs:
 - [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)
 - [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
 - [docs/LOSSY_MAPPINGS.md](docs/LOSSY_MAPPINGS.md)
+- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - [docs/agent-integrations.md](docs/agent-integrations.md)
 - [skills/README.md](skills/README.md)
 - [docs/DEBUGGING.md](docs/DEBUGGING.md)
