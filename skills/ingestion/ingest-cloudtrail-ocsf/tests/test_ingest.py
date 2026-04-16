@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import os
+import random
+import string
 import sys
 from pathlib import Path
 
@@ -248,6 +250,18 @@ class TestIterRawEvents:
         assert payload["level"] == "warning"
         assert payload["event"] == "json_parse_failed"
         assert payload["line"] == 1
+
+    def test_mixed_random_garbage_keeps_valid_events(self, capsys):
+        rng = random.Random(7)
+        alphabet = string.ascii_letters + string.digits + "[]{}:,"
+        malformed = ["".join(rng.choice(alphabet) for _ in range(25)) for _ in range(20)]
+        lines = malformed + [json.dumps({"eventName": "StillGood"})]
+
+        out = list(iter_raw_events(lines))
+
+        assert out == [{"eventName": "StillGood"}]
+        stderr = capsys.readouterr().err
+        assert "skipping line" in stderr
 
 
 # ── Golden fixture parity ──────────────────────────────────────────────

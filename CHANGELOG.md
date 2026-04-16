@@ -11,6 +11,12 @@ The format is loosely based on Keep a Changelog.
 
 ## Unreleased
 
+### Planned for v0.5.1
+
+- add parser-hardening follow-up tests on the highest-volume ingestion paths so malformed mixed-shape input keeps failing closed without breaking valid records in the same batch
+- improve visual accessibility and readability with diagram descriptions, clearer captions, and continued overlap cleanup in rendered SVGs
+- continue post-release quality work such as mutation/property-based parser testing where it adds measurable confidence without changing shipped contracts
+
 ## 0.5.0 - 2026-04-15
 
 ### Added

@@ -14,6 +14,26 @@ Keep markdown diagrams lightweight and reviewable, then pair them with polished 
 - [IAM departures data flow](images/iam-departures-data-flow.svg)
 - [Detection engineering pipeline](images/detection-pipeline.svg)
 
+## Diagram descriptions
+
+Use these descriptions as the text companion for screen readers, plain-text
+review, and PR discussions where opening the SVG is inconvenient.
+
+- `data-handling-paths.svg`
+  - Shows the main runtime choices: live cloud posture, raw log ingest, OCSF-ready lake detection, raw lake detection through ingest, persistence via sinks, and guarded remediation.
+- `start-here-guide.svg`
+  - Shows the shortest decision tree for choosing a first layer: discover for inventory/evidence, ingest for raw logs, detect for normalized events, evaluate for posture, sink for persistence, and remediate for guarded writes.
+- `runtime-surfaces.svg`
+  - Shows that CLI, CI, MCP, and persistent runners are access paths around the same skill bundle and execution core rather than separate implementations.
+- `iam-departures-architecture.svg`
+  - Shows the flagship write path: HR/IdP inputs, guarded orchestration, human approval, worker actions, and dual audit writes for reconciliation.
+- `repo-architecture.svg`
+  - Shows the six shipped skill layers plus the surrounding source, sink, query-pack, and runtime surfaces that compose around them.
+- `iam-departures-data-flow.svg`
+  - Shows the remediation workflow data path from source manifests through planning, approval, execution, and audit artifacts.
+- `detection-pipeline.svg`
+  - Shows the standard event path from raw input through normalization, detection, optional export, and downstream persistence.
+
 ## Rules
 
 - Keep ASCII or Mermaid diagrams in markdown for git-friendly diffs.
