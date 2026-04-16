@@ -14,7 +14,7 @@ Read next:
 
 - [ERROR_CODES.md](ERROR_CODES.md)
 - [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)
-- [DEBUGGING.md](DEBUGGING.md)
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - [schemas/stderr-telemetry.schema.json](schemas/stderr-telemetry.schema.json)
 
 ## Scope
