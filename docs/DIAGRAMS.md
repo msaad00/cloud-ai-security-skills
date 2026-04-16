@@ -6,14 +6,15 @@ Keep markdown diagrams lightweight and reviewable, then pair them with polished 
 
 ## Visual set
 
+- Primary visuals:
+  - [Repository architecture](images/repo-architecture.svg)
+  - [End-to-end skill flows](images/end-to-end-skill-flows.svg)
+  - [IAM departures cross-cloud workflow](images/iam-departures-architecture.svg)
 - [Data handling paths](images/data-handling-paths.svg)
 - [Start here guide](images/start-here-guide.svg)
 - [Runtime surfaces](images/runtime-surfaces.svg)
-- [IAM departures cross-cloud workflow](images/iam-departures-architecture.svg)
-- [Repository architecture](images/repo-architecture.svg)
 - [IAM departures data flow](images/iam-departures-data-flow.svg)
 - [Detection engineering pipeline](images/detection-pipeline.svg)
-- [End-to-end skill flows](images/end-to-end-skill-flows.svg)
 
 ## Diagram descriptions
 
@@ -23,7 +24,7 @@ review, and PR discussions where opening the SVG is inconvenient.
 - `data-handling-paths.svg`
   - Shows the main data-entry choices, the first skill family for each, the resulting outputs, and the control boundary that applies on each path.
 - `start-here-guide.svg`
-  - Shows the shortest decision tree for choosing a first layer: discover for inventory/evidence, ingest for raw logs, detect for normalized events, evaluate for posture, sink for persistence, and remediate for guarded writes.
+  - Shows the shortest operator decision tree for choosing the first layer: discover, ingest, detect, evaluate, sink, or remediate.
 - `runtime-surfaces.svg`
   - Shows that CLI, CI, MCP, and persistent runners are access paths around the same skill bundle and execution core rather than separate implementations.
 - `iam-departures-architecture.svg`

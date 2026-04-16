@@ -366,14 +366,16 @@ Read next:
 <details>
 <summary><b>More Diagrams And Docs</b></summary>
 
-High-signal visuals:
+Primary visuals:
+- [Repository architecture](docs/images/repo-architecture.svg)
+- [End-to-end skill flows](docs/images/end-to-end-skill-flows.svg)
+- [IAM departures workflow](docs/images/iam-departures-architecture.svg)
+
+Secondary visuals:
 - [Data handling paths](docs/images/data-handling-paths.svg)
 - [Start here guide](docs/images/start-here-guide.svg)
 - [Runtime surfaces](docs/images/runtime-surfaces.svg)
-- [Repository architecture](docs/images/repo-architecture.svg)
 - [Detection engineering pipeline](docs/images/detection-pipeline.svg)
-- [End-to-end skill flows](docs/images/end-to-end-skill-flows.svg)
-- [IAM departures workflow](docs/images/iam-departures-architecture.svg)
 - [IAM departures data flow](docs/images/iam-departures-data-flow.svg)
 
 Operator and contributor docs:
