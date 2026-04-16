@@ -69,3 +69,29 @@ system.
 - SNS only sees deduped findings
 - operators should scope the Lambda roles to the specific source bucket, queue,
   topic, and table ARNs in their environment
+
+## Live Deploy Verification Status
+
+Current repo reality:
+
+- the template is shipped
+- handler behavior is covered in tests
+- infrastructure validation runs in CI
+- a checked-in real-cloud deploy-and-first-event walkthrough is still pending
+
+That remaining deployment proof is tracked in
+[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198).
+
+## First Event Proof Checklist
+
+When capturing the live walkthrough for this runner, record:
+
+1. the exact CloudFormation deploy command and parameters
+2. the source bucket notification binding
+3. one uploaded object that triggers the ingest path
+4. evidence that:
+   - ingest Lambda ran
+   - an SQS detect message was created
+   - detect Lambda ran
+   - a DynamoDB dedupe row was written
+   - an SNS publish succeeded

@@ -78,3 +78,29 @@ based on cost, quota, and downstream sink pressure for their environment.
 - Pub/Sub findings fan-out sees only deduped findings
 - operators should scope the service accounts to the specific bucket, topics,
   and Firestore collection for their environment
+
+## Live Deploy Verification Status
+
+Current repo reality:
+
+- the Terraform template is shipped
+- handler behavior is covered in tests
+- Terraform validation runs in CI
+- a checked-in real-cloud deploy-and-first-event walkthrough is still pending
+
+That remaining deployment proof is tracked in
+[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198).
+
+## First Event Proof Checklist
+
+When capturing the live walkthrough for this runner, record:
+
+1. the exact Terraform apply inputs and deployed resources
+2. the packaged Cloud Function artifacts and runtime binding
+3. one object finalized in the watched GCS bucket
+4. evidence that:
+   - ingest function ran
+   - the detect Pub/Sub topic received messages
+   - detect function ran
+   - a Firestore dedupe document was created
+   - findings topic publish succeeded
