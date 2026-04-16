@@ -27,7 +27,7 @@ review, and PR discussions where opening the SVG is inconvenient.
 - `runtime-surfaces.svg`
   - Shows that CLI, CI, MCP, and persistent runners are access paths around the same skill bundle and execution core rather than separate implementations.
 - `iam-departures-architecture.svg`
-  - Shows the flagship write path: HR/IdP inputs, guarded orchestration, human approval, worker actions, and dual audit writes for reconciliation.
+  - Shows the flagship write path in four stages: actionable-set selection, guarded orchestration, scoped target writes, and dual audit with drift verification.
 - `repo-architecture.svg`
   - Shows the six shipped skill layers plus the surrounding source, sink, query-pack, and runtime surfaces that compose around them.
 - `iam-departures-data-flow.svg`
