@@ -50,7 +50,8 @@ metadata:
 # IAM Departures Remediation
 
 Automated IAM cleanup for departed employees with rehire-safe logic, change-driven
-exports, and a 2-Lambda Step Function remediation pipeline.
+exports, and an AWS-native EventBridge -> Step Function -> 2-Lambda remediation
+pipeline.
 
 Read [reference.md](reference.md) for detailed architecture, framework mappings,
 IAM role ARN definitions, and security model. Read [examples.md](examples.md)
@@ -69,13 +70,13 @@ for deployment walkthroughs and usage scenarios.
 ```mermaid
 flowchart TD
     HR["HR Source<br/>Workday / Snowflake / Databricks / ClickHouse"]
-    REC{"Reconciler<br/>SHA-256 change detect"}
+    REC{"Reconciler<br/>rehire-aware SHA-256 change detect"}
     EXIT["EXIT — no changes"]
     S3["S3 Manifest<br/>KMS · versioned<br/>EventBridge enabled"]
     EB["EventBridge Rule<br/>Object Created<br/>prefix departures/"]
 
     subgraph SFN["Step Function — VPC isolated"]
-        L1["Lambda 1 — Parser<br/>validate, grace period,<br/>rehire filter"]
+        L1["Lambda 1 — Parser<br/>validate manifest,<br/>recheck grace + IAM state"]
         L2["Lambda 2 — Worker<br/>13-step IAM cleanup"]
     end
 
@@ -109,7 +110,7 @@ flowchart TD
 - **Dry-run first**: use the parser and cross-cloud worker dry-run paths before any real execution. Planning, examples, and validation should never start with a destructive path.
 - **Deny policies**: Root, `break-glass-*`, and `emergency-*` accounts are protected by explicit IAM deny — the pipeline cannot touch them.
 - **Grace period**: 7-day default window before remediation (configurable). HR corrections within this window prevent accidental deletion.
-- **Rehire safety**: 8 scenarios handled. Active employees with same IAM are always skipped.
+- **Rehire safety**: 8 scenarios handled. The reconciler/export path applies the primary rehire-aware `should_remediate()` filter before writing the S3 manifest; the parser Lambda rechecks before worker execution.
 - **Cross-account scoped**: STS AssumeRole limited by `aws:PrincipalOrgID` condition — cannot escape the AWS Organization.
 - **Encryption**: S3 manifests KMS-encrypted. DynamoDB encryption at rest. Lambda env vars encrypted.
 - **VPC isolation**: Both Lambdas run in VPC with no public internet (NAT gateway for AWS API calls only).
@@ -134,6 +135,9 @@ The pipeline handles 8 rehire scenarios. Key rules:
 
 See `src/reconciler/sources.py:DepartureRecord.should_remediate()` for the
 complete decision tree.
+
+The parser Lambda is intentionally a second safety gate, not the first place
+rehire decisions are made.
 
 ## IAM Deletion Order
 
@@ -170,6 +174,19 @@ for deployable templates.
 | Cross-Account | `iam-remediation-role` | IAM read/write in target accounts (StackSets) |
 | DLQ | `iam-departures-dlq` (SQS) | Captures Lambda async failures for replay (KMS encrypted) |
 | Alerts | `iam-departures-alerts` (SNS) | EventBridge fires on `Step Functions Execution Status Change` for `FAILED` / `TIMED_OUT` / `ABORTED` |
+
+## Cross-cloud workflow shape
+
+The shipped flagship control plane is AWS-native:
+
+- reconciler writes the actionable manifest to S3
+- EventBridge starts the Step Function
+- the Step Function invokes parser and worker Lambdas
+- audit artifacts land in DynamoDB + S3 and then ingest back into the warehouse
+
+Equivalent GCP or Azure workflows should keep the same guardrails and skill
+contract, but use native services for those clouds rather than pretending one
+orchestration stack fits every provider.
 
 ## Data Sources
 

@@ -38,6 +38,7 @@ Short rule:
 
 - these are agent-usable skills
 - they are not agent-only skills
+- the normal agent path is MCP tool calling by skill name
 - the direct Python entrypoint is the clearest wrapper-free execution example
 - the full skill contract still lives in the bundle, not just the script file
 
@@ -132,7 +133,7 @@ Short rule:
 |---|---|---|
 | CLI | local runs, fixtures, one-shot pipelines | every shipped skill remains a direct script entrypoint |
 | CI | regression tests, policy checks, exports | the same skills run inside workflows; CI adds validation and release controls |
-| MCP | local agent tooling | the wrapper exposes the same skill contracts; it does not create a second implementation |
+| MCP | local agent tooling | agents call skill names with `input`, `args`, and optional `output_format`; the wrapper exposes the same skill contracts and does not create a second implementation |
 | Runner template | event-driven, queue-backed, scheduled processing | the repo ships concrete AWS, GCP, and Azure templates, but not a universal managed control plane |
 | Query pack | warehouse-native detection | currently partial shipping, not every detection exists as a SQL pack |
 | Sink | durable persistence edge | persistence is explicit and separate from pure detection logic |
@@ -196,6 +197,13 @@ Expected posture:
 - separate principals for read, detect, sink, and remediation roles where possible
 - checkpointing, dedupe, and bounded concurrency
 - append-only audit where feasible
+
+Cross-cloud note:
+
+- keep the skill contract the same across clouds
+- do not force AWS EventBridge or Step Functions semantics onto GCP or Azure
+- use native services per cloud for triggers, orchestration, and durable state
+- same guardrails, different orchestration substrate
 
 ## Example Paths
 

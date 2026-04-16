@@ -21,6 +21,15 @@ and cross-cloud roadmap.
 ## Architecture Diagram
 
 ```
+
+Cross-cloud note:
+
+- the shipped flagship workflow is AWS-native because the current remediation
+  control plane is deployed in AWS
+- keep the approval model, manifest contract, and audit semantics consistent
+  across clouds
+- use native orchestration services per cloud instead of forcing AWS
+  EventBridge or Step Functions semantics onto GCP or Azure
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    AWS Organization — Security OU Account                    │
 │                                                                             │
@@ -38,7 +47,7 @@ and cross-cloud roadmap.
 │  │                                                                    │    │
 │  │  sources.py ─→ DepartureRecord[]                                   │    │
 │  │      │              │                                              │    │
-│  │      │         should_remediate()                                  │    │
+│  │      │   should_remediate() + rehire/grace handling                │    │
 │  │      │              │                                              │    │
 │  │      ▼              ▼                                              │    │
 │  │  change_detect.py ─── SHA-256 hash ─── changed? ──no──→ EXIT      │    │
@@ -79,9 +88,9 @@ and cross-cloud roadmap.
 │  │  │                                                          │      │    │
 │  │  │  1. Read S3 manifest                                     │      │    │
 │  │  │  2. Validate required fields (email, account_id, iam)    │      │    │
-│  │  │  3. Check grace period (IAM_GRACE_PERIOD_DAYS, def: 7)   │      │    │
-│  │  │  4. Filter rehires (same-IAM vs orphaned)                │      │    │
-│  │  │  5. Filter already-deleted IAMs                          │      │    │
+│  │  │  3. Recheck grace period (IAM_GRACE_PERIOD_DAYS, def: 7) │      │    │
+│  │  │  4. Revalidate manifest vs current IAM state             │      │    │
+│  │  │  5. Filter already-deleted or now-invalid IAMs          │      │    │
 │  │  │  6. STS AssumeRole → iam:GetUser (verify exists)         │      │    │
 │  │  │  Output: validated_entries[]                              │      │    │
 │  │  └────────────────────┬─────────────────────────────────────┘      │    │

@@ -64,14 +64,53 @@ Each shipped skill is a bundle:
 The Python file is the execution core. The full skill that agents use is the
 whole bundle.
 
-Why the README shows `python skills/.../src/<entry>.py`:
+### Agent or MCP path first
+
+The normal agent-facing integration path is the skill name through MCP, not a
+raw `python .../src/<entry>.py` call.
+
+For the Kubernetes example, an MCP client calls the skill bundle like this:
+
+```text
+tools/call name="ingest-k8s-audit-ocsf"
+arguments={
+  "args":["skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl"],
+  "output_format":"ocsf"
+}
+
+tools/call name="detect-privilege-escalation-k8s"
+arguments={
+  "input":"<stdout from ingest-k8s-audit-ocsf>",
+  "output_format":"ocsf"
+}
+
+tools/call name="convert-ocsf-to-sarif"
+arguments={
+  "input":"<stdout from detect-privilege-escalation-k8s>"
+}
+```
+
+That is the skill-level contract agents use today:
+
+- skill name from `SKILL.md`
+- `input`, `args`, and optional `output_format`
+- routing and guardrails from the skill bundle
+- the same runtime core underneath
+
+### Direct execution core
+
+The direct Python path is still shown because it is the wrapper-free execution
+surface the MCP server, CI, and runners call under the hood.
+
+Why the README still shows `python skills/.../src/<entry>.py`:
 
 - that is the direct execution path for the skill implementation
 - MCP, CI, and runners call the same skill code
 - agent clients add the `SKILL.md` contract, routing hints, and guardrails on top
 - the wrapper changes the access path, not the underlying skill implementation
 
-Start with the bundled Kubernetes audit fixture and generate SARIF in one shot:
+If you want the same flow without MCP, start with the bundled Kubernetes audit
+fixture and generate SARIF in one shot:
 
 ```bash
 python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
@@ -112,7 +151,8 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
   > findings.native.jsonl
 ```
 
-### Real input and output
+<details>
+<summary><b>Real input and output</b></summary>
 
 Input fixture line, abbreviated:
 
@@ -143,6 +183,8 @@ Native finding output, abbreviated:
 ```json
 {"schema_mode":"native","record_type":"detection_finding","title":"Service account enumerated and read a Kubernetes secret"}
 ```
+
+</details>
 
 ### Same skill, different access path
 
@@ -183,6 +225,29 @@ The diagram shows the flagship write path only: source events feed a guarded
 planner/worker flow, the reconciler writes an S3 manifest, EventBridge starts
 the Step Function, human approval gates the write edge, and the final action
 trail lands in both operational storage and durable audit outputs.
+
+Important accuracy notes:
+
+- rehire and primary eligibility logic happen in the reconciler/export path before actionable entries are written to the S3 manifest
+- the parser Lambda is a second safety gate that rechecks manifest validity, grace period, and current IAM state before the worker runs
+- EventBridge, Step Function, parser Lambda, and worker Lambda each use separate execution roles
+- the flagship orchestration is AWS-native on purpose; equivalent GCP and Azure workflows should keep the same control contract but use native event and orchestration services for those clouds
+
+## End-to-End Skill Flows
+
+The flagship remediation path is one family. The repo also ships standard
+end-to-end read paths across raw logs, warehouses, and live APIs.
+
+![End-to-end skill compositions showing raw logs through ingest and detection, warehouse rows through source and sink, and live discovery or evaluation through native outputs and optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
+
+Use this as the quick mental model:
+
+- raw logs:
+  - `ingest-* -> detect-* -> view/*`
+- warehouse or object rows:
+  - `source-* -> detect-* -> sink-*`
+- live cloud or SaaS state:
+  - `discover-*` or `evaluation/*`, with optional guarded `remediation/*` on approved write paths
 
 ## Trust, Security, And Supply Chain
 

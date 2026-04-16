@@ -32,6 +32,23 @@ Important clarification:
 - agent clients call those same skill bundles through MCP or other wrappers
 - agents do not require a separate implementation model to use them
 
+## What an agent actually calls
+
+The MCP wrapper exposes the skill by skill name and passes only the bounded
+runtime inputs the wrapper supports:
+
+- `args` for explicit CLI-style arguments
+- `input` for stdin payloads such as JSON or JSONL
+- `output_format` when the skill supports multiple output modes
+
+So an agent is not expected to invoke `python skills/.../src/detect.py`
+directly. The normal path is:
+
+1. read the skill bundle for routing and guardrails
+2. call `tools/call name="<skill-name>"`
+3. pass `args`, `input`, and optional `output_format`
+4. let the MCP wrapper execute the real entrypoint underneath
+
 ## Client quick map
 
 | Tool | Best integration path | What to rely on |

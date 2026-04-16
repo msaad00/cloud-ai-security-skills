@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 520" role="img" aria-label="IAM Departures Remediation — closed-loop, event-driven pipeline architecture">
   <title>IAM Departures Remediation — closed-loop event-driven pipeline</title>
-  <desc>Six numbered stages across two deployment domains: HR sources and Reconciler inside the AWS Corporate Security OU, then an S3 manifest plus EventBridge trigger into Parser and Worker Lambdas inside a VPC-isolated Step Function, then five cloud targets and a dual-write audit trail. A dashed verification loop runs from the audit back to the reconciler for drift detection.</desc>
+  <desc>Six numbered stages across two deployment domains: HR sources and a rehire-aware reconciler inside the AWS Corporate Security OU, then an S3 manifest plus EventBridge trigger into Parser and Worker Lambdas inside a VPC-isolated Step Function, then five cloud targets and a dual-write audit trail. A dashed verification loop runs from the audit back to the reconciler for drift detection.</desc>
 
   <defs>
     <!-- Canvas background -->
@@ -132,7 +132,7 @@
     <text x="262" y="184" class="step-n" fill="#22d3ee">2</text>
     <text x="286" y="186" class="box-t">Reconciler</text>
     <text x="258" y="216" class="box-b">SHA-256 row diff</text>
-    <text x="258" y="234" class="box-b">→ S3 manifest (KMS)</text>
+    <text x="258" y="234" class="box-b">rehire-aware → S3 manifest</text>
     <text x="258" y="282" class="box-i">schedule + EventBridge handoff</text>
   </g>
 
@@ -152,8 +152,8 @@
     <circle cx="482" cy="180" r="14" fill="#0b1120" stroke="#3b82f6" stroke-width="1.5"/>
     <text x="482" y="184" class="step-n" fill="#60a5fa">3</text>
     <text x="506" y="186" class="box-t">Parser λ</text>
-    <text x="478" y="216" class="box-b">validate · grace</text>
-    <text x="478" y="234" class="box-b">rehire filter</text>
+    <text x="478" y="216" class="box-b">validate manifest</text>
+    <text x="478" y="234" class="box-b">recheck grace + IAM</text>
     <text x="478" y="282" class="box-i">read-only</text>
   </g>
 
