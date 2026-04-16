@@ -35,7 +35,7 @@ review, and PR discussions where opening the SVG is inconvenient.
 - `detection-pipeline.svg`
   - Shows the standard event path from raw input through normalization, detection, optional export, and downstream persistence.
 - `end-to-end-skill-flows.svg`
-  - Shows three concrete shipped compositions: raw logs through ingest/detect/export, warehouse rows through source/detect/sink, and live discovery/evaluation with native outputs and optional guarded action paths.
+  - Shows three concrete shipped compositions with the same four questions answered in each lane: what the input is, which skill families run, what the output becomes, and which guardrails apply.
 
 ## Rules
 
