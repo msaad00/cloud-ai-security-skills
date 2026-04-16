@@ -49,6 +49,7 @@ The skills remain unchanged and stateless.
 - `DETECT_SKILL_CMD`
   Example: `python skills/detection/detect-lateral-movement/src/detect.py --output-format native`
 - `DEDUPE_TABLE`
+- `DEDUPE_TTL_DAYS` (optional, default 30, range 1-365). Controls how long dedupe rows live before DynamoDB TTL expires them.
 - `SNS_TOPIC_ARN`
 
 ## Packaging model
@@ -66,6 +67,12 @@ system.
 - no shell invocation; skill commands are tokenized with `shlex.split`
 - `subprocess.run(..., shell=False)` only
 - DynamoDB conditional writes prevent duplicate publish on replay
+- DynamoDB TTL is enabled with an `expires_at` attribute on every new dedupe
+  row. The `DedupeTtlDays` CloudFormation parameter (default 30, range 1-365)
+  flows into the detect Lambda as `DEDUPE_TTL_DAYS` and controls how long a
+  UID stays suppressed before DynamoDB deletes the row and a recurrence is
+  allowed to re-fire. Rows written before TTL was enabled are not backfilled
+  and will remain until they are overwritten or removed manually.
 - SNS only sees deduped findings
 - operators should scope the Lambda roles to the specific source bucket, queue,
   topic, and table ARNs in their environment

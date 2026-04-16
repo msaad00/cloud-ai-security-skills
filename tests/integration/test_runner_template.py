@@ -51,3 +51,39 @@ class TestAwsS3SqsDetectRunner:
     def test_detect_falls_back_to_event_uid(self):
         record = {"event_uid": "evt-123"}
         assert DETECT._extract_uid(record) == "evt-123"
+
+    def test_detect_ttl_days_default_when_env_absent(self, monkeypatch):
+        monkeypatch.delenv("DEDUPE_TTL_DAYS", raising=False)
+        assert DETECT._dedupe_ttl_days() == 30
+
+    def test_detect_ttl_days_respects_env(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "7")
+        assert DETECT._dedupe_ttl_days() == 7
+
+    def test_detect_ttl_days_rejects_non_integer(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "twelve")
+        try:
+            DETECT._dedupe_ttl_days()
+        except ValueError as exc:
+            assert "DEDUPE_TTL_DAYS" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on non-integer DEDUPE_TTL_DAYS")
+
+    def test_detect_ttl_days_rejects_out_of_range(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "0")
+        try:
+            DETECT._dedupe_ttl_days()
+        except ValueError as exc:
+            assert "between 1 and 365" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on out-of-range DEDUPE_TTL_DAYS")
+
+    def test_detect_expires_at_adds_configured_ttl(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "30")
+        base = 1_700_000_000
+        assert DETECT._expires_at(now=base) == base + 30 * 86_400
+
+    def test_detect_expires_at_uses_default_when_env_absent(self, monkeypatch):
+        monkeypatch.delenv("DEDUPE_TTL_DAYS", raising=False)
+        base = 1_700_000_000
+        assert DETECT._expires_at(now=base) == base + 30 * 86_400
