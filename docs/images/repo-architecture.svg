@@ -1,76 +1,84 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
-  <title id="title">cloud-ai-security-skills layered architecture</title>
-  <desc id="desc">A readable overview of external sources, six shipped skill layers, and runtime edges around the repo.</desc>
-  <rect width="1200" height="760" fill="#0b1220"/>
-  <rect x="32" y="32" width="1136" height="696" rx="24" fill="#111827" stroke="#334155"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-labelledby="title desc">
+  <title id="title">cloud-ai-security-skills repository architecture</title>
+  <desc id="desc">A readable overview of external sources, six shipped skill layers, the shared skill contract, persistence and query-pack edges, and runtime surfaces around the same skills.</desc>
 
-  <text x="68" y="84" fill="#f8fafc" font-size="34" font-family="Arial, sans-serif" font-weight="700">cloud-ai-security-skills</text>
-  <text x="68" y="116" fill="#94a3b8" font-size="17" font-family="Arial, sans-serif">Six shipped skill layers, three edge/runtime layers, one shared skill contract.</text>
+  <rect width="1280" height="820" fill="#08111f"/>
+  <rect x="32" y="32" width="1216" height="756" rx="28" fill="#0f172a" stroke="#334155" stroke-width="2"/>
 
-  <rect x="68" y="146" width="1064" height="70" rx="18" fill="#0f172a" stroke="#475569"/>
-  <text x="92" y="176" fill="#e2e8f0" font-size="20" font-family="Arial, sans-serif" font-weight="700">L0 External sources</text>
-  <text x="92" y="202" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">Cloud APIs, raw logs, identity providers, Kubernetes audit, lakehouse tables, MCP proxy events</text>
+  <g font-family="Arial, sans-serif">
+    <text x="72" y="92" fill="#f8fafc" font-size="36" font-weight="700">cloud-ai-security-skills</text>
+    <text x="72" y="126" fill="#94a3b8" font-size="20">Six shipped skill layers. Three edge and runtime layers. One shared skill bundle contract.</text>
 
-  <rect x="68" y="246" width="1064" height="54" rx="16" fill="#082f49" stroke="#38bdf8"/>
-  <text x="92" y="280" fill="#e0f2fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">Shipped skill layers</text>
+    <rect x="72" y="162" width="1136" height="78" rx="20" fill="#111827" stroke="#475569" stroke-width="2"/>
+    <text x="96" y="197" fill="#e5e7eb" font-size="21" font-weight="700">L0 External sources</text>
+    <text x="96" y="226" fill="#cbd5e1" font-size="18">Cloud APIs, raw logs, identity providers, Kubernetes audit, warehouses, object stores, MCP proxy events</text>
 
-  <rect x="68" y="322" width="154" height="118" rx="18" fill="#172554" stroke="#60a5fa"/>
-  <text x="88" y="355" fill="#e0f2fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">L1 Ingest</text>
-  <text x="88" y="381" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">raw source</text>
-  <text x="88" y="403" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">to repo-native,</text>
-  <text x="88" y="425" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">OCSF, or bridge</text>
+    <rect x="72" y="272" width="1136" height="58" rx="18" fill="#083344" stroke="#22d3ee" stroke-width="2"/>
+    <text x="96" y="309" fill="#ecfeff" font-size="25" font-weight="700">Shipped skill layers</text>
 
-  <rect x="242" y="322" width="154" height="118" rx="18" fill="#1d4ed8" stroke="#60a5fa"/>
-  <text x="262" y="355" fill="#eff6ff" font-size="22" font-family="Arial, sans-serif" font-weight="700">L2 Discover</text>
-  <text x="262" y="381" fill="#dbeafe" font-size="15" font-family="Arial, sans-serif">inventory, evidence,</text>
-  <text x="262" y="403" fill="#dbeafe" font-size="15" font-family="Arial, sans-serif">AI BOM, context</text>
+    <g>
+      <path d="M165 330 L165 362" stroke="#60a5fa" stroke-width="4" fill="none"/>
+      <path d="M350 330 L350 362" stroke="#60a5fa" stroke-width="4" fill="none"/>
+      <path d="M535 330 L535 362" stroke="#60a5fa" stroke-width="4" fill="none"/>
+      <path d="M720 330 L720 362" stroke="#60a5fa" stroke-width="4" fill="none"/>
+      <path d="M905 330 L905 362" stroke="#60a5fa" stroke-width="4" fill="none"/>
+      <path d="M1090 330 L1090 362" stroke="#60a5fa" stroke-width="4" fill="none"/>
+    </g>
 
-  <rect x="416" y="322" width="154" height="118" rx="18" fill="#0f766e" stroke="#2dd4bf"/>
-  <text x="436" y="355" fill="#ccfbf1" font-size="22" font-family="Arial, sans-serif" font-weight="700">L3 Detect</text>
-  <text x="436" y="381" fill="#ccfbf1" font-size="15" font-family="Arial, sans-serif">deterministic</text>
-  <text x="436" y="403" fill="#ccfbf1" font-size="15" font-family="Arial, sans-serif">attack findings</text>
+    <g>
+      <rect x="72" y="362" width="186" height="134" rx="22" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
+      <text x="98" y="400" fill="#dbeafe" font-size="26" font-weight="700">L1 Ingest</text>
+      <text x="98" y="432" fill="#dbeafe" font-size="17">raw source to</text>
+      <text x="98" y="456" fill="#dbeafe" font-size="17">native, OCSF,</text>
+      <text x="98" y="480" fill="#dbeafe" font-size="17">or bridge</text>
 
-  <rect x="590" y="322" width="154" height="118" rx="18" fill="#14532d" stroke="#4ade80"/>
-  <text x="610" y="355" fill="#dcfce7" font-size="22" font-family="Arial, sans-serif" font-weight="700">L4 Evaluate</text>
-  <text x="610" y="381" fill="#dcfce7" font-size="15" font-family="Arial, sans-serif">benchmarks, posture,</text>
-  <text x="610" y="403" fill="#dcfce7" font-size="15" font-family="Arial, sans-serif">control evidence</text>
+      <rect x="257" y="362" width="186" height="134" rx="22" fill="#1d4ed8" stroke="#60a5fa" stroke-width="2"/>
+      <text x="283" y="400" fill="#eff6ff" font-size="26" font-weight="700">L2 Discover</text>
+      <text x="283" y="432" fill="#dbeafe" font-size="17">inventory, evidence,</text>
+      <text x="283" y="456" fill="#dbeafe" font-size="17">AI BOM, context</text>
 
-  <rect x="764" y="322" width="154" height="118" rx="18" fill="#7c2d12" stroke="#fb923c"/>
-  <text x="784" y="355" fill="#ffedd5" font-size="22" font-family="Arial, sans-serif" font-weight="700">L5 Remediate</text>
-  <text x="784" y="381" fill="#ffedd5" font-size="15" font-family="Arial, sans-serif">guarded writes,</text>
-  <text x="784" y="403" fill="#ffedd5" font-size="15" font-family="Arial, sans-serif">HITL, dual audit</text>
+      <rect x="442" y="362" width="186" height="134" rx="22" fill="#0f766e" stroke="#2dd4bf" stroke-width="2"/>
+      <text x="468" y="400" fill="#ccfbf1" font-size="26" font-weight="700">L3 Detect</text>
+      <text x="468" y="432" fill="#ccfbf1" font-size="17">deterministic</text>
+      <text x="468" y="456" fill="#ccfbf1" font-size="17">attack findings</text>
 
-  <rect x="938" y="322" width="154" height="118" rx="18" fill="#581c87" stroke="#c084fc"/>
-  <text x="958" y="355" fill="#f5d0fe" font-size="22" font-family="Arial, sans-serif" font-weight="700">L6 View</text>
-  <text x="958" y="381" fill="#f5d0fe" font-size="15" font-family="Arial, sans-serif">SARIF, Mermaid,</text>
-  <text x="958" y="403" fill="#f5d0fe" font-size="15" font-family="Arial, sans-serif">delivery formats</text>
+      <rect x="627" y="362" width="186" height="134" rx="22" fill="#14532d" stroke="#4ade80" stroke-width="2"/>
+      <text x="653" y="400" fill="#dcfce7" font-size="26" font-weight="700">L4 Evaluate</text>
+      <text x="653" y="432" fill="#dcfce7" font-size="17">benchmarks, posture,</text>
+      <text x="653" y="456" fill="#dcfce7" font-size="17">control evidence</text>
 
-  <path d="M145 300 L145 322" stroke="#60a5fa" stroke-width="3" fill="none"/>
-  <path d="M319 300 L319 322" stroke="#60a5fa" stroke-width="3" fill="none"/>
-  <path d="M493 300 L493 322" stroke="#60a5fa" stroke-width="3" fill="none"/>
-  <path d="M667 300 L667 322" stroke="#60a5fa" stroke-width="3" fill="none"/>
-  <path d="M841 300 L841 322" stroke="#60a5fa" stroke-width="3" fill="none"/>
-  <path d="M1015 300 L1015 322" stroke="#60a5fa" stroke-width="3" fill="none"/>
+      <rect x="812" y="362" width="186" height="134" rx="22" fill="#7c2d12" stroke="#fb923c" stroke-width="2"/>
+      <text x="838" y="400" fill="#ffedd5" font-size="26" font-weight="700">L5 Remediate</text>
+      <text x="838" y="432" fill="#ffedd5" font-size="17">guarded writes,</text>
+      <text x="838" y="456" fill="#ffedd5" font-size="17">HITL, dual audit</text>
 
-  <rect x="68" y="474" width="1064" height="54" rx="16" fill="#1f2937" stroke="#64748b"/>
-  <text x="92" y="508" fill="#f8fafc" font-size="22" font-family="Arial, sans-serif" font-weight="700">Shared skill contract</text>
-  <text x="344" y="508" fill="#cbd5e1" font-size="16" font-family="Arial, sans-serif">SKILL.md • src/ • tests/ • REFERENCES.md • repo-native / canonical / OCSF / bridge</text>
+      <rect x="997" y="362" width="186" height="134" rx="22" fill="#581c87" stroke="#c084fc" stroke-width="2"/>
+      <text x="1023" y="400" fill="#f3e8ff" font-size="26" font-weight="700">L6 View</text>
+      <text x="1023" y="432" fill="#f3e8ff" font-size="17">SARIF, Mermaid,</text>
+      <text x="1023" y="456" fill="#f3e8ff" font-size="17">delivery formats</text>
+    </g>
 
-  <path d="M580 440 L580 474" stroke="#94a3b8" stroke-width="3" fill="none"/>
-  <path d="M620 440 L620 474" stroke="#94a3b8" stroke-width="3" fill="none"/>
+    <path d="M640 496 L640 536" stroke="#94a3b8" stroke-width="4" fill="none"/>
 
-  <rect x="68" y="554" width="336" height="120" rx="18" fill="#0f172a" stroke="#475569"/>
-  <text x="92" y="589" fill="#f8fafc" font-size="24" font-family="Arial, sans-serif" font-weight="700">L7 and L8 edge layers</text>
-  <text x="92" y="617" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">L7 sinks: customer-owned persistence edges</text>
-  <text x="92" y="639" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">L8 query packs: warehouse-native SQL analytics</text>
+    <rect x="72" y="536" width="1136" height="68" rx="18" fill="#1f2937" stroke="#64748b" stroke-width="2"/>
+    <text x="96" y="578" fill="#f8fafc" font-size="25" font-weight="700">Shared skill contract</text>
+    <text x="392" y="578" fill="#cbd5e1" font-size="19">SKILL.md • src/ • tests/ • REFERENCES.md • native / canonical / OCSF / bridge</text>
 
-  <rect x="432" y="554" width="336" height="120" rx="18" fill="#0f172a" stroke="#475569"/>
-  <text x="456" y="589" fill="#f8fafc" font-size="24" font-family="Arial, sans-serif" font-weight="700">L9 runtime surfaces</text>
-  <text x="456" y="617" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">CLI, CI, MCP, and runners call the same skills</text>
-  <text x="456" y="639" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">wrappers add orchestration, not a second implementation</text>
+    <g>
+      <rect x="72" y="642" width="352" height="114" rx="22" fill="#111827" stroke="#475569" stroke-width="2"/>
+      <text x="96" y="680" fill="#f8fafc" font-size="24" font-weight="700">L7 and L8 edge layers</text>
+      <text x="96" y="712" fill="#cbd5e1" font-size="17">L7 sinks: customer-owned persistence</text>
+      <text x="96" y="738" fill="#cbd5e1" font-size="17">L8 query packs: warehouse-native SQL</text>
 
-  <rect x="796" y="554" width="336" height="120" rx="18" fill="#0f172a" stroke="#475569"/>
-  <text x="820" y="589" fill="#f8fafc" font-size="24" font-family="Arial, sans-serif" font-weight="700">Key rule</text>
-  <text x="820" y="617" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">Architecture doc explains the contract.</text>
-  <text x="820" y="639" fill="#cbd5e1" font-size="15" font-family="Arial, sans-serif">Diagrams exist to simplify it, not replace it.</text>
+      <rect x="464" y="642" width="352" height="114" rx="22" fill="#111827" stroke="#475569" stroke-width="2"/>
+      <text x="488" y="680" fill="#f8fafc" font-size="24" font-weight="700">L9 runtime surfaces</text>
+      <text x="488" y="712" fill="#cbd5e1" font-size="17">CLI, CI, MCP, and runners call the same skills</text>
+      <text x="488" y="738" fill="#cbd5e1" font-size="17">wrappers add orchestration, not a second model</text>
+
+      <rect x="856" y="642" width="352" height="114" rx="22" fill="#111827" stroke="#475569" stroke-width="2"/>
+      <text x="880" y="680" fill="#f8fafc" font-size="24" font-weight="700">Key rule</text>
+      <text x="880" y="712" fill="#cbd5e1" font-size="17">Architecture defines the contract.</text>
+      <text x="880" y="738" fill="#cbd5e1" font-size="17">Diagrams simplify it; they do not replace it.</text>
+    </g>
+  </g>
 </svg>

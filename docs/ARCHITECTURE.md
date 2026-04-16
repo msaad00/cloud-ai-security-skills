@@ -4,6 +4,16 @@ This document is the load-bearing design contract for `cloud-ai-security-skills`
 
 This file is the design contract. It explains how the repo is supposed to work and what future changes must preserve. [`DIAGRAMS.md`](./DIAGRAMS.md) is the visual companion: it indexes the small set of readable SVGs used in rendered docs.
 
+## Quick read
+
+- six shipped skill layers stay at the center: ingest, discover, detect, evaluate, remediate, and view
+- three edge or runtime layers sit around them: sources and sinks, query packs, and runtime surfaces
+- one skill bundle contract is shared across CLI, CI, MCP, and runners
+- OCSF is the default interoperable stream format; native stays first for operational artifacts
+
+<details>
+<summary><b>Related contracts and expanded design principles</b></summary>
+
 - **Wire format contract** — see [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-engineering/OCSF_CONTRACT.md)
 - **Design rationale and product decisions** — see [`./DESIGN_DECISIONS.md`](./DESIGN_DECISIONS.md)
 - **Schema versioning and upgrade rules** — see [`./SCHEMA_VERSIONING.md`](./SCHEMA_VERSIONING.md)
@@ -62,6 +72,8 @@ The repo cannot assume cloud APIs stay still. Providers deprecate fields, add en
 5. **Migrate intentionally.** Deprecated APIs are removed only after the replacement path is tested, documented, and reflected in `REFERENCES.md`.
 
 This is how the repo stays secure and reliable without turning every skill into an over-general abstraction layer.
+
+</details>
 
 ## 3. Layer model
 
@@ -142,6 +154,9 @@ For the detailed contract, see:
 | L7 sinks | shipping | `sink-snowflake-jsonl`, `sink-clickhouse-jsonl`, and `sink-s3-jsonl` ship today under `skills/remediation/` |
 | L8 query packs | partial shipping | `packs/lateral-movement/` and `packs/privilege-escalation-k8s/` are shipped; broader pack coverage remains future work |
 | L9 agent/runtime surfaces | shipping | `mcp-server`, CLI, CI, and runners call the same skill contract |
+
+<details>
+<summary><b>Expanded execution, layout, guardrails, and roadmap</b></summary>
 
 ## 4. Two execution modes
 
@@ -488,6 +503,8 @@ To keep this doc honest:
 | **Mode B** | Streaming execution. Runner drives skills in a loop, state lives only in the runner checkpoint and the sink. |
 | **Deterministic UID** | A content-addressed identifier. Same semantic input → same UID. The property that makes idempotent sinks work. |
 | **Read-only by default** | The baseline posture: no skill performs writes unless it is `remediate-*` or `sink-*` and has an explicit "Do NOT use" clause. |
+
+</details>
 
 ---
 

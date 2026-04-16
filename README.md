@@ -15,6 +15,23 @@ Security skills for cloud and AI systems. Use source-specific ingest, discovery,
 - Read-only by default; write paths stay HITL and audited.
 - Trust, schema, and runtime behavior are documented and validated in CI.
 
+## Repo Shape
+
+Start here if you want the shortest true picture of the repo:
+
+![Repository architecture showing external sources, six shipped skill layers, the shared skill contract, and the edge/runtime layers around the same skills.](docs/images/repo-architecture.svg)
+
+The mental model:
+
+- core skill layers:
+  - `ingest`, `discover`, `detect`, `evaluate`, `remediation`, `view`
+- edge layers:
+  - `source-*`, `sink-*`, `packs/*`
+- runtime surfaces:
+  - CLI, CI, MCP, and runners all call the same skill bundles
+
+For the full contract, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the visual index, see [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
+
 ## Start Here
 
 | If you need to... | Start with... | Typical output |

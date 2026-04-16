@@ -4,6 +4,8 @@ This guide answers the practical question first: **what are you trying to do, an
 
 Use it when the README feels too high-level and `skills/README.md` feels too catalog-like.
 
+![Start-here guide showing the shortest path from operator goal to the right layer: ingest, discover, detect, evaluate, sink, or remediate.](images/start-here-guide.svg)
+
 ## Start by goal
 
 | Goal | Start with | Common sources | Asset focus | Typical output |
@@ -16,6 +18,9 @@ Use it when the README feels too high-level and `skills/README.md` feels too cat
 | Centralize remediation audit in your own lakehouse | `iam-departures-remediation` plus a customer-owned sink pattern | IAM departures workflow audit rows | identities, approvals, actions, audit history | DynamoDB + S3 today, external sink pattern via Snowflake / Snowpipe or another lakehouse later |
 | Export findings to downstream tools | `view/*` | OCSF findings | detections and evidence | SARIF, Mermaid attack flow |
 | Remediate offboarding safely | `iam-departures-remediation` | HR departure feeds + cloud / data-platform APIs | users, IAM identities, warehouse identities | dry-run plan or audited remediation |
+
+<details>
+<summary><b>Expanded selection tables</b></summary>
 
 ## Start by source
 
@@ -74,9 +79,16 @@ Use it when the README feels too high-level and `skills/README.md` feels too cat
 | Audit sinks | IAM departures dual-write to DynamoDB + S3 | external customer sinks like Snowflake / Snowpipe, Security Lake, ClickHouse, BigQuery |
 | Visuals | repo architecture, detection pipeline, IAM departures workflow + data flow | deeper source / asset / plug-in visuals as the surface grows |
 
+</details>
+
+<details>
+<summary><b>Read next</b></summary>
+
 ## Read next
 
 - Need the big picture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Need the skill inventory: [../skills/README.md](../skills/README.md)
 - Need trust and runtime controls: [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)
 - Need troubleshooting: [DEBUGGING.md](DEBUGGING.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+</details>
