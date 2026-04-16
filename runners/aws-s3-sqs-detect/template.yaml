@@ -19,6 +19,12 @@ Parameters:
   DetectSkillCommand:
     Type: String
     Description: Command run by the detect Lambda, for example `python skills/detection/detect-lateral-movement/src/detect.py --output-format native`
+  DedupeTtlDays:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    MaxValue: 365
+    Description: Days before a dedupe row expires and is deleted by DynamoDB TTL. Lower values allow the same finding UID to re-fire sooner; higher values suppress duplicates for longer. 30 days covers routine backfills and replays without indefinitely retaining keys.
 
 Resources:
   DetectQueueDlq:
@@ -46,7 +52,7 @@ Resources:
           KeyType: HASH
       TimeToLiveSpecification:
         AttributeName: expires_at
-        Enabled: false
+        Enabled: true
 
   AlertsTopic:
     Type: AWS::SNS::Topic
@@ -138,6 +144,7 @@ Resources:
         Variables:
           DETECT_SKILL_CMD: !Ref DetectSkillCommand
           DEDUPE_TABLE: !Ref DedupeTable
+          DEDUPE_TTL_DAYS: !Ref DedupeTtlDays
           SNS_TOPIC_ARN: !Ref AlertsTopic
 
   IngestInvokePermission:
