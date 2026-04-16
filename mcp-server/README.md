@@ -20,6 +20,17 @@ Audit behavior:
 - the wrapper emits one JSON audit line per resolved tool call
 - the audit record contract lives in [../docs/MCP_AUDIT_CONTRACT.md](../docs/MCP_AUDIT_CONTRACT.md)
 - wrapper diagnostics stay on `stderr`; wrapped skill output stays on `stdout`
+- every audit event records the resolved `timeout_seconds` so operators can tell from the log whether a call was governed by the default, a per-skill override, or an env override
+
+Timeout behavior:
+
+Each tool call runs the skill in a subprocess with a hard timeout.
+
+- Default: `60` seconds (from `DEFAULT_TIMEOUT_SECONDS` in `src/server.py`).
+- Per-skill override: a skill's `SKILL.md` frontmatter may declare `mcp_timeout_seconds: <N>` (range `1`–`900`) when the skill's realistic runtime exceeds the default. No shipped skill sets this today; the field is opt-in and defaults to the global value.
+- Operator override: setting the `CLOUD_SECURITY_MCP_TIMEOUT_SECONDS` environment variable wins over both, so on-call can widen or tighten the window without editing any `SKILL.md`.
+
+Resolution order, highest wins: env override > per-skill value > default.
 
 Run locally:
 

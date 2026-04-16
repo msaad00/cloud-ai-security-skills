@@ -17,6 +17,10 @@ ENTRYPOINT_CANDIDATES = (
 )
 
 
+MIN_TIMEOUT_SECONDS = 1
+MAX_TIMEOUT_SECONDS = 900
+
+
 @dataclass(frozen=True)
 class SkillSpec:
     name: str
@@ -34,6 +38,7 @@ class SkillSpec:
     caller_roles: tuple[str, ...]
     approver_roles: tuple[str, ...]
     min_approvers: int | None
+    mcp_timeout_seconds: int | None
 
     @property
     def supported(self) -> bool:
@@ -153,9 +158,27 @@ def discover_skills(root: Path | None = None) -> list[SkillSpec]:
                 caller_roles=_parse_modes(metadata.get("caller_roles")),
                 approver_roles=_parse_modes(metadata.get("approver_roles")),
                 min_approvers=int(metadata["min_approvers"]) if metadata.get("min_approvers") else None,
+                mcp_timeout_seconds=_parse_mcp_timeout(metadata.get("mcp_timeout_seconds"), skill_dir),
             )
         )
     return specs
+
+
+def _parse_mcp_timeout(raw: str | None, skill_dir: Path) -> int | None:
+    if raw is None or not raw.strip():
+        return None
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"{skill_dir}/SKILL.md: mcp_timeout_seconds must be an integer, got {raw!r}"
+        ) from exc
+    if value < MIN_TIMEOUT_SECONDS or value > MAX_TIMEOUT_SECONDS:
+        raise ValueError(
+            f"{skill_dir}/SKILL.md: mcp_timeout_seconds must be between "
+            f"{MIN_TIMEOUT_SECONDS} and {MAX_TIMEOUT_SECONDS}, got {value}"
+        )
+    return value
 
 
 def supported_skills(root: Path | None = None) -> list[SkillSpec]:

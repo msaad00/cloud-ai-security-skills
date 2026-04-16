@@ -21,12 +21,18 @@ class _FakeCompleted:
 
 
 class _FakeSkill:
-    def __init__(self, read_only: bool = True, approver_roles: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        read_only: bool = True,
+        approver_roles: tuple[str, ...] = (),
+        mcp_timeout_seconds: int | None = None,
+    ) -> None:
         self.name = "fake-skill"
         self.category = "detection"
         self.capability = "read-only" if read_only else "write-remediation"
         self.read_only = read_only
         self.approver_roles = approver_roles
+        self.mcp_timeout_seconds = mcp_timeout_seconds
 
 
 def test_call_tool_injects_caller_and_approval_context(monkeypatch):
@@ -102,3 +108,47 @@ def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
     assert audit_events[0]["error_type"] == "ValueError"
     assert audit_events[0]["args_hash"] == MODULE._stable_hash(["--dry-run"])
     assert audit_events[0]["approval_context_provided"] is False
+
+
+def test_resolve_timeout_prefers_env_override():
+    skill = _FakeSkill(mcp_timeout_seconds=45)
+    env = {"CLOUD_SECURITY_MCP_TIMEOUT_SECONDS": "300"}
+    assert MODULE._resolve_timeout(skill, env) == 300
+
+
+def test_resolve_timeout_uses_skill_value_when_no_env_override():
+    skill = _FakeSkill(mcp_timeout_seconds=120)
+    env: dict[str, str] = {}
+    assert MODULE._resolve_timeout(skill, env) == 120
+
+
+def test_resolve_timeout_falls_back_to_default_when_neither_set():
+    skill = _FakeSkill(mcp_timeout_seconds=None)
+    env: dict[str, str] = {}
+    assert MODULE._resolve_timeout(skill, env) == MODULE.DEFAULT_TIMEOUT_SECONDS
+
+
+def test_resolve_timeout_ignores_blank_env_override():
+    skill = _FakeSkill(mcp_timeout_seconds=90)
+    env = {"CLOUD_SECURITY_MCP_TIMEOUT_SECONDS": "   "}
+    assert MODULE._resolve_timeout(skill, env) == 90
+
+
+def test_call_tool_audit_records_resolved_timeout(monkeypatch):
+    audit_events: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        MODULE,
+        "tool_map",
+        lambda: {"fake-skill": _FakeSkill(mcp_timeout_seconds=150)},
+    )
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    def _fake_run(*args, **kwargs):
+        assert kwargs["timeout"] == 150
+        return _FakeCompleted()
+
+    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", raising=False)
+    MODULE._call_tool("fake-skill", {"args": []})
+    assert audit_events[0]["timeout_seconds"] == 150
