@@ -12,11 +12,31 @@ They own:
 They do **not** change the skill contract. The same `SKILL.md + src/ + tests/`
 bundle should still run unchanged from the CLI, CI, MCP, or a persistent loop.
 
-## Shipped reference runner
+Read next:
 
-- [`aws-s3-sqs-detect`](aws-s3-sqs-detect/): S3 object create trigger → ingest
-  Lambda → SQS detect queue → detect Lambda → DynamoDB dedupe → SNS publish
+- [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md)
+- [../docs/DATA_HANDLING.md](../docs/DATA_HANDLING.md)
+
+## Shipped reference runners
+
+- [`aws-s3-sqs-detect`](aws-s3-sqs-detect/): S3 object create trigger -> ingest
+  Lambda -> SQS detect queue -> detect Lambda -> DynamoDB dedupe -> SNS publish
+- [`gcp-gcs-pubsub-detect`](gcp-gcs-pubsub-detect/): GCS finalize trigger ->
+  ingest Cloud Function -> Pub/Sub detect topic -> detect Cloud Function ->
+  Firestore dedupe -> findings topic
+- [`azure-blob-eventgrid-detect`](azure-blob-eventgrid-detect/): Blob create ->
+  Event Grid -> ingest queue -> ingest handler -> detect queue -> detect
+  handler -> Table Storage dedupe -> Service Bus topic
 
 This is a reference template, not a multi-tenant managed service. Operators still
 own packaging, deployment, sink wiring, IAM review, and environment-specific
 controls.
+
+## Live Deployment Status
+
+All three runners are shipped and CI-validated.
+
+The repo does not yet claim a captured real-cloud deploy-and-first-event proof
+for all three templates. That remaining work is tracked in
+[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198) and
+summarized in [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md).

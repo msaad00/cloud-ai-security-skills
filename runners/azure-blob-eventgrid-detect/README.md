@@ -86,3 +86,30 @@ unbounded.
 - dedupe prevents duplicate publishes on replay
 - operators should scope the Azure role assignments to the specific blob
   source, queue, topic, and table resources in their environment
+
+## Live Deploy Verification Status
+
+Current repo reality:
+
+- the Bicep template is shipped
+- handler behavior is covered in tests
+- template validation runs in CI
+- a checked-in real-cloud deploy-and-first-event walkthrough is still pending
+
+That remaining deployment proof is tracked in
+[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198).
+
+## First Event Proof Checklist
+
+When capturing the live walkthrough for this runner, record:
+
+1. the exact Bicep deployment inputs and provisioned resources
+2. the chosen Azure runtime packaging path for the handlers
+3. one blob created in the watched source path
+4. evidence that:
+   - Event Grid routed the event
+   - ingest queue received the message
+   - ingest handler ran and enqueued detect work
+   - detect handler ran
+   - Table Storage dedupe wrote a stable UID row
+   - Service Bus topic publish succeeded
