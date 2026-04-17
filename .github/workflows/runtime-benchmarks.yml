@@ -1,6 +1,19 @@
 name: Runtime Benchmarks
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/runtime-benchmarks.yml"
+      - "docs/RUNTIME_PROFILES.md"
+      - "docs/benchmarks/runtime-profiles-2026-04-16.json"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "scripts/benchmark_runtime_profiles.py"
+      - "scripts/check_runtime_profile_regressions.py"
+      - "skills/_shared/**"
+      - "skills/detection/detect-lateral-movement/**"
+      - "skills/ingestion/ingest-cloudtrail-ocsf/**"
+      - "skills/sink/sink-snowflake-jsonl/**"
   workflow_dispatch:
   schedule:
     - cron: "0 8 * * *"
