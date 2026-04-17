@@ -18,6 +18,7 @@ The format is loosely based on Keep a Changelog.
 
 ### Changed
 
+- tightened mypy from the shared/runtime surfaces into one additional shipped detector bucket. `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login`, and `detect-mcp-tool-drift` now run with `--disallow-untyped-defs --disallow-incomplete-defs --warn-return-any` in `scripts/run_mypy.sh`, while the rest of the skill catalog stays on gradual per-directory checking.
 - batched downstream publish in the shipped runner detect paths so AWS uses SNS `publish_batch`, GCP keeps Pub/Sub publish futures outstanding until the batch is queued and then waits once, and Azure sends Service Bus findings in grouped batches instead of one API call per finding. The runner READMEs now also include exact first-event walkthrough skeletons and evidence capture checklists, while still stating honestly that real-cloud proof capture remains pending.
 - tightened the read-only query gate for `source-snowflake-query` and `source-databricks-query`. They still are not full SQL parsers, but they now reject SQL comments, dynamic identifier helpers, `SYSTEM$` calls, and common control/write keywords in addition to rejecting multiple statements and non-read-only statement families.
 - CI now checks `uv.lock` freshness with `uv lock --check`, and the checked-in lockfile was refreshed to match the current `pyproject.toml` so local `uv` workflows fail on real dependency drift instead of stale metadata.

@@ -21,7 +21,25 @@ fi
   --disallow-incomplete-defs \
   --warn-return-any
 
+STRICT_SKILL_DIRS=(
+  "skills/detection/detect-entra-role-grant-escalation/src"
+  "skills/detection/detect-google-workspace-suspicious-login/src"
+  "skills/detection/detect-mcp-tool-drift/src"
+)
+
+for dir in "${STRICT_SKILL_DIRS[@]}"; do
+  "${MYPY_CMD[@]}" \
+    "$dir" \
+    --config-file pyproject.toml \
+    --disallow-untyped-defs \
+    --disallow-incomplete-defs \
+    --warn-return-any
+done
+
 for dir in skills/*/*/src; do
+  case " ${STRICT_SKILL_DIRS[*]} " in
+    *" ${dir} "*) continue ;;
+  esac
   "${MYPY_CMD[@]}" "$dir" --config-file pyproject.toml
 done
 
