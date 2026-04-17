@@ -31,6 +31,10 @@
     "message": {
       "type": "string",
       "description": "Human-readable diagnostic summary."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Wrapper-provided correlation ID when a caller sets SKILL_CORRELATION_ID."
     }
   },
   "additionalProperties": true

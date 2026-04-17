@@ -59,6 +59,7 @@ Required top-level fields:
 |---|---|---|
 | `event` | string | fixed value `mcp_tool_call` |
 | `timestamp` | string | UTC ISO-8601 timestamp with millisecond precision |
+| `correlation_id` | string | wrapper-generated stable ID for this tool invocation, also forwarded to the skill runtime |
 | `tool` | string | resolved MCP tool name |
 | `category` | string | skill category from the contract metadata |
 | `capability` | string | skill capability from the contract metadata |
@@ -115,6 +116,22 @@ The wrapper preserves only the fields it knows about:
 
 Presence is tracked separately from value so operators can tell the difference
 between "not supplied" and "supplied but empty".
+
+### `correlation_id`
+
+The wrapper generates one UUID per resolved tool invocation.
+
+It is used in three places:
+
+- the MCP audit event on `stderr`
+- the `structuredContent` response returned to the MCP client
+- the subprocess environment as `SKILL_CORRELATION_ID`
+
+That lets operators correlate:
+
+- wrapper audit records
+- structured skill `stderr`
+- client-visible tool-call metadata
 
 ### `result`
 

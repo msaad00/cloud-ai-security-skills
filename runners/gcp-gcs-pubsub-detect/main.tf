@@ -51,6 +51,11 @@ variable "dedupe_collection" {
   default = "runner_dedupe"
 }
 
+variable "dedupe_ttl_days" {
+  type    = number
+  default = 30
+}
+
 variable "max_instance_count" {
   type    = number
   default = 50
@@ -69,6 +74,17 @@ resource "google_firestore_database" "dedupe" {
   name        = "(default)"
   location_id = var.region
   type        = "FIRESTORE_NATIVE"
+}
+
+resource "google_firestore_field" "dedupe_expires_at" {
+  project    = var.project_id
+  database   = google_firestore_database.dedupe.name
+  collection = var.dedupe_collection
+  field      = "expires_at"
+
+  ttl_config {}
+
+  depends_on = [google_firestore_database.dedupe]
 }
 
 resource "google_service_account" "ingest" {
@@ -171,6 +187,7 @@ resource "google_cloudfunctions2_function" "detect" {
     environment_variables = {
       DETECT_SKILL_CMD = var.detect_skill_command
       DEDUPE_COLLECTION = var.dedupe_collection
+      DEDUPE_TTL_DAYS  = tostring(var.dedupe_ttl_days)
       FINDINGS_TOPIC   = "projects/${var.project_id}/topics/${google_pubsub_topic.findings.name}"
     }
   }
@@ -182,7 +199,10 @@ resource "google_cloudfunctions2_function" "detect" {
     retry_policy   = "RETRY_POLICY_RETRY"
   }
 
-  depends_on = [google_firestore_database.dedupe]
+  depends_on = [
+    google_firestore_database.dedupe,
+    google_firestore_field.dedupe_expires_at,
+  ]
 }
 
 output "detect_topic" {

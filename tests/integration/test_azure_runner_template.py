@@ -99,6 +99,34 @@ class TestAzureBlobEventGridDetectRunner:
         assert DETECT._extract_uid({"metadata": {"uid": "meta-1"}}) == "meta-1"
         assert DETECT._extract_uid({"event_uid": "event-1"}) == "event-1"
 
+    def test_detect_ttl_days_default_when_env_absent(self, monkeypatch):
+        monkeypatch.delenv("DEDUPE_TTL_DAYS", raising=False)
+        assert DETECT._dedupe_ttl_days() == 30
+
+    def test_detect_ttl_days_respects_env(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "21")
+        assert DETECT._dedupe_ttl_days() == 21
+
+    def test_detect_ttl_days_rejects_non_integer(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "long")
+        with pytest.raises(ValueError, match="DEDUPE_TTL_DAYS"):
+            DETECT._dedupe_ttl_days()
+
+    def test_detect_ttl_days_rejects_out_of_range(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "366")
+        with pytest.raises(ValueError, match="between 1 and 365"):
+            DETECT._dedupe_ttl_days()
+
+    def test_detect_expires_at_adds_configured_ttl(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "30")
+        base = 1_700_000_000
+        assert DETECT._expires_at(now=base) == base + 30 * 86_400
+
+    def test_detect_entity_is_expired(self):
+        assert DETECT._entity_is_expired({"expires_at": 10}, now=11) is True
+        assert DETECT._entity_is_expired({"expires_at": 12}, now=11) is False
+        assert DETECT._entity_is_expired({}, now=11) is False
+
     def test_detect_handles_findings_and_dedupes(self, monkeypatch):
         lines = [
             json.dumps(

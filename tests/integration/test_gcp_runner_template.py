@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import importlib.util
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,3 +63,34 @@ class TestGcpGcsPubsubDetectRunner:
         payload = "line-1\nline-2\n".encode("utf-8")
         event = {"data": base64.b64encode(payload).decode("ascii")}
         assert DETECT._decode_pubsub_event(event) == ["line-1", "line-2"]
+
+    def test_detect_ttl_days_default_when_env_absent(self, monkeypatch):
+        monkeypatch.delenv("DEDUPE_TTL_DAYS", raising=False)
+        assert DETECT._dedupe_ttl_days() == 30
+
+    def test_detect_ttl_days_respects_env(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "14")
+        assert DETECT._dedupe_ttl_days() == 14
+
+    def test_detect_ttl_days_rejects_non_integer(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "fast")
+        try:
+            DETECT._dedupe_ttl_days()
+        except ValueError as exc:
+            assert "DEDUPE_TTL_DAYS" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on non-integer DEDUPE_TTL_DAYS")
+
+    def test_detect_ttl_days_rejects_out_of_range(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "0")
+        try:
+            DETECT._dedupe_ttl_days()
+        except ValueError as exc:
+            assert "between 1 and 365" in str(exc)
+        else:
+            raise AssertionError("expected ValueError on out-of-range DEDUPE_TTL_DAYS")
+
+    def test_detect_expires_at_adds_configured_ttl(self, monkeypatch):
+        monkeypatch.setenv("DEDUPE_TTL_DAYS", "10")
+        base = datetime(2026, 4, 17, tzinfo=UTC)
+        assert DETECT._expires_at(now=base) == datetime(2026, 4, 27, tzinfo=UTC)

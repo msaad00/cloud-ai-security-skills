@@ -43,6 +43,12 @@
       }
     },
     {
+      "Sid": "DenyDirectStepFunctionExecution",
+      "Effect": "Deny",
+      "Action": "states:StartExecution",
+      "Resource": "*"
+    },
+    {
       "Sid": "CloudWatchLogs",
       "Effect": "Allow",
       "Action": [

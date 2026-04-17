@@ -21,6 +21,9 @@ Audit behavior:
 - the audit record contract lives in [../docs/MCP_AUDIT_CONTRACT.md](../docs/MCP_AUDIT_CONTRACT.md)
 - wrapper diagnostics stay on `stderr`; wrapped skill output stays on `stdout`
 - every audit event records the resolved `timeout_seconds` so operators can tell from the log whether a call was governed by the default, a per-skill override, or an env override
+- every call also gets a wrapper-generated `correlation_id` that is recorded in
+  the MCP audit event and forwarded into the skill as `SKILL_CORRELATION_ID`
+  so structured `stderr` can be joined back to the audited tool invocation
 
 Timeout behavior:
 

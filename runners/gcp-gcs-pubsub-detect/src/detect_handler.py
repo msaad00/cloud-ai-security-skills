@@ -5,9 +5,11 @@ import json
 import os
 import shlex
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from typing import Any
+
+_DEFAULT_DEDUPE_TTL_DAYS = 30
 
 try:
     from google.api_core.exceptions import Conflict
@@ -49,6 +51,24 @@ def _findings_topic() -> str:
     if not topic:
         raise ValueError("FINDINGS_TOPIC is required")
     return topic
+
+
+def _dedupe_ttl_days() -> int:
+    raw = os.environ.get("DEDUPE_TTL_DAYS", "").strip()
+    if not raw:
+        return _DEFAULT_DEDUPE_TTL_DAYS
+    try:
+        days = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"DEDUPE_TTL_DAYS must be an integer, got {raw!r}") from exc
+    if days < 1 or days > 365:
+        raise ValueError(f"DEDUPE_TTL_DAYS must be between 1 and 365, got {days}")
+    return days
+
+
+def _expires_at(now: datetime | None = None) -> datetime:
+    current = datetime.now(UTC) if now is None else now
+    return current + timedelta(days=_dedupe_ttl_days())
 
 
 def _run_skill(lines: list[str]) -> list[str]:
@@ -98,6 +118,7 @@ def _put_if_new(uid: str, payload: str) -> bool:
     item = {
         "seen_at": datetime.now(UTC).isoformat(),
         "payload_sha256": sha256(payload.encode("utf-8")).hexdigest(),
+        "expires_at": _expires_at(),
     }
     try:
         document.create(item)

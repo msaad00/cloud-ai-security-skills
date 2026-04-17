@@ -56,6 +56,10 @@ The skills remain unchanged and stateless.
 - `ALERT_TOPIC_NAME`
 - `DEDUPE_TABLE_NAME`
 - `TABLE_ACCOUNT_URL`
+- `DEDUPE_TTL_DAYS`
+  Optional dedupe retention window in days. Defaults to `30`. Azure Table
+  Storage does not provide native row TTL here, so the handler enforces the
+  replay window by treating expired rows as replaceable on the next sighting.
 - `SERVICE_BUS_FQDN`
 
 ## Packaging model
@@ -84,6 +88,9 @@ unbounded.
 - `subprocess.run(..., shell=False)` only
 - Event Grid payloads are treated as untrusted input
 - dedupe prevents duplicate publishes on replay
+- dedupe rows carry `expires_at`; expired rows are replaced by the handler so
+  replay protection stays bounded even though Table Storage does not auto-purge
+  them
 - operators should scope the Azure role assignments to the specific blob
   source, queue, topic, and table resources in their environment
 

@@ -9,6 +9,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO, cast
+from uuid import uuid4
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
@@ -150,10 +151,12 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     output_format = _validate_output_format((arguments or {}).get("output_format"))
     caller_context = _validate_context((arguments or {}).get("_caller_context"), "_caller_context")
     approval_context = _validate_context((arguments or {}).get("_approval_context"), "_approval_context")
+    correlation_id = str(uuid4())
     started = time.monotonic()
     audit_event: dict[str, Any] = {
         "event": "mcp_tool_call",
         "timestamp": _now_iso(),
+        "correlation_id": correlation_id,
         "tool": name,
         "category": skill.category,
         "capability": skill.capability,
@@ -179,6 +182,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
 
         env = os.environ.copy()
         env.setdefault("PYTHONUNBUFFERED", "1")
+        env["SKILL_CORRELATION_ID"] = correlation_id
         if caller_context:
             if "user_id" in caller_context:
                 env["SKILL_CALLER_ID"] = caller_context["user_id"]
@@ -219,6 +223,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
                 "skill": skill.name,
                 "category": skill.category,
                 "capability": skill.capability,
+                "correlation_id": correlation_id,
                 "output_format": output_format or "default",
                 "caller_context_provided": caller_context is not None,
                 "approval_context_provided": approval_context is not None,

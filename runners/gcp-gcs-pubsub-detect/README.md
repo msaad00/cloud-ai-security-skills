@@ -49,6 +49,10 @@ The runner keeps state and side effects at the edges:
   Example: `python skills/detection/detect-lateral-movement/src/detect.py --output-format native`
 - `DEDUPE_COLLECTION`
   Firestore collection used for replay-safe dedupe keys
+- `DEDUPE_TTL_DAYS`
+  Optional retention window for dedupe documents. Defaults to `30`. The
+  Terraform template also enables Firestore TTL on the `expires_at` field so
+  expired rows age out automatically.
 - `FINDINGS_TOPIC`
   Fully qualified Pub/Sub topic path such as
   `projects/my-project/topics/cloud-security-findings`
@@ -75,6 +79,8 @@ based on cost, quota, and downstream sink pressure for their environment.
 - no shell invocation; skill commands are tokenized with `shlex.split`
 - `subprocess.run(..., shell=False)` only
 - Firestore `create()` semantics prevent duplicate publish on replay
+- dedupe rows carry `expires_at`; the template enables Firestore TTL so replay
+  protection stays bounded instead of growing forever
 - Pub/Sub findings fan-out sees only deduped findings
 - operators should scope the service accounts to the specific bucket, topics,
   and Firestore collection for their environment

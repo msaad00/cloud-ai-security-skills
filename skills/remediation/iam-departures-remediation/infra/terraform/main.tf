@@ -294,6 +294,12 @@ resource "aws_iam_role_policy" "parser" {
         Resource = var.kms_key_arn
       },
       {
+        Sid      = "DenyDirectStepFunctionExecution"
+        Effect   = "Deny"
+        Action   = "states:StartExecution"
+        Resource = "*"
+      },
+      {
         Sid    = "CloudWatchLogs"
         Effect = "Allow"
         Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
@@ -364,6 +370,12 @@ resource "aws_iam_role_policy" "worker" {
           "arn:aws:iam::*:user/emergency-*",
           "arn:aws:iam::*:role/*"
         ]
+      },
+      {
+        Sid      = "DenyDirectStepFunctionExecution"
+        Effect   = "Deny"
+        Action   = "states:StartExecution"
+        Resource = "*"
       },
       {
         Sid      = "WriteAuditToDynamoDB"

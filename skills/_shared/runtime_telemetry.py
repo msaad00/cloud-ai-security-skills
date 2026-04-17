@@ -31,6 +31,9 @@ def emit_stderr_event(
             "event": event,
             "message": message,
         }
+        correlation_id = os.environ.get("SKILL_CORRELATION_ID", "").strip()
+        if correlation_id:
+            payload["correlation_id"] = correlation_id
         for key, value in fields.items():
             if value is None:
                 continue

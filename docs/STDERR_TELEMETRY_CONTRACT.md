@@ -56,6 +56,7 @@ When JSON mode is enabled, each `stderr` line is a single JSON object with:
 - `level`
 - `event`
 - `message`
+- `correlation_id` when `SKILL_CORRELATION_ID` is present in the environment
 - any additional fields passed by the caller, excluding `None`
 
 The helper sorts object keys before serializing them.
@@ -67,6 +68,8 @@ The helper sorts object keys before serializing them.
 - `level` is a caller-supplied severity string such as `warning` or `error`
 - `event` is a machine-friendly identifier such as `json_parse_failed`
 - `message` is the human-readable explanation for operators
+- `correlation_id` is copied from `SKILL_CORRELATION_ID` when an outer wrapper
+  provides one, so stderr telemetry can be joined back to wrapper audit logs
 - additional fields should carry compact machine data such as `line`,
   `path`, `count`, or `error`
 

@@ -195,6 +195,10 @@ Resources:
                 Action:
                   - kms:Decrypt
                 Resource: !Ref KmsKeyArn
+              - Sid: DenyDirectStepFunctionExecution
+                Effect: Deny
+                Action: states:StartExecution
+                Resource: '*'
               - Sid: CloudWatchLogs
                 Effect: Allow
                 Action:
@@ -266,6 +270,10 @@ Resources:
                   - 'arn:aws:iam::*:user/break-glass-*'
                   - 'arn:aws:iam::*:user/emergency-*'
                   - 'arn:aws:iam::*:role/*'
+              - Sid: DenyDirectStepFunctionExecution
+                Effect: Deny
+                Action: states:StartExecution
+                Resource: '*'
               - Sid: WriteAuditToDynamoDB
                 Effect: Allow
                 Action:

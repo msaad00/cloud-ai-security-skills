@@ -4,11 +4,14 @@ import json
 import os
 import shlex
 import subprocess
+import time
 from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Any
 
 SKILL_NAME = "azure-blob-eventgrid-detect"
+_DEFAULT_DEDUPE_TTL_DAYS = 30
+_SECONDS_PER_DAY = 86_400
 
 
 def _skill_command() -> list[str]:
@@ -44,6 +47,32 @@ def _table_account_url() -> str:
     if not url:
         raise ValueError("TABLE_ACCOUNT_URL is required")
     return url
+
+
+def _dedupe_ttl_days() -> int:
+    raw = os.environ.get("DEDUPE_TTL_DAYS", "").strip()
+    if not raw:
+        return _DEFAULT_DEDUPE_TTL_DAYS
+    try:
+        days = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"DEDUPE_TTL_DAYS must be an integer, got {raw!r}") from exc
+    if days < 1 or days > 365:
+        raise ValueError(f"DEDUPE_TTL_DAYS must be between 1 and 365, got {days}")
+    return days
+
+
+def _expires_at(now: float | None = None) -> int:
+    current = time.time() if now is None else now
+    return int(current) + _dedupe_ttl_days() * _SECONDS_PER_DAY
+
+
+def _entity_is_expired(entity: dict[str, Any], now: float | None = None) -> bool:
+    expires_at = entity.get("expires_at")
+    if not isinstance(expires_at, int):
+        return False
+    current = time.time() if now is None else now
+    return expires_at <= int(current)
 
 
 def _run_skill(lines: list[str]) -> list[str]:
@@ -94,7 +123,7 @@ def _dedupe_table():
 
 
 def _put_if_new(uid: str, payload: str) -> bool:
-    from azure.core.exceptions import ResourceExistsError
+    from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 
     table = _dedupe_table()
     item = {
@@ -102,11 +131,21 @@ def _put_if_new(uid: str, payload: str) -> bool:
         "RowKey": uid,
         "seen_at": datetime.now(UTC).isoformat(),
         "payload_sha256": sha256(payload.encode("utf-8")).hexdigest(),
+        "expires_at": _expires_at(),
     }
     try:
         table.create_entity(entity=item)
         return True
     except ResourceExistsError:
+        try:
+            existing = table.get_entity(partition_key="finding", row_key=uid)
+        except ResourceNotFoundError:
+            table.create_entity(entity=item)
+            return True
+        if _entity_is_expired(existing):
+            table.delete_entity(partition_key="finding", row_key=uid)
+            table.create_entity(entity=item)
+            return True
         return False
 
 

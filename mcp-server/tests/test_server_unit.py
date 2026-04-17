@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -11,6 +12,15 @@ assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+RUNTIME_TELEMETRY_PATH = REPO_ROOT / "skills" / "_shared" / "runtime_telemetry.py"
+RUNTIME_TELEMETRY_SPEC = importlib.util.spec_from_file_location(
+    "cloud_security_runtime_telemetry_test",
+    RUNTIME_TELEMETRY_PATH,
+)
+assert RUNTIME_TELEMETRY_SPEC and RUNTIME_TELEMETRY_SPEC.loader
+RUNTIME_TELEMETRY = importlib.util.module_from_spec(RUNTIME_TELEMETRY_SPEC)
+sys.modules[RUNTIME_TELEMETRY_SPEC.name] = RUNTIME_TELEMETRY
+RUNTIME_TELEMETRY_SPEC.loader.exec_module(RUNTIME_TELEMETRY)
 
 
 class _FakeCompleted:
@@ -73,14 +83,17 @@ def test_call_tool_injects_caller_and_approval_context(monkeypatch):
     assert env["SKILL_CALLER_EMAIL"] == "user@example.com"
     assert env["SKILL_SESSION_ID"] == "sess-1"
     assert env["SKILL_CALLER_ROLES"] == "security_engineer"
+    assert isinstance(env["SKILL_CORRELATION_ID"], str) and env["SKILL_CORRELATION_ID"]
     assert env["SKILL_APPROVER_ID"] == "a-456"
     assert env["SKILL_APPROVER_EMAIL"] == "approver@example.com"
     assert env["SKILL_APPROVAL_TICKET"] == "SEC-123"
     assert env["SKILL_APPROVAL_TIMESTAMP"] == "2026-04-14T12:00:00Z"
     assert result["structuredContent"]["caller_context_provided"] is True
     assert result["structuredContent"]["approval_context_provided"] is True
+    assert result["structuredContent"]["correlation_id"] == env["SKILL_CORRELATION_ID"]
     assert audit_events[0]["tool"] == "fake-skill"
     assert audit_events[0]["result"] == "success"
+    assert audit_events[0]["correlation_id"] == env["SKILL_CORRELATION_ID"]
     assert audit_events[0]["caller_id"] == "u-123"
     assert audit_events[0]["approval_ticket"] == "SEC-123"
     assert audit_events[0]["args_count"] == 0
@@ -152,3 +165,20 @@ def test_call_tool_audit_records_resolved_timeout(monkeypatch):
     monkeypatch.delenv("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", raising=False)
     MODULE._call_tool("fake-skill", {"args": []})
     assert audit_events[0]["timeout_seconds"] == 150
+
+
+def test_runtime_telemetry_includes_env_correlation_id(monkeypatch, capsys):
+    monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+    monkeypatch.setenv("SKILL_CORRELATION_ID", "corr-123")
+
+    RUNTIME_TELEMETRY.emit_stderr_event(
+        "fake-skill",
+        level="warning",
+        event="skipped_record",
+        message="record skipped",
+        line=7,
+    )
+
+    payload = json.loads(capsys.readouterr().err.strip())
+    assert payload["correlation_id"] == "corr-123"
+    assert payload["line"] == 7
