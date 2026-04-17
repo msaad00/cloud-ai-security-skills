@@ -10,6 +10,7 @@ from hashlib import sha256
 from typing import Any
 
 _DEFAULT_DEDUPE_TTL_DAYS = 30
+_MAX_SNS_BATCH_SIZE = 10
 _SECONDS_PER_DAY = 86_400
 
 try:
@@ -107,6 +108,30 @@ def _sns_topic() -> str:
     return topic
 
 
+def _batched(items: list[tuple[str, str]], size: int) -> list[list[tuple[str, str]]]:
+    return [items[index : index + size] for index in range(0, len(items), size)]
+
+
+def _publish_findings(records: list[tuple[str, str]]) -> None:
+    client = _sns_client()
+    topic = _sns_topic()
+    for batch_index, batch in enumerate(_batched(records, _MAX_SNS_BATCH_SIZE)):
+        response = client.publish_batch(
+            TopicArn=topic,
+            PublishBatchRequestEntries=[
+                {
+                    "Id": f"{batch_index}-{entry_index}",
+                    "Message": line,
+                    "Subject": f"skill-finding:{uid}",
+                }
+                for entry_index, (line, uid) in enumerate(batch)
+            ],
+        )
+        failed = response.get("Failed", [])
+        if failed:
+            raise RuntimeError(f"SNS publish_batch failed for {len(failed)} finding(s)")
+
+
 def _put_if_new(uid: str, payload: str) -> bool:
     table = _dedupe_table()
     item = {
@@ -128,15 +153,17 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, int]:
     input_lines = [record["body"] for record in event.get("Records", [])]
     findings = _run_skill(input_lines)
 
-    published = 0
+    to_publish: list[tuple[str, str]] = []
     duplicates = 0
     for line in findings:
         record = json.loads(line)
         uid = _extract_uid(record)
         if _put_if_new(uid, line):
-            _sns_client().publish(TopicArn=_sns_topic(), Message=line, Subject=f"skill-finding:{uid}")
-            published += 1
+            to_publish.append((line, uid))
         else:
             duplicates += 1
 
-    return {"messages_processed": len(input_lines), "published": published, "duplicates": duplicates}
+    if to_publish:
+        _publish_findings(to_publish)
+
+    return {"messages_processed": len(input_lines), "published": len(to_publish), "duplicates": duplicates}

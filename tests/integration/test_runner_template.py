@@ -87,3 +87,20 @@ class TestAwsS3SqsDetectRunner:
         monkeypatch.delenv("DEDUPE_TTL_DAYS", raising=False)
         base = 1_700_000_000
         assert DETECT._expires_at(now=base) == base + 30 * 86_400
+
+    def test_detect_publish_findings_uses_sns_batches(self, monkeypatch):
+        seen_batches: list[list[dict[str, str]]] = []
+
+        class _FakeClient:
+            def publish_batch(self, **kwargs):
+                seen_batches.append(kwargs["PublishBatchRequestEntries"])
+                return {"Failed": []}
+
+        monkeypatch.setattr(DETECT, "_sns_client", lambda: _FakeClient())
+        monkeypatch.setattr(DETECT, "_sns_topic", lambda: "arn:aws:sns:us-east-1:123:topic")
+
+        records = [(f"line-{idx}", f"uid-{idx}") for idx in range(12)]
+        DETECT._publish_findings(records)
+
+        assert [len(batch) for batch in seen_batches] == [10, 2]
+        assert seen_batches[0][0]["Subject"] == "skill-finding:uid-0"

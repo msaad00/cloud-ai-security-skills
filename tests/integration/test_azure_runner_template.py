@@ -127,6 +127,10 @@ class TestAzureBlobEventGridDetectRunner:
         assert DETECT._entity_is_expired({"expires_at": 12}, now=11) is False
         assert DETECT._entity_is_expired({}, now=11) is False
 
+    def test_detect_batches_service_bus_messages(self):
+        batches = DETECT._batched([(f"line-{idx}", f"uid-{idx}") for idx in range(205)], size=100)
+        assert [len(batch) for batch in batches] == [100, 100, 5]
+
     def test_detect_handles_findings_and_dedupes(self, monkeypatch):
         lines = [
             json.dumps(
@@ -144,8 +148,13 @@ class TestAzureBlobEventGridDetectRunner:
         monkeypatch.setattr(DETECT, "_put_if_new", lambda uid, payload: next(dedupe_results))
         monkeypatch.setattr(
             DETECT,
-            "_publish_finding",
-            lambda line, uid: published.append((line, uid)),
+            "_publish_findings",
+            lambda records: published.extend(records),
+        )
+        monkeypatch.setattr(
+            DETECT,
+            "_batched",
+            DETECT._batched,
         )
 
         result = DETECT.handle_detect_messages(["raw message"])

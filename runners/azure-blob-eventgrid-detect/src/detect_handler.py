@@ -11,6 +11,7 @@ from typing import Any
 
 SKILL_NAME = "azure-blob-eventgrid-detect"
 _DEFAULT_DEDUPE_TTL_DAYS = 30
+_MAX_SERVICE_BUS_SEND = 100
 _SECONDS_PER_DAY = 86_400
 
 
@@ -73,6 +74,10 @@ def _entity_is_expired(entity: dict[str, Any], now: float | None = None) -> bool
         return False
     current = time.time() if now is None else now
     return expires_at <= int(current)
+
+
+def _batched(items: list[tuple[str, str]], size: int) -> list[list[tuple[str, str]]]:
+    return [items[index : index + size] for index in range(0, len(items), size)]
 
 
 def _run_skill(lines: list[str]) -> list[str]:
@@ -149,7 +154,7 @@ def _put_if_new(uid: str, payload: str) -> bool:
         return False
 
 
-def _publish_finding(line: str, uid: str) -> None:
+def _publish_findings(records: list[tuple[str, str]]) -> None:
     from azure.identity import DefaultAzureCredential
     from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
@@ -160,23 +165,27 @@ def _publish_finding(line: str, uid: str) -> None:
     with client:
         sender = client.get_topic_sender(topic_name=_alert_topic_name())
         with sender:
-            sender.send_messages(ServiceBusMessage(line, subject=f"skill-finding:{uid}"))
+            for batch in _batched(records, _MAX_SERVICE_BUS_SEND):
+                sender.send_messages(
+                    [ServiceBusMessage(line, subject=f"skill-finding:{uid}") for line, uid in batch]
+                )
 
 
 def handle_detect_messages(messages: list[str]) -> dict[str, int]:
     findings = _run_skill(messages)
-    published = 0
+    to_publish: list[tuple[str, str]] = []
     duplicates = 0
     for line in findings:
         record = json.loads(line)
         uid = _extract_uid(record)
         if _put_if_new(uid, line):
-            _publish_finding(line, uid)
-            published += 1
+            to_publish.append((line, uid))
         else:
             duplicates += 1
+    if to_publish:
+        _publish_findings(to_publish)
     return {
         "messages_processed": len(messages),
-        "published": published,
+        "published": len(to_publish),
         "duplicates": duplicates,
     }

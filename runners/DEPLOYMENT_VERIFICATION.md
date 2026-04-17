@@ -13,17 +13,18 @@ Read next:
 
 ## Current Status
 
-| Runner | Template shipped | Handler tests | IaC validation in CI | Real deploy proof captured | Tracking issue |
-|---|---|---|---|---|---|
-| `aws-s3-sqs-detect` | yes | yes | yes | not yet | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
-| `gcp-gcs-pubsub-detect` | yes | yes | yes | not yet | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
-| `azure-blob-eventgrid-detect` | yes | yes | yes | not yet | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
+| Runner | Template shipped | Handler tests | IaC validation in CI | Walkthrough committed | Real deploy proof captured | Tracking issue |
+|---|---|---|---|---|---|---|
+| `aws-s3-sqs-detect` | yes | yes | yes | yes | not yet | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
+| `gcp-gcs-pubsub-detect` | yes | yes | yes | yes | not yet | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
+| `azure-blob-eventgrid-detect` | yes | yes | yes | yes | not yet | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
 
 Current repo reality:
 
 - all three runner templates are shipped references
 - the handlers and infrastructure contracts are validated in CI
-- the repo does not yet claim a checked-in live deployment walkthrough for all three clouds
+- the repo now carries concrete first-event walkthroughs in each runner README
+- the repo still does not claim a checked-in live deployment walkthrough outcome for all three clouds
 
 That is the remaining work tracked in `#198`.
 
@@ -36,7 +37,20 @@ To close `#198`, each runner should have one captured deploy-and-first-event pro
 3. configure one real `ingest-*` and one real `detect-*` skill command
 4. send one real source event through the trigger path
 5. confirm the downstream dedupe + publish path completes
-6. write the exact walkthrough and cloud-specific prerequisites back into the runner README
+6. record the exact commands, runtime bindings, and evidence back into the runner README
+
+## Prepared Walkthroughs
+
+Each runner README now includes:
+
+- deploy/apply command skeletons with the required inputs
+- where the ingest and detect skill commands are bound
+- one example source event to send
+- the exact evidence to capture on the first successful run
+
+That is intentionally different from claiming the walkthrough has already been
+executed in a real cloud. Prepared walkthroughs reduce operator guesswork; the
+live proof still requires a real deployment and captured evidence.
 
 ## Cloud-Specific First-Event Checklist
 
