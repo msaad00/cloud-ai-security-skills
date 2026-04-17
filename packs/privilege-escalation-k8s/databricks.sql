@@ -296,33 +296,7 @@ SELECT
                         END,
                     'types', ARRAY(finding_type),
                     'first_seen_time', first_seen_time_ms,
-                    'last_seen_time', last_seen_time_ms,
-                    'attacks', ARRAY(
-                        NAMED_STRUCT(
-                            'version', 'v14',
-                            'tactic', NAMED_STRUCT('name', tactic_name, 'uid', tactic_uid),
-                            'technique', NAMED_STRUCT('name', technique_name, 'uid', mitre_technique_uid),
-                            'sub_technique',
-                                CASE
-                                    WHEN mitre_subtechnique_uid IS NULL THEN NULL
-                                    ELSE NAMED_STRUCT('name', subtechnique_name, 'uid', mitre_subtechnique_uid)
-                                END
-                        )
-                    )
-                ),
-                'observables', ARRAY(
-                    NAMED_STRUCT('name', 'actor.name', 'type', 'Other', 'value', actor_name),
-                    NAMED_STRUCT('name', 'k8s.namespace', 'type', 'Other', 'value', namespace),
-                    NAMED_STRUCT('name', 'k8s.resource_type', 'type', 'Other', 'value', resource_type),
-                    NAMED_STRUCT('name', 'k8s.resource_name', 'type', 'Other', 'value', target_name),
-                    NAMED_STRUCT('name', 'k8s.subresource', 'type', 'Other', 'value', subresource),
-                    NAMED_STRUCT('name', 'rule', 'type', 'Other', 'value', rule_name)
-                ),
-                'evidence', NAMED_STRUCT(
-                    'events_observed', 1,
-                    'first_seen_time', first_seen_time_ms,
-                    'last_seen_time', last_seen_time_ms,
-                    'raw_events', ARRAY()
+                    'last_seen_time', last_seen_time_ms
                 )
             )
         ) AS STRING
