@@ -19,7 +19,7 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: native
+output_formats: native, ocsf
 concurrency_safety: operator_coordinated
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files.
@@ -131,7 +131,7 @@ python src/checks.py config.yaml --section auth
 python src/checks.py config.yaml --section safety
 
 # JSON output for pipeline integration
-python src/checks.py config.json --output json > results.json
+python src/checks.py config.json --output json --output-format ocsf > results.json
 
 # Scan additional paths for hardcoded secrets
 python src/checks.py config.yaml --scan-paths ./k8s/ ./helm/

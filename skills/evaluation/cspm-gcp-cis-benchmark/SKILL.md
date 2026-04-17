@@ -13,7 +13,7 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: native
+output_formats: native, ocsf
 concurrency_safety: operator_coordinated
 compatibility: >-
   Requires Python 3.11+, google-cloud-iam, google-cloud-storage, google-cloud-compute.
@@ -140,7 +140,7 @@ python src/checks.py --project my-project-id --section iam
 python src/checks.py --project my-project-id --section vertex-ai
 
 # Output JSON
-python src/checks.py --project my-project-id --output json > cis-gcp-results.json
+python src/checks.py --project my-project-id --output json --output-format ocsf > cis-gcp-results.json
 ```
 
 ## Remediation — Critical Findings

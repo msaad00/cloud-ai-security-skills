@@ -68,6 +68,7 @@
       "Sid": "WriteAuditToDynamoDB",
       "Effect": "Allow",
       "Action": [
+        "dynamodb:GetItem",
         "dynamodb:PutItem"
       ],
       "Resource": "arn:aws:dynamodb:*:*:table/${IAM_AUDIT_DYNAMODB_TABLE}"

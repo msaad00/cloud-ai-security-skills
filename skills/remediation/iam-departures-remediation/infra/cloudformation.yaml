@@ -277,6 +277,7 @@ Resources:
               - Sid: WriteAuditToDynamoDB
                 Effect: Allow
                 Action:
+                  - dynamodb:GetItem
                   - dynamodb:PutItem
                 Resource: !GetAtt AuditTable.Arn
               - Sid: WriteAuditToS3

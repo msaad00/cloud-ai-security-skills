@@ -12,8 +12,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.evaluation_ocsf import findings_to_native, findings_to_ocsf  # noqa: E402
+
+SKILL_NAME = "k8s-security-benchmark"
+BENCHMARK_NAME = "Kubernetes Security Benchmark"
+PROVIDER_NAME = "Kubernetes"
+OUTPUT_FORMATS = ("native", "ocsf")
 
 
 @dataclass
@@ -327,13 +338,25 @@ def main() -> None:
     parser.add_argument("config", help="Path to K8s config (JSON/YAML)")
     parser.add_argument("--section", choices=list(ALL_CHECKS.keys()))
     parser.add_argument("--output", choices=["console", "json"], default="console")
+    parser.add_argument("--output-format", choices=list(OUTPUT_FORMATS), default="native")
     args = parser.parse_args()
     p = Path(args.config)
     content = p.read_text()
     config = json.loads(content) if p.suffix == ".json" else __import__("yaml").safe_load(content)
     findings = run_benchmark(config, section=args.section)
     if args.output == "json":
-        print(json.dumps([asdict(f) for f in findings], indent=2))
+        rendered = (
+            findings_to_ocsf(
+                findings,
+                skill_name=SKILL_NAME,
+                benchmark_name=BENCHMARK_NAME,
+                provider=PROVIDER_NAME,
+                frameworks=["CIS Kubernetes Benchmark", "NIST CSF 2.0"],
+            )
+            if args.output_format == "ocsf"
+            else findings_to_native(findings)
+        )
+        print(json.dumps(rendered, indent=2))
     else:
         print_summary(findings)
     sys.exit(1 if any(f.status == "FAIL" and f.severity in ("CRITICAL", "HIGH") for f in findings) else 0)

@@ -241,6 +241,22 @@ class TestPositiveCases:
         findings = list(detect(events))
         assert len(findings) == 1
 
+
+class TestThresholdOverrides:
+    def test_min_bytes_env_override_allows_smaller_flows(self, monkeypatch):
+        events = [
+            _anchor_event(time_ms=1000),
+            _flow(time_ms=60_000, bytes_=800),
+        ]
+
+        assert list(detect(events)) == []
+
+        monkeypatch.setenv("DETECT_LATERAL_MOVEMENT_MIN_BYTES", "512")
+
+        findings = list(detect(events))
+        assert len(findings) == 1
+        assert findings[0]["severity_id"] == SEVERITY_HIGH
+
     def test_exact_window_boundary_is_included(self):
         events = [
             _anchor_event(time_ms=1000),

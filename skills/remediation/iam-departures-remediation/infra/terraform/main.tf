@@ -382,7 +382,7 @@ resource "aws_iam_role_policy" "worker" {
       {
         Sid      = "WriteAuditToDynamoDB"
         Effect   = "Allow"
-        Action   = ["dynamodb:PutItem"]
+        Action   = ["dynamodb:GetItem", "dynamodb:PutItem"]
         Resource = aws_dynamodb_table.audit.arn
       },
       {

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,6 +48,10 @@ WINDOW_MS = 10 * 60 * 1000
 MIN_RELEVANT_EVENTS = 3
 MIN_CHALLENGES = 2
 MIN_DENIALS = 1
+WINDOW_ENV = "DETECT_OKTA_MFA_FATIGUE_WINDOW_MS"
+MIN_RELEVANT_ENV = "DETECT_OKTA_MFA_FATIGUE_MIN_RELEVANT_EVENTS"
+MIN_CHALLENGES_ENV = "DETECT_OKTA_MFA_FATIGUE_MIN_CHALLENGES"
+MIN_DENIALS_ENV = "DETECT_OKTA_MFA_FATIGUE_MIN_DENIALS"
 
 OKTA_INGEST_SKILL = "ingest-okta-system-log-ocsf"
 CHALLENGE_EVENT_TYPES = {"system.push.send_factor_verify_push"}
@@ -203,10 +208,11 @@ def _build_native_finding(user_uid: str, user_name: str, burst: list[dict[str, A
     source_ips = sorted({str((item["src_endpoint"] or {}).get("ip") or "") for item in burst if (item["src_endpoint"] or {}).get("ip")})
     session_uids = sorted({str((item["session"] or {}).get("uid") or "") for item in burst if (item["session"] or {}).get("uid")})
     event_uids = [item["event_uid"] for item in burst]
+    window_ms = _window_ms()
 
     description = (
         f"User '{user_name or user_uid}' received {challenge_count} Okta Verify push challenge events and "
-        f"{denial_count} denial or verification-failure events within {WINDOW_MS // 60000} minutes. "
+        f"{denial_count} denial or verification-failure events within {window_ms // 60000} minutes. "
         "This is a high-signal MFA fatigue pattern aligned to repeated push prompts and user rejection."
     )
 
@@ -302,6 +308,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
 
 
 def coverage_metadata() -> dict[str, Any]:
+    window_ms = _window_ms()
     return {
         "frameworks": ("OCSF 1.8.0", "MITRE ATT&CK v14"),
         "providers": ("okta",),
@@ -313,11 +320,11 @@ def coverage_metadata() -> dict[str, Any]:
                 "techniques": [MITRE_TECHNIQUE_UID],
             }
         },
-        "window_ms": WINDOW_MS,
+        "window_ms": window_ms,
         "thresholds": {
-            "min_relevant_events": MIN_RELEVANT_EVENTS,
-            "min_challenges": MIN_CHALLENGES,
-            "min_denials": MIN_DENIALS,
+            "min_relevant_events": _min_relevant_events(),
+            "min_challenges": _min_challenges(),
+            "min_denials": _min_denials(),
         },
     }
 
@@ -356,12 +363,13 @@ def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Ite
         user_uid = item["user_uid"]
         current_time = item["time_ms"]
         burst = states.setdefault(user_uid, [])
+        window_ms = _window_ms()
 
-        if burst and current_time - burst[-1]["time_ms"] > WINDOW_MS:
+        if burst and current_time - burst[-1]["time_ms"] > window_ms:
             burst.clear()
             active_bursts.discard(user_uid)
 
-        cutoff = current_time - WINDOW_MS
+        cutoff = current_time - window_ms
         burst[:] = [entry for entry in burst if entry["time_ms"] >= cutoff]
         burst.append(item)
 
@@ -370,9 +378,9 @@ def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Ite
         if user_uid in active_bursts:
             continue
         if (
-            len(burst) >= MIN_RELEVANT_EVENTS
-            and challenge_count >= MIN_CHALLENGES
-            and denial_count >= MIN_DENIALS
+            len(burst) >= _min_relevant_events()
+            and challenge_count >= _min_challenges()
+            and denial_count >= _min_denials()
         ):
             native_finding = _build_native_finding(user_uid, item["user_name"], burst)
             if output_format == "native":
@@ -380,6 +388,33 @@ def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Ite
             else:
                 yield _render_ocsf_finding(native_finding)
             active_bursts.add(user_uid)
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _window_ms() -> int:
+    return _env_int(WINDOW_ENV, WINDOW_MS)
+
+
+def _min_relevant_events() -> int:
+    return _env_int(MIN_RELEVANT_ENV, MIN_RELEVANT_EVENTS)
+
+
+def _min_challenges() -> int:
+    return _env_int(MIN_CHALLENGES_ENV, MIN_CHALLENGES)
+
+
+def _min_denials() -> int:
+    return _env_int(MIN_DENIALS_ENV, MIN_DENIALS)
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:

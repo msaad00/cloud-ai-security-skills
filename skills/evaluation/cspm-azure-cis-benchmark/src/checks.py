@@ -16,7 +16,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.evaluation_ocsf import findings_to_native, findings_to_ocsf  # noqa: E402
+
+SKILL_NAME = "cspm-azure-cis-benchmark"
+BENCHMARK_NAME = "CIS Azure Foundations Benchmark v2.1"
+PROVIDER_NAME = "Azure"
+OUTPUT_FORMATS = ("native", "ocsf")
 
 # ---------------------------------------------------------------------------
 # Data model
@@ -345,12 +357,24 @@ def main():
     parser.add_argument("--subscription-id", required=True, help="Azure subscription ID")
     parser.add_argument("--section", choices=["storage", "networking"], help="Run specific section")
     parser.add_argument("--output", choices=["console", "json"], default="console")
+    parser.add_argument("--output-format", choices=list(OUTPUT_FORMATS), default="native")
     args = parser.parse_args()
 
     findings = run_assessment(subscription_id=args.subscription_id, section=args.section)
 
     if args.output == "json":
-        print(json.dumps([asdict(f) for f in findings], indent=2))
+        rendered = (
+            findings_to_ocsf(
+                findings,
+                skill_name=SKILL_NAME,
+                benchmark_name=BENCHMARK_NAME,
+                provider=PROVIDER_NAME,
+                frameworks=["CIS Azure Foundations v2.1", "NIST CSF 2.0"],
+            )
+            if args.output_format == "ocsf"
+            else findings_to_native(findings)
+        )
+        print(json.dumps(rendered, indent=2))
     else:
         print_summary(findings)
 

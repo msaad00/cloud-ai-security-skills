@@ -17,7 +17,7 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: native
+output_formats: native, ocsf
 concurrency_safety: operator_coordinated
 compatibility: >-
   Requires Python 3.11+. No cloud SDKs needed — works with local config files
@@ -154,7 +154,7 @@ python src/checks.py config.yaml --section driver
 python src/checks.py config.yaml --section tenant
 
 # JSON output
-python src/checks.py config.json --output json > gpu-security-results.json
+python src/checks.py config.json --output json --output-format ocsf > gpu-security-results.json
 ```
 
 ## Config Format

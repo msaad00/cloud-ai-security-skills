@@ -22,8 +22,19 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.evaluation_ocsf import findings_to_native, findings_to_ocsf  # noqa: E402
+
+SKILL_NAME = "model-serving-security"
+BENCHMARK_NAME = "Model Serving Security Benchmark"
+PROVIDER_NAME = "Multi"
+OUTPUT_FORMATS = ("native", "ocsf")
 
 FRAMEWORKS = (
     "MITRE ATLAS",
@@ -842,13 +853,25 @@ def main() -> None:
     parser.add_argument("--section", choices=list(ALL_CHECKS.keys()), help="Run specific section only")
     parser.add_argument("--scan-paths", nargs="*", help="Additional paths to scan for hardcoded secrets")
     parser.add_argument("--output", choices=["console", "json"], default="console", help="Output format")
+    parser.add_argument("--output-format", choices=list(OUTPUT_FORMATS), default="native")
     args = parser.parse_args()
 
     config = load_config(args.config)
     findings = run_benchmark(config, section=args.section, scan_paths=args.scan_paths)
 
     if args.output == "json":
-        print(json.dumps([asdict(f) for f in findings], indent=2))
+        rendered = (
+            findings_to_ocsf(
+                findings,
+                skill_name=SKILL_NAME,
+                benchmark_name=BENCHMARK_NAME,
+                provider=PROVIDER_NAME,
+                frameworks=list(FRAMEWORKS),
+            )
+            if args.output_format == "ocsf"
+            else findings_to_native(findings)
+        )
+        print(json.dumps(rendered, indent=2))
     else:
         print_summary(findings)
 

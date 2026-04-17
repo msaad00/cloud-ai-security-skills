@@ -93,6 +93,11 @@ event family.
 
 Default 15 minutes post-anchor. Rationale: attackers tend to act fast after acquiring a more powerful cloud identity. A longer window catches more but produces more false positives on legitimate cross-service traffic.
 
+Operators can override the runtime thresholds without forking the skill:
+
+- `DETECT_LATERAL_MOVEMENT_WINDOW_MS`
+- `DETECT_LATERAL_MOVEMENT_MIN_BYTES`
+
 ### Batch sizing guidance
 
 This detector is designed for bounded batch windows, not as an infinite-stream

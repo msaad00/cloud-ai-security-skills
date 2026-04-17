@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import ipaddress
 import json
+import os
 import sys
 from bisect import bisect_left
 from datetime import datetime, timezone
@@ -72,6 +73,8 @@ CORRELATION_WINDOW_MS = 15 * 60 * 1000
 # Byte threshold — filter out scan probes / 3-way handshake noise
 MIN_BYTES = 1024
 OUTPUT_FORMATS = ("ocsf", "native")
+WINDOW_ENV = "DETECT_LATERAL_MOVEMENT_WINDOW_MS"
+MIN_BYTES_ENV = "DETECT_LATERAL_MOVEMENT_MIN_BYTES"
 
 # Cloud identity-pivot operations we anchor on
 ASSUME_ROLE_OPERATIONS = {"AssumeRole", "AssumeRoleWithSAML", "AssumeRoleWithWebIdentity"}
@@ -354,13 +357,15 @@ def is_identity_pivot_anchor(event: dict[str, Any]) -> bool:
 
 def coverage_metadata() -> dict[str, object]:
     """Return machine-readable ATT&CK and provider coverage for the detector."""
+    correlation_window_ms = _correlation_window_ms()
+    min_bytes = _min_bytes()
     return {
         "frameworks": list(FRAMEWORKS),
         "providers": list(PROVIDERS),
         "asset_classes": list(ASSET_CLASSES),
         "attack_coverage": ATTACK_COVERAGE,
-        "correlation_window_seconds": CORRELATION_WINDOW_MS // 1000,
-        "min_flow_bytes": MIN_BYTES,
+        "correlation_window_seconds": correlation_window_ms // 1000,
+        "min_flow_bytes": min_bytes,
     }
 
 
@@ -386,6 +391,7 @@ def _build_native_finding(
     src_ip = str(flow_event["src_ip"])
     flow_bytes = _safe_int(flow_event["traffic_bytes"])
     operation = str(anchor_event["operation"])
+    correlation_window_ms = _correlation_window_ms()
 
     dst_key = f"{dst_ip}:{dst_port}"
     uid = f"det-lm-{_short(provider_key)}-{_short(session)}-{_short(dst_key)}"
@@ -393,7 +399,7 @@ def _build_native_finding(
     desc = (
         f"Principal '{principal}' triggered identity pivot operation '{operation}' "
         f"(session '{session}'), and within the "
-        f"{CORRELATION_WINDOW_MS // 60000}-minute correlation window an "
+        f"{correlation_window_ms // 60000}-minute correlation window an "
         f"accepted east-west flow moved {flow_bytes} bytes from "
         f"{src_instance or src_ip} to {dst_ip}:{dst_port}. This is the "
         f"canonical {provider} lateral movement pattern (MITRE T1021 Remote "
@@ -447,7 +453,7 @@ def _build_native_finding(
         "dst_ip": dst_ip,
         "dst_port": dst_port,
         "traffic_bytes": flow_bytes,
-        "window_seconds": CORRELATION_WINDOW_MS // 1000,
+        "window_seconds": correlation_window_ms // 1000,
         "rule_name": "cloud-lateral-movement",
     }
 
@@ -527,7 +533,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
 def _is_candidate_flow(event: dict[str, Any]) -> bool:
     if event["event_kind"] != "network_activity" or int(event["activity_id"]) != NET_ACTIVITY_ACCEPT:
         return False
-    if _safe_int(event["traffic_bytes"]) < MIN_BYTES:
+    if _safe_int(event["traffic_bytes"]) < _min_bytes():
         return False
     return is_rfc1918(str(event["dst_ip"]))
 
@@ -614,7 +620,7 @@ def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Ite
 
     for anchor in identity_anchors:
         anchor_time = int(anchor["time_ms"])
-        window_end = anchor_time + CORRELATION_WINDOW_MS
+        window_end = anchor_time + _correlation_window_ms()
         anchor_provider = str(anchor["provider"])
         anchor_account = str(anchor["account_uid"])
         session = str(anchor["session_uid"])
@@ -641,6 +647,25 @@ def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Ite
         )
     )
     yield from findings
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _correlation_window_ms() -> int:
+    return _env_int(WINDOW_ENV, CORRELATION_WINDOW_MS)
+
+
+def _min_bytes() -> int:
+    return _env_int(MIN_BYTES_ENV, MIN_BYTES)
 
 
 # ---------------------------------------------------------------------------
