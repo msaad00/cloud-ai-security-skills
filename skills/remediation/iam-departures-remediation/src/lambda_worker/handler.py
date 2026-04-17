@@ -57,6 +57,7 @@ CROSS_ACCOUNT_ROLE = os.environ.get("IAM_CROSS_ACCOUNT_ROLE", "iam-remediation-r
 AUDIT_TABLE = os.environ.get("IAM_AUDIT_DYNAMODB_TABLE", "iam-remediation-audit")
 AUDIT_BUCKET = os.environ.get("IAM_REMEDIATION_BUCKET", "")
 ACCOUNT_ID_RE = re.compile(r"^\d{12}$")
+CHECKPOINT_SK = "CURRENT"
 
 
 def handler(event: dict, context: Any) -> dict:
@@ -115,55 +116,51 @@ def handler(event: dict, context: Any) -> dict:
         email,
     )
 
-    actions_taken: list[dict] = []
+    checkpoint = _load_checkpoint(entry)
+    actions_taken: list[dict[str, Any]] = list(checkpoint["actions_taken"])
+    completed_steps: list[str] = list(checkpoint["completed_steps"])
+    completed_step_set = set(completed_steps)
+
+    if checkpoint["status"] == "remediated":
+        logger.info("Replay-safe short circuit for already remediated user %s in %s", iam_username, account_id)
+        return {
+            "email": email,
+            "iam_username": iam_username,
+            "account_id": account_id,
+            "status": "remediated",
+            "actions_taken": actions_taken,
+            "remediated_at": checkpoint["updated_at"],
+            "checkpoint_reused": True,
+        }
+
     try:
         iam = _get_iam_client(account_id)
 
-        # Step 1: Deactivate all access keys
-        _deactivate_access_keys(iam, iam_username, actions_taken)
-
-        # Step 2: Delete login profile (console access)
-        _delete_login_profile(iam, iam_username, actions_taken)
-
-        # Step 3: Remove from all groups
-        _remove_from_groups(iam, iam_username, actions_taken)
-
-        # Step 4: Detach all managed policies
-        _detach_managed_policies(iam, iam_username, actions_taken)
-
-        # Step 5: Delete all inline policies
-        _delete_inline_policies(iam, iam_username, actions_taken)
-
-        # Step 6: Deactivate and delete MFA devices
-        _delete_mfa_devices(iam, iam_username, actions_taken)
-
-        # Step 7: Delete signing certificates
-        _delete_signing_certificates(iam, iam_username, actions_taken)
-
-        # Step 8: Delete SSH public keys
-        _delete_ssh_keys(iam, iam_username, actions_taken)
-
-        # Step 9: Delete service-specific credentials
-        _delete_service_credentials(iam, iam_username, actions_taken)
-
-        # Step 10: Tag user with audit metadata before deletion
-        _tag_user_for_audit(iam, iam_username, entry, actions_taken)
-
-        # Step 11: DELETE the IAM user (all deps removed)
-        iam.delete_user(UserName=iam_username)
-        actions_taken.append(
-            {
-                "action": "delete_user",
-                "target": iam_username,
-                "timestamp": _now(),
-            }
-        )
+        for step_name, step_fn in _remediation_steps():
+            if step_name in completed_step_set:
+                continue
+            step_fn(iam, iam_username, entry, actions_taken)
+            completed_steps.append(step_name)
+            completed_step_set.add(step_name)
+            _save_checkpoint(
+                entry,
+                actions_taken,
+                completed_steps,
+                status="in_progress",
+            )
 
         logger.info("Successfully deleted IAM user: %s", iam_username)
 
         # Step 12: Write audit record
         audit_record = _build_audit_record(entry, actions_taken, "remediated", context=context)
         _write_audit(audit_record)
+        _save_checkpoint(
+            entry,
+            actions_taken,
+            completed_steps,
+            status="remediated",
+            audit_timestamp=audit_record["audit_timestamp"],
+        )
 
         return {
             "email": email,
@@ -176,6 +173,13 @@ def handler(event: dict, context: Any) -> dict:
 
     except Exception as exc:
         logger.exception("Remediation failed for %s in %s", iam_username, account_id)
+        _save_checkpoint(
+            entry,
+            actions_taken,
+            completed_steps,
+            status="error",
+            error=str(exc),
+        )
 
         # Still write audit — record the failure
         audit_record = _build_audit_record(entry, actions_taken, "error", error=str(exc), context=context)
@@ -192,6 +196,22 @@ def handler(event: dict, context: Any) -> dict:
 
 
 # ── IAM Remediation Steps ──────────────────────────────────────────
+
+
+def _remediation_steps() -> tuple[tuple[str, Any], ...]:
+    return (
+        ("deactivate_access_keys", lambda iam, username, _entry, actions: _deactivate_access_keys(iam, username, actions)),
+        ("delete_login_profile", lambda iam, username, _entry, actions: _delete_login_profile(iam, username, actions)),
+        ("remove_from_groups", lambda iam, username, _entry, actions: _remove_from_groups(iam, username, actions)),
+        ("detach_managed_policies", lambda iam, username, _entry, actions: _detach_managed_policies(iam, username, actions)),
+        ("delete_inline_policies", lambda iam, username, _entry, actions: _delete_inline_policies(iam, username, actions)),
+        ("delete_mfa_devices", lambda iam, username, _entry, actions: _delete_mfa_devices(iam, username, actions)),
+        ("delete_signing_certificates", lambda iam, username, _entry, actions: _delete_signing_certificates(iam, username, actions)),
+        ("delete_ssh_keys", lambda iam, username, _entry, actions: _delete_ssh_keys(iam, username, actions)),
+        ("delete_service_credentials", lambda iam, username, _entry, actions: _delete_service_credentials(iam, username, actions)),
+        ("tag_user_for_audit", lambda iam, username, entry, actions: _tag_user_for_audit(iam, username, entry, actions)),
+        ("delete_user", lambda iam, username, _entry, actions: _delete_user(iam, username, actions)),
+    )
 
 
 def _deactivate_access_keys(iam: Any, username: str, actions: list) -> None:
@@ -406,6 +426,17 @@ def _tag_user_for_audit(iam: Any, username: str, entry: dict, actions: list) -> 
         logger.warning("Failed to tag user %s before deletion", username)
 
 
+def _delete_user(iam: Any, username: str, actions: list[dict[str, Any]]) -> None:
+    iam.delete_user(UserName=username)
+    actions.append(
+        {
+            "action": "delete_user",
+            "target": username,
+            "timestamp": _now(),
+        }
+    )
+
+
 # ── Audit ───────────────────────────────────────────────────────────
 
 
@@ -487,6 +518,84 @@ def _write_audit(record: dict) -> None:
             logger.exception("Failed to write S3 audit record")
 
 
+def _load_checkpoint(entry: dict[str, Any]) -> dict[str, Any]:
+    checkpoint = {
+        "status": "new",
+        "actions_taken": [],
+        "completed_steps": [],
+        "updated_at": "",
+    }
+    if not AUDIT_TABLE:
+        return checkpoint
+    try:
+        dynamodb = boto3.resource("dynamodb")
+        table = dynamodb.Table(AUDIT_TABLE)
+        response = table.get_item(
+            Key={
+                "pk": _checkpoint_pk(entry),
+                "sk": CHECKPOINT_SK,
+            }
+        )
+    except Exception:
+        logger.exception("Failed to read DynamoDB checkpoint")
+        return checkpoint
+
+    item = response.get("Item") or {}
+    actions_taken = item.get("actions_taken")
+    parsed_actions: list[dict[str, Any]] = []
+    if isinstance(actions_taken, str):
+        try:
+            decoded = json.loads(actions_taken)
+            if isinstance(decoded, list):
+                parsed_actions = [action for action in decoded if isinstance(action, dict)]
+        except json.JSONDecodeError:
+            parsed_actions = []
+
+    completed_steps = item.get("completed_steps")
+    if not isinstance(completed_steps, list):
+        completed_steps = []
+
+    checkpoint["status"] = str(item.get("status") or "new")
+    checkpoint["actions_taken"] = parsed_actions
+    checkpoint["completed_steps"] = [step for step in completed_steps if isinstance(step, str)]
+    checkpoint["updated_at"] = str(item.get("updated_at") or "")
+    return checkpoint
+
+
+def _save_checkpoint(
+    entry: dict[str, Any],
+    actions_taken: list[dict[str, Any]],
+    completed_steps: list[str],
+    *,
+    status: str,
+    error: str = "",
+    audit_timestamp: str = "",
+) -> None:
+    if not AUDIT_TABLE:
+        return
+    try:
+        dynamodb = boto3.resource("dynamodb")
+        table = dynamodb.Table(AUDIT_TABLE)
+        table.put_item(
+            Item={
+                "pk": _checkpoint_pk(entry),
+                "sk": CHECKPOINT_SK,
+                "record_type": "remediation_checkpoint",
+                "status": status,
+                "email": entry.get("email", ""),
+                "iam_username": entry.get("iam_username", ""),
+                "account_id": entry.get("recipient_account_id", ""),
+                "completed_steps": completed_steps,
+                "updated_at": _now(),
+                "actions_taken": json.dumps(actions_taken),
+                "error": error,
+                "audit_timestamp": audit_timestamp,
+            }
+        )
+    except Exception:
+        logger.exception("Failed to write DynamoDB checkpoint")
+
+
 # ── Helpers ─────────────────────────────────────────────────────────
 
 
@@ -521,3 +630,9 @@ def _require_non_empty_str(entry: dict[str, Any], field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Missing required field: {field}")
     return value.strip()
+
+
+def _checkpoint_pk(entry: dict[str, Any]) -> str:
+    account_id = str(entry.get("recipient_account_id") or "")
+    iam_username = str(entry.get("iam_username") or "")
+    return f"CHECKPOINT#{account_id}#{iam_username}"

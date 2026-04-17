@@ -14,7 +14,7 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: native
+output_formats: native, ocsf
 concurrency_safety: operator_coordinated
 compatibility: >-
   Requires Python 3.11+, boto3, and AWS credentials with SecurityAudit managed policy
@@ -135,7 +135,7 @@ python src/checks.py --section logging
 python src/checks.py --section networking
 
 # Output JSON for SIEM/warehouse ingestion
-python src/checks.py --output json > cis-aws-results.json
+python src/checks.py --output json --output-format ocsf > cis-aws-results.json
 
 # Specific region
 python src/checks.py --region us-east-1

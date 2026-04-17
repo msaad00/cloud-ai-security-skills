@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lambda_worker.handler import (
     _build_audit_record,
+    _checkpoint_pk,
     _deactivate_access_keys,
     _delete_inline_policies,
     _delete_login_profile,
@@ -146,9 +147,11 @@ class TestRemediationSteps:
 class TestWorkerHandler:
     """Test the full worker Lambda handler."""
 
+    @patch("lambda_worker.handler._save_checkpoint")
+    @patch("lambda_worker.handler._load_checkpoint", return_value={"status": "new", "actions_taken": [], "completed_steps": [], "updated_at": ""})
     @patch("lambda_worker.handler._write_audit")
     @patch("lambda_worker.handler._get_iam_client")
-    def test_successful_remediation(self, mock_iam, mock_audit):
+    def test_successful_remediation(self, mock_iam, mock_audit, _mock_load_checkpoint, mock_save_checkpoint):
         """Full remediation flow for a standard terminated employee."""
         iam = MagicMock()
         mock_iam.return_value = iam
@@ -189,10 +192,13 @@ class TestWorkerHandler:
         assert result["account_id"] == "123456789012"
         iam.delete_user.assert_called_once_with(UserName="jane")
         mock_audit.assert_called_once()
+        assert mock_save_checkpoint.call_count >= 2
 
+    @patch("lambda_worker.handler._save_checkpoint")
+    @patch("lambda_worker.handler._load_checkpoint", return_value={"status": "new", "actions_taken": [], "completed_steps": [], "updated_at": ""})
     @patch("lambda_worker.handler._write_audit")
     @patch("lambda_worker.handler._get_iam_client")
-    def test_remediation_failure_logged(self, mock_iam, mock_audit):
+    def test_remediation_failure_logged(self, mock_iam, mock_audit, _mock_load_checkpoint, mock_save_checkpoint):
         """If remediation fails, error is captured and audit still written."""
         mock_iam.side_effect = Exception("AssumeRole denied")
 
@@ -201,14 +207,17 @@ class TestWorkerHandler:
         assert result["status"] == "error"
         assert "AssumeRole denied" in result["error"]
         mock_audit.assert_called_once()  # Audit still written on failure
+        mock_save_checkpoint.assert_called()
 
+    @patch("lambda_worker.handler._save_checkpoint")
     @patch("lambda_worker.handler._write_audit")
-    def test_invalid_payload_rejected_before_remediation(self, mock_audit):
+    def test_invalid_payload_rejected_before_remediation(self, mock_audit, mock_save_checkpoint):
         result = handler(_make_event(account_id="not-an-account"), None)
 
         assert result["status"] == "error"
         assert result["error"] == "Invalid remediation payload"
         mock_audit.assert_called_once()
+        mock_save_checkpoint.assert_not_called()
 
     def test_audit_record_captures_caller_and_approval_context(self, monkeypatch):
         class _Context:
@@ -234,6 +243,71 @@ class TestWorkerHandler:
         assert record["approval_ticket"] == "SEC-123"
         assert record["approval_timestamp"] == "2026-04-14T12:00:00Z"
         assert record["lambda_request_id"] == "req-123"
+
+    @patch("lambda_worker.handler._save_checkpoint")
+    @patch(
+        "lambda_worker.handler._load_checkpoint",
+        return_value={
+            "status": "in_progress",
+            "actions_taken": [{"action": "delete_user", "target": "jane", "timestamp": "2026-04-17T00:00:00+00:00"}],
+            "completed_steps": [
+                "deactivate_access_keys",
+                "delete_login_profile",
+                "remove_from_groups",
+                "detach_managed_policies",
+                "delete_inline_policies",
+                "delete_mfa_devices",
+                "delete_signing_certificates",
+                "delete_ssh_keys",
+                "delete_service_credentials",
+                "tag_user_for_audit",
+                "delete_user",
+            ],
+            "updated_at": "2026-04-17T00:00:00+00:00",
+        },
+    )
+    @patch("lambda_worker.handler._write_audit")
+    @patch("lambda_worker.handler._get_iam_client")
+    def test_replay_after_delete_user_skips_delete_step(
+        self,
+        mock_iam,
+        mock_audit,
+        _mock_load_checkpoint,
+        mock_save_checkpoint,
+    ):
+        iam = MagicMock()
+        mock_iam.return_value = iam
+
+        result = handler(_make_event(), None)
+
+        assert result["status"] == "remediated"
+        iam.delete_user.assert_not_called()
+        mock_audit.assert_called_once()
+        mock_save_checkpoint.assert_called()
+
+    @patch("lambda_worker.handler._write_audit")
+    @patch("lambda_worker.handler._get_iam_client")
+    @patch(
+        "lambda_worker.handler._load_checkpoint",
+        return_value={
+            "status": "remediated",
+            "actions_taken": [{"action": "delete_user", "target": "jane", "timestamp": "2026-04-17T00:00:00+00:00"}],
+            "completed_steps": ["delete_user"],
+            "updated_at": "2026-04-17T00:00:00+00:00",
+        },
+    )
+    def test_remediated_checkpoint_short_circuits(self, mock_load_checkpoint, mock_iam, mock_audit):
+        result = handler(_make_event(), None)
+
+        assert result["status"] == "remediated"
+        assert result["checkpoint_reused"] is True
+        mock_iam.assert_not_called()
+        mock_audit.assert_not_called()
+
+
+class TestCheckpoints:
+    def test_checkpoint_pk_uses_account_and_username(self):
+        assert _checkpoint_pk(_make_event()["entry"]) == "CHECKPOINT#123456789012#jane"
 
 
 class TestSnowflakeIdentifierSafety:

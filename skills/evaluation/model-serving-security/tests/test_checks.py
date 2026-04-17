@@ -8,6 +8,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from checks import (
+    BENCHMARK_NAME,
+    PROVIDER_NAME,
+    SKILL_NAME,
     Finding,
     benchmark_metadata,
     check_1_1_endpoint_auth_required,
@@ -29,6 +32,7 @@ from checks import (
     check_6_3_model_versioning,
     check_6_4_guardrails_attached,
     check_6_5_ai_endpoint_audit_logging,
+    findings_to_ocsf,
     run_benchmark,
 )
 
@@ -94,6 +98,36 @@ class TestAuthChecks:
         f = check_1_4_workload_identity_required(config)
         assert f.status == "PASS"
         assert f.nist_ai_rmf == "GOVERN, MANAGE"
+
+
+class TestOcsfProjection:
+    def test_findings_can_render_as_compliance_findings(self):
+        finding = Finding(
+            check_id="MOD-1.1",
+            title="Endpoint authentication required",
+            section="auth",
+            severity="CRITICAL",
+            status="FAIL",
+            detail="Public model endpoint has no authn control",
+            remediation="Require IAM, OAuth, or workload identity",
+            mitre_atlas="AML.TA0003",
+            nist_csf="PR.AC-1",
+            nist_ai_rmf="GOVERN",
+            resources=["inference-endpoint"],
+        )
+
+        rendered = findings_to_ocsf(
+            [finding],
+            skill_name=SKILL_NAME,
+            benchmark_name=BENCHMARK_NAME,
+            provider=PROVIDER_NAME,
+            frameworks=list(benchmark_metadata()["frameworks"]),
+        )
+
+        assert rendered[0]["class_uid"] == 2003
+        assert rendered[0]["finding_info"]["types"] == ["MOD-1.1"]
+        assert rendered[0]["metadata"]["product"]["feature"]["name"] == SKILL_NAME
+        assert "GOVERN" in rendered[0]["compliance"]["requirements"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════

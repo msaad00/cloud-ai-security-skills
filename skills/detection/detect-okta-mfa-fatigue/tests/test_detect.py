@@ -300,6 +300,26 @@ class TestDetection:
             raise AssertionError("expected unsupported output_format to raise")
 
 
+class TestThresholdOverrides:
+    def test_min_challenges_env_override_raises_threshold(self, monkeypatch):
+        events = [
+            _event(uid="evt-1", event_type="system.push.send_factor_verify_push", time_ms=1000),
+            _event(uid="evt-2", event_type="system.push.send_factor_verify_push", time_ms=2000),
+            _event(
+                uid="evt-3",
+                event_type="user.mfa.okta_verify.deny_push",
+                time_ms=3000,
+                status_id=STATUS_FAILURE,
+            ),
+        ]
+
+        assert len(list(detect(events))) == 1
+
+        monkeypatch.setenv("DETECT_OKTA_MFA_FATIGUE_MIN_CHALLENGES", "3")
+
+        assert list(detect(events)) == []
+
+
 class TestMetadata:
     def test_coverage_metadata(self):
         metadata = coverage_metadata()

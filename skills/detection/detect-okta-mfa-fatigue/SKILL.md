@@ -65,6 +65,13 @@ authentication projection:
 The detector emits one finding per burst and suppresses repeat findings until
 there is a quiet period longer than the correlation window.
 
+Operators can tune the burst logic at runtime without forking the skill:
+
+- `DETECT_OKTA_MFA_FATIGUE_WINDOW_MS`
+- `DETECT_OKTA_MFA_FATIGUE_MIN_RELEVANT_EVENTS`
+- `DETECT_OKTA_MFA_FATIGUE_MIN_CHALLENGES`
+- `DETECT_OKTA_MFA_FATIGUE_MIN_DENIALS`
+
 ## Output contract
 
 Emits OCSF 1.8 Detection Finding (class `2004`) by default. With

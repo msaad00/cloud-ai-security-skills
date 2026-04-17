@@ -34,6 +34,7 @@ check_3_4_cloudwatch_alarms = _CHECKS.check_3_4_cloudwatch_alarms
 check_4_1_no_unrestricted_ssh = _CHECKS.check_4_1_no_unrestricted_ssh
 check_4_2_no_unrestricted_rdp = _CHECKS.check_4_2_no_unrestricted_rdp
 check_4_3_vpc_flow_logs = _CHECKS.check_4_3_vpc_flow_logs
+findings_to_ocsf = _CHECKS.findings_to_ocsf
 
 
 @mock_aws
@@ -179,3 +180,31 @@ class TestRunnerRouting:
         assert finding.control_id == "3.4"
         clients["cw"].describe_alarms.assert_called_once()
         clients["iam"].describe_alarms.assert_not_called()
+
+
+class TestOcsfProjection:
+    def test_findings_can_render_as_compliance_findings(self):
+        finding = Finding(
+            control_id="1.1",
+            title="MFA on root account",
+            section="iam",
+            severity="CRITICAL",
+            status="FAIL",
+            detail="Root MFA disabled",
+            nist_csf="PR.AC-1",
+            iso_27001="A.8.5",
+            resources=["root"],
+        )
+
+        rendered = findings_to_ocsf(
+            [finding],
+            skill_name=_CHECKS.SKILL_NAME,
+            benchmark_name=_CHECKS.BENCHMARK_NAME,
+            provider=_CHECKS.PROVIDER_NAME,
+            frameworks=["CIS AWS Foundations v3.0", "NIST CSF 2.0", "ISO/IEC 27001:2022"],
+        )
+
+        assert rendered[0]["class_uid"] == 2003
+        assert rendered[0]["finding_info"]["types"] == ["1.1"]
+        assert rendered[0]["cloud"]["provider"] == "AWS"
+        assert "PR.AC-1" in rendered[0]["compliance"]["requirements"]

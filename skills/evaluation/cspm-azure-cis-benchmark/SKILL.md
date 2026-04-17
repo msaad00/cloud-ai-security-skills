@@ -13,7 +13,7 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: native
+output_formats: native, ocsf
 concurrency_safety: operator_coordinated
 compatibility: >-
   Requires Python 3.11+, azure-identity, azure-mgmt-storage, azure-mgmt-network.
@@ -127,7 +127,7 @@ python src/checks.py --subscription-id SUB_ID --section identity
 python src/checks.py --subscription-id SUB_ID --section ai-foundry
 
 # Output JSON
-python src/checks.py --subscription-id SUB_ID --output json > cis-azure-results.json
+python src/checks.py --subscription-id SUB_ID --output json --output-format ocsf > cis-azure-results.json
 ```
 
 ## Remediation — Critical Findings

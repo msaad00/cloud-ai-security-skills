@@ -15,7 +15,7 @@ approval_model: none
 execution_modes: jit, ci, mcp, persistent
 side_effects: none
 input_formats: raw
-output_formats: native
+output_formats: native, ocsf
 concurrency_safety: operator_coordinated
 compatibility: >-
   Requires Python 3.11+. No Docker daemon needed — works with config files.
@@ -69,7 +69,7 @@ flowchart LR
 ```bash
 python src/checks.py container-config.json
 python src/checks.py config.yaml --section dockerfile
-python src/checks.py config.json --output json
+python src/checks.py config.json --output json --output-format ocsf
 ```
 
 ## Security Guardrails
