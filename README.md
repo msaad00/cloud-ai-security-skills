@@ -19,7 +19,7 @@ Security skills for cloud and AI systems. Use source-specific ingest, discovery,
 
 Start here if you want the shortest true picture of the repo:
 
-![Repository architecture showing external sources feeding three action bands — Intake (Ingest and Discover), Analyze (Detect and Evaluate), and Act (View and Remediate) — that share one skill bundle contract, with edge persistence, warehouse query packs, and runtime surfaces wrapping the same skills.](docs/images/repo-architecture.svg)
+![Repository architecture showing a cleaner three-band model: external signals feed Intake through Ingest and Discover, flow into Analyze through Detect and Evaluate, and leave through Act via View or guarded Remediate, all on one shared skill bundle contract.](docs/images/repo-architecture.svg)
 
 The mental model:
 
@@ -50,7 +50,7 @@ For the full source, asset, framework, and runtime crosswalk, see [docs/USE_CASE
 
 Use this as the quick mental model for how data moves through the repo:
 
-![End-to-end skill compositions showing three shipped paths: raw logs through ingest, detect, and view; lake rows through source, detect, and sink; and live API or HR-driven paths through discovery or evaluation with optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
+![Common shipped flows showing three concrete lanes: raw payloads through ingest, detect, and view; warehouse rows through source, detect, and sink; and live state through discovery or evaluation with optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
 
 The visual is intentionally short. The exact examples live in markdown:
 
@@ -98,13 +98,13 @@ Each shipped skill is a bundle:
 - `src/` for the executable implementation
 - `tests/` for contract and regression coverage
 
-The Python file is the execution core. The full skill that agents use is the
-whole bundle.
+The execution core is only one part. The operational contract is the whole
+bundle.
 
 ### Use the skill name first
 
 The normal integration path is the skill name through MCP or an agent client,
-not a raw `python .../src/<entry>.py` invocation.
+not a raw subprocess command.
 
 For the Kubernetes example, the skill-level flow is:
 
@@ -161,10 +161,57 @@ Most flows reduce to one of these outcomes:
   - start from live state or HR events
   - end in evidence, audit records, or guarded writes
 
-The low-level execution-core examples still exist for debugging and wrapper
-authors, but they are intentionally moved out of the top-level entry path. See
+The low-level subprocess examples still exist for debugging and wrapper authors,
+but they are intentionally kept out of the main entry path. See
 [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md) and the individual `SKILL.md`
-files when you need wrapper-free subprocess examples.
+files when you need wrapper-free execution details.
+
+<details>
+<summary><b>Low-level execution core examples</b></summary>
+
+The same Kubernetes path can still be run directly when you are debugging a
+wrapper or developing around the raw subprocess surface:
+
+```bash
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
+  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
+  > findings.sarif
+```
+
+If you want to inspect each stage separately, write local scratch files in the
+current directory:
+
+```bash
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
+  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
+  > k8s-events.ocsf.jsonl
+
+python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+  k8s-events.ocsf.jsonl \
+  > k8s-findings.ocsf.jsonl
+
+python skills/view/convert-ocsf-to-sarif/src/convert.py \
+  k8s-findings.ocsf.jsonl \
+  > findings.sarif
+```
+
+Those intermediate files are only for debugging. The final output you usually
+keep is `findings.sarif`.
+
+If you want the repo-owned native wire format instead of OCSF:
+
+```bash
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
+  --output-format native \
+  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+      --output-format native \
+  > findings.native.jsonl
+```
+
+</details>
 
 <details>
 <summary><b>Real input and output</b></summary>
@@ -232,7 +279,7 @@ what ships everywhere:
 
 The flagship example skill family is IAM departures remediation: a guarded, event-driven workflow with a dual audit trail and clear trust boundaries.
 
-![IAM departures workflow showing HR and identity inputs flowing through guarded approval and remediation steps into dual audit outputs.](docs/images/iam-departures-architecture.svg)
+![IAM departures remediation showing the flagship write path in three stages: select the actionable set first, run the guarded workflow with separate roles, then write a dual audit trail and verify drift later.](docs/images/iam-departures-architecture.svg)
 
 The diagram shows the flagship write path only: source events feed a guarded
 planner/worker flow, the reconciler writes an S3 manifest, EventBridge starts
