@@ -519,7 +519,7 @@ def _write_audit(record: dict) -> None:
 
 
 def _load_checkpoint(entry: dict[str, Any]) -> dict[str, Any]:
-    checkpoint = {
+    checkpoint: dict[str, Any] = {
         "status": "new",
         "actions_taken": [],
         "completed_steps": [],

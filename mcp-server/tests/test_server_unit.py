@@ -55,6 +55,8 @@ def test_call_tool_injects_caller_and_approval_context(monkeypatch):
 
     def _fake_run(*args, **kwargs):
         captured["env"] = kwargs["env"]
+        captured["shell"] = kwargs.get("shell", False)
+        captured["cwd"] = kwargs["cwd"]
         return _FakeCompleted()
 
     monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
@@ -88,6 +90,8 @@ def test_call_tool_injects_caller_and_approval_context(monkeypatch):
     assert env["SKILL_APPROVER_EMAIL"] == "approver@example.com"
     assert env["SKILL_APPROVAL_TICKET"] == "SEC-123"
     assert env["SKILL_APPROVAL_TIMESTAMP"] == "2026-04-14T12:00:00Z"
+    assert captured["shell"] is False
+    assert captured["cwd"] == MODULE.repo_root()
     assert result["structuredContent"]["caller_context_provided"] is True
     assert result["structuredContent"]["approval_context_provided"] is True
     assert result["structuredContent"]["correlation_id"] == env["SKILL_CORRELATION_ID"]
