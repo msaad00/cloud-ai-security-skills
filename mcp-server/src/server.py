@@ -14,7 +14,13 @@ CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
-from tool_registry import SkillSpec, build_command, repo_root, tool_definition, tool_map  # noqa: E402
+from tool_registry import (  # noqa: E402
+    SkillSpec,
+    build_command,
+    repo_root,
+    tool_definition,
+    tool_map,
+)
 
 SERVER_NAME = "cloud-ai-security-skills"
 SERVER_VERSION = "0.1.0"
