@@ -34,7 +34,7 @@ def findings_to_native(findings: list[Any]) -> list[dict[str, Any]]:
     """Render evaluation findings into plain dicts."""
     rendered: list[dict[str, Any]] = []
     for finding in findings:
-        if is_dataclass(finding):
+        if is_dataclass(finding) and not isinstance(finding, type):
             rendered.append(asdict(finding))
         elif isinstance(finding, dict):
             rendered.append(dict(finding))
