@@ -276,7 +276,7 @@ jobs:
             cloud-ai-security-skills-full-lock.cdx.json.sig
             cloud-ai-security-skills-full-lock.cdx.json.pem
 
-  # ── IaC validation (CloudFormation + Terraform in one job) ─────
+  # ── IaC + shell validation (CloudFormation, Terraform, Bicep, Bash) ─
   validate-iac:
     runs-on: ubuntu-latest
     needs: [lint, skill-contract, type-check, safe-skill-bar]
@@ -289,13 +289,33 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.12.0"
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.58.0
+      - name: Install Azure Bicep CLI
+        run: |
+          curl -sSL https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 -o /usr/local/bin/bicep
+          chmod +x /usr/local/bin/bicep
+          bicep --version
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends shellcheck
       - name: cfn-lint — CloudFormation
         run: |
           cfn-lint skills/remediation/iam-departures-remediation/infra/cloudformation.yaml
           cfn-lint skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml
           cfn-lint runners/aws-s3-sqs-detect/template.yaml
-      - name: terraform validate
+      - name: terraform validate — iam-departures infra
         run: cd skills/remediation/iam-departures-remediation/infra/terraform && terraform init -backend=false && terraform validate
+      - name: terraform validate — gcp runner
+        run: cd runners/gcp-gcs-pubsub-detect && terraform init -backend=false && terraform validate
+      - name: tflint — iam-departures infra
+        run: cd skills/remediation/iam-departures-remediation/infra/terraform && tflint
+      - name: tflint — gcp runner
+        run: cd runners/gcp-gcs-pubsub-detect && tflint
+      - name: bicep build — azure runner
+        run: bicep build runners/azure-blob-eventgrid-detect/template.bicep --outfile /tmp/azure-runner.json
+      - name: shellcheck — scripts
+        run: shellcheck scripts/*.sh
 
   # ── agent-bom scans (code + skills + fs + IaC with SARIF upload) ─
   agent-bom:
