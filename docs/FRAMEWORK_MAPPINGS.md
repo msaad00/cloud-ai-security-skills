@@ -21,11 +21,11 @@ from individual `SKILL.md` files.
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
 | **MITRE ATT&CK v14** | strong | cloud, Kubernetes, container, MCP, and remediation skills |
-| **MITRE ATLAS** | partial but real | AI-oriented evaluation and discovery skills |
+| **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection detection |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
-| **OWASP LLM Top 10** | partial | model-serving and future AI inventory/enrichment paths |
-| **OWASP MCP Top 10** | partial | `detect-mcp-tool-drift` and MCP-related repo controls |
+| **OWASP LLM Top 10** | partial | model-serving controls plus `detect-prompt-injection-mcp-proxy` |
+| **OWASP MCP Top 10** | partial | `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, and MCP-related repo controls |
 | **SOC 2 TSC** | partial | evaluation and remediation mappings |
 | **ISO 27001:2022** | partial | CSPM/evaluation mappings |
 | **PCI DSS 4.0** | partial | AWS posture mappings today |
@@ -37,7 +37,7 @@ from individual `SKILL.md` files.
 |---|---|
 | **ingestion/** | OCSF 1.8, vendor schemas, source-specific event contracts |
 | **discovery/** | MITRE ATT&CK, MITRE ATLAS, CycloneDX ML-BOM, NIST AI RMF, PCI / SOC 2 evidence support |
-| **detection/** | OCSF 1.8, MITRE ATT&CK, selective OWASP MCP mappings |
+| **detection/** | OCSF 1.8, MITRE ATT&CK, MITRE ATLAS, selective OWASP MCP / LLM mappings |
 | **evaluation/** | CIS, NIST CSF, ISO, SOC 2, PCI, MITRE ATLAS, OWASP LLM |
 | **view/** | OCSF 1.8, SARIF, Mermaid, MITRE ATT&CK labels |
 | **remediation/** | MITRE ATT&CK, NIST CSF, CIS Controls, SOC 2 |
@@ -53,6 +53,7 @@ Strongest current ATT&CK coverage:
 | `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-entra-role-grant-escalation` | T1098.003 for successful Entra app-role assignments that grant additional application permissions to service principals |
 | `detect-google-workspace-suspicious-login` | T1110 and T1078 for provider-marked Google Workspace suspicious logins and repeated failure-then-success bursts |
+| `detect-prompt-injection-mcp-proxy` | MITRE ATLAS AML.T0051 for explicit prompt-injection and instruction-smuggling language in MCP tool descriptions |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
 | `detect-sensitive-secret-read-k8s` | T1552, T1552.007 |
@@ -99,6 +100,7 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 |---|---|
 | `discover-environment` | graph overlay for AI/ML resources and adversarial ML techniques |
 | `model-serving-security` | explicit ATLAS coverage plus machine-readable NIST AI RMF section scope in the benchmark metadata |
+| `detect-prompt-injection-mcp-proxy` | AI-agent / MCP prompt-injection detection for malicious tool descriptions in `tools/list` responses |
 | `discover-ai-bom` | inventory artifact for future ATLAS / AI RMF evidence joins |
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
 | `discover-cloud-control-evidence` | cross-cloud evidence package with explicit NIST AI RMF evidence mode and ATT&CK / ATLAS / AI RMF inventory context |

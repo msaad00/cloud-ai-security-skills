@@ -34,7 +34,7 @@ Use it when the README feels too high-level and `skills/README.md` feels too cat
 | Okta System Log | `ingest-okta-system-log-ocsf` | `detect-okta-mfa-fatigue` |
 | Microsoft Entra / Graph `directoryAudit` | `ingest-entra-directory-audit-ocsf` | `detect-entra-credential-addition` or `detect-entra-role-grant-escalation` |
 | Google Workspace login audit | `ingest-google-workspace-login-ocsf` | `detect-google-workspace-suspicious-login` |
-| MCP proxy activity | `ingest-mcp-proxy-ocsf` | `detect-mcp-tool-drift` |
+| MCP proxy activity | `ingest-mcp-proxy-ocsf` | `detect-mcp-tool-drift` or `detect-prompt-injection-mcp-proxy` |
 | GuardDuty / Security Hub / SCC / Defender | source-specific `ingest-*` finding ingester | `view/*` or SIEM export |
 
 ## Start by asset class

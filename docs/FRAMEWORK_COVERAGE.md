@@ -3,16 +3,16 @@
 This file is **generated from [`framework-coverage.json`](framework-coverage.json)** by `scripts/generate_framework_coverage_doc.py`. Do not edit by hand — update the registry and regenerate.
 
 - Registry version: `0.4.0`
-- Registry updated: `2026-04-15`
-- Total shipped skills in registry: **43**
+- Registry updated: `2026-04-17`
+- Total shipped skills in registry: **44**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **34** | — |
+| OCSF | 1.8.0 | **35** | — |
 | MITRE ATT&CK | v14 | **21** | 100% mapped coverage |
-| MITRE ATLAS | current | **6** | 100% mapped coverage |
+| MITRE ATLAS | current | **7** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **1** | — |
 | CIS GCP Foundations | v3.0 | **1** | — |
 | CIS Azure Foundations | v2.1 | **1** | — |
@@ -24,8 +24,8 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | SOC 2 TSC | current | **9** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
-| OWASP LLM Top 10 | current | **1** | — |
-| OWASP MCP Top 10 | current | **2** | — |
+| OWASP LLM Top 10 | current | **2** | — |
+| OWASP MCP Top 10 | current | **3** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
 Shipped skills mapped counts the number of skills in the registry that declare this framework under `frameworks`. It does not claim per-control depth; see each skill's `SKILL.md` and `REFERENCES.md` for the concrete controls, techniques, or benchmarks covered.
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **34**
+Shipped skills mapped: **35**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -47,6 +47,7 @@ Shipped skills mapped: **34**
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
 | [`detect-okta-mfa-fatigue`](../skills/detection/detect-okta-mfa-fatigue) | detection | okta | identities, authentication, mfa, sessions |
 | [`detect-privilege-escalation-k8s`](../skills/detection/detect-privilege-escalation-k8s) | detection | kubernetes | clusters, containers, identities, secrets |
+| [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-sensitive-secret-read-k8s`](../skills/detection/detect-sensitive-secret-read-k8s) | detection | kubernetes | clusters, secrets, identities |
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
@@ -115,10 +116,11 @@ Shipped skills mapped: **21**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **6**
+Shipped skills mapped: **7**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`discover-ai-bom`](../skills/discovery/discover-ai-bom) | discovery | aws, azure, gcp, multi | inventory, ai-endpoints, models, datasets, vector-stores, gpu-fleets |
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
@@ -275,21 +277,23 @@ Shipped skills mapped: **3**
 
 - Registry id: `owasp-llm-top-10`
 
-Shipped skills mapped: **1**
+Shipped skills mapped: **2**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 
 ### OWASP MCP Top 10 (current)
 
 - Registry id: `owasp-mcp-top-10`
 
-Shipped skills mapped: **2**
+Shipped skills mapped: **3**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
+| [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`ingest-mcp-proxy-ocsf`](../skills/ingestion/ingest-mcp-proxy-ocsf) | ingestion | mcp, multi | agent-tools, application-activity |
 
 ### CycloneDX ML-BOM (current)
