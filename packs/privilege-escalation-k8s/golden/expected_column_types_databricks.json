@@ -1,0 +1,18 @@
+{
+  "finding_uid": "string",
+  "event_uid": "string",
+  "rule_name": "string",
+  "severity_id": "int",
+  "actor_name": "string",
+  "namespace": "string",
+  "target_name": "string",
+  "resource_type": "string",
+  "subresource": "string",
+  "first_seen_time_ms": "bigint",
+  "last_seen_time_ms": "bigint",
+  "finding_time_ms": "bigint",
+  "mitre_technique_uid": "string",
+  "mitre_subtechnique_uid": "string",
+  "finding_type": "string",
+  "finding_json": "string"
+}
