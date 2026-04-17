@@ -75,10 +75,10 @@ git push origin vX.Y.Z
 3. Verify the tag points at the intended merge commit.
 4. Verify GitHub Actions passed on the tagged commit if a release workflow uses
    tag triggers.
-5. Verify the release workflow attached the signed CycloneDX SBOM set:
-   - `cloud-ai-security-skills-full-lock.cdx.json`
-   - `cloud-ai-security-skills-full-lock.cdx.json.sig`
-   - `cloud-ai-security-skills-full-lock.cdx.json.pem`
+5. Verify the release workflow attached the signed CycloneDX SBOM **and** the signed source tarball:
+   - SBOM: `cloud-ai-security-skills-full-lock.cdx.json` plus `.sig` and `.pem`
+   - Source tarball: `cloud-ai-security-skills-<tag>-source.tar.gz` plus `.sig` and `.pem`
+6. Verify the release workflow published SLSA build-provenance attestations for both the SBOM and the source tarball, plus a CycloneDX SBOM attestation binding the SBOM to the tarball. The attestations appear under the repo's GitHub attestation log and can be checked with `gh attestation verify <asset> --repo msaad00/cloud-ai-security-skills`.
 
 ## Post-Release
 

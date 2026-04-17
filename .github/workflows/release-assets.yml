@@ -12,9 +12,10 @@ on:
 permissions:
   contents: write
   id-token: write
+  attestations: write
 
 jobs:
-  signed-sbom:
+  signed-release-assets:
     runs-on: ubuntu-latest
     steps:
       - name: Resolve release tag
@@ -43,6 +44,18 @@ jobs:
             --all-groups \
             --output-file cloud-ai-security-skills-full-lock.cdx.json
 
+      - name: Download signed source tarball from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.meta.outputs.tag }}"
+          out="cloud-ai-security-skills-${tag}-source.tar.gz"
+          curl -sSL -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/tarball/refs/tags/${tag}" \
+            -o "${out}"
+          ls -l "${out}"
+          echo "SOURCE_TARBALL=${out}" >> "$GITHUB_ENV"
+
       - uses: sigstore/cosign-installer@v3.8.1
 
       - name: Sign SBOM with GitHub OIDC
@@ -52,7 +65,30 @@ jobs:
             --output-certificate cloud-ai-security-skills-full-lock.cdx.json.pem \
             cloud-ai-security-skills-full-lock.cdx.json
 
-      - name: Upload signed SBOM set to release
+      - name: Sign source tarball with GitHub OIDC
+        run: |
+          cosign sign-blob --yes \
+            --output-signature "${SOURCE_TARBALL}.sig" \
+            --output-certificate "${SOURCE_TARBALL}.pem" \
+            "${SOURCE_TARBALL}"
+
+      - name: Generate SLSA build provenance attestation for SBOM
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: cloud-ai-security-skills-full-lock.cdx.json
+
+      - name: Generate SLSA build provenance attestation for source tarball
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ env.SOURCE_TARBALL }}
+
+      - name: Generate CycloneDX SBOM attestation
+        uses: actions/attest-sbom@v3
+        with:
+          subject-path: ${{ env.SOURCE_TARBALL }}
+          sbom-path: cloud-ai-security-skills-full-lock.cdx.json
+
+      - name: Upload signed SBOM and source-tarball set to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -60,4 +96,7 @@ jobs:
             cloud-ai-security-skills-full-lock.cdx.json \
             cloud-ai-security-skills-full-lock.cdx.json.sig \
             cloud-ai-security-skills-full-lock.cdx.json.pem \
+            "${SOURCE_TARBALL}" \
+            "${SOURCE_TARBALL}.sig" \
+            "${SOURCE_TARBALL}.pem" \
             --clobber

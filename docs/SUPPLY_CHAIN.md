@@ -111,21 +111,46 @@ See:
 
 ## Release Distribution
 
-Published GitHub Releases now rebuild and attach the same signed CycloneDX
-artifact set that CI produces:
+Published GitHub Releases rebuild and attach both a signed CycloneDX SBOM and a
+signed source tarball, each with a SLSA build-provenance attestation and a
+CycloneDX SBOM attestation linking the tarball to its dependency graph:
 
-- `cloud-ai-security-skills-full-lock.cdx.json`
-- `cloud-ai-security-skills-full-lock.cdx.json.sig`
-- `cloud-ai-security-skills-full-lock.cdx.json.pem`
+- SBOM: `cloud-ai-security-skills-full-lock.cdx.json` plus the matching
+  `.sig` and `.pem` Sigstore materials
+- Source tarball: `cloud-ai-security-skills-<tag>-source.tar.gz` plus the
+  matching `.sig` and `.pem` Sigstore materials, downloaded from the
+  GitHub `tarball/refs/tags/<tag>` endpoint at release time and signed
+  keylessly via `cosign sign-blob` with GitHub OIDC
+- Attestations: `actions/attest-build-provenance@v2` publishes SLSA
+  provenance for both the SBOM and the source tarball to the repo's
+  GitHub attestation log, and `actions/attest-sbom@v3` binds the SBOM to
+  the source tarball so consumers can verify the dependency graph came
+  from the same release
 
 That keeps the release surface self-contained for buyers, auditors, and
-downstream automation that reads release assets instead of CI artifacts.
+downstream automation that reads release assets instead of CI artifacts, and
+lets consumers verify with either `cosign verify-blob` against the Sigstore
+cert or `gh attestation verify` against the GitHub attestation log.
+
+Verification example (consumer side):
+
+```bash
+tag=vX.Y.Z
+tarball="cloud-ai-security-skills-${tag}-source.tar.gz"
+cosign verify-blob \
+  --certificate      "${tarball}.pem" \
+  --signature        "${tarball}.sig" \
+  --certificate-identity-regexp 'https://github.com/msaad00/cloud-ai-security-skills/' \
+  --certificate-oidc-issuer     'https://token.actions.githubusercontent.com' \
+  "${tarball}"
+
+gh attestation verify "${tarball}" \
+  --repo msaad00/cloud-ai-security-skills
+```
 
 ## Future Tightenings
 
 - export a runtime-group SBOM artifact once the repo's non-package group layout
   supports a clean grouped CycloneDX export without workarounds
-- add broader signed provenance or release attestations if the release flow
-  grows beyond the current repo-level tag process
 - emit SPDX alongside CycloneDX if a customer or procurement workflow requires
   both formats

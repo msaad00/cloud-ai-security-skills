@@ -60,14 +60,14 @@
     <text x="162" y="632" fill="#cbd5e1" font-size="15">findings to presentation · findings to approved remediation</text>
 
     <rect x="96" y="648" width="536" height="80" rx="16" fill="#581c87" stroke="#c084fc" stroke-width="2"/>
-    <text x="120" y="680" fill="#f3e8ff" font-size="22" font-weight="700">L5 View</text>
-    <text x="120" y="708" fill="#f3e8ff" font-size="15">convert-ocsf-to-sarif · convert-ocsf-to-mermaid-</text>
-    <text x="120" y="726" fill="#f3e8ff" font-size="15">attack-flow · downstream delivery formats</text>
+    <text x="120" y="680" fill="#f3e8ff" font-size="22" font-weight="700">L5 Remediate</text>
+    <text x="120" y="708" fill="#f3e8ff" font-size="15">iam-departures-remediation · HITL approval,</text>
+    <text x="120" y="726" fill="#f3e8ff" font-size="15">dry-run first, dual audit (DynamoDB + S3)</text>
 
     <rect x="648" y="648" width="560" height="80" rx="16" fill="#7c2d12" stroke="#fb923c" stroke-width="2"/>
-    <text x="672" y="680" fill="#ffedd5" font-size="22" font-weight="700">L6 Remediate</text>
-    <text x="672" y="708" fill="#ffedd5" font-size="15">iam-departures-remediation · HITL approval,</text>
-    <text x="672" y="726" fill="#ffedd5" font-size="15">dry-run first, dual audit (DynamoDB + S3)</text>
+    <text x="672" y="680" fill="#ffedd5" font-size="22" font-weight="700">L6 View</text>
+    <text x="672" y="708" fill="#ffedd5" font-size="15">convert-ocsf-to-sarif · convert-ocsf-to-mermaid-</text>
+    <text x="672" y="726" fill="#ffedd5" font-size="15">attack-flow · downstream delivery formats</text>
 
     <path d="M640 740 L640 762" stroke="#94a3b8" stroke-width="3" fill="none"/>
 
