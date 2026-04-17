@@ -91,6 +91,8 @@ unbounded.
 - dedupe rows carry `expires_at`; expired rows are replaced by the handler so
   replay protection stays bounded even though Table Storage does not auto-purge
   them
+- detect-side downstream fan-out sends findings to Service Bus in grouped
+  batches instead of one API call per finding
 - operators should scope the Azure role assignments to the specific blob
   source, queue, topic, and table resources in their environment
 
@@ -120,3 +122,46 @@ When capturing the live walkthrough for this runner, record:
    - detect handler ran
    - Table Storage dedupe wrote a stable UID row
    - Service Bus topic publish succeeded
+
+## Prepared Walkthrough
+
+### 1. Deploy the infrastructure
+
+```bash
+az deployment group create \
+  --resource-group <resource-group> \
+  --template-file runners/azure-blob-eventgrid-detect/template.bicep \
+  --parameters \
+      sourceStorageAccountName=<existing-source-storage-account> \
+      sourceContainerName=<existing-source-container> \
+      serviceBusNamespaceName=<service-bus-namespace> \
+      dedupeStorageAccountName=<dedupe-storage-account>
+```
+
+### 2. Bind the handler runtime
+
+- package the ingest and detect handlers into the chosen Azure runtime
+- set the documented environment variables, including the exact `INGEST_SKILL_CMD`
+  and `DETECT_SKILL_CMD`
+- wire queue/topic permissions and the `recommendedMaxInstances` ceiling into
+  the runtime configuration
+
+### 3. Send one real event
+
+```bash
+az storage blob upload \
+  --account-name <existing-source-storage-account> \
+  --container-name <existing-source-container> \
+  --name incoming/sample-cloudtrail.jsonl \
+  --file sample-cloudtrail.jsonl
+```
+
+### 4. Capture proof
+
+- Event Grid delivery evidence for the blob-created event
+- a message in the ingest queue
+- runtime logs for the ingest handler
+- a message in the detect queue
+- runtime logs for the detect handler
+- a Table Storage entity with `PartitionKey`, `RowKey`, `payload_sha256`, and `expires_at`
+- a Service Bus topic message or downstream subscriber receipt

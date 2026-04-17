@@ -24,5 +24,15 @@ runs:
       if: ${{ inputs.packages != '' }}
       shell: bash
       run: |
+        set -euo pipefail
         python -m pip install --upgrade pip
-        pip install ${{ inputs.packages }}
+        for attempt in 1 2 3; do
+          if pip install ${{ inputs.packages }}; then
+            exit 0
+          fi
+          if [ "$attempt" -eq 3 ]; then
+            exit 1
+          fi
+          echo "pip install failed on attempt $attempt; retrying after transient network backoff" >&2
+          sleep $((attempt * 5))
+        done

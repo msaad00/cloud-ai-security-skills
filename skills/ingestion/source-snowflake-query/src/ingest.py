@@ -6,11 +6,20 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from typing import Any, Iterable
 
 SKILL_NAME = "source-snowflake-query"
 ALLOWED_PREFIXES = ("SELECT", "WITH", "SHOW", "DESCRIBE")
+DISALLOWED_PATTERNS = (
+    re.compile(r"--"),
+    re.compile(r"/\*"),
+    re.compile(r"\*/"),
+    re.compile(r"\b(?:ALTER|CALL|COPY\s+INTO|CREATE|DELETE|DROP|EXECUTE\s+IMMEDIATE|GET|GRANT|INSERT|MERGE|PUT|REVOKE|TRUNCATE|UPDATE|USE)\b"),
+    re.compile(r"\bIDENTIFIER\s*\("),
+    re.compile(r"\bSYSTEM\$"),
+)
 
 
 def _configure_snowflake_logging() -> None:
@@ -38,7 +47,43 @@ def _normalize_query(query: str) -> str:
     head = cleaned.lstrip("(\n\t ").upper()
     if not any(head.startswith(prefix) for prefix in ALLOWED_PREFIXES):
         raise ValueError("only SELECT, WITH, SHOW, and DESCRIBE statements are allowed")
+    _validate_read_only_shape(cleaned)
     return cleaned
+
+
+def _strip_quoted_sql(text: str) -> str:
+    result: list[str] = []
+    quote: str | None = None
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if quote is None and char in ("'", '"', "`"):
+            quote = char
+            result.append(" ")
+            index += 1
+            continue
+        if quote is not None:
+            if char == quote:
+                if index + 1 < len(text) and text[index + 1] == quote:
+                    index += 2
+                    continue
+                quote = None
+            result.append(" ")
+            index += 1
+            continue
+        result.append(char)
+        index += 1
+    return "".join(result)
+
+
+def _validate_read_only_shape(query: str) -> None:
+    stripped = _strip_quoted_sql(query).upper()
+    for pattern in DISALLOWED_PATTERNS:
+        if pattern.search(stripped):
+            raise ValueError(
+                "query contains comments or disallowed control/write keywords; "
+                "only plain read-only SELECT, WITH, SHOW, and DESCRIBE queries are allowed"
+            )
 
 
 def _connect() -> Any:

@@ -40,3 +40,14 @@ The repo does not yet claim a captured real-cloud deploy-and-first-event proof
 for all three templates. That remaining work is tracked in
 [`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198) and
 summarized in [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md).
+
+What is now committed:
+
+- exact first-event walkthrough skeletons in each runner README
+- the deploy/apply inputs that need to be bound
+- the evidence operators should capture on the first successful run
+
+What is still not claimed:
+
+- a checked-in record that those walkthroughs were executed in AWS, GCP, and
+  Azure against real deployed resources

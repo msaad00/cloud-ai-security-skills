@@ -69,6 +69,25 @@ class TestNormalizeQuery:
         else:
             raise AssertionError("expected ValueError")
 
+    def test_rejects_sql_comments(self):
+        try:
+            _normalize_query("SELECT * FROM foo -- nope")
+        except ValueError as exc:
+            assert "comments or disallowed control/write keywords" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+    def test_rejects_disallowed_control_keyword(self):
+        try:
+            _normalize_query("SELECT SYSTEM$ABORT_SESSION('x')")
+        except ValueError as exc:
+            assert "comments or disallowed control/write keywords" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+    def test_allows_keyword_inside_string_literal(self):
+        assert _normalize_query("SELECT 'delete from foo' AS sample") == "SELECT 'delete from foo' AS sample"
+
 
 class TestReadQuery:
     def test_prefers_cli_query(self):

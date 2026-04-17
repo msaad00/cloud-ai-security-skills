@@ -67,6 +67,8 @@ system.
 - no shell invocation; skill commands are tokenized with `shlex.split`
 - `subprocess.run(..., shell=False)` only
 - DynamoDB conditional writes prevent duplicate publish on replay
+- detect-side downstream fan-out uses SNS `publish_batch` in batches of up to
+  `10` findings per API call instead of one publish call per finding
 - DynamoDB TTL is enabled with an `expires_at` attribute on every new dedupe
   row. The `DedupeTtlDays` CloudFormation parameter (default 30, range 1-365)
   flows into the detect Lambda as `DEDUPE_TTL_DAYS` and controls how long a
@@ -102,3 +104,39 @@ When capturing the live walkthrough for this runner, record:
    - detect Lambda ran
    - a DynamoDB dedupe row was written
    - an SNS publish succeeded
+
+## Prepared Walkthrough
+
+### 1. Deploy the stack
+
+```bash
+aws cloudformation deploy \
+  --template-file runners/aws-s3-sqs-detect/template.yaml \
+  --stack-name cloud-security-runner-aws \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides \
+      SourceBucketName=<existing-source-bucket> \
+      IngestHandlerZipKey=<ingest-handler.zip> \
+      DetectHandlerZipKey=<detect-handler.zip> \
+      IngestSkillCommand="python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native" \
+      DetectSkillCommand="python skills/detection/detect-lateral-movement/src/detect.py --output-format native"
+```
+
+### 2. Bind the source event
+
+- enable the source bucket notification so object-create events invoke the
+  ingest Lambda shipped by this stack
+
+### 3. Send one real event
+
+```bash
+aws s3 cp sample-cloudtrail.jsonl s3://<existing-source-bucket>/incoming/sample-cloudtrail.jsonl
+```
+
+### 4. Capture proof
+
+- CloudWatch log lines showing the ingest Lambda invocation
+- an SQS message in the detect queue
+- CloudWatch log lines showing the detect Lambda invocation
+- a DynamoDB item in the dedupe table with `pk`, `payload_sha256`, and `expires_at`
+- an SNS message or subscriber receipt proving the downstream publish

@@ -29,6 +29,30 @@ DETECT = _load_module(
 
 
 class TestGcpGcsPubsubDetectRunner:
+    def test_publish_findings_waits_for_pubsub_results(self):
+        seen: list[str] = []
+
+        class _FakeFuture:
+            def __init__(self, line: str):
+                self.line = line
+
+            def result(self):
+                seen.append(self.line)
+                return "message-id"
+
+        class _FakePublisher:
+            def publish(self, topic: str, payload: bytes):
+                assert topic == "projects/test/topics/findings"
+                return _FakeFuture(payload.decode("utf-8"))
+
+        DETECT._publish_findings(
+            _FakePublisher(),
+            "projects/test/topics/findings",
+            [("line-1", "uid-1"), ("line-2", "uid-2")],
+        )
+
+        assert seen == ["line-1", "line-2"]
+
     def test_ingest_skill_command_requires_env(self, monkeypatch):
         monkeypatch.delenv("INGEST_SKILL_CMD", raising=False)
         try:

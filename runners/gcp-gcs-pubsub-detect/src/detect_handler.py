@@ -113,6 +113,18 @@ def _decode_pubsub_event(event: dict[str, Any]) -> list[str]:
     return [line for line in payload.splitlines() if line.strip()]
 
 
+def _publish_findings(
+    publisher: Any,
+    topic: str,
+    records: list[tuple[str, str]],
+) -> None:
+    # PublisherClient batches outstanding publish() calls under the hood. Keep
+    # the futures unresolved until the full batch is queued, then wait once.
+    futures = [publisher.publish(topic, line.encode("utf-8")) for line, _uid in records]
+    for future in futures:
+        future.result()
+
+
 def _put_if_new(uid: str, payload: str) -> bool:
     document = _firestore_client().collection(_dedupe_collection()).document(uid)
     item = {
@@ -131,7 +143,7 @@ def handle_pubsub_event(event: dict[str, Any], _context: Any) -> dict[str, int]:
     input_lines = _decode_pubsub_event(event)
     findings = _run_skill(input_lines)
 
-    published = 0
+    to_publish: list[tuple[str, str]] = []
     duplicates = 0
     topic = _findings_topic()
     publisher = _publisher_client()
@@ -140,9 +152,11 @@ def handle_pubsub_event(event: dict[str, Any], _context: Any) -> dict[str, int]:
         record = json.loads(line)
         uid = _extract_uid(record)
         if _put_if_new(uid, line):
-            publisher.publish(topic, line.encode("utf-8"))
-            published += 1
+            to_publish.append((line, uid))
         else:
             duplicates += 1
 
-    return {"messages_processed": len(input_lines), "published": published, "duplicates": duplicates}
+    if to_publish:
+        _publish_findings(publisher, topic, to_publish)
+
+    return {"messages_processed": len(input_lines), "published": len(to_publish), "duplicates": duplicates}

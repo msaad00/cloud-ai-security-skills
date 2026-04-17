@@ -81,6 +81,9 @@ based on cost, quota, and downstream sink pressure for their environment.
 - Firestore `create()` semantics prevent duplicate publish on replay
 - dedupe rows carry `expires_at`; the template enables Firestore TTL so replay
   protection stays bounded instead of growing forever
+- detect-side downstream publish keeps Pub/Sub futures outstanding until the
+  batch is queued, so the client library can batch them before the handler
+  waits for publish completion
 - Pub/Sub findings fan-out sees only deduped findings
 - operators should scope the service accounts to the specific bucket, topics,
   and Firestore collection for their environment
@@ -110,3 +113,40 @@ When capturing the live walkthrough for this runner, record:
    - detect function ran
    - a Firestore dedupe document was created
    - findings topic publish succeeded
+
+## Prepared Walkthrough
+
+### 1. Deploy the infrastructure
+
+```bash
+terraform -chdir=runners/gcp-gcs-pubsub-detect init
+terraform -chdir=runners/gcp-gcs-pubsub-detect apply \
+  -var project_id=<gcp-project-id> \
+  -var region=<gcp-region> \
+  -var source_bucket_name=<existing-source-bucket> \
+  -var function_source_bucket=<function-archive-bucket> \
+  -var ingest_source_object=<ingest-handler.zip> \
+  -var detect_source_object=<detect-handler.zip> \
+  -var 'ingest_skill_command=python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native' \
+  -var 'detect_skill_command=python skills/detection/detect-lateral-movement/src/detect.py --output-format native'
+```
+
+### 2. Bind the function archives
+
+- upload the packaged ingest and detect handler archives to the
+  `function_source_bucket`
+- confirm both Cloud Functions point at the intended skill commands
+
+### 3. Send one real event
+
+```bash
+gcloud storage cp sample-cloudtrail.jsonl gs://<existing-source-bucket>/incoming/sample-cloudtrail.jsonl
+```
+
+### 4. Capture proof
+
+- Cloud Logging evidence for the ingest function invocation
+- a message on the detect Pub/Sub topic
+- Cloud Logging evidence for the detect function invocation
+- a Firestore dedupe document with `payload_sha256` and `expires_at`
+- a message on the findings topic or a downstream subscriber receipt
