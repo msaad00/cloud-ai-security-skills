@@ -11,7 +11,7 @@ import json
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = REPO_ROOT / "docs" / "framework-coverage.json"
@@ -19,7 +19,10 @@ OUTPUT = REPO_ROOT / "docs" / "FRAMEWORK_COVERAGE.md"
 
 
 def _load_registry() -> dict[str, Any]:
-    return json.loads(REGISTRY.read_text())
+    decoded = json.loads(REGISTRY.read_text())
+    if not isinstance(decoded, dict):
+        raise ValueError("framework-coverage registry must be a JSON object")
+    return cast(dict[str, Any], decoded)
 
 
 def _render(data: dict[str, Any]) -> str:
