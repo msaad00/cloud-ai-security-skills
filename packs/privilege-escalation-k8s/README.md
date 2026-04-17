@@ -14,7 +14,10 @@ Do not use this pack when:
 
 ## Input contract
 
-This SQL expects a pre-existing Snowflake table or view with a single `raw_json VARIANT` column containing one OCSF 1.8 event per row.
+The shipped SQL files expect a pre-existing table or view containing one OCSF 1.8 event per row:
+
+- `snowflake.sql`: `raw_json VARIANT`
+- `databricks.sql`: `raw_json STRING`
 
 Minimum event family:
 - API Activity (`class_uid = 6003`) for normalized Kubernetes audit events
@@ -30,14 +33,17 @@ The same Rule 1 correlation window is used:
 
 ## Run
 
-Set the source table, then run the SQL in Snowflake:
+Set the source table, then run the SQL in your warehouse:
 
 ```sql
 SET source_table = 'K8S_AUDIT_OCSF';
 SET lookback_hours = 24;
 ```
 
-Then execute [`snowflake.sql`](./snowflake.sql).
+Then execute one of:
+
+- [`snowflake.sql`](./snowflake.sql)
+- [`databricks.sql`](./databricks.sql)
 
 If your column is not named `raw_json`, create a small view that aliases it:
 
@@ -58,9 +64,10 @@ The query returns one row per deterministic finding with:
 The locked output columns and types are listed in:
 - [`golden/expected_columns.json`](./golden/expected_columns.json)
 - [`golden/expected_column_types.json`](./golden/expected_column_types.json)
+- [`golden/expected_column_types_databricks.json`](./golden/expected_column_types_databricks.json) for Databricks
 
 ## Notes
 
-- This pack keeps the data in Snowflake, but the detection logic stays aligned with the shipped Python skill.
+- This pack keeps the data in the warehouse, but the detection logic stays aligned with the shipped Python skill.
 - The SQL is intentionally explicit so operators can audit each rule directly.
 - This pack is read-only. Persisting findings is a separate step, for example through `sink-snowflake-jsonl`.
