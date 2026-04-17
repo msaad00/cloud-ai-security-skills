@@ -14,7 +14,7 @@ The format is loosely based on Keep a Changelog.
 ### Added
 
 - [`scripts/benchmark_runtime_profiles.py`](scripts/benchmark_runtime_profiles.py) plus a checked-in runtime snapshot at [`docs/benchmarks/runtime-profiles-2026-04-16.json`](docs/benchmarks/runtime-profiles-2026-04-16.json) so the representative sizing tables in [`docs/RUNTIME_PROFILES.md`](docs/RUNTIME_PROFILES.md) can be regenerated from code instead of drifting as prose.
-- a `Runtime Benchmarks` workflow plus [`scripts/check_runtime_profile_regressions.py`](scripts/check_runtime_profile_regressions.py) so the benchmark harness can run on demand or nightly and compare scaling behavior against the checked-in baseline instead of relying on timestamp-sensitive JSON diffs.
+- a `Runtime Benchmarks` workflow plus [`scripts/check_runtime_profile_regressions.py`](scripts/check_runtime_profile_regressions.py) so the benchmark harness can run on demand, nightly, and on pull requests that touch benchmarked code, dependency, or baseline-snapshot surfaces, comparing scaling behavior against the checked-in baseline instead of relying on timestamp-sensitive JSON diffs.
 
 ### Changed
 
