@@ -195,7 +195,7 @@ Resources:
                 Action:
                   - kms:Decrypt
                 Resource: !Ref KmsKeyArn
-              - Sid: DenyDirectStepFunctionExecution
+              - Sid: DenyDirectStepFunctionExecutionWILDCARDOK
                 Effect: Deny
                 Action: states:StartExecution
                 Resource: '*'
@@ -270,7 +270,7 @@ Resources:
                   - 'arn:aws:iam::*:user/break-glass-*'
                   - 'arn:aws:iam::*:user/emergency-*'
                   - 'arn:aws:iam::*:role/*'
-              - Sid: DenyDirectStepFunctionExecution
+              - Sid: DenyDirectStepFunctionExecutionWILDCARDOK
                 Effect: Deny
                 Action: states:StartExecution
                 Resource: '*'

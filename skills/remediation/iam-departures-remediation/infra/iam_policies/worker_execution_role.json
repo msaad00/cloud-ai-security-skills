@@ -59,7 +59,7 @@
       ]
     },
     {
-      "Sid": "DenyDirectStepFunctionExecution",
+      "Sid": "DenyDirectStepFunctionExecution_WILDCARD_OK",
       "Effect": "Deny",
       "Action": "states:StartExecution",
       "Resource": "*"

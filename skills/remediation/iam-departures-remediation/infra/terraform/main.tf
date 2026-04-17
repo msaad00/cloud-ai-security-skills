@@ -294,6 +294,7 @@ resource "aws_iam_role_policy" "parser" {
         Resource = var.kms_key_arn
       },
       {
+        # WILDCARD_OK: explicit deny on direct Step Functions execution is intentionally global.
         Sid      = "DenyDirectStepFunctionExecution"
         Effect   = "Deny"
         Action   = "states:StartExecution"
@@ -372,6 +373,7 @@ resource "aws_iam_role_policy" "worker" {
         ]
       },
       {
+        # WILDCARD_OK: explicit deny on direct Step Functions execution is intentionally global.
         Sid      = "DenyDirectStepFunctionExecution"
         Effect   = "Deny"
         Action   = "states:StartExecution"
