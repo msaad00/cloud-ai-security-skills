@@ -14,12 +14,33 @@ CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
-from tool_registry import build_command, repo_root, tool_definition, tool_map  # noqa: E402
+from tool_registry import (  # noqa: E402
+    SkillSpec,
+    build_command,
+    repo_root,
+    tool_definition,
+    tool_map,
+)
 
 SERVER_NAME = "cloud-ai-security-skills"
 SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_TIMEOUT_SECONDS = 60
+
+
+def _resolve_timeout(skill: SkillSpec, env: dict[str, str]) -> int:
+    """Resolve the per-call subprocess timeout.
+
+    Priority: env override > skill-declared timeout > global default. The env
+    override is kept at the top so operators can widen or tighten the window
+    without editing every SKILL.md.
+    """
+    override = env.get("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", "").strip()
+    if override:
+        return int(override)
+    if skill.mcp_timeout_seconds is not None:
+        return skill.mcp_timeout_seconds
+    return DEFAULT_TIMEOUT_SECONDS
 
 
 def _now_iso() -> str:
@@ -176,7 +197,8 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
                 env["SKILL_APPROVAL_TICKET"] = approval_context["ticket_id"]
             if "approval_timestamp" in approval_context:
                 env["SKILL_APPROVAL_TIMESTAMP"] = approval_context["approval_timestamp"]
-        timeout_seconds = int(env.get("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
+        timeout_seconds = _resolve_timeout(skill, env)
+        audit_event["timeout_seconds"] = timeout_seconds
         completed = subprocess.run(
             build_command(skill, args, output_format=output_format),
             input=stdin_text,

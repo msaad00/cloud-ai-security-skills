@@ -177,3 +177,46 @@ class TestToolDefinition:
         skill = tool_map(REPO_ROOT)["ingest-cloudtrail-ocsf"]
         command = build_command(skill, [], output_format="native")
         assert command[-2:] == ["--output-format", "native"]
+
+
+class TestMcpTimeoutParsing:
+    def test_missing_value_returns_none(self):
+        assert MODULE._parse_mcp_timeout(None, Path("/fake")) is None
+
+    def test_empty_value_returns_none(self):
+        assert MODULE._parse_mcp_timeout("", Path("/fake")) is None
+        assert MODULE._parse_mcp_timeout("   ", Path("/fake")) is None
+
+    def test_integer_value_parses(self):
+        assert MODULE._parse_mcp_timeout("120", Path("/fake")) == 120
+
+    def test_non_integer_value_errors(self):
+        try:
+            MODULE._parse_mcp_timeout("forever", Path("/fake"))
+        except ValueError as exc:
+            assert "must be an integer" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+    def test_out_of_range_value_errors(self):
+        try:
+            MODULE._parse_mcp_timeout("0", Path("/fake"))
+        except ValueError as exc:
+            assert "between 1 and 900" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+        try:
+            MODULE._parse_mcp_timeout("9999", Path("/fake"))
+        except ValueError as exc:
+            assert "between 1 and 900" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+    def test_default_shipped_skills_have_no_override(self):
+        for skill in discover_skills(REPO_ROOT):
+            assert skill.mcp_timeout_seconds is None, (
+                f"{skill.name} ships an mcp_timeout_seconds override; "
+                "make sure its SKILL.md declares the value explicitly and "
+                "that this test is updated to allowlist it"
+            )
