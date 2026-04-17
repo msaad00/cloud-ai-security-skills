@@ -1,114 +1,124 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1060" viewBox="0 0 1560 1060" role="img" aria-labelledby="title desc">
-  <title id="title">End-to-end skill flows</title>
-  <desc id="desc">Three real shipped paths are shown with the same structure: where the data starts, which skill families run, what the result becomes, and which guardrail matters most. The first path is raw logs through ingest, detect, and view. The second is warehouse or object rows through source, detect, and sink. The third is live state or HR events through discovery or evaluation into native outputs with optional guarded remediation.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="960" viewBox="0 0 1480 960" role="img" aria-labelledby="title desc">
+  <title id="title">Common shipped flows</title>
+  <desc id="desc">Three high-signal shipped paths. Raw payloads flow through ingest, detect, and view. Warehouse or object rows flow through source, detect, and sink. Live cloud, SaaS, or HR state flows through discovery or evaluation, then optionally through guarded remediation. The same skill bundle contract is used from CLI, MCP, CI, and runners.</desc>
+
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#07111e"/>
-      <stop offset="100%" stop-color="#0b1326"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#08111f"/>
+      <stop offset="100%" stop-color="#06111b"/>
     </linearGradient>
-    <style>
-      .title { fill: #f8fafc; font: 700 42px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .subtitle { fill: #cbd5e1; font: 400 21px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .eyebrow { fill: #67e8f9; font: 700 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
-      .lane { fill: #f8fafc; font: 700 32px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .body { fill: #e2e8f0; font: 400 18px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .head { fill: #93c5fd; font: 700 20px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .cardtitle { fill: #f8fafc; font: 700 28px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .cardbody { fill: #cbd5e1; font: 400 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .chip { fill: #dbeafe; font: 600 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .guard { fill: #cbd5e1; font: 400 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-      .guardlabel { fill: #67e8f9; font: 700 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
-    </style>
+    <linearGradient id="cyanStroke" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#7dd3fc"/>
+    </linearGradient>
+    <linearGradient id="blueStroke" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+    <linearGradient id="tealStroke" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
   </defs>
 
-  <rect width="1560" height="1060" fill="url(#bg)"/>
-  <rect x="28" y="28" width="1504" height="1004" rx="34" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+  <rect width="1480" height="960" fill="url(#bg)"/>
+  <rect x="28" y="28" width="1424" height="904" rx="32" fill="#0f172a" stroke="#334155" stroke-width="2"/>
 
-  <g>
-    <text x="72" y="92" class="title">Common shipped flows</text>
-    <text x="72" y="126" class="subtitle">The same skill bundles show up in different lanes. What changes is the starting data, the output, and the guardrail around the path.</text>
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="72" y="92" fill="#f8fafc" font-size="42" font-weight="800">Common shipped flows</text>
+    <text x="72" y="128" fill="#c7d2e3" font-size="22">The repo repeats the same skill bundles in different lanes. What changes is the input, output, and control boundary.</text>
 
-    <rect x="72" y="158" width="1416" height="54" rx="18" fill="#101929" stroke="#475569" stroke-width="2"/>
-    <text x="102" y="192" class="chip">Access surfaces</text>
-    <text x="262" y="192" class="chip">CLI</text>
-    <text x="320" y="192" fill="#38bdf8" font-size="20">•</text>
-    <text x="344" y="192" class="chip">MCP / agents</text>
-    <text x="478" y="192" fill="#38bdf8" font-size="20">•</text>
-    <text x="502" y="192" class="chip">CI</text>
-    <text x="542" y="192" fill="#38bdf8" font-size="20">•</text>
-    <text x="566" y="192" class="chip">AWS / GCP / Azure runners</text>
-    <text x="878" y="192" fill="#38bdf8" font-size="20">•</text>
-    <text x="902" y="192" class="chip">same underlying skill contract</text>
+    <rect x="72" y="158" width="1336" height="60" rx="18" fill="#111c34" stroke="#475569" stroke-width="2"/>
+    <text x="98" y="196" fill="#e5eefb" font-size="18" font-weight="800">Access surfaces</text>
+    <text x="240" y="196" fill="#dbe4f0" font-size="18">CLI • MCP / agents • CI • AWS / GCP / Azure runners • same underlying skill contract</text>
 
-    <text x="110" y="262" class="head">Start</text>
-    <text x="390" y="262" class="head">Skill flow</text>
-    <text x="930" y="262" class="head">Result</text>
-    <text x="1188" y="262" class="head">Guardrail</text>
+    <text x="126" y="274" fill="#93c5fd" font-size="17" font-weight="800">START</text>
+    <text x="452" y="274" fill="#93c5fd" font-size="17" font-weight="800">SKILL FLOW</text>
+    <text x="1042" y="274" fill="#93c5fd" font-size="17" font-weight="800">RESULT</text>
+    <text x="1284" y="274" fill="#93c5fd" font-size="17" font-weight="800">GUARDRAIL</text>
 
-    <rect x="72" y="282" width="1416" height="214" rx="28" fill="#0a2538" stroke="#22d3ee" stroke-width="2"/>
-    <text x="102" y="332" class="lane">1. Raw log detection and export</text>
-    <text x="102" y="364" class="body">Use when the repo starts from raw CloudTrail, Kubernetes audit, Okta, Entra, or other source-specific payloads.</text>
-    <rect x="102" y="390" width="230" height="78" rx="20" fill="#13253f" stroke="#60a5fa" stroke-width="2"/>
-    <text x="136" y="435" class="cardtitle">raw payloads</text>
-    <text x="136" y="458" class="cardbody">stdin, file, object, or queue message</text>
-    <rect x="372" y="390" width="150" height="78" rx="20" fill="#1d4ed8" stroke="#93c5fd" stroke-width="2"/>
-    <rect x="552" y="390" width="150" height="78" rx="20" fill="#0f766e" stroke="#5eead4" stroke-width="2"/>
-    <rect x="732" y="390" width="150" height="78" rx="20" fill="#7c3aed" stroke="#c4b5fd" stroke-width="2"/>
-    <text x="413" y="437" class="cardtitle">ingest-*</text>
-    <text x="592" y="437" class="cardtitle">detect-*</text>
-    <text x="783" y="437" class="cardtitle">view/*</text>
-    <path d="M332 429 L372 429" stroke="#38bdf8" stroke-width="5" fill="none"/>
-    <path d="M522 429 L552 429" stroke="#93c5fd" stroke-width="5" fill="none"/>
-    <path d="M702 429 L732 429" stroke="#5eead4" stroke-width="5" fill="none"/>
-    <rect x="922" y="390" width="220" height="78" rx="20" fill="#13253f" stroke="#7dd3fc" stroke-width="2"/>
-    <text x="956" y="434" fill="#f8fafc" font-size="24" font-weight="700" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif">export artifact</text>
-    <text x="956" y="458" class="cardbody">SARIF, Mermaid, or JSON output</text>
-    <rect x="1172" y="390" width="276" height="78" rx="20" fill="#13253f" stroke="#22d3ee" stroke-width="2"/>
-    <text x="1204" y="434" class="guardlabel">Guardrail</text>
-    <text x="1204" y="458" class="guard">read-only, deterministic, no hidden writes</text>
+    <g transform="translate(72,294)">
+      <rect x="0" y="0" width="1336" height="176" rx="26" fill="#0c2a3b" stroke="url(#cyanStroke)" stroke-width="2.5"/>
+      <text x="30" y="42" fill="#f8fafc" font-size="28" font-weight="800">1. Raw log detection and export</text>
+      <text x="30" y="74" fill="#d7e9f0" font-size="18">Use when the repo starts from CloudTrail, Kubernetes audit, Okta, Entra, Workspace, or other source-native payloads.</text>
 
-    <rect x="72" y="526" width="1416" height="214" rx="28" fill="#10243a" stroke="#60a5fa" stroke-width="2"/>
-    <text x="102" y="576" class="lane">2. Warehouse or object analysis with persistence</text>
-    <text x="102" y="608" class="body">Use when data already lives in Snowflake, Databricks, ClickHouse, or object storage and you want analysis near the data.</text>
-    <rect x="102" y="634" width="230" height="78" rx="20" fill="#13253f" stroke="#38bdf8" stroke-width="2"/>
-    <text x="136" y="679" class="cardtitle">rows or objects</text>
-    <text x="136" y="702" class="cardbody">read-only table, view, or object rows</text>
-    <rect x="372" y="634" width="150" height="78" rx="20" fill="#155e75" stroke="#67e8f9" stroke-width="2"/>
-    <rect x="552" y="634" width="150" height="78" rx="20" fill="#0f766e" stroke="#5eead4" stroke-width="2"/>
-    <rect x="732" y="634" width="150" height="78" rx="20" fill="#5b21b6" stroke="#c084fc" stroke-width="2"/>
-    <text x="406" y="681" class="cardtitle">source-*</text>
-    <text x="592" y="681" class="cardtitle">detect-*</text>
-    <text x="792" y="681" class="cardtitle">sink-*</text>
-    <path d="M332 673 L372 673" stroke="#60a5fa" stroke-width="5" fill="none"/>
-    <path d="M522 673 L552 673" stroke="#67e8f9" stroke-width="5" fill="none"/>
-    <path d="M702 673 L732 673" stroke="#5eead4" stroke-width="5" fill="none"/>
-    <rect x="922" y="634" width="220" height="78" rx="20" fill="#13253f" stroke="#7dd3fc" stroke-width="2"/>
-    <text x="956" y="679" fill="#f8fafc" font-size="24" font-weight="700" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif">customer sink</text>
-    <text x="956" y="702" class="cardbody">Snowflake, ClickHouse, or S3 JSONL</text>
-    <rect x="1172" y="634" width="276" height="78" rx="20" fill="#13253f" stroke="#60a5fa" stroke-width="2"/>
-    <text x="1204" y="678" class="guardlabel">Guardrail</text>
-    <text x="1204" y="702" class="guard">read-only query side, validated sinks only</text>
+      <rect x="30" y="102" width="236" height="50" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
+      <text x="62" y="134" fill="#f8fafc" font-size="18" font-weight="800">raw payloads</text>
 
-    <rect x="72" y="770" width="1416" height="214" rx="28" fill="#083344" stroke="#2dd4bf" stroke-width="2"/>
-    <text x="102" y="820" class="lane">3. Live posture, discovery, and guarded action</text>
-    <text x="102" y="852" class="body">Use when the repo starts from live cloud APIs, SaaS APIs, or HR lifecycle events instead of a raw log stream.</text>
-    <rect x="102" y="878" width="230" height="78" rx="20" fill="#13253f" stroke="#14b8a6" stroke-width="2"/>
-    <text x="136" y="923" class="cardtitle">live state</text>
-    <text x="136" y="946" class="cardbody">cloud, SaaS, or HR event context</text>
-    <rect x="372" y="878" width="230" height="78" rx="20" fill="#0f766e" stroke="#5eead4" stroke-width="2"/>
-    <rect x="632" y="878" width="190" height="78" rx="20" fill="#4338ca" stroke="#a78bfa" stroke-width="2"/>
-    <rect x="852" y="878" width="190" height="78" rx="20" fill="#7f1d1d" stroke="#fca5a5" stroke-width="2"/>
-    <text x="404" y="925" fill="#f8fafc" font-size="23" font-weight="700" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif">discover / evaluate</text>
-    <text x="674" y="925" fill="#f8fafc" font-size="23" font-weight="700" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif">native outputs</text>
-    <text x="888" y="925" fill="#f8fafc" font-size="23" font-weight="700" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif">remediation/*</text>
-    <path d="M332 917 L372 917" stroke="#2dd4bf" stroke-width="5" fill="none"/>
-    <path d="M602 917 L632 917" stroke="#5eead4" stroke-width="5" fill="none"/>
-    <path d="M822 917 L852 917" stroke="#a78bfa" stroke-width="5" fill="none"/>
-    <rect x="1072" y="878" width="180" height="78" rx="20" fill="#13253f" stroke="#2dd4bf" stroke-width="2"/>
-    <text x="1102" y="923" fill="#f8fafc" font-size="24" font-weight="700" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif">evidence trail</text>
-    <text x="1102" y="946" class="cardbody">review and audit output</text>
-    <rect x="1272" y="878" width="176" height="78" rx="20" fill="#13253f" stroke="#22d3ee" stroke-width="2"/>
-    <text x="1304" y="923" class="guardlabel">Guardrail</text>
-    <text x="1304" y="946" class="guard">HITL, dry-run, audited writes</text>
+      <rect x="322" y="102" width="172" height="50" rx="18" fill="#2955d9" stroke="#9cc2ff" stroke-width="2"/>
+      <text x="376" y="134" fill="#f8fafc" font-size="18" font-weight="800">ingest-*</text>
+      <rect x="546" y="102" width="172" height="50" rx="18" fill="#16877b" stroke="#7ef0df" stroke-width="2"/>
+      <text x="600" y="134" fill="#f8fafc" font-size="18" font-weight="800">detect-*</text>
+      <rect x="770" y="102" width="172" height="50" rx="18" fill="#8b3dff" stroke="#d0b0ff" stroke-width="2"/>
+      <text x="830" y="134" fill="#f8fafc" font-size="18" font-weight="800">view/*</text>
+
+      <path d="M266 127 L322 127" stroke="#60a5fa" stroke-width="5" fill="none"/>
+      <path d="M494 127 L546 127" stroke="#8dc4ff" stroke-width="5" fill="none"/>
+      <path d="M718 127 L770 127" stroke="#77e6d7" stroke-width="5" fill="none"/>
+
+      <rect x="994" y="102" width="232" height="50" rx="18" fill="#17304f" stroke="#7dd3fc" stroke-width="2"/>
+      <text x="1036" y="134" fill="#f8fafc" font-size="18" font-weight="800">SARIF / Mermaid / JSON</text>
+
+      <rect x="1240" y="102" width="66" height="50" rx="18" fill="#13253f" stroke="#22d3ee" stroke-width="2"/>
+      <text x="1261" y="134" fill="#67e8f9" font-size="18" font-weight="800">RO</text>
+
+      <text x="30" y="168" fill="#8fd8e5" font-size="15">Example: ingest-cloudtrail-ocsf → detect-lateral-movement → convert-ocsf-to-sarif</text>
+    </g>
+
+    <g transform="translate(72,500)">
+      <rect x="0" y="0" width="1336" height="176" rx="26" fill="#13253f" stroke="url(#blueStroke)" stroke-width="2.5"/>
+      <text x="30" y="42" fill="#f8fafc" font-size="28" font-weight="800">2. Warehouse or object analysis with persistence</text>
+      <text x="30" y="74" fill="#d7e3f0" font-size="18">Use when data already lives in Snowflake, Databricks, ClickHouse, or object storage and you want analysis near the data.</text>
+
+      <rect x="30" y="102" width="236" height="50" rx="18" fill="#17304f" stroke="#38bdf8" stroke-width="2"/>
+      <text x="66" y="134" fill="#f8fafc" font-size="18" font-weight="800">rows or objects</text>
+
+      <rect x="322" y="102" width="172" height="50" rx="18" fill="#155e75" stroke="#7dd3fc" stroke-width="2"/>
+      <text x="378" y="134" fill="#f8fafc" font-size="18" font-weight="800">source-*</text>
+      <rect x="546" y="102" width="172" height="50" rx="18" fill="#16877b" stroke="#7ef0df" stroke-width="2"/>
+      <text x="600" y="134" fill="#f8fafc" font-size="18" font-weight="800">detect-*</text>
+      <rect x="770" y="102" width="172" height="50" rx="18" fill="#6d28d9" stroke="#c4b5fd" stroke-width="2"/>
+      <text x="826" y="134" fill="#f8fafc" font-size="18" font-weight="800">sink-*</text>
+
+      <path d="M266 127 L322 127" stroke="#60a5fa" stroke-width="5" fill="none"/>
+      <path d="M494 127 L546 127" stroke="#7dd3fc" stroke-width="5" fill="none"/>
+      <path d="M718 127 L770 127" stroke="#7ef0df" stroke-width="5" fill="none"/>
+
+      <rect x="994" y="102" width="232" height="50" rx="18" fill="#17304f" stroke="#93c5fd" stroke-width="2"/>
+      <text x="1048" y="134" fill="#f8fafc" font-size="18" font-weight="800">customer sink edge</text>
+
+      <rect x="1240" y="102" width="66" height="50" rx="18" fill="#13253f" stroke="#60a5fa" stroke-width="2"/>
+      <text x="1254" y="134" fill="#bfdbfe" font-size="18" font-weight="800">ROQ</text>
+
+      <text x="30" y="168" fill="#a8c8f2" font-size="15">Example: source-snowflake-query → detect-lateral-movement → sink-snowflake-jsonl</text>
+    </g>
+
+    <g transform="translate(72,706)">
+      <rect x="0" y="0" width="1336" height="176" rx="26" fill="#083344" stroke="url(#tealStroke)" stroke-width="2.5"/>
+      <text x="30" y="42" fill="#f8fafc" font-size="28" font-weight="800">3. Live posture, discovery, and guarded action</text>
+      <text x="30" y="74" fill="#d1efe8" font-size="18">Use when the repo starts from live cloud APIs, SaaS APIs, or HR lifecycle events instead of a raw stream.</text>
+
+      <rect x="30" y="102" width="236" height="50" rx="18" fill="#17304f" stroke="#14b8a6" stroke-width="2"/>
+      <text x="74" y="134" fill="#f8fafc" font-size="18" font-weight="800">live state</text>
+
+      <rect x="322" y="102" width="248" height="50" rx="18" fill="#16877b" stroke="#7ef0df" stroke-width="2"/>
+      <text x="354" y="134" fill="#f8fafc" font-size="18" font-weight="800">discover-* / evaluation/*</text>
+      <rect x="616" y="102" width="192" height="50" rx="18" fill="#4f46e5" stroke="#a5b4fc" stroke-width="2"/>
+      <text x="654" y="134" fill="#f8fafc" font-size="18" font-weight="800">native outputs</text>
+      <rect x="854" y="102" width="202" height="50" rx="18" fill="#991b1b" stroke="#fca5a5" stroke-width="2"/>
+      <text x="900" y="134" fill="#f8fafc" font-size="18" font-weight="800">remediation/*</text>
+
+      <path d="M266 127 L322 127" stroke="#2dd4bf" stroke-width="5" fill="none"/>
+      <path d="M570 127 L616 127" stroke="#7ef0df" stroke-width="5" fill="none"/>
+      <path d="M808 127 L854 127" stroke="#a5b4fc" stroke-width="5" fill="none"/>
+
+      <rect x="1088" y="102" width="138" height="50" rx="18" fill="#17304f" stroke="#2dd4bf" stroke-width="2"/>
+      <text x="1114" y="134" fill="#f8fafc" font-size="18" font-weight="800">evidence trail</text>
+
+      <rect x="1240" y="102" width="66" height="50" rx="18" fill="#13253f" stroke="#22d3ee" stroke-width="2"/>
+      <text x="1255" y="134" fill="#99f6e4" font-size="18" font-weight="800">HITL</text>
+
+      <text x="30" y="168" fill="#9ce9dd" font-size="15">Example: discover-control-evidence, cspm-aws-cis-benchmark, or iam-departures-remediation</text>
+    </g>
   </g>
 </svg>
