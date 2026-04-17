@@ -28,15 +28,15 @@ review, and PR discussions where opening the SVG is inconvenient.
 - `runtime-surfaces.svg`
   - Shows that CLI, CI, MCP, and persistent runners are access paths around the same skill bundle and execution core rather than separate implementations.
 - `iam-departures-architecture.svg`
-  - Shows the flagship write path in four stages: actionable-set selection, guarded orchestration, scoped target writes, and dual audit with drift verification.
+  - Shows the flagship write path as four staged control points: select scope, start the guarded workflow, apply scoped writes, and dual-audit plus verify the result.
 - `repo-architecture.svg`
-  - Shows external sources feeding three action bands — Intake (Ingest and Discover), Analyze (Detect and Evaluate), and Act (View and Remediate) — that share one skill bundle contract, with edge persistence, warehouse query packs, and runtime surfaces wrapping the same skills.
+  - Shows the six shipped skill lanes grouped into three action bands, with the shared skill contract underneath and the supporting edges and runtime surfaces around them.
 - `iam-departures-data-flow.svg`
   - Shows the remediation workflow data path from source manifests through planning, approval, execution, and audit artifacts.
 - `detection-pipeline.svg`
   - Shows the standard event path from raw input through normalization, detection, optional export, and downstream persistence.
 - `end-to-end-skill-flows.svg`
-  - Shows three concrete shipped compositions with the same four questions answered in each lane: what the input is, which skill families run, what the output becomes, and which guardrails apply.
+  - Shows three concrete shipped compositions as the same four-column answer each time: where the flow starts, which skills run, what the result becomes, and which guardrail matters.
 
 ## Rules
 

@@ -1,98 +1,108 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1020" viewBox="0 0 1280 1020" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="980" viewBox="0 0 1480 980" role="img" aria-labelledby="title desc">
   <title id="title">cloud-ai-security-skills repository architecture</title>
-  <desc id="desc">External sources feed three action bands of shipped skill lanes. Intake pairs Ingest and Discover in parallel. Analyze pairs Detect and Evaluate in parallel. Act pairs Remediate and View in parallel. All six lanes share one skill bundle contract and are wrapped by edge persistence, warehouse query packs, and runtime surfaces.</desc>
+  <desc id="desc">The repo is organized into three action bands. Intake contains Ingest and Discover. Analyze contains Detect and Evaluate. Act contains Remediate and View. All six lanes share one skill bundle contract, while sources and sinks, warehouse query packs, and runtime surfaces wrap the same underlying skills.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#07111e"/>
+      <stop offset="100%" stop-color="#0b1326"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#111c34"/>
+    </linearGradient>
+    <linearGradient id="intake" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#162456"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="analyze" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0f3a41"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="act" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4a1930"/>
+      <stop offset="100%" stop-color="#7c2d12"/>
+    </linearGradient>
+    <style>
+      .title { fill: #f8fafc; font: 700 42px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .subtitle { fill: #cbd5e1; font: 400 21px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .micro { fill: #94a3b8; font: 400 15px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .section { fill: #f8fafc; font: 700 30px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .eyebrow { fill: #93c5fd; font: 700 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+      .cardtitle { fill: #f8fafc; font: 700 29px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .body { fill: #e2e8f0; font: 400 17px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .small { fill: #cbd5e1; font: 400 15px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .chip { fill: #dbeafe; font: 600 15px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+      .foot { fill: #cbd5e1; font: 400 16px 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+    </style>
+  </defs>
 
-  <rect width="1280" height="1020" fill="#08111f"/>
-  <rect x="32" y="32" width="1216" height="956" rx="28" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+  <rect width="1480" height="980" fill="url(#bg)"/>
+  <rect x="28" y="28" width="1424" height="924" rx="34" fill="url(#panel)" stroke="#334155" stroke-width="2"/>
 
-  <g font-family="Arial, sans-serif">
-    <text x="72" y="88" fill="#f8fafc" font-size="34" font-weight="700">cloud-ai-security-skills</text>
-    <text x="72" y="120" fill="#cbd5e1" font-size="18">Same skill bundle, any surface. OCSF 1.8 default wire format, native where OCSF is thin.</text>
-    <text x="72" y="148" fill="#94a3b8" font-size="15">Three action bands. Six skill lanes. One shared contract. Edge and runtime surfaces wrap the same skills.</text>
+  <g>
+    <text x="72" y="92" class="title">cloud-ai-security-skills</text>
+    <text x="72" y="126" class="subtitle">Same skill bundle, any surface. OCSF 1.8 by default for streams, native where OCSF is thin.</text>
+    <text x="72" y="152" class="micro">Three action bands. Six shipped skill lanes. One shared contract. Support layers wrap the same skills instead of replacing them.</text>
 
-    <!-- External sources band -->
-    <rect x="72" y="176" width="1136" height="60" rx="16" fill="#111827" stroke="#475569" stroke-width="2"/>
-    <text x="96" y="208" fill="#e5e7eb" font-size="18" font-weight="700">External sources</text>
-    <text x="96" y="228" fill="#cbd5e1" font-size="15">Cloud APIs · raw logs · identity providers · Kubernetes audit · warehouses · object stores · MCP proxy events</text>
+    <rect x="72" y="186" width="1336" height="86" rx="22" fill="#101929" stroke="#475569" stroke-width="2"/>
+    <text x="102" y="220" class="eyebrow">External signals</text>
+    <rect x="102" y="234" width="150" height="26" rx="13" fill="#172136"/>
+    <rect x="266" y="234" width="132" height="26" rx="13" fill="#172136"/>
+    <rect x="412" y="234" width="154" height="26" rx="13" fill="#172136"/>
+    <rect x="580" y="234" width="158" height="26" rx="13" fill="#172136"/>
+    <rect x="752" y="234" width="148" height="26" rx="13" fill="#172136"/>
+    <rect x="914" y="234" width="148" height="26" rx="13" fill="#172136"/>
+    <text x="126" y="252" class="chip">cloud APIs</text>
+    <text x="298" y="252" class="chip">raw logs</text>
+    <text x="442" y="252" class="chip">identity feeds</text>
+    <text x="606" y="252" class="chip">Kubernetes audit</text>
+    <text x="785" y="252" class="chip">warehouses</text>
+    <text x="948" y="252" class="chip">MCP proxy</text>
 
-    <path d="M640 236 L640 260" stroke="#94a3b8" stroke-width="3" fill="none"/>
-    <path d="M632 254 L640 262 L648 254" stroke="#94a3b8" stroke-width="3" fill="none"/>
+    <rect x="72" y="308" width="1336" height="154" rx="28" fill="#0f1f3a" stroke="#3b82f6" stroke-width="2"/>
+    <text x="100" y="342" class="eyebrow">Intake</text>
+    <text x="100" y="380" class="section">Turn raw inputs or live state into stable repo data</text>
+    <rect x="100" y="404" width="610" height="44" rx="18" fill="url(#intake)" stroke="#93c5fd" stroke-width="2"/>
+    <rect x="770" y="404" width="610" height="44" rx="18" fill="url(#intake)" stroke="#93c5fd" stroke-width="2"/>
+    <text x="126" y="434" class="cardtitle">L1 Ingest</text>
+    <text x="796" y="434" class="cardtitle">L2 Discover</text>
+    <text x="126" y="490" class="body">source-specific normalization from CloudTrail, Azure Activity, GCP audit,</text>
+    <text x="126" y="514" class="body">Kubernetes audit, Okta, Entra, Workspace, VPC/NSG flows, and MCP proxy logs</text>
+    <text x="796" y="490" class="body">live inventory, AI BOM, control evidence, environment graph context,</text>
+    <text x="796" y="514" class="body">and repo-native outputs for posture, evidence, and discovery workflows</text>
 
-    <!-- Intake band -->
-    <rect x="72" y="266" width="1136" height="138" rx="22" fill="#0f1f3a" stroke="#1e3a8a" stroke-width="2"/>
-    <text x="96" y="296" fill="#bfdbfe" font-size="17" font-weight="700">1 · Intake</text>
-    <text x="180" y="296" fill="#cbd5e1" font-size="15">raw source to stable event stream or live evidence</text>
+    <rect x="72" y="492" width="1336" height="154" rx="28" fill="#0a2d30" stroke="#14b8a6" stroke-width="2"/>
+    <text x="100" y="526" class="eyebrow" fill="#99f6e4">Analyze</text>
+    <text x="100" y="564" class="section">Turn events into findings and controls into benchmark results</text>
+    <rect x="100" y="588" width="610" height="44" rx="18" fill="url(#analyze)" stroke="#5eead4" stroke-width="2"/>
+    <rect x="770" y="588" width="610" height="44" rx="18" fill="url(#analyze)" stroke="#5eead4" stroke-width="2"/>
+    <text x="126" y="618" class="cardtitle">L3 Detect</text>
+    <text x="796" y="618" class="cardtitle">L4 Evaluate</text>
+    <text x="126" y="674" class="body">detectors for lateral movement, Kubernetes privilege escalation,</text>
+    <text x="126" y="698" class="body">Okta MFA fatigue, MCP tool drift, Workspace auth, and Entra identity abuse</text>
+    <text x="796" y="674" class="body">benchmarks and evaluation flows for AWS, Azure, GCP, Kubernetes,</text>
+    <text x="796" y="698" class="body">containers, model serving, and GPU cluster posture</text>
 
-    <rect x="96" y="312" width="536" height="80" rx="16" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
-    <text x="120" y="344" fill="#dbeafe" font-size="22" font-weight="700">L1 Ingest</text>
-    <text x="120" y="372" fill="#dbeafe" font-size="15">15 ingesters · CloudTrail, GCP audit, Azure activity,</text>
-    <text x="120" y="390" fill="#dbeafe" font-size="15">K8s audit, Okta, Entra, Workspace, MCP proxy</text>
+    <rect x="72" y="676" width="1336" height="154" rx="28" fill="#2b1a1a" stroke="#f97316" stroke-width="2"/>
+    <text x="100" y="710" class="eyebrow" fill="#fdba74">Act</text>
+    <text x="100" y="748" class="section">Present results or take approval-bound action</text>
+    <rect x="100" y="772" width="610" height="44" rx="18" fill="url(#act)" stroke="#f0abfc" stroke-width="2"/>
+    <rect x="770" y="772" width="610" height="44" rx="18" fill="url(#act)" stroke="#fb923c" stroke-width="2"/>
+    <text x="126" y="802" class="cardtitle">L5 Remediate</text>
+    <text x="796" y="802" class="cardtitle">L6 View</text>
+    <text x="126" y="858" class="body">flagship guarded write path for IAM departures: dry-run first,</text>
+    <text x="126" y="882" class="body">human approval, scoped roles, and dual audit to DynamoDB plus S3</text>
+    <text x="796" y="858" class="body">delivery and review formats such as SARIF and Mermaid attack flow</text>
+    <text x="796" y="882" class="body">for downstream triage, export, and security review workflows</text>
 
-    <rect x="648" y="312" width="560" height="80" rx="16" fill="#1d4ed8" stroke="#60a5fa" stroke-width="2"/>
-    <text x="672" y="344" fill="#eff6ff" font-size="22" font-weight="700">L2 Discover</text>
-    <text x="672" y="372" fill="#dbeafe" font-size="15">live inventory, AI BOM, cloud control evidence,</text>
-    <text x="672" y="390" fill="#dbeafe" font-size="15">discover-environment graph context</text>
+    <rect x="72" y="850" width="1336" height="48" rx="18" fill="#182234" stroke="#64748b" stroke-width="2"/>
+    <text x="100" y="881" class="foot"><tspan font-weight="700" fill="#f8fafc">Shared contract</tspan><tspan dx="18">SKILL.md • REFERENCES.md • src/ • tests/ • native / canonical / OCSF / bridge modes</tspan></text>
 
-    <path d="M640 404 L640 428" stroke="#94a3b8" stroke-width="3" fill="none"/>
-    <path d="M632 422 L640 430 L648 422" stroke="#94a3b8" stroke-width="3" fill="none"/>
-
-    <!-- Analyze band -->
-    <rect x="72" y="434" width="1136" height="138" rx="22" fill="#0c2e2a" stroke="#0d9488" stroke-width="2"/>
-    <text x="96" y="464" fill="#a7f3d0" font-size="17" font-weight="700">2 · Analyze</text>
-    <text x="196" y="464" fill="#cbd5e1" font-size="15">events to findings · controls to compliance results</text>
-
-    <rect x="96" y="480" width="536" height="80" rx="16" fill="#0f766e" stroke="#2dd4bf" stroke-width="2"/>
-    <text x="120" y="512" fill="#ccfbf1" font-size="22" font-weight="700">L3 Detect</text>
-    <text x="120" y="540" fill="#ccfbf1" font-size="15">8 detectors · lateral movement, K8s priv-esc,</text>
-    <text x="120" y="558" fill="#ccfbf1" font-size="15">MFA fatigue, MCP tool drift · MITRE-mapped</text>
-
-    <rect x="648" y="480" width="560" height="80" rx="16" fill="#14532d" stroke="#4ade80" stroke-width="2"/>
-    <text x="672" y="512" fill="#dcfce7" font-size="22" font-weight="700">L4 Evaluate</text>
-    <text x="672" y="540" fill="#dcfce7" font-size="15">7 benchmarks · CIS AWS / GCP / Azure / K8s,</text>
-    <text x="672" y="558" fill="#dcfce7" font-size="15">container, GPU cluster, model serving</text>
-
-    <path d="M640 572 L640 596" stroke="#94a3b8" stroke-width="3" fill="none"/>
-    <path d="M632 590 L640 598 L648 590" stroke="#94a3b8" stroke-width="3" fill="none"/>
-
-    <!-- Act band -->
-    <rect x="72" y="602" width="1136" height="138" rx="22" fill="#2b1a1a" stroke="#b45309" stroke-width="2"/>
-    <text x="96" y="632" fill="#fed7aa" font-size="17" font-weight="700">3 · Act</text>
-    <text x="162" y="632" fill="#cbd5e1" font-size="15">findings to presentation · findings to approved remediation</text>
-
-    <rect x="96" y="648" width="536" height="80" rx="16" fill="#581c87" stroke="#c084fc" stroke-width="2"/>
-    <text x="120" y="680" fill="#f3e8ff" font-size="22" font-weight="700">L5 Remediate</text>
-    <text x="120" y="708" fill="#f3e8ff" font-size="15">iam-departures-remediation · HITL approval,</text>
-    <text x="120" y="726" fill="#f3e8ff" font-size="15">dry-run first, dual audit (DynamoDB + S3)</text>
-
-    <rect x="648" y="648" width="560" height="80" rx="16" fill="#7c2d12" stroke="#fb923c" stroke-width="2"/>
-    <text x="672" y="680" fill="#ffedd5" font-size="22" font-weight="700">L6 View</text>
-    <text x="672" y="708" fill="#ffedd5" font-size="15">convert-ocsf-to-sarif · convert-ocsf-to-mermaid-</text>
-    <text x="672" y="726" fill="#ffedd5" font-size="15">attack-flow · downstream delivery formats</text>
-
-    <path d="M640 740 L640 762" stroke="#94a3b8" stroke-width="3" fill="none"/>
-
-    <!-- Shared contract -->
-    <rect x="72" y="766" width="1136" height="48" rx="14" fill="#1f2937" stroke="#64748b" stroke-width="2"/>
-    <text x="96" y="797" fill="#f8fafc" font-size="17" font-weight="700">Shared contract</text>
-    <text x="260" y="797" fill="#cbd5e1" font-size="15">SKILL.md · src/ · tests/ · REFERENCES.md · OCSF 1.8 JSONL default · native / canonical / bridge modes</text>
-
-    <!-- Edge persistence, query packs, runtime surfaces -->
-    <rect x="72" y="838" width="352" height="130" rx="18" fill="#111827" stroke="#475569" stroke-width="2"/>
-    <text x="96" y="870" fill="#f8fafc" font-size="18" font-weight="700">Edge persistence</text>
-    <text x="96" y="898" fill="#cbd5e1" font-size="14">sink-snowflake-jsonl · sink-clickhouse-jsonl</text>
-    <text x="96" y="918" fill="#cbd5e1" font-size="14">sink-s3-jsonl · IAM departures DynamoDB + S3</text>
-    <text x="96" y="946" fill="#94a3b8" font-size="13">customer-owned, append-only, audit-friendly</text>
-
-    <rect x="440" y="838" width="304" height="130" rx="18" fill="#111827" stroke="#475569" stroke-width="2"/>
-    <text x="464" y="870" fill="#f8fafc" font-size="18" font-weight="700">Query packs</text>
-    <text x="464" y="898" fill="#cbd5e1" font-size="14">packs/lateral-movement</text>
-    <text x="464" y="918" fill="#cbd5e1" font-size="14">packs/privilege-escalation-k8s</text>
-    <text x="464" y="946" fill="#94a3b8" font-size="13">warehouse-native SQL mirrors</text>
-
-    <rect x="760" y="838" width="448" height="130" rx="18" fill="#111827" stroke="#475569" stroke-width="2"/>
-    <text x="784" y="870" fill="#f8fafc" font-size="18" font-weight="700">Runtime surfaces</text>
-    <text x="784" y="898" fill="#cbd5e1" font-size="14">CLI · CI · MCP · AWS / GCP / Azure runners</text>
-    <text x="784" y="918" fill="#cbd5e1" font-size="14">same skill bundle underneath every surface</text>
-    <text x="784" y="946" fill="#94a3b8" font-size="13">wrappers add orchestration, not a second implementation</text>
+    <rect x="72" y="912" width="420" height="30" rx="15" fill="#121b2a"/>
+    <rect x="530" y="912" width="352" height="30" rx="15" fill="#121b2a"/>
+    <rect x="920" y="912" width="488" height="30" rx="15" fill="#121b2a"/>
+    <text x="96" y="932" class="small"><tspan font-weight="700" fill="#f8fafc">Edge layers</tspan><tspan dx="10">source-* and sink-*</tspan></text>
+    <text x="554" y="932" class="small"><tspan font-weight="700" fill="#f8fafc">Query packs</tspan><tspan dx="10">warehouse SQL mirrors</tspan></text>
+    <text x="944" y="932" class="small"><tspan font-weight="700" fill="#f8fafc">Runtime surfaces</tspan><tspan dx="10">CLI • CI • MCP • runners</tspan></text>
   </g>
 </svg>

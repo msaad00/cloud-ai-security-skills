@@ -101,12 +101,12 @@ Each shipped skill is a bundle:
 The Python file is the execution core. The full skill that agents use is the
 whole bundle.
 
-### Agent or MCP path first
+### Use the skill name first
 
-The normal agent-facing integration path is the skill name through MCP, not a
-raw `python .../src/<entry>.py` call.
+The normal integration path is the skill name through MCP or an agent client,
+not a raw `python .../src/<entry>.py` invocation.
 
-For the Kubernetes example, an MCP client calls the skill bundle like this:
+For the Kubernetes example, the skill-level flow is:
 
 ```text
 tools/call name="ingest-k8s-audit-ocsf"
@@ -127,66 +127,44 @@ arguments={
 }
 ```
 
-That is the skill-level contract agents use today:
+That is the contract the repo wants humans and agents to think in:
 
 - skill name from `SKILL.md`
 - `input`, `args`, and optional `output_format`
-- routing and guardrails from the skill bundle
-- the same runtime core underneath
+- routing, references, and guardrails from the skill bundle
+- the same execution core underneath CLI, CI, MCP, and runners
 
-### Direct execution core
+The same path can be driven by:
 
-The direct Python path is still shown because it is the wrapper-free execution
-surface the MCP server, CI, and runners call under the hood.
+- MCP / agents:
+  - Claude, Codex, Cursor, Windsurf, Cortex Code CLI
+- CI:
+  - the same skill bundle called inside a pipeline job
+- runners:
+  - the same skill bundle called behind AWS, GCP, or Azure event wrappers
 
-Why the README still shows `python skills/.../src/<entry>.py`:
+If you want to stand up the local MCP surface, use the project-scoped config in
+[`.mcp.json`](.mcp.json) or the local wrapper instructions in
+[mcp-server/README.md](mcp-server/README.md).
 
-- that is the direct execution path for the skill implementation
-- MCP, CI, and runners call the same skill code
-- agent clients add the `SKILL.md` contract, routing hints, and guardrails on top
-- the wrapper changes the access path, not the underlying skill implementation
+### What you should expect back
 
-If you want the same flow without MCP, start with the bundled Kubernetes audit
-fixture and generate SARIF in one shot:
+Most flows reduce to one of these outcomes:
 
-```bash
-python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
-  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
-  > findings.sarif
-```
+- `ingest-* -> detect-* -> view/*`
+  - start from raw payloads
+  - end in SARIF, Mermaid, or review JSON
+- `source-* -> detect-* -> sink-*`
+  - start from a warehouse or object row set
+  - end in customer-owned persistence
+- `discover-*` or `evaluation/* -> remediation/*`
+  - start from live state or HR events
+  - end in evidence, audit records, or guarded writes
 
-If you want to inspect each stage separately, write local scratch files in the
-current directory:
-
-```bash
-python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
-  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  > k8s-events.ocsf.jsonl
-
-python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-  k8s-events.ocsf.jsonl \
-  > k8s-findings.ocsf.jsonl
-
-python skills/view/convert-ocsf-to-sarif/src/convert.py \
-  k8s-findings.ocsf.jsonl \
-  > findings.sarif
-```
-
-Those intermediate files are only for debugging. The final output you usually
-keep is `findings.sarif`.
-
-If you want the repo-owned native wire format instead of OCSF:
-
-```bash
-python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
-  --output-format native \
-  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-      --output-format native \
-  > findings.native.jsonl
-```
+The low-level execution-core examples still exist for debugging and wrapper
+authors, but they are intentionally moved out of the top-level entry path. See
+[docs/DATA_HANDLING.md](docs/DATA_HANDLING.md) and the individual `SKILL.md`
+files when you need wrapper-free subprocess examples.
 
 <details>
 <summary><b>Real input and output</b></summary>
@@ -223,22 +201,20 @@ Native finding output, abbreviated:
 
 </details>
 
-### Same skill, different access path
+### Same skill bundle, different access path
 
-The skill code stays the same across all of these:
+Agent clients do not require a second implementation. The same skill bundle is
+what ships everywhere:
 
-- direct CLI:
-  - `python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py ...`
 - MCP / agent:
-  - Claude, Codex, Cursor, Windsurf, or Cortex call the same skill through
-    `mcp-server/`
+  - skill name plus `input`, `args`, and optional `output_format`
 - CI:
-  - GitHub Actions or another pipeline invokes the same script and checks its output
+  - the same bundle called inside a job
 - runner:
-  - the runner template wraps the same skill in an event-driven path
-
-Agent clients do not require a second implementation of the skill. They use the
-same skill bundle through a different access path.
+  - the same bundle called behind event-driven wrappers
+- execution core:
+  - the underlying subprocess entrypoint documented in the skill bundle and in
+    [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
 
 ## Native vs OCSF
 
