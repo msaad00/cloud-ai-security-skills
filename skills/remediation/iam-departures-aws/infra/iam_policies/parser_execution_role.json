@@ -27,20 +27,15 @@
         "StringEquals": {
           "aws:PrincipalOrgID": "${AWS_ORG_ID}"
         }
-      }
+      },
+      "_comment": "Parser calls iam:GetUser ONLY through credentials returned by this STS AssumeRole. The cross-account role (cross_account_remediation_role.json) carries the enumerated IAM read permissions. No direct iam:* grant on this role."
     },
     {
-      "Sid": "ValidateIAMUserExists_WILDCARD_OK",
-      "Effect": "Allow",
-      "Action": [
-        "iam:GetUser"
-      ],
+      "Sid": "DenyAllDirectIAMActions_WILDCARD_OK",
+      "Effect": "Deny",
+      "Action": "iam:*",
       "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:PrincipalOrgID": "${AWS_ORG_ID}"
-        }
-      }
+      "_comment": "WILDCARD_OK: Deny on iam:* for Resource:* is defense in depth. Deny is intentionally broader than any future Allow; this forces every IAM call to go through the cross-account STS path where the protected-principal deny list lives."
     },
     {
       "Sid": "DenyDirectStepFunctionExecution_WILDCARD_OK",

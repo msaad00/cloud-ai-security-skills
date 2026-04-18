@@ -51,7 +51,7 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.jsonl \
 |---|---|---|
 | L1 Ingest | 15 shipped ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources as demand justifies |
 | L2 Discover | 4 shipped skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence sources |
-| L3 Detect | 9 shipped detectors tied to MITRE ATT&CK techniques (lateral movement, K8s privesc + secret read, MCP tool drift, MCP prompt injection, Okta MFA fatigue, Entra credential addition, Entra role grant, Workspace suspicious login) | credential stuffing, impossible travel, more AI-agent signals |
+| L3 Detect | 10 shipped detectors tied to MITRE ATT&CK techniques (lateral movement, K8s privesc + secret read, MCP tool drift, MCP prompt injection, Okta MFA fatigue, Okta credential stuffing, Entra credential addition, Entra role grant, Workspace suspicious login) | impossible travel, more AI-agent signals |
 | L4 Evaluate | 7 shipped benchmarks (CIS AWS / GCP / Azure, K8s, Docker / container, GPU cluster, model serving) | migrate to OCSF Compliance Finding (`class_uid=2003`) outputs |
 | L5 Remediate | `iam-departures-aws` with HITL, dual audit, dry-run | broader remediation families (see issues #155, #240, #241, #242) |
 | L6 View | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow` | graph overlay, warehouse-ready converters |
@@ -70,7 +70,7 @@ skills/
 └── output/         ← L7 (sink-* skills: append-only persistence)
 ```
 
-The repo ships **44 skills** across these seven layers (15 + 4 + 9 + 7 + 1 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
+The repo ships **45 skills** across these seven layers (15 + 4 + 10 + 7 + 1 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
 
 `skills/detection-engineering/` holds the shared OCSF contract and frozen
 golden fixtures. Executable skills live only under the six layered
