@@ -4,14 +4,14 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **45**
+- Total shipped skills in registry: **46**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
 | OCSF | 1.8.0 | **36** | — |
-| MITRE ATT&CK | v14 | **22** | 100% mapped coverage |
+| MITRE ATT&CK | v14 | **23** | 100% mapped coverage |
 | MITRE ATLAS | current | **7** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **1** | — |
 | CIS GCP Foundations | v3.0 | **1** | — |
@@ -19,9 +19,9 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
 | CIS Controls | v8 | **2** | — |
-| NIST CSF | 2.0 | **9** | 100% mapped coverage |
+| NIST CSF | 2.0 | **10** | 100% mapped coverage |
 | NIST AI RMF | current | **4** | — |
-| SOC 2 TSC | current | **9** | 100% mapped coverage |
+| SOC 2 TSC | current | **10** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
 | OWASP LLM Top 10 | current | **2** | — |
@@ -84,7 +84,7 @@ Shipped skills mapped: **36**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **22**
+Shipped skills mapped: **23**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -108,6 +108,7 @@ Shipped skills mapped: **22**
 | [`ingest-k8s-audit-ocsf`](../skills/ingestion/ingest-k8s-audit-ocsf) | ingestion | kubernetes | clusters, audit-logs, identities |
 | [`ingest-security-hub-ocsf`](../skills/ingestion/ingest-security-hub-ocsf) | ingestion | aws | findings, security-posture |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
 | [`convert-ocsf-to-mermaid-attack-flow`](../skills/view/convert-ocsf-to-mermaid-attack-flow) | view | multi | findings, review-output, graphs |
 | [`convert-ocsf-to-sarif`](../skills/view/convert-ocsf-to-sarif) | view | multi | findings, review-output |
 
@@ -199,7 +200,7 @@ Shipped skills mapped: **2**
 - Asset classes in scope: identities, storage, logging, network, clusters, runtime, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **9**
+Shipped skills mapped: **10**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -212,6 +213,7 @@ Shipped skills mapped: **9**
 | [`k8s-security-benchmark`](../skills/evaluation/k8s-security-benchmark) | evaluation | kubernetes | clusters, identities, network, logging |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
 
 ### NIST AI RMF (current)
 
@@ -233,7 +235,7 @@ Shipped skills mapped: **4**
 - Asset classes in scope: access, logging, change, evidence, inventory, ai-endpoints
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **9**
+Shipped skills mapped: **10**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -246,6 +248,7 @@ Shipped skills mapped: **9**
 | [`sink-s3-jsonl`](../skills/output/sink-s3-jsonl) | output | aws | findings, evidence, audit-logs, object-storage |
 | [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl) | output | snowflake | findings, evidence, audit-logs, lakehouse |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
 
 ### PCI DSS (4.0)
 
