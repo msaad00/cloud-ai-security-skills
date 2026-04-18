@@ -144,7 +144,7 @@ Pick the row that matches the job.
 | an AI estate to inventory | [`discover-ai-bom`](skills/discovery/discover-ai-bom/) | CycloneDX-aligned AI BOM |
 | audit evidence to produce | [`discover-control-evidence`](skills/discovery/discover-control-evidence/) | PCI / SOC 2 evidence JSON |
 | OCSF findings to publish | [`view/*`](skills/view/) | SARIF · Mermaid |
-| a departing employee to offboard | [`iam-departures-remediation`](skills/remediation/iam-departures-remediation/) | dry-run plan or audited action |
+| a departing employee to offboard | [`iam-departures-aws`](skills/remediation/iam-departures-aws/) | dry-run plan or audited action |
 
 Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
@@ -220,7 +220,7 @@ The one shipped write path. Guarded, event-driven, dual-audited — and **one cl
 
 ### Per-cloud service mapping
 
-Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-departures-remediation/infra/)). For Azure and GCP, the **worker library code** lives in [`src/lambda_worker/clouds/`](skills/remediation/iam-departures-remediation/src/lambda_worker/clouds/) (`azure_entra.py`, `gcp_iam.py`, `databricks_scim.py`, `snowflake_user.py`); the recommended native orchestration stack per cloud is documented below so operators pick equivalent primitives instead of forcing one stack across all clouds.
+Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-departures-aws/infra/)). For Azure and GCP, the **worker library code** lives in [`src/lambda_worker/clouds/`](skills/remediation/iam-departures-aws/src/lambda_worker/clouds/) (`azure_entra.py`, `gcp_iam.py`, `databricks_scim.py`, `snowflake_user.py`); the recommended native orchestration stack per cloud is documented below so operators pick equivalent primitives instead of forcing one stack across all clouds.
 
 | Role | AWS · shipped | GCP · pattern | Azure · pattern |
 |---|---|---|---|
@@ -232,7 +232,7 @@ Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-
 | Identity target | **IAM** (cross-account, `aws:PrincipalOrgID`) | **Cloud IAM** (cross-project, Org policies) | **Entra ID** (tenant scope, Graph API) |
 | DLQ / alerts | **SQS** + **SNS** | **Pub/Sub** + **Cloud Monitoring** | **Service Bus** + **Monitor Alerts** |
 
-Details: [skills/remediation/iam-departures-remediation/](skills/remediation/iam-departures-remediation/) · [SKILL.md#cross-cloud-workflow-shape](skills/remediation/iam-departures-remediation/SKILL.md)
+Details: [skills/remediation/iam-departures-aws/](skills/remediation/iam-departures-aws/) · [SKILL.md#cross-cloud-workflow-shape](skills/remediation/iam-departures-aws/SKILL.md)
 
 ## Native vs OCSF
 

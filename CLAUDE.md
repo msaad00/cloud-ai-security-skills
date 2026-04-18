@@ -55,7 +55,7 @@ skills/
 │   └── convert-ocsf-to-mermaid-attack-flow/
 │
 ├── remediation/                   # active fix workflows, gated and audited
-│   └── iam-departures-remediation/
+│   └── iam-departures-aws/
 │
 └── detection-engineering/         # shared OCSF contract + frozen fixtures
     ├── OCSF_CONTRACT.md
@@ -94,7 +94,7 @@ to attempt them.
   `roles/viewer`, `iam.securityReviewer`, and Azure `Reader`. They have **zero**
   write permissions to any cloud account. Never wrap them in code that mutates
   state — that would be outside the skill contract.
-- **`iam-departures-remediation` reconciler** is read-only against HR sources
+- **`iam-departures-aws` reconciler** is read-only against HR sources
   and only *writes a manifest* to S3. The Step Function is the only thing that
   touches IAM.
 
@@ -224,7 +224,7 @@ python skills/evaluation/cspm-gcp-cis-benchmark/src/checks.py   --project my-pro
 python skills/evaluation/cspm-azure-cis-benchmark/src/checks.py --subscription <sub-id>
 
 # remediation/ (dry-run)
-python skills/remediation/iam-departures-remediation/src/lambda_parser/handler.py --dry-run examples/manifest.json
+python skills/remediation/iam-departures-aws/src/lambda_parser/handler.py --dry-run examples/manifest.json
 
 # ingestion + detection + view — end-to-end pipe
 python skills/ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
@@ -236,7 +236,7 @@ pip install pytest boto3 moto
 pytest skills/evaluation/cspm-aws-cis-benchmark/tests/     -o "testpaths=tests"
 pytest skills/evaluation/cspm-gcp-cis-benchmark/tests/     -o "testpaths=tests"
 pytest skills/evaluation/cspm-azure-cis-benchmark/tests/   -o "testpaths=tests"
-pytest skills/remediation/iam-departures-remediation/tests/          -o "testpaths=tests"
+pytest skills/remediation/iam-departures-aws/tests/          -o "testpaths=tests"
 pytest skills/ingestion/ingest-mcp-proxy-ocsf/tests/     -o "testpaths=tests"
 pytest skills/detection/detect-mcp-tool-drift/tests/     -o "testpaths=tests"
 ```

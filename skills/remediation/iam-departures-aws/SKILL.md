@@ -1,5 +1,5 @@
 ---
-name: iam-departures-remediation
+name: iam-departures-aws
 description: >-
   Auto-remediate AWS IAM users belonging to departed employees. Reconciles HR
   termination data (Workday via Snowflake, Databricks, ClickHouse, or direct API)
@@ -37,7 +37,7 @@ compatibility: >-
 metadata:
   author: msaad00
   homepage: https://github.com/msaad00/cloud-ai-security-skills
-  source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/remediation/iam-departures-remediation
+  source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/remediation/iam-departures-aws
   version: 0.2.0
   frameworks:
     - MITRE ATT&CK
@@ -230,7 +230,7 @@ Prefer the storage-integration or federation path where the source platform supp
 ## Project Structure
 
 ```
-skills/remediation/iam-departures-remediation/
+skills/remediation/iam-departures-aws/
 ├── SKILL.md                    # This file (skill definition)
 ├── reference.md                # Detailed architecture + framework mappings
 ├── examples.md                 # Deployment walkthroughs
@@ -266,7 +266,7 @@ Deploy with CloudFormation or Terraform — both produce identical infrastructur
 # CloudFormation
 aws cloudformation deploy \
   --template-file infra/cloudformation.yaml \
-  --stack-name iam-departures-remediation \
+  --stack-name iam-departures-aws \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides OrgId=o-abc123def4 ...
 

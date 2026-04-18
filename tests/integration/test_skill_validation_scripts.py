@@ -208,7 +208,7 @@ class TestValidationScripts:
 
     def test_remediation_skill_declares_human_approval(self):
         skills = {skill.name: skill for skill in COMMON.discover_skill_contracts()}
-        remediation = skills["iam-departures-remediation"]
+        remediation = skills["iam-departures-aws"]
         assert remediation.approval_model == "human_required"
         assert remediation.execution_modes == ("jit", "persistent")
         assert "writes-identity" in remediation.side_effects

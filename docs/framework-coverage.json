@@ -383,7 +383,7 @@
       "execution_modes": ["cli", "ci", "mcp"]
     },
     {
-      "path": "skills/remediation/iam-departures-remediation",
+      "path": "skills/remediation/iam-departures-aws",
       "layer": "remediation",
       "providers": ["aws", "snowflake", "databricks", "clickhouse"],
       "asset_classes": ["identities", "access", "audit", "hr-events"],

@@ -129,4 +129,4 @@ Golden fixture parity against [`../golden/k8s_sensitive_secret_read_sample.ocsf.
 
 - [`SKILL.md`](../detect-privilege-escalation-k8s/SKILL.md) for the complementary `detect-privilege-escalation-k8s` Rule 1 (list + get enumeration)
 - [`REFERENCES.md`](REFERENCES.md) for official K8s / OCSF / MITRE links
-- [`../../remediation/iam-departures-remediation/RUNBOOK.md`](../../remediation/iam-departures-remediation/) for the remediation-side runbook pattern this skill's runbook follows
+- [`../../remediation/iam-departures-aws/RUNBOOK.md`](../../remediation/iam-departures-aws/) for the remediation-side runbook pattern this skill's runbook follows

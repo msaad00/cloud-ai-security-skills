@@ -7,7 +7,7 @@ description: >-
   benchmark, cloud security posture, IAM hygiene audit, S3 public access check, or
   CloudTrail validation. Do NOT use for GCP, Azure, or on-prem; do NOT use this skill
   to remediate findings (it is assessment-only and has zero write permissions) — pair
-  with iam-departures-remediation for IAM cleanup, or open a ticket in your remediation
+  with iam-departures-aws for IAM cleanup, or open a ticket in your remediation
   workflow for other findings.
 license: Apache-2.0
 approval_model: none

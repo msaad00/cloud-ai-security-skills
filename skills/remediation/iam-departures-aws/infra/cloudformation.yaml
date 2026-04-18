@@ -87,7 +87,7 @@ Resources:
                 TransitionInDays: 90
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
         - Key: ManagedBy
           Value: cloudformation
 
@@ -150,7 +150,7 @@ Resources:
         SSEEnabled: true
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   # ── IAM Roles ────────────────────────────────────────────────
 
@@ -208,7 +208,7 @@ Resources:
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/iam-departures-parser*'
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   WorkerExecutionRole:
     Type: AWS::IAM::Role
@@ -303,7 +303,7 @@ Resources:
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/iam-departures-worker*'
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   StepFunctionRole:
     Type: AWS::IAM::Role
@@ -355,7 +355,7 @@ Resources:
                 Resource: '*'
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   EventBridgeRole:
     Type: AWS::IAM::Role
@@ -379,7 +379,7 @@ Resources:
                 Resource: !Ref DeparturesPipeline
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   # ── Failure Path: DLQ + SNS + EventBridge alert rule ─────────
   # Closed-loop guarantee: nothing fails silently. Async Lambda
@@ -395,7 +395,7 @@ Resources:
       KmsDataKeyReusePeriodSeconds: 300
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   PipelineAlertsTopic:
     Type: AWS::SNS::Topic
@@ -405,7 +405,7 @@ Resources:
       KmsMasterKeyId: !Ref KmsKeyArn
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   PipelineAlertsEmailSubscription:
     Type: AWS::SNS::Subscription
@@ -508,7 +508,7 @@ Resources:
         Mode: Active
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   WorkerFunction:
     Type: AWS::Lambda::Function
@@ -534,7 +534,7 @@ Resources:
         Mode: Active
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   # ── Step Function ────────────────────────────────────────────
 
@@ -619,7 +619,7 @@ Resources:
         }
       Tags:
         - Key: Project
-          Value: iam-departures-remediation
+          Value: iam-departures-aws
 
   StepFunctionLogGroup:
     Type: AWS::Logs::LogGroup

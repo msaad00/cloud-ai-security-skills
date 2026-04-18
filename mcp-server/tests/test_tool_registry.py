@@ -40,7 +40,7 @@ class TestDiscovery:
             "detect-entra-role-grant-escalation",
             "detect-google-workspace-suspicious-login",
             "cspm-aws-cis-benchmark",
-            "iam-departures-remediation",
+            "iam-departures-aws",
             "ingest-vpc-flow-logs-gcp-ocsf",
             "ingest-nsg-flow-logs-azure-ocsf",
             "ingest-gcp-scc-ocsf",
@@ -52,8 +52,8 @@ class TestDiscovery:
 
     def test_marks_remediation_skill_without_cli_entrypoint_as_unsupported(self):
         skills = {skill.name: skill for skill in discover_skills(REPO_ROOT)}
-        assert skills["iam-departures-remediation"].supported is False
-        assert skills["iam-departures-remediation"].capability == "write-remediation"
+        assert skills["iam-departures-aws"].supported is False
+        assert skills["iam-departures-aws"].capability == "write-remediation"
 
     def test_supported_tools_include_ingest_detect_and_evaluate(self):
         tools = tool_map(REPO_ROOT)
@@ -105,7 +105,7 @@ class TestToolDefinition:
         assert skill.min_approvers is None
 
     def test_unsupported_write_skill_rbac_metadata_is_parsed(self):
-        remediation = next(skill for skill in discover_skills(REPO_ROOT) if skill.name == "iam-departures-remediation")
+        remediation = next(skill for skill in discover_skills(REPO_ROOT) if skill.name == "iam-departures-aws")
         assert remediation.network_egress == (
             "api.workday.com",
             "*.snowflakecomputing.com",

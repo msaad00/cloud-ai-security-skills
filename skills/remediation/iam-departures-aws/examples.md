@@ -6,7 +6,7 @@
 # 1. Deploy the stack to your Security OU account
 aws cloudformation deploy \
   --template-file infra/cloudformation.yaml \
-  --stack-name iam-departures-remediation \
+  --stack-name iam-departures-aws \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
     RemediationBucket=my-security-remediation-bucket \
@@ -60,7 +60,7 @@ python -m reconciler.sources --source snowflake --use-storage-integration
 
 ```bash
 # Run the test suite
-cd skills/remediation/iam-departures-remediation
+cd skills/remediation/iam-departures-aws
 python -m pytest tests/ -v
 
 # Test specific rehire scenarios

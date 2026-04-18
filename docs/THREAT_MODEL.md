@@ -128,7 +128,7 @@ Key evidence:
 
 - [SINK_CONTRACT.md](SINK_CONTRACT.md)
 - [RUNNER_CONTRACT.md](RUNNER_CONTRACT.md)
-- `iam-departures-remediation`
+- `iam-departures-aws`
 
 ### Defensive parsing and deterministic outputs
 

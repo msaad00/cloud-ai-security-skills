@@ -29,7 +29,7 @@ The repo does **not** hardcode credentials in source. Skills should never ask fo
 
 ## Current secret-bearing paths
 
-The main secret-bearing paths are in `iam-departures-remediation`, which supports multiple HR and cross-cloud backends.
+The main secret-bearing paths are in `iam-departures-aws`, which supports multiple HR and cross-cloud backends.
 
 | Integration | Supported auth today | Preferred path |
 |---|---|---|
@@ -61,7 +61,7 @@ Credential-bearing integrations should follow this order:
 
 Current documented exception:
 
-- `httpx` is retained for the direct Workday REST path in `iam-departures-remediation`
+- `httpx` is retained for the direct Workday REST path in `iam-departures-aws`
 - the stdlib alternative would reduce ergonomics without meaningfully improving trust or blast radius
 - this exception is explicit so the repo does not imply that all network calls are cloud-provider SDK traffic only
 

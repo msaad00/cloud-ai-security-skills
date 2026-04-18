@@ -33,7 +33,7 @@ is the row you can take to your auditor.
 | `cspm-azure-cis-benchmark` | ✅ | ✅ | ✅ Reader role | ✅ | n/a | ✅ |
 | `k8s-security-benchmark` | ✅ | ✅ | ✅ kubectl viewer | ✅ | n/a | ✅ |
 | `container-security` | ✅ | ✅ | ✅ filesystem read only | ✅ | n/a | ✅ |
-| `iam-departures-remediation` | ⚠️ writes via worker only | ✅ | ✅ deny on root/break-glass | ✅ DDB + S3 + ingest-back | n/a | ✅ |
+| `iam-departures-aws` | ⚠️ writes via worker only | ✅ | ✅ deny on root/break-glass | ✅ DDB + S3 + ingest-back | n/a | ✅ |
 | `model-serving-security` | ✅ | ✅ | ✅ config-only | ✅ | n/a | ✅ |
 | `gpu-cluster-security` | ✅ | ✅ | ✅ config-only | ✅ | n/a | ✅ |
 | `discover-environment` | ✅ | ✅ | ✅ viewer | ✅ snapshot diff | n/a | ✅ |

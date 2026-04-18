@@ -15,7 +15,7 @@ them. One shared skill bundle contract.
 | L2 Discover | live inventory, evidence, AI BOM, graph context | `discover-ai-bom`, `discover-cloud-control-evidence`, `discover-control-evidence`, `discover-environment` |
 | L3 Detect | deterministic attack-pattern findings | `detect-lateral-movement`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-mcp-tool-drift`, `detect-okta-mfa-fatigue`, `detect-entra-credential-addition`, `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login` |
 | L4 Evaluate | benchmark and posture results | `cspm-aws-cis-benchmark`, `cspm-gcp-cis-benchmark`, `cspm-azure-cis-benchmark`, `k8s-security-benchmark`, `container-security`, `gpu-cluster-security`, `model-serving-security` |
-| L5 Remediate | guarded writes with HITL and dual audit | `iam-departures-remediation` |
+| L5 Remediate | guarded writes with HITL and dual audit | `iam-departures-aws` |
 | L6 View | export into downstream formats | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow` |
 
 OCSF 1.8 is the default interoperable wire format, not a layer. It is pinned
@@ -53,7 +53,7 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.jsonl \
 | L2 Discover | 4 shipped skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence sources |
 | L3 Detect | 8 shipped detectors tied to MITRE ATT&CK techniques | credential stuffing, impossible travel, MCP prompt injection |
 | L4 Evaluate | 7 shipped benchmarks (CIS AWS / GCP / Azure, K8s, Docker / container, GPU cluster, model serving) | migrate to OCSF Compliance Finding (`class_uid=2003`) outputs |
-| L5 Remediate | `iam-departures-remediation` with HITL, dual audit, dry-run | broader remediation families as detection patterns mature |
+| L5 Remediate | `iam-departures-aws` with HITL, dual audit, dry-run | broader remediation families as detection patterns mature |
 | L6 View | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow` | graph overlay, warehouse-ready converters |
 
 ## Directory layout

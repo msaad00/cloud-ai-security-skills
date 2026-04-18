@@ -8,7 +8,7 @@ JSON_POLICY = (
     ROOT
     / "skills"
     / "remediation"
-    / "iam-departures-remediation"
+    / "iam-departures-aws"
     / "infra"
     / "iam_policies"
     / "worker_execution_role.json"
@@ -17,7 +17,7 @@ CLOUDFORMATION = (
     ROOT
     / "skills"
     / "remediation"
-    / "iam-departures-remediation"
+    / "iam-departures-aws"
     / "infra"
     / "cloudformation.yaml"
 )
@@ -25,7 +25,7 @@ TERRAFORM = (
     ROOT
     / "skills"
     / "remediation"
-    / "iam-departures-remediation"
+    / "iam-departures-aws"
     / "infra"
     / "terraform"
     / "main.tf"

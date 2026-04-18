@@ -164,7 +164,7 @@ consumer, scheduler, or serverless loop. It does not mean the repo already
 ships that runner for every skill.
 
 Current shipped exception:
-- `iam-departures-remediation`
+- `iam-departures-aws`
 
 ### Why is a read-only skill refusing to write or mutate anything?
 

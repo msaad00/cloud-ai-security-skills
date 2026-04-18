@@ -26,9 +26,9 @@ flowchart LR
 | Benchmark security posture | `evaluation/*` | live cloud APIs and control-plane state | accounts, policies, clusters, containers, GPUs, model endpoints | posture or compliance results |
 | Inventory cloud or AI assets | `discover-environment` or `discover-ai-bom` | live cloud APIs, AI service inventories | resources, graphs, AI endpoints, registries, datasets | inventory graph or CycloneDX-aligned AI BOM |
 | Build audit evidence | `discover-control-evidence` or `discover-cloud-control-evidence` | discovery output and live inventory | controls, settings, evidence artifacts | evidence JSON or OCSF bridge |
-| Centralize remediation audit in your own lakehouse | `iam-departures-remediation` plus a customer-owned sink pattern | IAM departures workflow audit rows | identities, approvals, actions, audit history | DynamoDB + S3 today, external sink pattern via Snowflake / Snowpipe or another lakehouse later |
+| Centralize remediation audit in your own lakehouse | `iam-departures-aws` plus a customer-owned sink pattern | IAM departures workflow audit rows | identities, approvals, actions, audit history | DynamoDB + S3 today, external sink pattern via Snowflake / Snowpipe or another lakehouse later |
 | Export findings to downstream tools | `view/*` | OCSF findings | detections and evidence | SARIF, Mermaid attack flow |
-| Remediate offboarding safely | `iam-departures-remediation` | HR departure feeds + cloud / data-platform APIs | users, IAM identities, warehouse identities | dry-run plan or audited remediation |
+| Remediate offboarding safely | `iam-departures-aws` | HR departure feeds + cloud / data-platform APIs | users, IAM identities, warehouse identities | dry-run plan or audited remediation |
 
 <details>
 <summary><b>Expanded selection tables</b></summary>
@@ -60,7 +60,7 @@ flowchart LR
 | Containers and GPU clusters | evaluate | `container-security`, `gpu-cluster-security` |
 | AI services and model endpoints | discover / evaluate | `discover-ai-bom`, `discover-environment`, `model-serving-security` |
 | Audit evidence and control state | discovery | `discover-control-evidence`, `discover-cloud-control-evidence` |
-| Offboarding / access cleanup | remediation | `iam-departures-remediation` |
+| Offboarding / access cleanup | remediation | `iam-departures-aws` |
 
 ## Start by framework
 

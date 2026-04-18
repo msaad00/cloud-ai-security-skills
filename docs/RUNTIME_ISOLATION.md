@@ -19,7 +19,7 @@ Agents and wrappers should treat those fields as part of the runtime contract, n
 Important meaning:
 - `execution_modes: persistent` means the skill is compatible with a persistent runner or serverless loop
 - it does **not** mean the repo already ships a dedicated daemon, queue worker, sink, or Lambda wrapper for that skill
-- today, most skills are persistent-compatible but still run as stateless CLI tools; the repo ships a small number of persistent code paths, including `iam-departures-remediation` and the reference runner under `runners/aws-s3-sqs-detect/`
+- today, most skills are persistent-compatible but still run as stateless CLI tools; the repo ships a small number of persistent code paths, including `iam-departures-aws` and the reference runner under `runners/aws-s3-sqs-detect/`
 
 ## Modes
 
@@ -71,7 +71,7 @@ These are the only places where side effects should happen:
 - `runners/`
 
 Current shipped exceptions:
-- `iam-departures-remediation` includes repo-owned Lambda handlers and infrastructure for its event-driven persistent path
+- `iam-departures-aws` includes repo-owned Lambda handlers and infrastructure for its event-driven persistent path
 - `runners/aws-s3-sqs-detect` ships a generic AWS reference runner for S3 → ingest → SQS → detect → DynamoDB dedupe → SNS
 
 Required controls:

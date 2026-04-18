@@ -105,7 +105,7 @@ Shipped skills mapped: **21**
 | [`ingest-guardduty-ocsf`](../skills/ingestion/ingest-guardduty-ocsf) | ingestion | aws | findings, threat-detections |
 | [`ingest-k8s-audit-ocsf`](../skills/ingestion/ingest-k8s-audit-ocsf) | ingestion | kubernetes | clusters, audit-logs, identities |
 | [`ingest-security-hub-ocsf`](../skills/ingestion/ingest-security-hub-ocsf) | ingestion | aws | findings, security-posture |
-| [`iam-departures-remediation`](../skills/remediation/iam-departures-remediation) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`convert-ocsf-to-mermaid-attack-flow`](../skills/view/convert-ocsf-to-mermaid-attack-flow) | view | multi | findings, review-output, graphs |
 | [`convert-ocsf-to-sarif`](../skills/view/convert-ocsf-to-sarif) | view | multi | findings, review-output |
 
@@ -188,7 +188,7 @@ Shipped skills mapped: **2**
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
-| [`iam-departures-remediation`](../skills/remediation/iam-departures-remediation) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 
 ### NIST CSF (2.0)
 
@@ -209,7 +209,7 @@ Shipped skills mapped: **9**
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
 | [`k8s-security-benchmark`](../skills/evaluation/k8s-security-benchmark) | evaluation | kubernetes | clusters, identities, network, logging |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
-| [`iam-departures-remediation`](../skills/remediation/iam-departures-remediation) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 
 ### NIST AI RMF (current)
 
@@ -240,7 +240,7 @@ Shipped skills mapped: **9**
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
-| [`iam-departures-remediation`](../skills/remediation/iam-departures-remediation) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
+| [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`sink-clickhouse-jsonl`](../skills/remediation/sink-clickhouse-jsonl) | remediation | clickhouse | findings, evidence, audit-logs, lakehouse |
 | [`sink-s3-jsonl`](../skills/remediation/sink-s3-jsonl) | remediation | aws | findings, evidence, audit-logs, object-storage |
 | [`sink-snowflake-jsonl`](../skills/remediation/sink-snowflake-jsonl) | remediation | snowflake | findings, evidence, audit-logs, lakehouse |

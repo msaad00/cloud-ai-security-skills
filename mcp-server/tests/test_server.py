@@ -65,7 +65,7 @@ class TestMcpServer:
             assert "detect-entra-role-grant-escalation" in names
             assert "detect-google-workspace-suspicious-login" in names
             assert "model-serving-security" in names
-            assert "iam-departures-remediation" not in names
+            assert "iam-departures-aws" not in names
         finally:
             proc.terminate()
             proc.wait(timeout=5)

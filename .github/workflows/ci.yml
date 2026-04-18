@@ -136,7 +136,7 @@ jobs:
             google-cloud-iam google-cloud-resource-manager google-api-python-client
             azure-identity
             clickhouse-connect databricks-sql-connector httpx snowflake-connector-python
-      - run: pytest skills/remediation/iam-departures-remediation/tests/ -v -o "testpaths=tests"
+      - run: pytest skills/remediation/iam-departures-aws/tests/ -v -o "testpaths=tests"
 
   test-detection-engineering:
     runs-on: ubuntu-latest
@@ -303,15 +303,15 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends shellcheck
       - name: cfn-lint — CloudFormation
         run: |
-          cfn-lint skills/remediation/iam-departures-remediation/infra/cloudformation.yaml
-          cfn-lint skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml
+          cfn-lint skills/remediation/iam-departures-aws/infra/cloudformation.yaml
+          cfn-lint skills/remediation/iam-departures-aws/infra/cross_account_stackset.yaml
           cfn-lint runners/aws-s3-sqs-detect/template.yaml
       - name: terraform validate — iam-departures infra
-        run: cd skills/remediation/iam-departures-remediation/infra/terraform && terraform init -backend=false && terraform validate
+        run: cd skills/remediation/iam-departures-aws/infra/terraform && terraform init -backend=false && terraform validate
       - name: terraform validate — gcp runner
         run: cd runners/gcp-gcs-pubsub-detect && terraform init -backend=false && terraform validate
       - name: tflint — iam-departures infra
-        run: cd skills/remediation/iam-departures-remediation/infra/terraform && tflint
+        run: cd skills/remediation/iam-departures-aws/infra/terraform && tflint
       - name: tflint — gcp runner
         run: cd runners/gcp-gcs-pubsub-detect && tflint
       - name: bicep build — azure runner
@@ -339,16 +339,16 @@ jobs:
       - name: Scan IaC (CloudFormation + Terraform)
         run: |
           agent-bom iac \
-            skills/remediation/iam-departures-remediation/infra/cloudformation.yaml \
-            skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml \
-            skills/remediation/iam-departures-remediation/infra/terraform/main.tf \
+            skills/remediation/iam-departures-aws/infra/cloudformation.yaml \
+            skills/remediation/iam-departures-aws/infra/cross_account_stackset.yaml \
+            skills/remediation/iam-departures-aws/infra/terraform/main.tf \
             -f json -o iac-scan.json || true
       - name: Scan IaC (SARIF for code scanning)
         run: |
           agent-bom iac \
-            skills/remediation/iam-departures-remediation/infra/cloudformation.yaml \
-            skills/remediation/iam-departures-remediation/infra/cross_account_stackset.yaml \
-            skills/remediation/iam-departures-remediation/infra/terraform/main.tf \
+            skills/remediation/iam-departures-aws/infra/cloudformation.yaml \
+            skills/remediation/iam-departures-aws/infra/cross_account_stackset.yaml \
+            skills/remediation/iam-departures-aws/infra/terraform/main.tf \
             -f sarif -o iac-scan.sarif || true
       - name: Normalise SARIF (handle agent-bom empty-result quirk)
         if: always()

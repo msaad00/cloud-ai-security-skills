@@ -266,7 +266,7 @@ When cloud SDK access is not available:
 | **Discover resources** | Fully automated | Read-only, no side effects |
 | **Generate graph JSON** | Fully automated | Local output |
 | **Modify IAM/network** | Human required | Infrastructure changes have blast radius |
-| **Remediate findings** | Human required | Use iam-departures-remediation or hand off to your ticketing workflow |
+| **Remediate findings** | Human required | Use iam-departures-aws or hand off to your ticketing workflow |
 
 ## Tests
 

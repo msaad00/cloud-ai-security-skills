@@ -85,7 +85,7 @@ variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default = {
-    Project   = "iam-departures-remediation"
+    Project   = "iam-departures-aws"
     ManagedBy = "terraform"
   }
 }

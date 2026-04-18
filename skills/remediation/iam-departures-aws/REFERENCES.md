@@ -1,4 +1,4 @@
-# References — iam-departures-remediation
+# References — iam-departures-aws
 
 ## Standards implemented
 

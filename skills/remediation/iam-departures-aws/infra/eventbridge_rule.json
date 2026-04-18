@@ -18,7 +18,7 @@
     {
       "Arn": "${StepFunctionArn}",
       "RoleArn": "${EventBridgeExecutionRoleArn}",
-      "Id": "iam-departures-remediation",
+      "Id": "iam-departures-aws",
       "InputTransformer": {
         "InputPathsMap": {
           "bucket": "$.detail.bucket.name",

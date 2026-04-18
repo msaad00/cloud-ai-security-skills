@@ -59,7 +59,7 @@ Strongest current ATT&CK coverage:
 | `detect-sensitive-secret-read-k8s` | T1552, T1552.007 |
 | `ingest-guardduty-ocsf` | curated ATT&CK tactic/technique extraction |
 | `ingest-security-hub-ocsf` | ATT&CK extraction when upstream findings contain MITRE hints |
-| `iam-departures-remediation` | ATT&CK-linked remediation context |
+| `iam-departures-aws` | ATT&CK-linked remediation context |
 | `discover-environment` | ATT&CK graph overlay for cloud resources and relationships |
 
 Notes:

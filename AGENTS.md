@@ -40,7 +40,7 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 - `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow`
 
 **`remediation/`** (active fix workflows, HITL-gated, dual-audited)
-- `iam-departures-remediation`
+- `iam-departures-aws`
 
 Compose via stdin/stdout pipes. The shared wire contract is pinned in
 [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
@@ -92,7 +92,7 @@ MCP is the access layer, not a separate implementation model.
 Important nuance on `execution_modes: persistent`:
 - `persistent` in a skill contract means the skill can be embedded in a long-lived runner or serverless loop without changing the skill code
 - it does **not** automatically mean the repo already ships that runner, daemon, or sink
-- today, most skills are persistent-compatible; only a smaller set of workflows ship repo-owned persistent wrappers (`iam-departures-remediation`, the `runners/aws-s3-sqs-detect` / `runners/gcp-gcs-pubsub-detect` / `runners/azure-blob-eventgrid-detect` reference templates)
+- today, most skills are persistent-compatible; only a smaller set of workflows ship repo-owned persistent wrappers (`iam-departures-aws`, the `runners/aws-s3-sqs-detect` / `runners/gcp-gcs-pubsub-detect` / `runners/azure-blob-eventgrid-detect` reference templates)
 
 Approval rules:
 - **read-only skills** do not need human approval to run
