@@ -209,38 +209,30 @@ Native wire format is the same content in a repo-owned envelope — see [docs/NA
 
 ## Flagship · IAM departures remediation
 
-The one shipped write path. Guarded, event-driven, cross-cloud, dual-audited.
+The one shipped write path. Guarded, event-driven, dual-audited — and **one cloud per worker**, never cross-cloud.
 
-```mermaid
-flowchart LR
-    classDef src fill:#0c4a6e,stroke:#38bdf8,color:#e0f2fe
-    classDef plan fill:#1e293b,stroke:#94a3b8,color:#f1f5f9
-    classDef orch fill:#1e1b4b,stroke:#a78bfa,color:#ddd6fe
-    classDef write fill:#422006,stroke:#fbbf24,color:#fef3c7
-    classDef audit fill:#022c22,stroke:#2dd4bf,color:#ccfbf1
-
-    hr["HR sources<br/><sub>rehire + grace filter</sub>"]:::src --> rec[Reconciler]:::plan
-    rec --> s3[("S3 manifest<br/><sub>actionable set only</sub>")]:::plan
-    s3 --> eb[EventBridge]:::orch
-    eb --> sf[Step Function]:::orch
-    sf --> parser["Parser Lambda<br/><sub>re-check before act</sub>"]:::orch
-    parser --> worker["Worker Lambda<br/><sub>scoped principal</sub>"]:::orch
-
-    worker --> aws[AWS IAM]:::write
-    worker --> gcp[GCP IAM]:::write
-    worker --> az[Azure IAM]:::write
-
-    worker --> ddb[(DynamoDB audit)]:::audit
-    worker --> s3a[(S3 KMS audit)]:::audit
-    s3a -. drift check .-> rec
-```
+![AWS-only IAM departures flow. Plan reads HR sources in Snowflake or Databricks, runs the reconciler, writes an S3 manifest of the actionable set. Orchestrate fires an EventBridge rule that starts a Step Function; the Step Function invokes a parser Lambda that re-checks manifest and IAM state, then a worker Lambda with a scoped principal that assumes a cross-account role inside the AWS Organization. Write deletes the AWS IAM user through the nine-step deletion order. Audit lands in DynamoDB plus KMS-encrypted S3, then ingest-back feeds drift checks into the next reconciler run. The footer makes clear that Azure and GCP use their own native orchestration stacks. No single worker ever crosses cloud boundaries.](docs/images/iam-departures-aws.svg)
 
 - **scope first** — rehire and grace-window logic run in the reconciler before the manifest is written
 - **separate principals** — EventBridge, Step Function, parser Lambda, worker Lambda each have their own execution role
+- **one cloud per worker** — the AWS worker only touches AWS IAM via cross-account `AssumeRole` inside the Org. A single worker principal never spans cloud boundaries
 - **dual audit** — DynamoDB + KMS-encrypted S3 for every write; ingest-back so the next run verifies closure
-- **AWS-native on purpose** — equivalent GCP and Azure workflows keep the same control contract
 
-Details: [skills/remediation/iam-departures-remediation/](skills/remediation/iam-departures-remediation/)
+### Per-cloud service mapping
+
+Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-departures-remediation/infra/)). For Azure and GCP, the **worker library code** lives in [`src/lambda_worker/clouds/`](skills/remediation/iam-departures-remediation/src/lambda_worker/clouds/) (`azure_entra.py`, `gcp_iam.py`, `databricks_scim.py`, `snowflake_user.py`); the recommended native orchestration stack per cloud is documented below so operators pick equivalent primitives instead of forcing one stack across all clouds.
+
+| Role | AWS · shipped | GCP · pattern | Azure · pattern |
+|---|---|---|---|
+| Event trigger | **EventBridge** rule (S3 `ObjectCreated`) | **Eventarc** trigger (GCS finalize) | **Event Grid** (Blob `Created`) |
+| Orchestration | **Step Functions** (Map state, DLQ, retries) | **Cloud Workflows** (parallel, retries) | **Logic Apps** or **Durable Functions** |
+| Worker compute | **Lambda** (parser + worker) | **Cloud Run Jobs** or **Cloud Functions** | **Azure Functions** or **Container Apps Jobs** |
+| Object store for manifest + evidence | **S3** + **KMS** | **Cloud Storage** + **CMEK** | **Blob Storage** + **CMK** (Key Vault) |
+| Key-value audit | **DynamoDB** (user, ts key) | **Firestore** / **Bigtable** | **Cosmos DB** / **Table Storage** |
+| Identity target | **IAM** (cross-account, `aws:PrincipalOrgID`) | **Cloud IAM** (cross-project, Org policies) | **Entra ID** (tenant scope, Graph API) |
+| DLQ / alerts | **SQS** + **SNS** | **Pub/Sub** + **Cloud Monitoring** | **Service Bus** + **Monitor Alerts** |
+
+Details: [skills/remediation/iam-departures-remediation/](skills/remediation/iam-departures-remediation/) · [SKILL.md#cross-cloud-workflow-shape](skills/remediation/iam-departures-remediation/SKILL.md)
 
 ## Native vs OCSF
 
