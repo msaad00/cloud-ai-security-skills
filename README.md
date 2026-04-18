@@ -19,6 +19,61 @@ Security skills for cloud and AI systems. Use source-specific ingest, discovery,
 
 Start here if you want the shortest true picture of the repo:
 
+```mermaid
+flowchart TB
+    subgraph Signals[External Signals]
+        cloud[Cloud APIs]
+        logs[Raw Logs]
+        idp[Identity Feeds]
+        k8s[Kubernetes Audit]
+        mcp[MCP Proxy]
+        lake[Warehouses]
+    end
+
+    subgraph Intake[Intake]
+        ingest[L1 Ingest]
+        discover[L2 Discover]
+    end
+
+    subgraph Analyze[Analyze]
+        detect[L3 Detect]
+        evaluate[L4 Evaluate]
+    end
+
+    subgraph Act[Act]
+        remediate[L5 Remediate]
+        view[L6 View]
+    end
+
+    contract[(Shared Skill Bundle)]
+    support[Source / Sink / Packs / Runners]
+
+    cloud --> ingest
+    logs --> ingest
+    idp --> ingest
+    k8s --> ingest
+    mcp --> ingest
+    lake --> ingest
+    cloud --> discover
+    idp --> discover
+
+    ingest --> detect
+    discover --> detect
+    discover --> evaluate
+    detect --> view
+    evaluate --> view
+    discover --> remediate
+    evaluate --> remediate
+
+    contract --- ingest
+    contract --- discover
+    contract --- detect
+    contract --- evaluate
+    contract --- remediate
+    contract --- view
+    support --- contract
+```
+
 ![Repository architecture showing a cleaner three-band model: external signals feed Intake through Ingest and Discover, flow into Analyze through Detect and Evaluate, and leave through Act via View or guarded Remediate, all on one shared skill bundle contract.](docs/images/repo-architecture.svg)
 
 The mental model:
@@ -49,6 +104,30 @@ For the full source, asset, framework, and runtime crosswalk, see [docs/USE_CASE
 ## Common Shipped Flows
 
 Use this as the quick mental model for how data moves through the repo:
+
+```mermaid
+flowchart TB
+    subgraph Lane1[Raw Log Detection And Export]
+        raw[Raw Payloads] --> ingest1[ingest-*]
+        ingest1 --> detect1[detect-*]
+        detect1 --> view1[view/*]
+        view1 --> artifact[Export Artifact]
+    end
+
+    subgraph Lane2[Warehouse Or Object Analysis]
+        rows[Rows Or Objects] --> source[source-*]
+        source --> detect2[detect-*]
+        detect2 --> sink[sink-*]
+        sink --> persistence[Customer Sink]
+    end
+
+    subgraph Lane3[Live Posture And Guarded Action]
+        live[Live State] --> discover_eval[discover-* / evaluation/*]
+        discover_eval --> native[Native Outputs]
+        native --> remediation[remediation/*]
+        remediation --> audit[Evidence Trail]
+    end
+```
 
 ![Common shipped flows showing three concrete lanes: raw payloads through ingest, detect, and view; warehouse rows through source, detect, and sink; and live state through discovery or evaluation with optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
 
@@ -278,6 +357,19 @@ what ships everywhere:
 ## Flagship Example
 
 The flagship example skill family is IAM departures remediation: a guarded, event-driven workflow with a dual audit trail and clear trust boundaries.
+
+```mermaid
+flowchart LR
+    hr[HR Sources] --> reconciler[Reconciler]
+    reconciler --> manifest[S3 Manifest]
+    manifest --> eventbridge[EventBridge Rule]
+    eventbridge --> stepfn[Step Function]
+    stepfn --> parser[Parser Lambda]
+    parser --> worker[Worker Lambda]
+    worker --> targets[Scoped Targets]
+    worker --> audit[DynamoDB + S3 Audit]
+    audit -. later drift verification .-> reconciler
+```
 
 ![IAM departures remediation showing the flagship write path in three stages: select the actionable set first, run the guarded workflow with separate roles, then write a dual audit trail and verify drift later.](docs/images/iam-departures-architecture.svg)
 
