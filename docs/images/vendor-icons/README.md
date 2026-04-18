@@ -1,8 +1,7 @@
 # Vendor icons
 
 Source SVGs used to derive the `<symbol>` definitions embedded inline in
-[`../iam-departures-architecture.svg`](../iam-departures-architecture.svg) and
-other polished repo visuals.
+[`../hero-banner.svg`](../hero-banner.svg), the one branded visual in the repo.
 
 ## Attribution
 

@@ -4,7 +4,18 @@ This guide answers the practical question first: **what are you trying to do, an
 
 Use it when the README feels too high-level and `skills/README.md` feels too catalog-like.
 
-![Every shipped skill in the repo grouped by layer, with vendor marks and per-layer counts.](images/skill-map.svg)
+```mermaid
+flowchart LR
+    classDef layer fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe
+    goal([Your goal]) --> pick{What do you have?}
+    pick -->|raw log or stream| L1[L1 Ingest]:::layer
+    pick -->|live cloud API| L2[L2 Discover]:::layer
+    pick -->|posture question| L4[L4 Evaluate]:::layer
+    pick -->|OCSF finding| L6[L6 View]:::layer
+    pick -->|departing employee| L5[L5 Remediate]:::layer
+    L1 --> L3[L3 Detect]:::layer
+    L3 --> L6
+```
 
 ## Start by goal
 

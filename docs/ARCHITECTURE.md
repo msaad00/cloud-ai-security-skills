@@ -79,7 +79,28 @@ This is how the repo stays secure and reliable without turning every skill into 
 
 The repo is easiest to read as **six shipped skill layers**, plus **three edge/runtime layers** that sit around the pure skills.
 
-![Repository architecture showing external sources feeding three action bands — Intake (Ingest and Discover), Analyze (Detect and Evaluate), and Act (View and Remediate) — that share one skill bundle contract, with edge persistence, warehouse query packs, and runtime surfaces wrapping the same skills.](./images/repo-architecture.svg)
+```mermaid
+flowchart LR
+    classDef signal fill:#0f172a,stroke:#475569,color:#f1f5f9
+    classDef intake fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe
+    classDef analyze fill:#064e3b,stroke:#34d399,color:#d1fae5
+    classDef act fill:#78350f,stroke:#fbbf24,color:#fef3c7
+
+    sig[External signals]:::signal
+    subgraph Intake
+        i[L1 Ingest]:::intake
+        d[L2 Discover]:::intake
+    end
+    subgraph Analyze
+        det[L3 Detect]:::analyze
+        ev[L4 Evaluate]:::analyze
+    end
+    subgraph Act
+        r[L5 Remediate]:::act
+        v[L6 View]:::act
+    end
+    sig --> Intake --> Analyze --> Act
+```
 
 The diagram is a layer index, not a second contract: sources feed ingest or
 discover paths, pure skills stay in the middle, and sinks/query packs/runtimes

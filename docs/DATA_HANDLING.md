@@ -17,7 +17,25 @@ Use this doc when you need to answer:
 Start with the real input you have, then follow the first skill family, the
 output shape, and the control boundary:
 
-![Three shipped compositions — raw payloads through ingest, detect, view; warehouse rows through source, detect, sink; live state through discovery or evaluation with optional guarded remediation.](images/end-to-end-skill-flows.svg)
+```mermaid
+flowchart LR
+    classDef raw fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe
+    classDef wh fill:#083344,stroke:#22d3ee,color:#cffafe
+    classDef live fill:#064e3b,stroke:#34d399,color:#d1fae5
+
+    subgraph Lane1[Raw log detection]
+        direction LR
+        r1[Raw] --> r2[ingest-*] --> r3[detect-*] --> r4[view/*]
+    end
+    subgraph Lane2[Detection on data already in your lake]
+        direction LR
+        w1[("CloudTrail in S3<br/>Okta in Snowflake<br/>Databricks tables")] --> w2[source-*] --> w3[detect-*] --> w4[sink-*]
+    end
+    subgraph Lane3[Live posture & guarded action]
+        direction LR
+        l1[Live state] --> l2[discover-* / evaluation/*] --> l3[remediation/*]
+    end
+```
 
 The visual is intentionally short. The details stay below in tables and worked
 examples.
