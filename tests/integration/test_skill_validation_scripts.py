@@ -105,6 +105,187 @@ class TestValidationScripts:
     def test_safe_skill_validator_passes(self):
         assert SAFE.main() == 0
 
+
+class TestAssumeRoleBoundaryGuardrail:
+    """Unit tests for the sts:AssumeRole boundary-condition check.
+
+    Every Allow of sts:AssumeRole in a skill's IaC must carry a boundary
+    condition (PrincipalOrgID, SourceAccount, PrincipalTag, SourceOrgID) or
+    an explicit ASSUME_ROLE_CONDITION_OK justification. Trust-policy
+    statements (Service/Federated principals) are exempt — they are bounded
+    by the principal itself, not by the condition.
+    """
+
+    def _write_policy(self, tmp_path: Path, filename: str, body: str) -> None:
+        # Put the file inside a skill-shaped tree so the recursive scan finds it.
+        (tmp_path / "skills" / "remediation" / "fake" / "infra").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "skills" / "remediation" / "fake" / "infra" / filename).write_text(body)
+
+    def _run_against(self, tmp_path: Path) -> list[str]:
+        # Point both SKILLS_ROOT (scan target) and ROOT (relative-path anchor
+        # for error messages) at the temp tree, then restore.
+        original_root = SAFE.ROOT
+        original_skills_root = SAFE.SKILLS_ROOT
+        SAFE.ROOT = tmp_path
+        SAFE.SKILLS_ROOT = tmp_path / "skills"
+        try:
+            return SAFE.validate_assume_role_boundaries()
+        finally:
+            SAFE.ROOT = original_root
+            SAFE.SKILLS_ROOT = original_skills_root
+
+    def test_passes_when_org_condition_present_json(self, tmp_path: Path):
+        self._write_policy(
+            tmp_path,
+            "role.json",
+            json.dumps(
+                {
+                    "Statement": [
+                        {
+                            "Sid": "AssumeTarget",
+                            "Effect": "Allow",
+                            "Action": "sts:AssumeRole",
+                            "Resource": "arn:aws:iam::*:role/target",
+                            "Condition": {"StringEquals": {"aws:PrincipalOrgID": "o-abc"}},
+                        }
+                    ]
+                },
+                indent=2,
+            ),
+        )
+        assert self._run_against(tmp_path) == []
+
+    def test_fails_when_no_condition_json(self, tmp_path: Path):
+        self._write_policy(
+            tmp_path,
+            "role.json",
+            json.dumps(
+                {
+                    "Statement": [
+                        {
+                            "Sid": "AssumeTarget",
+                            "Effect": "Allow",
+                            "Action": "sts:AssumeRole",
+                            "Resource": "arn:aws:iam::*:role/target",
+                        }
+                    ]
+                },
+                indent=2,
+            ),
+        )
+        errors = self._run_against(tmp_path)
+        assert len(errors) == 1
+        assert "sts:AssumeRole Allow must carry" in errors[0]
+
+    def test_trust_policy_service_principal_is_exempt(self, tmp_path: Path):
+        """Lambda/EC2 service-role trust policies never need PrincipalOrgID."""
+        self._write_policy(
+            tmp_path,
+            "lambda-trust.json",
+            json.dumps(
+                {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {"Service": "lambda.amazonaws.com"},
+                            "Action": "sts:AssumeRole",
+                        }
+                    ]
+                },
+                indent=2,
+            ),
+        )
+        assert self._run_against(tmp_path) == []
+
+    def test_source_account_condition_accepted(self, tmp_path: Path):
+        self._write_policy(
+            tmp_path,
+            "role.json",
+            json.dumps(
+                {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "sts:AssumeRole",
+                            "Resource": "arn:aws:iam::123456789012:role/target",
+                            "Condition": {"StringEquals": {"aws:SourceAccount": "123456789012"}},
+                        }
+                    ]
+                },
+                indent=2,
+            ),
+        )
+        assert self._run_against(tmp_path) == []
+
+    def test_explicit_opt_out_marker_accepted(self, tmp_path: Path):
+        self._write_policy(
+            tmp_path,
+            "role.json",
+            "\n".join(
+                [
+                    "{",
+                    "  // ASSUME_ROLE_CONDITION_OK: justified because ...",
+                    "  \"Statement\": [",
+                    "    {",
+                    "      \"Effect\": \"Allow\",",
+                    "      \"Action\": \"sts:AssumeRole\",",
+                    "      \"Resource\": \"arn:aws:iam::*:role/target\"",
+                    "    }",
+                    "  ]",
+                    "}",
+                ]
+            ),
+        )
+        assert self._run_against(tmp_path) == []
+
+    def test_terraform_hcl_flavor_detected(self, tmp_path: Path):
+        self._write_policy(
+            tmp_path,
+            "main.tf",
+            "\n".join(
+                [
+                    "resource \"aws_iam_role_policy\" \"worker\" {",
+                    "  policy = jsonencode({",
+                    "    Statement = [",
+                    "      {",
+                    "        Effect   = \"Allow\"",
+                    "        Action   = \"sts:AssumeRole\"",
+                    "        Resource = \"arn:aws:iam::*:role/target\"",
+                    "      }",
+                    "    ]",
+                    "  })",
+                    "}",
+                ]
+            ),
+        )
+        errors = self._run_against(tmp_path)
+        assert len(errors) == 1
+
+    def test_terraform_hcl_with_condition_passes(self, tmp_path: Path):
+        self._write_policy(
+            tmp_path,
+            "main.tf",
+            "\n".join(
+                [
+                    "resource \"aws_iam_role_policy\" \"worker\" {",
+                    "  policy = jsonencode({",
+                    "    Statement = [",
+                    "      {",
+                    "        Effect   = \"Allow\"",
+                    "        Action   = \"sts:AssumeRole\"",
+                    "        Resource = \"arn:aws:iam::*:role/target\"",
+                    "        Condition = {",
+                    "          StringEquals = { \"aws:PrincipalOrgID\" = \"o-abc\" }",
+                    "        }",
+                    "      }",
+                    "    ]",
+                    "  })",
+                    "}",
+                ]
+            ),
+        )
+        assert self._run_against(tmp_path) == []
+
     def test_integrity_validator_passes(self):
         assert INTEGRITY.main() == 0
 
