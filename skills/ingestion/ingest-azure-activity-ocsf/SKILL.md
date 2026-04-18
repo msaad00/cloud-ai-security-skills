@@ -3,15 +3,13 @@ name: ingest-azure-activity-ocsf
 description: >-
   Convert raw Azure Activity Logs (Administrative, Service Health, Resource
   Health, Alert, Autoscale, Recommendation, Security, Policy) into OCSF 1.8
-  API Activity events (class 6003). Reads the JSON shape Azure Monitor exports
-  to Event Hubs, Storage, or Log Analytics. Maps caller / claims to OCSF actor,
-  callerIpAddress to src_endpoint, operationName to api.operation, infers
-  activity_id (Create / Read / Update / Delete) from the Azure operation verb,
-  and sets status_id from properties.statusCode. Supports
-  `--output-format ocsf` and `--output-format native` from the same canonical
-  internal event shape. Use when the user mentions Azure activity logs, Azure
-  Monitor ingestion, OCSF pipeline for Azure, or feeding Azure audit data into
-  a SIEM. Do NOT use for AWS CloudTrail (use
+  API Activity events (class 6003). Reads the JSON shape Azure Monitor
+  exports to Event Hubs, Storage, or Log Analytics. Supports
+  `--output-format ocsf` and `--output-format native` from one canonical
+  internal event shape. See `references/field-map.md` for the caller /
+  callerIpAddress / operationName field mappings. Use when the user mentions
+  Azure activity logs, Azure Monitor ingestion, OCSF pipeline for Azure, or
+  feeding Azure audit data into a SIEM. Do NOT use for AWS CloudTrail (use
   ingest-cloudtrail-ocsf), GCP audit logs (use ingest-gcp-audit-ocsf), or
   Kubernetes audit logs (use ingest-k8s-audit-ocsf). Do NOT use for Azure
   diagnostic / metric logs — those are different pipelines. Do NOT use as a

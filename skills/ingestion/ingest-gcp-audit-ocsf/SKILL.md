@@ -1,20 +1,19 @@
 ---
 name: ingest-gcp-audit-ocsf
 description: >-
-  Convert raw GCP Cloud Audit Logs (Admin Activity, Data Access, System Event,
-  or Policy Denied) into OCSF 1.8 API Activity events (class 6003). Reads the
-  protoPayload format that GCP exports to Cloud Logging / BigQuery / Pub/Sub /
-  Cloud Storage. Maps protoPayload.authenticationInfo.principalEmail to OCSF
-  actor, requestMetadata.callerIp to src_endpoint, methodName to api.operation,
-  serviceName to api.service.name, and infers activity_id (Create / Read /
-  Update / Delete) from the GCP method verb. Sets status_id to Failure when
-  the protoPayload carries a non-OK status. Supports `--output-format ocsf`
-  and `--output-format native` from the same canonical internal event shape.
-  Use when the user mentions GCP audit logs, GCP Cloud Logging ingestion, OCSF
-  pipeline for GCP, or feeding GCP audit data into a SIEM. Do NOT use for AWS CloudTrail (use
-  ingest-cloudtrail-ocsf), Azure Activity Logs (use ingest-azure-activity-ocsf),
-  or Kubernetes audit logs (use ingest-k8s-audit-ocsf). Do NOT use as a
-  detection skill — this only normalises events.
+  Convert raw GCP Cloud Audit Logs (Admin Activity, Data Access, System
+  Event, or Policy Denied) into OCSF 1.8 API Activity events (class 6003).
+  Reads the protoPayload format that GCP exports to Cloud Logging, BigQuery,
+  Pub/Sub, or Cloud Storage. Supports `--output-format ocsf` and
+  `--output-format native` from one canonical internal event shape. See
+  `references/field-map.md` for the protoPayload → OCSF field mappings
+  (principalEmail, callerIp, methodName, serviceName, status). Use when the
+  user mentions GCP audit logs, GCP Cloud Logging ingestion, OCSF pipeline
+  for GCP, or feeding GCP audit data into a SIEM. Do NOT use for AWS
+  CloudTrail (use ingest-cloudtrail-ocsf), Azure Activity Logs (use
+  ingest-azure-activity-ocsf), or Kubernetes audit logs (use
+  ingest-k8s-audit-ocsf). Do NOT use as a detection skill — this only
+  normalises events.
 license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
