@@ -1,123 +1,147 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="920" viewBox="0 0 1480 920" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
   <title id="title">IAM departures remediation flagship path</title>
-  <desc id="desc">A cleaner three-stage view of the IAM departures workflow. HR systems feed a reconciler that filters rehires and grace-window exceptions before writing an S3 manifest. EventBridge starts a Step Function that gates a parser Lambda and a scoped worker Lambda. The workflow writes audited actions to DynamoDB and S3, then later verification and ingest-back close the loop.</desc>
+  <desc id="desc">A polished workflow poster for the IAM departures remediation family. HR systems feed a reconciler that filters rehires and grace-window exceptions before writing an S3 manifest. EventBridge starts a Step Function, the parser Lambda re-checks runtime state, the worker Lambda executes only scoped changes, and the workflow records a dual audit trail before later drift verification closes the loop.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#08111f"/>
-      <stop offset="100%" stop-color="#06111b"/>
+      <stop offset="0%" stop-color="#06111d"/>
+      <stop offset="100%" stop-color="#091523"/>
     </linearGradient>
-    <linearGradient id="scopeStroke" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#101b31"/>
+      <stop offset="100%" stop-color="#0c172b"/>
+    </linearGradient>
+    <linearGradient id="scope" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#22d3ee"/>
       <stop offset="100%" stop-color="#67e8f9"/>
     </linearGradient>
-    <linearGradient id="workflowStroke" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="workflow" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#60a5fa"/>
       <stop offset="100%" stop-color="#93c5fd"/>
     </linearGradient>
-    <linearGradient id="auditStroke" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#2dd4bf"/>
+    <linearGradient id="audit" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14b8a6"/>
       <stop offset="100%" stop-color="#a78bfa"/>
     </linearGradient>
-    <symbol id="aws" viewBox="0 0 24 24">
-      <path fill="#f59e0b" d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.063.056.127.056.183 0 .08-.048.16-.152.24l-.503.335a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.239-.112a2.47 2.47 0 0 1-.287-.375 6.18 6.18 0 0 1-.248-.471c-.622.734-1.405 1.101-2.347 1.101-.67 0-1.205-.191-1.596-.574-.391-.384-.59-.894-.59-1.533 0-.678.239-1.23.726-1.644.487-.415 1.133-.623 1.955-.623.272 0 .551.024.846.064.296.04.6.104.918.176v-.583c0-.607-.127-1.03-.375-1.277-.255-.248-.686-.367-1.3-.367-.28 0-.568.031-.863.103-.295.072-.583.16-.862.272a2.287 2.287 0 0 1-.28.104.488.488 0 0 1-.127.023c-.112 0-.168-.08-.168-.247v-.391c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.167c.279-.144.614-.264 1.005-.36a4.84 4.84 0 0 1 1.246-.151c.95 0 1.644.216 2.091.647.439.43.662 1.085.662 1.963v2.586z"/>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#020617" flood-opacity="0.42"/>
+    </filter>
+
+    <symbol id="aws" viewBox="0 0 64 64">
+      <rect x="4" y="4" width="56" height="56" rx="16" fill="#111827"/>
+      <path fill="#f59e0b" d="M18 35c7 5 18 6 28 1 1-1 3 1 1 2-4 4-12 6-20 6-5 0-10-1-13-4-1-1 0-4 4-5zm24-16c2 1 3 4 2 8-1 2-2 4-4 6 3 0 7 1 9 3 1 1 1 3-1 2-3-1-7-1-11-1-4 0-8 0-11 2-1 0-2-1-1-2 2-2 5-3 8-4-1-1-2-3-3-5-1-5 1-8 4-10 2-1 6-1 8 1z"/>
     </symbol>
-    <symbol id="azure" viewBox="0 0 24 24">
-      <path fill="#38bdf8" d="M22.379 23.343a1.62 1.62 0 0 0 1.536-2.14v.002L17.35 1.76A1.62 1.62 0 0 0 15.816.657H8.184A1.62 1.62 0 0 0 6.65 1.76L.086 21.204a1.62 1.62 0 0 0 1.536 2.139h4.741a1.62 1.62 0 0 0 1.535-1.103l.977-2.892 4.947 3.675c.28.208.618.32.966.32"/>
+    <symbol id="azure" viewBox="0 0 64 64">
+      <rect x="4" y="4" width="56" height="56" rx="16" fill="#111827"/>
+      <path fill="#38bdf8" d="M31 13h12l8 30H39l-4-12-7 12H14l17-30zm-3 18 5 8h10l-4-13-11 5z"/>
     </symbol>
-    <symbol id="gcp" viewBox="0 0 24 24">
-      <path fill="#60a5fa" d="M12.19 2.38a9.344 9.344 0 0 0-9.234 6.893c.053-.02-.055.013 0 0-3.875 2.551-3.922 8.11-.247 10.941l.006-.007-.007.03a6.717 6.717 0 0 0 4.077 1.356h5.173l.03.03h5.192c6.687.053 9.376-8.605 3.835-12.35a9.365 9.365 0 0 0-2.821-4.552l-.043.043.006-.05A9.344 9.344 0 0 0 12.19 2.38z"/>
+    <symbol id="gcp" viewBox="0 0 64 64">
+      <rect x="4" y="4" width="56" height="56" rx="16" fill="#111827"/>
+      <path fill="#60a5fa" d="M24 17c-5 2-9 8-9 15 0 9 7 17 17 17 6 0 10-2 14-6l-6-5c-2 2-4 3-8 3-5 0-9-4-9-9s4-9 9-9c2 0 5 1 7 3l6-5c-4-4-9-6-14-6-2 0-5 1-7 2z"/>
+      <path fill="#34d399" d="M46 26h-14v7h14c-1 5-5 8-11 8l4 6c9-2 15-8 15-18 0-1 0-2-1-3h-7z"/>
     </symbol>
-    <symbol id="snowflake" viewBox="0 0 24 24">
-      <path fill="#7dd3fc" d="M12.358 11.981a.412.412 0 00-.114-.266l-.57-.571a.346.346 0 00-.267-.114.412.412 0 00-.266.114l-.571.57a.411.411 0 00-.114.267c0 .076.038.19.114.267l.57.57a.345.345 0 00.267.114c.076 0 .19-.038.266-.114l.571-.57a.412.412 0 00.114-.267zM13.956 12.514L11.94 14.53c-.039.038-.153.114-.229.114h-.608a.411.411 0 01-.267-.114L8.82 12.514a.408.408 0 01-.076-.229v-.608c0-.076.038-.19.114-.267l2.016-2.016a.41.41 0 01.267-.114h.608a.41.41 0 01.267.114l2.016 2.016a.347.347 0 01.114.267v.608c-.076.077-.114.19-.19.229z"/>
+    <symbol id="snowflake" viewBox="0 0 64 64">
+      <rect x="4" y="4" width="56" height="56" rx="16" fill="#111827"/>
+      <path stroke="#7dd3fc" stroke-width="4" stroke-linecap="round" d="M32 14v36M16 23l32 18M16 41l32-18"/>
+      <path stroke="#7dd3fc" stroke-width="4" stroke-linecap="round" d="M22 14l20 36M42 14L22 50"/>
     </symbol>
-    <symbol id="databricks" viewBox="0 0 24 24">
-      <path fill="#ef4444" d="M.95 14.184L12 20.403l9.919-5.55v2.21L12 22.662l-10.484-5.96-.565.308v.77L12 24l11.05-6.218v-4.317l-.515-.309L12 19.118l-9.867-5.653v-2.21L12 16.805l11.05-6.218V6.32l-.515-.308L12 11.974 2.647 6.681 12 1.388l7.76 4.368.668-.411v-.566L12 0 .95 6.27v.72L12 13.207l9.919-5.55v2.26L12 15.52 1.516 9.56l-.565.308Z"/>
+    <symbol id="dbx" viewBox="0 0 64 64">
+      <rect x="4" y="4" width="56" height="56" rx="16" fill="#111827"/>
+      <path fill="#ef4444" d="M13 22l19-11 19 11-19 11zm0 10 19 11 19-11v8L32 51 13 40zm0-7 19 11 19-11v4L32 40 13 29z"/>
     </symbol>
   </defs>
 
-  <rect width="1480" height="920" fill="url(#bg)"/>
-  <rect x="30" y="28" width="1420" height="864" rx="34" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+  <rect width="1600" height="980" fill="url(#bg)"/>
+  <rect x="28" y="26" width="1544" height="928" rx="34" fill="url(#frame)" stroke="#334155" stroke-width="2"/>
 
   <g font-family="Inter, Segoe UI, Arial, sans-serif">
-    <text x="74" y="92" fill="#f8fafc" font-size="40" font-weight="800">IAM departures remediation</text>
-    <text x="74" y="128" fill="#c7d2e3" font-size="22">Flagship guarded write path. Decide scope early, keep orchestration separate, keep writes scoped, audit everything twice.</text>
+    <text x="84" y="98" fill="#f8fafc" font-size="50" font-weight="800">IAM departures remediation</text>
+    <text x="84" y="138" fill="#dbe4f0" font-size="22">Flagship guarded write path. Decide scope before act, re-check before write, record every action twice, and verify later drift.</text>
 
-    <rect x="74" y="156" width="1332" height="56" rx="18" fill="#111c34" stroke="#475569" stroke-width="2"/>
-    <text x="102" y="192" fill="#f8fafc" font-size="18" font-weight="800">Execution roles</text>
-    <text x="268" y="192" fill="#dbe4f0" font-size="18">EventBridge • Step Function • parser Lambda • worker Lambda • cross-account remediation role</text>
+    <rect x="84" y="172" width="1432" height="64" rx="20" fill="#111c34" stroke="#475569" stroke-width="2"/>
+    <text x="118" y="212" fill="#f8fafc" font-size="18" font-weight="800">Execution roles</text>
+    <text x="278" y="212" fill="#d7e2f2" font-size="18">EventBridge • Step Function • parser Lambda • worker Lambda • cross-account remediation role</text>
 
-    <g transform="translate(74,244)">
-      <rect x="0" y="0" width="1332" height="182" rx="28" fill="#0b2538" stroke="url(#scopeStroke)" stroke-width="2.5"/>
-      <text x="30" y="42" fill="#f8fafc" font-size="28" font-weight="800">1. Select scope before anything can act</text>
-      <text x="30" y="74" fill="#d8eaf0" font-size="18">Rehire and grace-window decisions happen in the reconciler. Only the actionable set is exported.</text>
+    <g transform="translate(84,270)" filter="url(#softShadow)">
+      <rect x="0" y="0" width="1432" height="198" rx="30" fill="#0b3040" stroke="url(#scope)" stroke-width="2.5"/>
+      <text x="36" y="48" fill="#f8fafc" font-size="32" font-weight="800">1. Select scope before anything can act</text>
+      <text x="36" y="82" fill="#d7e9f0" font-size="18">The reconciler is the first real control gate. Rehire and grace-period rules happen here before any actionable set is written.</text>
 
-      <rect x="30" y="102" width="250" height="54" rx="18" fill="#16304e" stroke="#5eead4" stroke-width="2"/>
-      <text x="82" y="136" fill="#f8fafc" font-size="18" font-weight="800">HR sources</text>
-      <rect x="330" y="102" width="318" height="54" rx="18" fill="#19607a" stroke="#67e8f9" stroke-width="2"/>
-      <text x="398" y="136" fill="#f8fafc" font-size="18" font-weight="800">reconciler</text>
-      <rect x="698" y="102" width="250" height="54" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
-      <text x="780" y="136" fill="#f8fafc" font-size="18" font-weight="800">S3 manifest</text>
-      <rect x="998" y="102" width="278" height="54" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
-      <text x="1070" y="136" fill="#f8fafc" font-size="18" font-weight="800">EventBridge rule</text>
+      <rect x="36" y="114" width="258" height="62" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
+      <text x="102" y="152" fill="#f8fafc" font-size="18" font-weight="800">HR sources</text>
 
-      <path d="M280 129 L330 129" stroke="#67e8f9" stroke-width="5" fill="none"/>
-      <path d="M648 129 L698 129" stroke="#60a5fa" stroke-width="5" fill="none"/>
-      <path d="M948 129 L998 129" stroke="#60a5fa" stroke-width="5" fill="none"/>
+      <rect x="348" y="114" width="342" height="62" rx="18" fill="#19607a" stroke="#67e8f9" stroke-width="2"/>
+      <text x="448" y="152" fill="#f8fafc" font-size="18" font-weight="800">reconciler</text>
 
-      <text x="30" y="170" fill="#99f6e4" font-size="15" font-weight="800">Guardrail</text>
-      <text x="122" y="170" fill="#d9e3ef" font-size="15">No direct Step Function entry. No rehire logic later in the pipeline. No filtered identities written to the action set.</text>
+      <rect x="744" y="114" width="258" height="62" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
+      <text x="826" y="152" fill="#f8fafc" font-size="18" font-weight="800">S3 manifest</text>
+
+      <rect x="1056" y="114" width="320" height="62" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
+      <text x="1142" y="152" fill="#f8fafc" font-size="18" font-weight="800">EventBridge rule</text>
+
+      <path d="M294 145 L348 145" stroke="#67e8f9" stroke-width="5" fill="none"/>
+      <path d="M690 145 L744 145" stroke="#60a5fa" stroke-width="5" fill="none"/>
+      <path d="M1002 145 L1056 145" stroke="#60a5fa" stroke-width="5" fill="none"/>
+
+      <text x="36" y="190" fill="#99f6e4" font-size="15" font-weight="800">Guardrail</text>
+      <text x="132" y="190" fill="#dbe4f0" font-size="15">No direct Step Function entry, no rehire logic later in the flow, no filtered identities written to the action manifest.</text>
     </g>
 
-    <g transform="translate(74,452)">
-      <rect x="0" y="0" width="1332" height="182" rx="28" fill="#10243a" stroke="url(#workflowStroke)" stroke-width="2.5"/>
-      <text x="30" y="42" fill="#f8fafc" font-size="28" font-weight="800">2. Start the guarded workflow and re-check before write</text>
-      <text x="30" y="74" fill="#dce6f4" font-size="18">EventBridge starts the Step Function. The parser Lambda re-checks runtime state before the worker can change anything.</text>
+    <g transform="translate(84,498)" filter="url(#softShadow)">
+      <rect x="0" y="0" width="1432" height="206" rx="30" fill="#11263d" stroke="url(#workflow)" stroke-width="2.5"/>
+      <text x="36" y="48" fill="#f8fafc" font-size="32" font-weight="800">2. Start the guarded workflow and re-check before write</text>
+      <text x="36" y="82" fill="#dce6f4" font-size="18">EventBridge starts the Step Function. The parser Lambda re-checks the manifest and current state before the worker touches any target.</text>
 
-      <rect x="30" y="102" width="256" height="54" rx="18" fill="#2942a4" stroke="#93c5fd" stroke-width="2"/>
-      <text x="92" y="136" fill="#f8fafc" font-size="18" font-weight="800">Step Function</text>
-      <rect x="338" y="102" width="256" height="54" rx="18" fill="#2942a4" stroke="#93c5fd" stroke-width="2"/>
-      <text x="404" y="136" fill="#f8fafc" font-size="18" font-weight="800">parser Lambda</text>
-      <rect x="646" y="102" width="256" height="54" rx="18" fill="#2942a4" stroke="#93c5fd" stroke-width="2"/>
-      <text x="710" y="136" fill="#f8fafc" font-size="18" font-weight="800">worker Lambda</text>
-      <rect x="954" y="102" width="292" height="54" rx="18" fill="#203d66" stroke="#60a5fa" stroke-width="2"/>
-      <text x="1048" y="136" fill="#f8fafc" font-size="18" font-weight="800">scoped targets</text>
+      <rect x="36" y="114" width="266" height="62" rx="18" fill="#2942a4" stroke="#93c5fd" stroke-width="2"/>
+      <text x="98" y="152" fill="#f8fafc" font-size="18" font-weight="800">Step Function</text>
 
-      <path d="M286 129 L338 129" stroke="#7db7ff" stroke-width="5" fill="none"/>
-      <path d="M594 129 L646 129" stroke="#93c5fd" stroke-width="5" fill="none"/>
-      <path d="M902 129 L954 129" stroke="#93c5fd" stroke-width="5" fill="none"/>
+      <rect x="356" y="114" width="266" height="62" rx="18" fill="#2942a4" stroke="#93c5fd" stroke-width="2"/>
+      <text x="422" y="152" fill="#f8fafc" font-size="18" font-weight="800">parser Lambda</text>
 
-      <g transform="translate(998,88)">
-        <use href="#aws" x="0" y="0" width="16" height="16"/>
-        <use href="#azure" x="28" y="0" width="16" height="16"/>
-        <use href="#gcp" x="56" y="0" width="16" height="16"/>
-        <use href="#snowflake" x="84" y="0" width="16" height="16"/>
-        <use href="#databricks" x="112" y="0" width="16" height="16"/>
+      <rect x="676" y="114" width="266" height="62" rx="18" fill="#2942a4" stroke="#93c5fd" stroke-width="2"/>
+      <text x="740" y="152" fill="#f8fafc" font-size="18" font-weight="800">worker Lambda</text>
+
+      <rect x="996" y="114" width="380" height="62" rx="18" fill="#203d66" stroke="#60a5fa" stroke-width="2"/>
+      <text x="1120" y="152" fill="#f8fafc" font-size="18" font-weight="800">scoped targets</text>
+
+      <path d="M302 145 L356 145" stroke="#93c5fd" stroke-width="5" fill="none"/>
+      <path d="M622 145 L676 145" stroke="#93c5fd" stroke-width="5" fill="none"/>
+      <path d="M942 145 L996 145" stroke="#93c5fd" stroke-width="5" fill="none"/>
+
+      <g transform="translate(1038,96)">
+        <use href="#aws" width="42" height="42"/>
+        <use href="#azure" x="50" width="42" height="42"/>
+        <use href="#gcp" x="100" width="42" height="42"/>
+        <use href="#snowflake" x="150" width="42" height="42"/>
+        <use href="#dbx" x="200" width="42" height="42"/>
       </g>
 
-      <text x="30" y="170" fill="#bfdbfe" font-size="15" font-weight="800">Guardrail</text>
-      <text x="126" y="170" fill="#d9e3ef" font-size="15">Separate roles, human-required approval, dry-run-first, deny-listed identities, scoped principals, no direct bypass of orchestration.</text>
+      <text x="36" y="198" fill="#bfdbfe" font-size="15" font-weight="800">Guardrail</text>
+      <text x="132" y="198" fill="#dbe4f0" font-size="15">Separate roles, human-required approval, dry-run-first, scoped principals, deny-listed identities, and no direct orchestration bypass.</text>
     </g>
 
-    <g transform="translate(74,660)">
-      <rect x="0" y="0" width="1332" height="184" rx="28" fill="#083344" stroke="url(#auditStroke)" stroke-width="2.5"/>
-      <text x="30" y="42" fill="#f8fafc" font-size="28" font-weight="800">3. Apply scoped changes and write the audit trail</text>
-      <text x="30" y="74" fill="#d4efe9" font-size="18">The worker touches only approved targets. The system of record is DynamoDB + S3, then later verification closes the loop.</text>
+    <g transform="translate(84,734)" filter="url(#softShadow)">
+      <rect x="0" y="0" width="1432" height="190" rx="30" fill="#083344" stroke="url(#audit)" stroke-width="2.5"/>
+      <text x="36" y="48" fill="#f8fafc" font-size="32" font-weight="800">3. Apply scoped changes and write the audit trail</text>
+      <text x="36" y="82" fill="#d5efe9" font-size="18">The worker touches only approved targets. The system of record is DynamoDB plus S3, then later ingest-back and verification close the loop.</text>
 
-      <rect x="30" y="104" width="250" height="54" rx="18" fill="#155e75" stroke="#5eead4" stroke-width="2"/>
-      <text x="78" y="138" fill="#f8fafc" font-size="18" font-weight="800">scoped write set</text>
-      <rect x="330" y="104" width="270" height="54" rx="18" fill="#4c1d95" stroke="#c4b5fd" stroke-width="2"/>
-      <text x="398" y="138" fill="#f8fafc" font-size="18" font-weight="800">DynamoDB + S3</text>
-      <rect x="650" y="104" width="246" height="54" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
-      <text x="724" y="138" fill="#f8fafc" font-size="18" font-weight="800">ingest-back</text>
-      <rect x="946" y="104" width="300" height="54" rx="18" fill="#17304f" stroke="#22d3ee" stroke-width="2"/>
-      <text x="1020" y="138" fill="#f8fafc" font-size="18" font-weight="800">later drift check</text>
+      <rect x="36" y="112" width="260" height="62" rx="18" fill="#155e75" stroke="#5eead4" stroke-width="2"/>
+      <text x="92" y="150" fill="#f8fafc" font-size="18" font-weight="800">scoped write set</text>
 
-      <path d="M280 131 L330 131" stroke="#5eead4" stroke-width="5" fill="none"/>
-      <path d="M600 131 L650 131" stroke="#c4b5fd" stroke-width="5" fill="none"/>
-      <path d="M896 131 L946 131" stroke="#60a5fa" stroke-width="5" fill="none"/>
-      <path d="M1226 158 C 1238 192, 1160 206, 920 206 C 580 206, 332 184, 226 74" stroke="#22d3ee" stroke-width="4" stroke-dasharray="8 10" fill="none"/>
-      <text x="740" y="176" fill="#67e8f9" font-size="17" font-style="italic" text-anchor="middle">drift detected → next reconciler run closes or flags it</text>
+      <rect x="352" y="112" width="286" height="62" rx="18" fill="#4c1d95" stroke="#c4b5fd" stroke-width="2"/>
+      <text x="432" y="150" fill="#f8fafc" font-size="18" font-weight="800">DynamoDB + S3</text>
+
+      <rect x="694" y="112" width="250" height="62" rx="18" fill="#17304f" stroke="#60a5fa" stroke-width="2"/>
+      <text x="770" y="150" fill="#f8fafc" font-size="18" font-weight="800">ingest-back</text>
+
+      <rect x="1000" y="112" width="344" height="62" rx="18" fill="#17304f" stroke="#22d3ee" stroke-width="2"/>
+      <text x="1100" y="150" fill="#f8fafc" font-size="18" font-weight="800">later drift check</text>
+
+      <path d="M296 143 L352 143" stroke="#5eead4" stroke-width="5" fill="none"/>
+      <path d="M638 143 L694 143" stroke="#c4b5fd" stroke-width="5" fill="none"/>
+      <path d="M944 143 L1000 143" stroke="#60a5fa" stroke-width="5" fill="none"/>
+      <path d="M1324 174 C 1298 214, 1180 220, 976 220 C 662 220, 434 201, 264 68" stroke="#22d3ee" stroke-width="4" stroke-dasharray="10 10" fill="none"/>
+      <text x="846" y="205" fill="#67e8f9" font-size="17" font-style="italic" text-anchor="middle">drift detected → next reconciler run closes or flags it</text>
     </g>
   </g>
 </svg>
