@@ -93,7 +93,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 
 | Skill | Scope |
 |---|---|
-| [`iam-departures-remediation`](remediation/iam-departures-remediation/) | Multi-cloud IAM cleanup for departed employees |
+| [`iam-departures-remediation`](remediation/iam-departures-remediation/) | AWS IAM cleanup for departed employees (per-cloud split for Azure/GCP/Snowflake/Databricks planned; library modules in `src/lambda_worker/clouds/`) |
 
 ## How to add a new skill
 
