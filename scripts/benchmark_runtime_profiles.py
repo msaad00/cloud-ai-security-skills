@@ -77,7 +77,7 @@ CASES: tuple[BenchmarkCase, ...] = (
         input_mode="stdin",
         command_prefix=(
             PYTHON,
-            str(REPO_ROOT / "skills/remediation/sink-snowflake-jsonl/src/sink.py"),
+            str(REPO_ROOT / "skills/output/sink-snowflake-jsonl/src/sink.py"),
             "--dry-run",
             "--table",
             "BENCH.RUNTIME_PROFILES",

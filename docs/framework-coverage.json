@@ -392,8 +392,8 @@
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
     },
     {
-      "path": "skills/remediation/sink-snowflake-jsonl",
-      "layer": "remediation",
+      "path": "skills/output/sink-snowflake-jsonl",
+      "layer": "output",
       "providers": ["snowflake"],
       "asset_classes": ["findings", "evidence", "audit-logs", "lakehouse"],
       "frameworks": ["ocsf-1.8", "soc2-tsc"],
@@ -401,8 +401,8 @@
       "execution_modes": ["cli", "mcp", "persistent"]
     },
     {
-      "path": "skills/remediation/sink-clickhouse-jsonl",
-      "layer": "remediation",
+      "path": "skills/output/sink-clickhouse-jsonl",
+      "layer": "output",
       "providers": ["clickhouse"],
       "asset_classes": ["findings", "evidence", "audit-logs", "lakehouse"],
       "frameworks": ["ocsf-1.8", "soc2-tsc"],
@@ -410,8 +410,8 @@
       "execution_modes": ["cli", "mcp", "persistent"]
     },
     {
-      "path": "skills/remediation/sink-s3-jsonl",
-      "layer": "remediation",
+      "path": "skills/output/sink-s3-jsonl",
+      "layer": "output",
       "providers": ["aws"],
       "asset_classes": ["findings", "evidence", "audit-logs", "object-storage"],
       "frameworks": ["ocsf-1.8", "soc2-tsc"],

@@ -43,10 +43,10 @@ flowchart LR
     classDef act fill:#78350f,stroke:#fbbf24,color:#fef3c7
     classDef bundle fill:#1e1b4b,stroke:#a78bfa,color:#ddd6fe
 
-    cloud["☁️ Cloud APIs<br/><sub>AWS · GCP · Azure</sub>"]:::signal
-    logs["📋 Raw logs<br/><sub>CloudTrail · K8s · MCP</sub>"]:::signal
-    idp["🔑 Identity<br/><sub>Okta · Entra · Workspace</sub>"]:::signal
-    lake["🗄️ Warehouses<br/><sub>Snowflake · Databricks</sub>"]:::signal
+    cloud["☁️ Cloud APIs<br/>AWS, GCP, Azure"]:::signal
+    logs["📋 Raw logs<br/>CloudTrail, K8s, MCP"]:::signal
+    idp["🔑 Identity<br/>Okta, Entra, Workspace"]:::signal
+    lake["🗄️ Warehouses<br/>Snowflake, Databricks"]:::signal
 
     subgraph Intake
         ingest["L1 Ingest<br/>15 skills"]:::intake
@@ -114,7 +114,7 @@ flowchart TB
         runners["Cloud runners<br/>AWS · GCP · Azure"]:::direct
     end
 
-    mcp["Repo MCP server<br/>mcp-server/src/server.py<br/><sub>auto-discovers SKILL.md · audited tool calls · timeout-governed</sub>"]:::mcp
+    mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
     bundle[("Shared skill bundle<br/>44 shipped")]:::bundle
     outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
 

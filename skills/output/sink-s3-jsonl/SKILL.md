@@ -101,13 +101,13 @@ The skill does not overwrite, append to, or mutate an existing object key.
 ```bash
 # Dry-run by default
 python skills/detection/detect-lateral-movement/src/detect.py < events.ocsf.jsonl \
-  | python skills/remediation/sink-s3-jsonl/src/sink.py \
+  | python skills/output/sink-s3-jsonl/src/sink.py \
       --bucket my-sec-lake \
       --prefix findings/lateral-movement
 
 # Explicit apply for direct operator use
 python skills/discovery/discover-control-evidence/src/discover.py \
-  | python skills/remediation/sink-s3-jsonl/src/sink.py \
+  | python skills/output/sink-s3-jsonl/src/sink.py \
       --bucket my-sec-lake \
       --prefix evidence/control-exports \
       --apply

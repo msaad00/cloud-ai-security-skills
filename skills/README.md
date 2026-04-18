@@ -10,6 +10,7 @@ Skills are grouped by **layered function**, not by vendor. Start with the proble
 | [`evaluation/`](evaluation/) | "Does this posture or event stream meet a benchmark?" | Compliance / posture result |
 | [`view/`](view/) | "How should I render or export this OCSF output?" | SARIF, Mermaid, other review formats |
 | [`remediation/`](remediation/) | "Something is wrong. How do I fix it safely?" | Audited action + re-verification |
+| [`output/`](output/) | "Where do these findings / evidence / audit rows persist?" | Append-only writes to S3, Snowflake, ClickHouse |
 
 Every shipped skill follows the [Anthropic skills guide](https://platform.claude.com/docs/en/build-with-claude/skills-guide): `SKILL.md`, `src/`, `tests/`, `REFERENCES.md`, and explicit `Use when...` / `Do NOT use...` routing language.
 
@@ -94,6 +95,16 @@ Active fix workflows with dry-run, audit, and guardrails.
 | Skill | Scope |
 |---|---|
 | [`iam-departures-aws`](remediation/iam-departures-aws/) | AWS IAM cleanup for departed employees (per-cloud split for Azure/GCP/Snowflake/Databricks planned; library modules in `src/lambda_worker/clouds/`) |
+
+## output/
+
+Append-only persistence sinks for findings, evidence, and audit rows. Pure writers — no identity or cloud-config mutation, no re-shaping of the payload. Kept distinct from `remediation/` so the "skills are pure, edges have side effects" layering stays honest.
+
+| Skill | Target |
+|---|---|
+| [`sink-s3-jsonl`](output/sink-s3-jsonl/) | Amazon S3 (immutable JSONL objects) |
+| [`sink-snowflake-jsonl`](output/sink-snowflake-jsonl/) | Snowflake (staged COPY) |
+| [`sink-clickhouse-jsonl`](output/sink-clickhouse-jsonl/) | ClickHouse (batched INSERT) |
 
 ## How to add a new skill
 

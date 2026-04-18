@@ -70,9 +70,9 @@ Shipped skills mapped: **35**
 | [`source-databricks-query`](../skills/ingestion/source-databricks-query) | ingestion | databricks | lakehouse, query-results, audit-logs |
 | [`source-s3-select`](../skills/ingestion/source-s3-select) | ingestion | aws | object-storage, query-results, audit-logs |
 | [`source-snowflake-query`](../skills/ingestion/source-snowflake-query) | ingestion | snowflake | lakehouse, query-results, audit-logs |
-| [`sink-clickhouse-jsonl`](../skills/remediation/sink-clickhouse-jsonl) | remediation | clickhouse | findings, evidence, audit-logs, lakehouse |
-| [`sink-s3-jsonl`](../skills/remediation/sink-s3-jsonl) | remediation | aws | findings, evidence, audit-logs, object-storage |
-| [`sink-snowflake-jsonl`](../skills/remediation/sink-snowflake-jsonl) | remediation | snowflake | findings, evidence, audit-logs, lakehouse |
+| [`sink-clickhouse-jsonl`](../skills/output/sink-clickhouse-jsonl) | output | clickhouse | findings, evidence, audit-logs, lakehouse |
+| [`sink-s3-jsonl`](../skills/output/sink-s3-jsonl) | output | aws | findings, evidence, audit-logs, object-storage |
+| [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl) | output | snowflake | findings, evidence, audit-logs, lakehouse |
 | [`convert-ocsf-to-mermaid-attack-flow`](../skills/view/convert-ocsf-to-mermaid-attack-flow) | view | multi | findings, review-output, graphs |
 | [`convert-ocsf-to-sarif`](../skills/view/convert-ocsf-to-sarif) | view | multi | findings, review-output |
 
@@ -240,10 +240,10 @@ Shipped skills mapped: **9**
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
+| [`sink-clickhouse-jsonl`](../skills/output/sink-clickhouse-jsonl) | output | clickhouse | findings, evidence, audit-logs, lakehouse |
+| [`sink-s3-jsonl`](../skills/output/sink-s3-jsonl) | output | aws | findings, evidence, audit-logs, object-storage |
+| [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl) | output | snowflake | findings, evidence, audit-logs, lakehouse |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
-| [`sink-clickhouse-jsonl`](../skills/remediation/sink-clickhouse-jsonl) | remediation | clickhouse | findings, evidence, audit-logs, lakehouse |
-| [`sink-s3-jsonl`](../skills/remediation/sink-s3-jsonl) | remediation | aws | findings, evidence, audit-logs, object-storage |
-| [`sink-snowflake-jsonl`](../skills/remediation/sink-snowflake-jsonl) | remediation | snowflake | findings, evidence, audit-logs, lakehouse |
 
 ### PCI DSS (4.0)
 
