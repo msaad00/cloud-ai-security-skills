@@ -240,10 +240,10 @@ Shipped skills mapped: **9**
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
+| [`sink-clickhouse-jsonl`](../skills/output/sink-clickhouse-jsonl) | output | clickhouse | findings, evidence, audit-logs, lakehouse |
+| [`sink-s3-jsonl`](../skills/output/sink-s3-jsonl) | output | aws | findings, evidence, audit-logs, object-storage |
+| [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl) | output | snowflake | findings, evidence, audit-logs, lakehouse |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
-| [`sink-clickhouse-jsonl`](../skills/output/sink-clickhouse-jsonl) | remediation | clickhouse | findings, evidence, audit-logs, lakehouse |
-| [`sink-s3-jsonl`](../skills/output/sink-s3-jsonl) | remediation | aws | findings, evidence, audit-logs, object-storage |
-| [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl) | remediation | snowflake | findings, evidence, audit-logs, lakehouse |
 
 ### PCI DSS (4.0)
 
