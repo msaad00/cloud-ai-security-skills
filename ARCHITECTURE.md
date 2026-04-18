@@ -76,8 +76,6 @@ directories above.
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full design contract and
   invariants.
-- [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) — visual index (architecture,
-  end-to-end flow, IAM departures).
 - [`docs/SCHEMA_COVERAGE.md`](docs/SCHEMA_COVERAGE.md) — per-source schema
   coverage tables.
 - [`docs/FRAMEWORK_MAPPINGS.md`](docs/FRAMEWORK_MAPPINGS.md) — MITRE ATT&CK,

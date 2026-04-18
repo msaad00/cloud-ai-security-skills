@@ -1,255 +1,91 @@
+<div align="center">
+
 # cloud-ai-security-skills
+
+**Production-grade security skills for cloud and AI systems.**
+Source-specific ingest, discovery, detection, evaluation, view, and remediation — one bundle, any surface.
 
 [![CI](https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain)
 [![Version](https://img.shields.io/badge/version-0.5.0-0ea5e9)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![OCSF 1.8](https://img.shields.io/badge/OCSF-1.8-22d3ee)](https://schema.ocsf.io/1.8.0)
+[![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK-ef4444)](https://attack.mitre.org/)
+[![CIS](https://img.shields.io/badge/CIS-AWS_%7C_GCP_%7C_Azure-22c55e)](docs/FRAMEWORK_MAPPINGS.md)
 [![Coverage Gates](https://img.shields.io/badge/coverage-gated-0f766e)](docs/COVERAGE_MODEL.md)
 [![Scanned by agent-bom](https://img.shields.io/badge/scanned_by-agent--bom-164e63)](https://github.com/msaad00/agent-bom)
 
-Security skills for cloud and AI systems. Use source-specific ingest, discovery, detection, evaluation, view, and remediation skills from the CLI, CI, MCP, or persistent runners without changing the skill code.
+<sub>AWS · GCP · Azure · Kubernetes · Okta · Microsoft Entra · Google Workspace · Snowflake · Databricks · ClickHouse · MCP</sub>
 
-- OCSF 1.8 is the default interoperable wire format for event and finding streams.
-- Native is the repo-owned operational format for evaluation, discovery, sinks, remediation, and domains where OCSF would be lossy.
-- Read-only by default; write paths stay HITL and audited.
-- Trust, schema, and runtime behavior are documented and validated in CI.
+</div>
 
-## Repo Shape
+---
 
-Start here if you want the shortest true picture of the repo:
+## What this repo gives you
 
-```mermaid
-flowchart TB
-    subgraph Signals[External Signals]
-        cloud[Cloud APIs]
-        logs[Raw Logs]
-        idp[Identity Feeds]
-        k8s[Kubernetes Audit]
-        mcp[MCP Proxy]
-        lake[Warehouses]
-    end
+**44 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — and one guarded write path for offboarding. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
-    subgraph Intake[Intake]
-        ingest[L1 Ingest]
-        discover[L2 Discover]
-    end
+| | Purpose | Output |
+|---|---|---:|
+| **15 × Ingest** | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
+| **4 × Discover** | inventory, graph, AI BOM, evidence | native / bridge JSON |
+| **9 × Detect** | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
+| **7 × Evaluate** | 82 posture and benchmark checks | compliance result |
+| **1 × Remediate** | IAM departures (HITL + dual audit) | audited action trail |
+| **2 × View** | findings → review formats | SARIF · Mermaid |
+| **6 × Edge** | warehouse source + sink adapters | native pass-through |
 
-    subgraph Analyze[Analyze]
-        detect[L3 Detect]
-        evaluate[L4 Evaluate]
-    end
+![Every shipped skill in the repo grouped by layer, with vendor logos and per-layer counts. Layer 1 Ingest has 15 normalizers across AWS, GCP, Azure, Kubernetes, Okta, Entra, Workspace, and MCP. Layer 2 Discover has 4 inventory and AI BOM skills. Layer 3 Detect has 9 MITRE-tagged rules. Layer 4 Evaluate has 7 benchmarks totaling 82 checks. Layer 5 Remediate ships IAM departures. Layer 6 View converts to SARIF and Mermaid. Edge adapters for Snowflake, Databricks, S3, and ClickHouse wrap the same contract.](docs/images/skill-map.svg)
 
-    subgraph Act[Act]
-        remediate[L5 Remediate]
-        view[L6 View]
-    end
+## Mental model
 
-    contract[(Shared Skill Bundle)]
-    support[Source / Sink / Packs / Runners]
+Three action bands over six layers. The same bundle contract is shared across all of them.
 
-    cloud --> ingest
-    logs --> ingest
-    idp --> ingest
-    k8s --> ingest
-    mcp --> ingest
-    lake --> ingest
-    cloud --> discover
-    idp --> discover
+![Repository architecture showing three action bands. Intake runs Ingest and Discover, Analyze runs Detect and Evaluate, Act runs View and guarded Remediate. External signals from cloud APIs, raw logs, identity feeds, Kubernetes audit, warehouses, and MCP proxy flow into the skill bundle contract underneath. Source and sink edges, SQL query packs, and runtime surfaces CLI, CI, MCP, and runners all wrap the same implementation.](docs/images/repo-architecture.svg)
 
-    ingest --> detect
-    discover --> detect
-    discover --> evaluate
-    detect --> view
-    evaluate --> view
-    discover --> remediate
-    evaluate --> remediate
+- **L1 Ingest** · raw source → stable stream · [`ingest-*`](skills/ingestion/)
+- **L2 Discover** · live inventory and evidence · [`discover-*`](skills/discovery/)
+- **L3 Detect** · deterministic attack findings · [`detect-*`](skills/detection/)
+- **L4 Evaluate** · benchmark and posture · [`evaluation/*`](skills/evaluation/)
+- **L5 Remediate** · guarded writes · [`iam-departures-remediation`](skills/remediation/iam-departures-remediation/)
+- **L6 View** · exports and renders · [`convert-ocsf-*`](skills/view/)
 
-    contract --- ingest
-    contract --- discover
-    contract --- detect
-    contract --- evaluate
-    contract --- remediate
-    contract --- view
-    support --- contract
-```
+Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
-![Repository architecture showing a cleaner three-band model: external signals feed Intake through Ingest and Discover, flow into Analyze through Detect and Evaluate, and leave through Act via View or guarded Remediate, all on one shared skill bundle contract.](docs/images/repo-architecture.svg)
+## Agent and runtime integrations
 
-The mental model:
+MCP clients, CLI, CI, and cloud runners all reach the same skill bundle. Wrappers add transport, queues, and audit — never a second implementation.
 
-- core skill layers:
-  - `ingest`, `discover`, `detect`, `evaluate`, `remediation`, `view`
-- edge layers:
-  - `source-*`, `sink-*`, `packs/*`
-- runtime surfaces:
-  - CLI, CI, MCP, and runners all call the same skill bundles
+![Agent and runtime integrations showing five MCP clients — Claude Code, OpenAI Codex, Cursor, Windsurf, and Cortex Code CLI — connecting over stdio to the repo-owned MCP server that auto-discovers SKILL.md files and exposes them as audited tool calls with correlation IDs and timeouts. CLI, CI, and persistent AWS, GCP, and Azure runners reach the same shared skill bundle directly. Outputs are native JSONL, OCSF 1.8 JSONL, bridge, SARIF, Mermaid attack flow, and audited writes.](docs/images/agent-integrations.svg)
 
-For the full contract, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the visual index, see [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
+- **MCP** · [.mcp.json](.mcp.json) · [mcp-server/README.md](mcp-server/README.md) · [docs/MCP_AUDIT_CONTRACT.md](docs/MCP_AUDIT_CONTRACT.md)
+- **CLI / pipes** · stdin/stdout bundles compose into one-liners
+- **CI** · GitHub Actions publishes SARIF to the Security tab
+- **Runners** · reference runners under [runners/](runners/) for S3/SQS, GCS/PubSub, Blob/EventGrid
 
-## Start Here
+## Start here
 
-| If you need to... | Start with... | Typical output |
+Pick the row that matches the job.
+
+| You have… | Start with | Typical output |
 |---|---|---|
-| Normalize one raw source | `ingest-*` | repo-native JSONL or OCSF JSONL |
-| Detect suspicious behavior | `ingest-*` + `detect-*` | repo-native finding JSON or OCSF Detection Finding |
-| Benchmark posture | `evaluation/*` | benchmark or control results |
-| Inventory cloud or AI assets | `discover-environment` or `discover-ai-bom` | graph JSON, AI BOM, OCSF bridge |
-| Build evidence for audits | `discover-control-evidence` or `discover-cloud-control-evidence` | evidence JSON |
-| Export findings | `view/*` | SARIF or Mermaid attack flow |
-| Remediate offboarding safely | `iam-departures-remediation` | dry-run plan or audited action log |
+| a raw log file or stream | [`ingest-*`](skills/ingestion/) → [`detect-*`](skills/detection/) | OCSF Detection Finding |
+| live cloud API access | [`discover-*`](skills/discovery/) or [`evaluation/*`](skills/evaluation/) | graph / benchmark JSON |
+| warehouse rows (Snowflake, Databricks, S3) | [`source-*`](skills/ingestion/) → `detect-*` → [`sink-*`](skills/remediation/) | customer-owned persistence |
+| an AI estate to inventory | [`discover-ai-bom`](skills/discovery/discover-ai-bom/) | CycloneDX-aligned AI BOM |
+| audit evidence to produce | [`discover-control-evidence`](skills/discovery/discover-control-evidence/) | PCI / SOC 2 evidence JSON |
+| OCSF findings to publish | [`view/*`](skills/view/) | SARIF · Mermaid |
+| a departing employee to offboard | [`iam-departures-remediation`](skills/remediation/iam-departures-remediation/) | dry-run plan or audited action |
 
-For the full source, asset, framework, and runtime crosswalk, see [docs/USE_CASES.md](docs/USE_CASES.md).
+Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
-## Common Shipped Flows
+## Common shipped flows
 
-Use this as the quick mental model for how data moves through the repo:
+Three concrete lanes. Same skill bundle contract in every lane — what changes is the input, output, and control boundary.
 
-```mermaid
-flowchart TB
-    subgraph Lane1[Raw Log Detection And Export]
-        raw[Raw Payloads] --> ingest1[ingest-*]
-        ingest1 --> detect1[detect-*]
-        detect1 --> view1[view/*]
-        view1 --> artifact[Export Artifact]
-    end
+![Common shipped flows showing three shipped compositions. Raw payloads flow ingest to detect to view. Warehouse or object rows flow source to detect to sink. Live cloud, SaaS, or HR state flows through discovery or evaluation, optionally through guarded remediation. Access surfaces CLI, MCP, CI, and AWS or GCP or Azure runners all invoke the same bundle.](docs/images/end-to-end-skill-flows.svg)
 
-    subgraph Lane2[Warehouse Or Object Analysis]
-        rows[Rows Or Objects] --> source[source-*]
-        source --> detect2[detect-*]
-        detect2 --> sink[sink-*]
-        sink --> persistence[Customer Sink]
-    end
-
-    subgraph Lane3[Live Posture And Guarded Action]
-        live[Live State] --> discover_eval[discover-* / evaluation/*]
-        discover_eval --> native[Native Outputs]
-        native --> remediation[remediation/*]
-        remediation --> audit[Evidence Trail]
-    end
-```
-
-![Common shipped flows showing three concrete lanes: raw payloads through ingest, detect, and view; warehouse rows through source, detect, and sink; and live state through discovery or evaluation with optional guarded remediation.](docs/images/end-to-end-skill-flows.svg)
-
-The visual is intentionally short. The exact examples live in markdown:
-
-- raw logs:
-  - `ingest-* -> detect-* -> view/*`
-  - example: `ingest-cloudtrail-ocsf -> detect-lateral-movement -> convert-ocsf-to-sarif`
-- warehouse or object rows:
-  - `source-* -> detect-* -> sink-*`
-  - example: `source-snowflake-query -> detect-lateral-movement -> sink-snowflake-jsonl`
-- live cloud or SaaS state:
-  - `discover-*` or `evaluation/*`, with optional guarded `remediation/*`
-  - example: `discover-control-evidence`, `cspm-aws-cis-benchmark`, or `iam-departures-remediation`
-
-For the longer runtime and data-path explanation, see [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md) and [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
-
-## Install And Trust Model
-
-This repo is not primarily distributed as a single PyPI-installed application.
-
-The intended trust and execution model is:
-
-- clone the repo at a tagged release
-- verify the signed tag and release-attached signed SBOM set
-- install only the dependency groups you actually need from `pyproject.toml`
-- run the skill bundles directly, through MCP, in CI, or behind the shipped runners
-
-In other words:
-
-- `uv.lock` is the full dependency ceiling
-- real operator installs are narrower and runtime-specific
-- the trust boundary is the repo release itself, not an opaque package wrapper
-
-See:
-
-- [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
-- [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md)
-- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
-
-## Quick Run
-
-Each shipped skill is a bundle:
-
-- `SKILL.md` for routing, guardrails, and approval model
-- `REFERENCES.md` for the official source-of-truth docs
-- `src/` for the executable implementation
-- `tests/` for contract and regression coverage
-
-The execution core is only one part. The operational contract is the whole
-bundle.
-
-### Use the skill name first
-
-The normal integration path is the skill name through MCP or an agent client,
-not a raw subprocess command.
-
-For the Kubernetes example, the skill-level flow is:
-
-```text
-tools/call name="ingest-k8s-audit-ocsf"
-arguments={
-  "args":["skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl"],
-  "output_format":"ocsf"
-}
-
-tools/call name="detect-privilege-escalation-k8s"
-arguments={
-  "input":"<stdout from ingest-k8s-audit-ocsf>",
-  "output_format":"ocsf"
-}
-
-tools/call name="convert-ocsf-to-sarif"
-arguments={
-  "input":"<stdout from detect-privilege-escalation-k8s>"
-}
-```
-
-That is the contract the repo wants humans and agents to think in:
-
-- skill name from `SKILL.md`
-- `input`, `args`, and optional `output_format`
-- routing, references, and guardrails from the skill bundle
-- the same execution core underneath CLI, CI, MCP, and runners
-
-The same path can be driven by:
-
-- MCP / agents:
-  - Claude, Codex, Cursor, Windsurf, Cortex Code CLI
-- CI:
-  - the same skill bundle called inside a pipeline job
-- runners:
-  - the same skill bundle called behind AWS, GCP, or Azure event wrappers
-
-If you want to stand up the local MCP surface, use the project-scoped config in
-[`.mcp.json`](.mcp.json) or the local wrapper instructions in
-[mcp-server/README.md](mcp-server/README.md).
-
-### What you should expect back
-
-Most flows reduce to one of these outcomes:
-
-- `ingest-* -> detect-* -> view/*`
-  - start from raw payloads
-  - end in SARIF, Mermaid, or review JSON
-- `source-* -> detect-* -> sink-*`
-  - start from a warehouse or object row set
-  - end in customer-owned persistence
-- `discover-*` or `evaluation/* -> remediation/*`
-  - start from live state or HR events
-  - end in evidence, audit records, or guarded writes
-
-The low-level subprocess examples still exist for debugging and wrapper authors,
-but they are intentionally kept out of the main entry path. See
-[docs/DATA_HANDLING.md](docs/DATA_HANDLING.md) and the individual `SKILL.md`
-files when you need wrapper-free execution details.
-
-<details>
-<summary><b>Low-level execution core examples</b></summary>
-
-The same Kubernetes path can still be run directly when you are debugging a
-wrapper or developing around the raw subprocess surface:
+**Example — Kubernetes privilege escalation, end-to-end:**
 
 ```bash
 python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
@@ -259,262 +95,127 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
   > findings.sarif
 ```
 
-If you want to inspect each stage separately, write local scratch files in the
-current directory:
+**Same flow from an MCP agent:**
 
-```bash
-python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
-  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  > k8s-events.ocsf.jsonl
-
-python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-  k8s-events.ocsf.jsonl \
-  > k8s-findings.ocsf.jsonl
-
-python skills/view/convert-ocsf-to-sarif/src/convert.py \
-  k8s-findings.ocsf.jsonl \
-  > findings.sarif
+```text
+tools/call name="ingest-k8s-audit-ocsf" args={"args":["skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl"]}
+tools/call name="detect-privilege-escalation-k8s" args={"input":"<stdout>"}
+tools/call name="convert-ocsf-to-sarif"          args={"input":"<stdout>"}
 ```
 
-Those intermediate files are only for debugging. The final output you usually
-keep is `findings.sarif`.
-
-If you want the repo-owned native wire format instead of OCSF:
-
-```bash
-python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
-  --output-format native \
-  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-      --output-format native \
-  > findings.native.jsonl
-```
-
-</details>
+The skill bundle is the product. CLI, CI, MCP, and runners are access paths.
 
 <details>
-<summary><b>Real input and output</b></summary>
+<summary><b>What you get back</b></summary>
 
-Input fixture line, abbreviated:
-
+Raw audit line (abbreviated):
 ```json
 {"kind":"Event","stage":"ResponseComplete","verb":"list","auditID":"k1-list-secrets","user":{"username":"system:serviceaccount:default:builder"}}
 ```
 
-OCSF event output, abbreviated:
-
+OCSF event (abbreviated):
 ```json
 {"class_uid":6003,"class_name":"API Activity","metadata":{"uid":"k1-list-secrets"},"api":{"operation":"list"},"resources":[{"type":"secrets","namespace":"default"}]}
 ```
 
-Native event output, abbreviated:
-
+OCSF Detection Finding 2004 (abbreviated):
 ```json
-{"schema_mode":"native","record_type":"api_activity","event_uid":"k1-list-secrets","operation":"list","resources":[{"type":"secrets","namespace":"default"}]}
+{"class_uid":2004,"class_name":"Detection Finding","finding_info":{"title":"Service account enumerated and read a Kubernetes secret","attacks":[{"technique":{"uid":"T1552.007"}}]}}
 ```
 
-OCSF finding output, abbreviated:
-
-```json
-{"class_uid":2004,"class_name":"Detection Finding","finding_info":{"title":"Service account enumerated and read a Kubernetes secret"}}
-```
-
-Native finding output, abbreviated:
-
-```json
-{"schema_mode":"native","record_type":"detection_finding","title":"Service account enumerated and read a Kubernetes secret"}
-```
+Native wire format is the same content in a repo-owned envelope — see [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md).
 
 </details>
 
-### Same skill bundle, different access path
+## Flagship: IAM departures remediation
 
-Agent clients do not require a second implementation. The same skill bundle is
-what ships everywhere:
+The one shipped write path. Guarded, event-driven, cross-cloud, and dual-audited.
 
-- MCP / agent:
-  - skill name plus `input`, `args`, and optional `output_format`
-- CI:
-  - the same bundle called inside a job
-- runner:
-  - the same bundle called behind event-driven wrappers
-- execution core:
-  - the underlying subprocess entrypoint documented in the skill bundle and in
-    [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
+![IAM departures remediation showing the flagship write path in four stages. Stage one, select actionable scope before anything can act: the reconciler filters rehires and grace-window exceptions from HR sources and writes an S3 manifest. Stage two, start the guarded workflow: EventBridge launches a Step Function that gates a parser Lambda and a scoped worker Lambda, each with separate execution roles. Stage three, apply scoped writes into AWS, GCP, and Azure IAM via cross-account roles. Stage four, write a dual audit trail to DynamoDB and S3, then ingest back to HR so the next reconciler run verifies closure.](docs/images/iam-departures-architecture.svg)
+
+- **scope first** — rehire and grace-window logic run in the reconciler before the manifest is written
+- **separate principals** — EventBridge, Step Function, parser Lambda, worker Lambda each have their own execution role
+- **dual audit** — DynamoDB + KMS-encrypted S3 for every write; ingest-back so the next run verifies closure
+- **AWS-native on purpose** — equivalent GCP and Azure workflows keep the same control contract
+
+Details: [skills/remediation/iam-departures-remediation/](skills/remediation/iam-departures-remediation/)
 
 ## Native vs OCSF
 
-| Mode | What it means | Use it when... |
+| Mode | When | What it is |
 |---|---|---|
-| `native` | repo-owned external wire format in JSONL, with fields like `schema_mode`, `canonical_schema_version`, `record_type`, and stable UIDs | you want the repo's stable schema without an interoperability envelope |
-| `ocsf` | OCSF JSONL pinned to the repo's OCSF contract | you want a standard external schema for SIEMs, exports, or downstream tooling |
-| `canonical` | internal-only normalization model | you are reading the docs or implementation, not choosing a CLI output mode |
-| `bridge` | interoperable output with native context preserved | you need both standard fields and repo context in one payload |
+| `ocsf` | default for ingest and detect streams | OCSF 1.8 JSONL pinned to [`OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md) |
+| `native` | when you want repo fidelity without an envelope | repo-owned external wire format with stable UIDs |
+| `bridge` | when you need both | interoperable fields with native context preserved |
+| `canonical` | internal only | the normalization model between ingest and detect |
 
-`native` is not raw vendor JSON and not an OCSF envelope with fields stripped out.
-`native` = repo-owned external wire format. See [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md), [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md), [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md), and [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md).
+The `-ocsf` suffix means OCSF is the default, not the only output. Reference: [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md) · [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md) · [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
 
-## Flagship Example
+## Install and trust
 
-The flagship example skill family is IAM departures remediation: a guarded, event-driven workflow with a dual audit trail and clear trust boundaries.
+This repo is not primarily distributed as a PyPI package. Operators clone a tagged release, verify the signed SBOM set, and install only the dependency groups they need from [`pyproject.toml`](pyproject.toml). `uv.lock` is the ceiling, real installs are narrower.
 
-```mermaid
-flowchart LR
-    hr[HR Sources] --> reconciler[Reconciler]
-    reconciler --> manifest[S3 Manifest]
-    manifest --> eventbridge[EventBridge Rule]
-    eventbridge --> stepfn[Step Function]
-    stepfn --> parser[Parser Lambda]
-    parser --> worker[Worker Lambda]
-    worker --> targets[Scoped Targets]
-    worker --> audit[DynamoDB + S3 Audit]
-    audit -. later drift verification .-> reconciler
-```
+- [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md) — SBOM, signing, provenance
+- [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md) — workload identity first
+- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — release gates
 
-![IAM departures remediation showing the flagship write path in three stages: select the actionable set first, run the guarded workflow with separate roles, then write a dual audit trail and verify drift later.](docs/images/iam-departures-architecture.svg)
+## Security posture
 
-The diagram shows the flagship write path only: source events feed a guarded
-planner/worker flow, the reconciler writes an S3 manifest, EventBridge starts
-the Step Function, human approval gates the write edge, and the final action
-trail lands in both operational storage and durable audit outputs.
+- **Read-only by default.** Write paths are HITL, audited, and dry-run-first.
+- **No hardcoded secrets.** Workload identity and short-lived credentials only.
+- **Official SDKs first**, repo-owned code second, canonical OSS only when required.
+- **CI gates** validate skill contracts, integrity, the safe-skill bar, coverage, mypy, and SBOM generation.
+- **Runtime isolation.** Wrappers cannot fork the skill model; they add transport only.
 
-The artwork is intentionally staged into:
+[SECURITY.md](SECURITY.md) · [SECURITY_BAR.md](SECURITY_BAR.md) · [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) · [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md)
 
-- actionable selection
-- guarded orchestration
-- scoped writes
-- dual audit and drift verification
+## Compliance frameworks
 
-The detailed examples, failure notes, and role tables stay in markdown so the
-visual stays readable in GitHub preview.
+CIS AWS / GCP / Azure Foundations · CIS Controls v8 · MITRE ATT&CK · NIST CSF 2.0 · SOC 2 TSC · ISO 27001:2022 · PCI DSS 4.0 · OWASP LLM Top 10 · OWASP MCP Top 10
 
-Important accuracy notes:
+Per-skill framework mapping: [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) · coverage report: [docs/FRAMEWORK_COVERAGE.md](docs/FRAMEWORK_COVERAGE.md)
 
-- rehire and primary eligibility logic happen in the reconciler/export path before actionable entries are written to the S3 manifest
-- the parser Lambda is a second safety gate that rechecks manifest validity, grace period, and current IAM state before the worker runs
-- EventBridge, Step Function, parser Lambda, and worker Lambda each use separate execution roles
-- the flagship orchestration is AWS-native on purpose; equivalent GCP and Azure workflows should keep the same control contract but use native event and orchestration services for those clouds
+## Where things stand
 
-## Trust, Security, And Supply Chain
-
-- Read-only by default; write paths require human approval and audit.
-- No hardcoded secrets; prefer workload identity and short-lived credentials.
-- Official vendor SDKs first, repo-owned code second, canonical OSS only when needed.
-- CI validates skill contracts, integrity, safe-skill bar, coverage, type checking, and SBOM generation.
-
-Read next:
-- [SECURITY.md](SECURITY.md)
-- [SECURITY_BAR.md](SECURITY_BAR.md)
-- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
-- [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md)
-- [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
-- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
-- [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
-- [docs/RUNTIME_PROFILES.md](docs/RUNTIME_PROFILES.md)
-
-## Core Surfaces
-
-| Surface | Best fit |
-|---|---|
-| CLI / Unix pipes | local triage, fixture testing, repeatable one-shot pipelines |
-| MCP | Claude, Codex, Cursor, Windsurf, Cortex Code CLI |
-| CI | scheduled checks, PR gates, SARIF generation, benchmark snapshots |
-| Persistent runner | event-driven or batch execution around the same stateless skills |
-| SIEM / lakehouse | normalized findings, evidence, or customer-owned audit sinks |
-
-## Shipped Vs Planned
-
-| Topic | Shipped today | Planned / supported pattern |
+| Area | Shipped today | Planned |
 |---|---|---|
-| Runtime surfaces | CLI, CI, MCP, AWS/GCP/Azure reference runners, IAM departures workflow | more specialized runners and dialect-specific wrappers where demand justifies them |
-| Persistence edges | `sink-snowflake-jsonl`, `sink-clickhouse-jsonl`, `sink-s3-jsonl`, plus IAM departures dual-write to DynamoDB + S3 | additional customer-controlled destinations like Security Lake and BigQuery |
-| Query packs | `packs/lateral-movement/` and `packs/privilege-escalation-k8s/` | broader warehouse and dialect coverage |
-| Schema modes | native, canonical, OCSF, and bridge are all shipped; ingest and detect are fully dual-mode, while discovery uses native/bridge and evaluation, sinks, and remediation stay native-first | extend OCSF or bridge only where it materially improves interoperability without losing operational clarity |
-| Remediation | IAM departures with HITL and audit | broader remediation families |
+| **Ingest** | 15 ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources |
+| **Discover** | 4 skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence |
+| **Detect** | 9 detectors tied to MITRE ATT&CK | credential stuffing, impossible travel, more MCP patterns |
+| **Evaluate** | 7 benchmarks (82 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, model serving | OCSF Compliance Finding class `2003` outputs |
+| **Remediate** | IAM departures with HITL, dry-run, dual audit | broader remediation families as detection matures |
+| **View** | SARIF, Mermaid attack flow | graph overlay, warehouse-ready converters |
+| **Sinks** | Snowflake, ClickHouse, S3 | Security Lake, BigQuery |
+| **Packs** | `lateral-movement`, `privilege-escalation-k8s` | broader warehouse dialect coverage |
+| **Runners** | AWS S3/SQS, GCP GCS/PubSub, Azure Blob/EventGrid reference | more specialized runners on demand |
 
 <details>
-<summary><b>Schema Modes</b></summary>
+<summary><b>More diagrams and docs</b></summary>
 
-The repo contract supports `native`, `canonical`, `ocsf`, and `bridge`.
+**Visual set (6 diagrams, one per question):**
+- [Hero banner](docs/images/hero-banner.svg) — what this is
+- [Repository architecture](docs/images/repo-architecture.svg) — how it's shaped
+- [Skill map](docs/images/skill-map.svg) — what's shipped
+- [Agent and runtime integrations](docs/images/agent-integrations.svg) — how to run it
+- [End-to-end skill flows](docs/images/end-to-end-skill-flows.svg) — how it composes
+- [IAM departures architecture](docs/images/iam-departures-architecture.svg) — the flagship write path
 
-- `canonical`: internal repo-owned normalization layer
-- `native`: repo-owned external wire format
-- `ocsf`: interoperable external wire format
-- `bridge`: native context preserved alongside interoperable fields
-
-`-ocsf` in a skill name means OCSF is the default wire format, not necessarily the only supported output.
-
-Read next:
-- [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md)
-- [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md)
-- [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md)
-- [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
-- [docs/DATA_FLOW.md](docs/DATA_FLOW.md)
-- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
-- [docs/OCSF_CONTRACT.md](docs/OCSF_CONTRACT.md)
-
-</details>
-
-<details>
-<summary><b>Layers And Runtime Model</b></summary>
-
-| Layer | Use it for | Start with |
-|---|---|---|
-| Ingest | raw source to stable event stream | source-specific `ingest-*` |
-| Discover | inventory, graph context, evidence | `discover-*` |
-| Detect | deterministic attack-pattern findings | `detect-*` |
-| Evaluate | benchmark and posture checks | `evaluation/*` |
-| View | export into downstream formats | `view/*` |
-| Remediate | guarded write path with HITL and audit | `iam-departures-remediation` |
-
-The skill contract stays the same across runtime surfaces: `SKILL.md + src/ + tests/` is the product; CLI, CI, MCP, and runners are only access paths.
-
-Read next:
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
-- [docs/RUNTIME_ISOLATION.md](docs/RUNTIME_ISOLATION.md)
-- [docs/DIAGRAMS.md](docs/DIAGRAMS.md)
-- [docs/images/runtime-surfaces.svg](docs/images/runtime-surfaces.svg)
-
-</details>
-
-<details>
-<summary><b>More Diagrams And Docs</b></summary>
-
-Primary visuals:
-- [Repository architecture](docs/images/repo-architecture.svg)
-- [End-to-end skill flows](docs/images/end-to-end-skill-flows.svg)
-- [IAM departures workflow](docs/images/iam-departures-architecture.svg)
-
-Secondary visuals:
-- [Data handling paths](docs/images/data-handling-paths.svg)
-- [Start here guide](docs/images/start-here-guide.svg)
-- [Runtime surfaces](docs/images/runtime-surfaces.svg)
-- [Detection engineering pipeline](docs/images/detection-pipeline.svg)
-- [IAM departures data flow](docs/images/iam-departures-data-flow.svg)
-
-Operator and contributor docs:
-- [AGENTS.md](AGENTS.md)
-- [CLAUDE.md](CLAUDE.md)
-- [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)
-- [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md)
-- [docs/SCHEMA_COVERAGE.md](docs/SCHEMA_COVERAGE.md)
-- [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md)
-- [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
-- [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
-- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md)
-- [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
-- [docs/COMPLIANCE_MAPPINGS.md](docs/COMPLIANCE_MAPPINGS.md)
-- [AGENTS.md](AGENTS.md)
-- [skills/README.md](skills/README.md)
-- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-- [docs/FRAMEWORK_COVERAGE.md](docs/FRAMEWORK_COVERAGE.md)
-- [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md)
-- [docs/ROADMAP.md](docs/ROADMAP.md)
+**Operator and contributor docs:**
+- [AGENTS.md](AGENTS.md) · [CLAUDE.md](CLAUDE.md) — cross-agent and Claude-specific repo contracts
+- [skills/README.md](skills/README.md) — skill catalog
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — full design contract
+- [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) · [docs/ROADMAP.md](docs/ROADMAP.md)
+- [docs/SCHEMA_VERSIONING.md](docs/SCHEMA_VERSIONING.md) · [docs/SCHEMA_COVERAGE.md](docs/SCHEMA_COVERAGE.md)
+- [docs/NORMALIZATION_REFERENCE.md](docs/NORMALIZATION_REFERENCE.md) · [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
+- [docs/DATA_HANDLING.md](docs/DATA_HANDLING.md) · [docs/ERROR_CODES.md](docs/ERROR_CODES.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 
 </details>
 
+## Integration with agent-bom
+
+This repo ships the security automations. [agent-bom](https://github.com/msaad00/agent-bom) provides continuous scanning and a unified graph. Use them together for detection + response.
+
 ## License
 
-Apache 2.0. Security research is welcome; see [SECURITY.md](SECURITY.md) for coordinated disclosure.
+Apache 2.0. Security research is welcome — see [SECURITY.md](SECURITY.md) for coordinated disclosure.

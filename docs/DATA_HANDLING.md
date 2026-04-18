@@ -17,7 +17,7 @@ Use this doc when you need to answer:
 Start with the real input you have, then follow the first skill family, the
 output shape, and the control boundary:
 
-![Data handling paths showing live API paths, raw log paths, lake paths, and the separate guarded remediation path, with outputs and controls called out per lane.](images/data-handling-paths.svg)
+![Three shipped compositions — raw payloads through ingest, detect, view; warehouse rows through source, detect, sink; live state through discovery or evaluation with optional guarded remediation.](images/end-to-end-skill-flows.svg)
 
 The visual is intentionally short. The details stay below in tables and worked
 examples.
@@ -58,7 +58,6 @@ Read next:
 - [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)
 - [RUNTIME_PROFILES.md](RUNTIME_PROFILES.md)
 - [NATIVE_VS_OCSF.md](NATIVE_VS_OCSF.md)
-- [DIAGRAMS.md](DIAGRAMS.md)
 
 ## The Main Scenarios
 
