@@ -26,7 +26,10 @@
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
 | **Remediate** | 1 | IAM departures (HITL + dual audit) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
-| **Edge** | 6 | warehouse source + sink adapters | native pass-through |
+| **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
+| **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
+
+**Total: 44 shipped skills.**
 
 ## Architecture
 
