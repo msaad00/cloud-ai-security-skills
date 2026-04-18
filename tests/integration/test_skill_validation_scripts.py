@@ -106,6 +106,156 @@ class TestValidationScripts:
         assert SAFE.main() == 0
 
 
+class TestRuntimeContractGuardrails:
+    """Unit tests for the SKILL.md frontmatter ↔ src/ runtime contract checks."""
+
+    def _fake_skill(self, tmp_path: Path, *, writable: bool, category: str = "remediation",
+                    capability: str = "", src_contents: str = "") -> object:
+        skill_dir = tmp_path / "skills" / category / "fake-skill"
+        (skill_dir / "src").mkdir(parents=True, exist_ok=True)
+        (skill_dir / "src" / "handler.py").write_text(src_contents or "# empty\n")
+        (skill_dir / "tests").mkdir(exist_ok=True)
+
+        class _Fake:
+            pass
+
+        fake = _Fake()
+        fake.skill_dir = skill_dir
+        fake.is_write_capable = writable
+        fake.approval_model = "human_required" if writable else "none"
+        fake.side_effects = ("writes-identity",) if writable else ("none",)
+        fake.frontmatter = {"capability": capability} if capability else {}
+        fake.category = category
+        return fake
+
+    def _run_source_guards(self, tmp_path: Path, fake: object) -> list[str]:
+        original_root = SAFE.ROOT
+        SAFE.ROOT = tmp_path
+        try:
+            return SAFE.validate_write_skill_source_guards(fake)
+        finally:
+            SAFE.ROOT = original_root
+
+    def _run_read_only_no_writes(self, tmp_path: Path, fake: object) -> list[str]:
+        original_root = SAFE.ROOT
+        SAFE.ROOT = tmp_path
+        try:
+            return SAFE.validate_read_only_no_cloud_writes(fake)
+        finally:
+            SAFE.ROOT = original_root
+
+    def test_writable_skill_passes_with_dry_run_and_audit(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=True,
+            src_contents=(
+                "def run(dry_run=True):\n"
+                "    audit.put_item(Table='audit-table')\n"
+            ),
+        )
+        assert self._run_source_guards(tmp_path, fake) == []
+
+    def test_writable_skill_missing_dry_run_fails(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=True,
+            src_contents="def run():\n    dynamodb.put_item(Table='x')\n",
+        )
+        errors = self._run_source_guards(tmp_path, fake)
+        assert any("dry-run" in e for e in errors)
+
+    def test_writable_skill_missing_audit_fails(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=True,
+            src_contents="def run(dry_run=True):\n    iam.delete_user()\n",
+        )
+        errors = self._run_source_guards(tmp_path, fake)
+        assert any("audit" in e for e in errors)
+
+    def test_sink_exempted_from_audit_requirement(self, tmp_path: Path):
+        """Sinks are the audit artifact; they don't audit their own writes."""
+        fake = self._fake_skill(
+            tmp_path,
+            writable=True,
+            category="output",
+            capability="write-sink",
+            src_contents="def run():\n    s3.put_object(Body=x)\n",
+        )
+        assert self._run_source_guards(tmp_path, fake) == []
+
+    def test_read_only_skill_never_checked_for_source_guards(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=False,
+            category="detection",
+            src_contents="def detect():\n    pass\n",
+        )
+        assert self._run_source_guards(tmp_path, fake) == []
+
+    def test_read_only_skill_calling_delete_user_fails(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=False,
+            category="detection",
+            src_contents=(
+                "def detect():\n"
+                "    iam.delete_user(UserName='alice')\n"
+            ),
+        )
+        errors = self._run_read_only_no_writes(tmp_path, fake)
+        assert any("cloud-write method" in e and "delete" in e for e in errors)
+
+    def test_read_only_skill_calling_put_object_fails(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=False,
+            category="discovery",
+            src_contents="def scan():\n    s3.put_object(Body=b'x')\n",
+        )
+        errors = self._run_read_only_no_writes(tmp_path, fake)
+        assert any("cloud-write method" in e for e in errors)
+
+    def test_read_only_skill_calling_read_methods_passes(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=False,
+            category="detection",
+            src_contents=(
+                "def detect():\n"
+                "    iam.get_user(UserName='alice')\n"
+                "    iam.list_access_keys(UserName='alice')\n"
+                "    s3.get_object(Bucket='x', Key='y')\n"
+            ),
+        )
+        assert self._run_read_only_no_writes(tmp_path, fake) == []
+
+    def test_writable_skill_skips_read_only_check(self, tmp_path: Path):
+        fake = self._fake_skill(
+            tmp_path,
+            writable=True,
+            src_contents="def run():\n    iam.delete_user()\n",
+        )
+        assert self._run_read_only_no_writes(tmp_path, fake) == []
+
+    def test_write_method_in_string_literal_ignored(self, tmp_path: Path):
+        """A write-method name inside a docstring or log message should not
+        trip the read-only check."""
+        fake = self._fake_skill(
+            tmp_path,
+            writable=False,
+            category="detection",
+            src_contents=(
+                'def detect():\n'
+                '    """This detector does NOT call iam.delete_user itself."""\n'
+                '    msg = "Would call iam.delete_user to fix this"\n'
+                '    log.info("Consider iam.remove_user_from_group")\n'
+            ),
+        )
+        errors = self._run_read_only_no_writes(tmp_path, fake)
+        assert errors == []
+
+
 class TestAssumeRoleBoundaryGuardrail:
     """Unit tests for the sts:AssumeRole boundary-condition check.
 

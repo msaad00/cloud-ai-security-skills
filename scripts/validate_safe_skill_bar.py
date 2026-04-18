@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+from typing import Any
 
 from skill_validation_common import ROOT, SKILLS_ROOT, discover_skill_contracts
 
@@ -65,6 +66,167 @@ def validate_write_skill_dry_run(skill: object) -> list[str]:
         errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must exercise dry-run in tests")
     if approval_model != "human_required":
         errors.append(f"{skill_dir.relative_to(ROOT)}: write-capable skill must require human approval")
+
+    return errors
+
+
+# -- Runtime contract: frontmatter declarations must match src/ behaviour ----
+#
+# The existing validate_write_skill_dry_run check verifies SKILL.md documents
+# dry-run and tests exercise it. These sibling checks verify the src/ CODE
+# actually implements what frontmatter declares. Without them, a skill could
+# declare approval_model: human_required + side_effects: writes-identity in
+# frontmatter while shipping a src/ that skips dry-run or skips the audit
+# write — a silent HITL bypass.
+#
+# Heuristic (grep-based), not AST. Cheap to run, catches the bug class that
+# matters: "the skill's own code stopped implementing what its own frontmatter
+# promises."
+
+_DRY_RUN_MARKERS_IN_SRC = (
+    "dry_run",
+    "--dry-run",
+    "--apply",
+    "DryRun",
+)
+
+_AUDIT_WRITE_MARKERS_IN_SRC = (
+    "put_item",        # DynamoDB
+    "put_object",      # S3
+    "dynamodb",
+    "audit",
+    "AuditWriter",
+    "write_audit",
+    "record_audit",
+)
+
+# boto3 / google-cloud / msgraph method prefixes that mutate state. A read-only
+# skill should never invoke any of these. Subset matches the most common write
+# surfaces; extend when new ones land.
+_CLOUD_WRITE_METHOD_PREFIXES = (
+    ".delete_",       # delete_user / delete_access_key / delete_role etc.
+    ".create_",       # create_user / create_access_key / create_role etc.
+    ".update_",       # update_access_key / update_role etc.
+    ".put_",          # put_role_policy / put_bucket_policy etc.
+    ".attach_",       # attach_role_policy etc.
+    ".detach_",       # detach_user_policy etc.
+    ".remove_",       # remove_user_from_group etc.
+    ".deactivate_",   # deactivate_mfa_device
+    ".revoke_",       # revoke_security_group_ingress
+    ".terminate_",    # terminate_instances
+)
+
+
+def _src_python_files(skill_dir: Any) -> list[Any]:
+    src_dir = skill_dir / "src"
+    if not src_dir.exists():
+        return []
+    return sorted(src_dir.rglob("*.py"))
+
+
+def _blank_quoted(line: str, quote: str) -> str:
+    result: list[str] = []
+    inside = False
+    for char in line:
+        if char == quote:
+            inside = not inside
+            result.append(char)
+            continue
+        result.append(" " if inside else char)
+    return "".join(result)
+
+
+def _strip_strings_and_comments(text: str) -> str:
+    """Blank out #-comments and body of '...' / "..." strings so grep doesn't
+    false-positive on method names that appear in docstrings, log messages, or
+    example prose. Crude but sufficient for the patterns we detect."""
+    out: list[str] = []
+    for line in text.splitlines():
+        if "#" in line:
+            line = line[: line.index("#")]
+        line = _blank_quoted(line, '"')
+        line = _blank_quoted(line, "'")
+        out.append(line)
+    return "\n".join(out)
+
+
+def validate_write_skill_source_guards(skill: object) -> list[str]:
+    """Writable skill's src/ must actually implement the dry-run + audit
+    guardrails its frontmatter promises.
+
+    Scope: **remediation skills only**. Output-sinks (`capability: write-sink`)
+    are writable by design but are themselves the audit artifact that
+    remediation skills feed into — they do not "audit their own writes."
+    """
+    errors: list[str] = []
+    skill_dir = getattr(skill, "skill_dir")
+    is_write_capable = bool(getattr(skill, "is_write_capable"))
+    if not is_write_capable:
+        return errors
+
+    # Exempt sinks: they are the audit destination, not an audit emitter.
+    capability = getattr(skill, "frontmatter", {}).get("capability", "")
+    category = getattr(skill, "category", "")
+    if capability == "write-sink" or category == "output":
+        return errors
+
+    src_files = _src_python_files(skill_dir)
+    if not src_files:
+        errors.append(
+            f"{skill_dir.relative_to(ROOT)}: writable skill has no src/**/*.py files"
+        )
+        return errors
+
+    src_text = "\n".join(path.read_text() for path in src_files)
+
+    if not any(marker in src_text for marker in _DRY_RUN_MARKERS_IN_SRC):
+        errors.append(
+            f"{skill_dir.relative_to(ROOT)}: writable skill src/ must implement a "
+            "dry-run switch (dry_run parameter or --dry-run / --apply flag). "
+            "Frontmatter says writable but code shows no dry-run surface."
+        )
+
+    if not any(marker in src_text for marker in _AUDIT_WRITE_MARKERS_IN_SRC):
+        errors.append(
+            f"{skill_dir.relative_to(ROOT)}: writable skill src/ must implement an "
+            "audit write path (put_item / put_object / audit.record / similar). "
+            "Frontmatter says writable but code shows no audit marker."
+        )
+
+    return errors
+
+
+def validate_read_only_no_cloud_writes(skill: object) -> list[str]:
+    """Read-only skill's src/ must not invoke any cloud-SDK write method.
+
+    Catches the regression where a detection / evaluation / discovery skill
+    starts calling a write method when a read method would do.
+    """
+    errors: list[str] = []
+    skill_dir = getattr(skill, "skill_dir")
+    is_write_capable = bool(getattr(skill, "is_write_capable"))
+    if is_write_capable:
+        return errors
+
+    src_files = _src_python_files(skill_dir)
+    if not src_files:
+        return errors
+
+    for path in src_files:
+        text = path.read_text()
+        stripped = _strip_strings_and_comments(text)
+        for idx, line in enumerate(stripped.splitlines(), start=1):
+            for marker in _CLOUD_WRITE_METHOD_PREFIXES:
+                if marker in line:
+                    rel = path.relative_to(ROOT)
+                    errors.append(
+                        f"{rel}:{idx}: read-only skill appears to call a "
+                        f"cloud-write method (`{marker.strip('.')}...`). "
+                        "Frontmatter declares read-only; either remove the call "
+                        "or move the skill to remediation/ and update frontmatter."
+                    )
+                    break  # one error per line is enough
+
 
     return errors
 
@@ -187,7 +349,9 @@ def main() -> int:
     errors: list[str] = []
     for skill in discover_skill_contracts():
         errors.extend(validate_read_only_no_subprocess(skill))
+        errors.extend(validate_read_only_no_cloud_writes(skill))
         errors.extend(validate_write_skill_dry_run(skill))
+        errors.extend(validate_write_skill_source_guards(skill))
     errors.extend(validate_wildcards())
     errors.extend(validate_assume_role_boundaries())
 
