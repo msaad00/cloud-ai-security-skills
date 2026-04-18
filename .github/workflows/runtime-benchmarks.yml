@@ -11,7 +11,7 @@ on:
       - "skills/_shared/**"
       - "skills/detection/detect-lateral-movement/**"
       - "skills/ingestion/ingest-cloudtrail-ocsf/**"
-      - "skills/sink/sink-snowflake-jsonl/**"
+      - "skills/output/sink-snowflake-jsonl/**"
   workflow_dispatch:
   schedule:
     - cron: "0 8 * * *"

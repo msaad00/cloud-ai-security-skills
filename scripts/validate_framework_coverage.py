@@ -6,7 +6,7 @@ from typing import TypedDict
 
 from skill_validation_common import ROOT, discover_skill_contracts
 
-ALLOWED_LAYERS = {"ingestion", "discovery", "detection", "evaluation", "view", "remediation"}
+ALLOWED_LAYERS = {"ingestion", "discovery", "detection", "evaluation", "view", "remediation", "output"}
 ALLOWED_STATUSES = {"gap", "mapped", "implemented", "tested", "validated"}
 ALLOWED_EXECUTION_MODES = {"cli", "ci", "mcp", "persistent"}
 

@@ -113,12 +113,12 @@ It does not create, alter, or merge schema.
 ```bash
 # Dry-run by default
 python skills/detection/detect-lateral-movement/src/detect.py < events.ocsf.jsonl \
-  | python skills/remediation/sink-clickhouse-jsonl/src/sink.py \
+  | python skills/output/sink-clickhouse-jsonl/src/sink.py \
       --table security.findings_sink
 
 # Explicit apply for direct operator use
 python skills/discovery/discover-control-evidence/src/discover.py \
-  | python skills/remediation/sink-clickhouse-jsonl/src/sink.py \
+  | python skills/output/sink-clickhouse-jsonl/src/sink.py \
       --table security.evidence_sink \
       --apply
 ```

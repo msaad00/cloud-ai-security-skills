@@ -122,7 +122,7 @@ sit at the edges around the same bundle contract.
 | Layer | Role | Current state |
 |---|---|---|
 | L0 | external sources and vendor APIs | outside the repo boundary |
-| L7 | sinks and persistence edges | shipped in `skills/remediation/sink-*`; future re-home to top-level `sinks/` remains optional |
+| L7 | sinks and persistence edges | shipped as the `skills/output/` layer (formerly co-located under `skills/remediation/`) |
 | L8 | query packs and warehouse-native analytics | partial shipping |
 | L9 | agent/runtime surface (`mcp-server`, runners, wrappers) | shipped as thin wrappers around the same skill contract |
 
@@ -277,11 +277,8 @@ cloud-ai-security-skills/
 │   ├── detection/            # L3
 │   ├── evaluation/           # L4
 │   ├── view/                 # L6
-│   └── remediation/          # L5
-├── sinks/                    # optional future L7 re-home from skills/remediation/sink-*
-│   ├── sink-snowflake-jsonl/
-│   ├── sink-clickhouse-jsonl/
-│   └── sink-s3-jsonl/
+│   ├── remediation/          # L5
+│   └── output/               # L7 — sink-* skills that persist findings/evidence/audit
 ├── runners/                  # Mode B drivers
 │   ├── runner-s3-to-snowflake/
 │   └── runner-eventbridge-to-security-lake/
@@ -303,9 +300,11 @@ cloud-ai-security-skills/
 
 **Rationale for separating `sinks/`, `runners/`, `mcp-server/`, and `packs/` from `skills/`:** the "skills are pure, edges have side effects" mental model becomes visible in the directory tree. A reviewer can tell at a glance whether a change touches pure code or effectful code. This is cheap documentation that pays for itself on every PR.
 
-Today, sinks still live under `skills/remediation/sink-*` for compatibility with
-the existing skill-discovery contract. The conceptual layer is already real even
-if the final directory re-home is deferred.
+Sinks live under `skills/output/` as a first-class layer alongside ingestion,
+detection, evaluation, view, and remediation. They are intentionally separate
+from `skills/remediation/`: sinks persist records, remediations take mutating
+actions against identity or cloud-config. Keeping the layers distinct keeps the
+"skills are pure, edges have side effects" mental model honest in the tree.
 
 The layered skill directories are now canonical. `skills/detection-engineering/`
 remains only as the shared OCSF contract and frozen-fixture namespace used by

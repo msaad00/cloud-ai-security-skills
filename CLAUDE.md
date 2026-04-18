@@ -57,6 +57,11 @@ skills/
 ├── remediation/                   # active fix workflows, gated and audited
 │   └── iam-departures-aws/
 │
+├── output/                        # append-only persistence sinks
+│   ├── sink-s3-jsonl/
+│   ├── sink-snowflake-jsonl/
+│   └── sink-clickhouse-jsonl/
+│
 └── detection-engineering/         # shared OCSF contract + frozen fixtures
     ├── OCSF_CONTRACT.md
     └── golden/
