@@ -9,9 +9,85 @@ metadata inside their own docs.
 
 The format is loosely based on Keep a Changelog.
 
-## Unreleased
+## [0.6.0] — 2026-04-18 — Closed-loop hardening
+
+First release that claims both **SIEM-ready producer** AND **closed-loop
+remediation**, with the guardrails to back the claims.
+
+Skills count: **46** (15 ingest, 4 discover, 10 detect, 7 evaluate, 2 remediate,
+2 view, 3 output, 3 sources).
 
 ### Added
+
+- **First end-to-end detect → act → audit → re-verify loop shipped** —
+  [`detect-credential-stuffing-okta`](skills/detection/detect-credential-stuffing-okta/)
+  (T1110 / T1110.003, [#260](https://github.com/msaad00/cloud-ai-security-skills/pull/260))
+  paired with [`remediate-okta-session-kill`](skills/remediation/remediate-okta-session-kill/)
+  ([#264](https://github.com/msaad00/cloud-ai-security-skills/pull/264)).
+  Covers both detection families — the new credential-stuffing detector and
+  the existing MFA-fatigue detector — with a single HITL-gated containment
+  skill (revoke sessions + OAuth refresh tokens) that honors a hard deny-list
+  of protected principals, requires a declared incident window before
+  `--apply` fires, and dual-audits every step (DynamoDB + KMS-encrypted S3)
+  before AND after the Okta API call.
+- **OCSF 1.8 schema validator at the wire** ([#243](https://github.com/msaad00/cloud-ai-security-skills/issues/243),
+  [#267](https://github.com/msaad00/cloud-ai-security-skills/pull/267)) —
+  [`skills/_shared/ocsf_validator.py`](skills/_shared/ocsf_validator.py) plus
+  a CI hook ([`scripts/validate_golden_ocsf.py`](scripts/validate_golden_ocsf.py))
+  that replays every golden fixture through the validator on every PR.
+  Catches required-field drift, cross-field invariant violations
+  (`type_uid == class_uid * 100 + activity_id`, `category_uid` matches
+  class), enum-range bugs, metadata pinning drift, and the "forgot to multiply
+  epoch seconds by 1000" bug class. Two pre-existing drifts caught and
+  fixed on first run.
+- **SKILL.md frontmatter ↔ src/ runtime contract check** ([#257 part A](https://github.com/msaad00/cloud-ai-security-skills/pull/268)) —
+  `validate_safe_skill_bar.py` now verifies that a writable skill's `src/`
+  actually implements the dry-run + audit guardrails its frontmatter promises,
+  and that a read-only skill's `src/` never invokes a cloud-SDK write method.
+  Catches the silent-HITL-bypass bug class at lint time.
+- **Generalized remediation re-verify contract** ([#257 part B](https://github.com/msaad00/cloud-ai-security-skills/pull/269)) —
+  [`skills/_shared/remediation_verifier.py`](skills/_shared/remediation_verifier.py)
+  + [`docs/REMEDIATION_VERIFICATION.md`](docs/REMEDIATION_VERIFICATION.md).
+  Three outcomes: VERIFIED / DRIFT / UNREACHABLE. A DRIFT outcome emits both a
+  native audit record AND an OCSF 2004 Detection Finding with
+  `finding_types: ["remediation-drift"]` so the SIEM alerting that already
+  exists for the original attack pattern picks up drift automatically.
+- **HITL policy matrix codified** ([#259](https://github.com/msaad00/cloud-ai-security-skills/issues/259),
+  [#265](https://github.com/msaad00/cloud-ai-security-skills/pull/265)) —
+  [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md) lists the `approval_model` per
+  finding class × reversibility × blast radius. Privilege-escalation-adjacent
+  actions (cross-account trust edits, MCP tool quarantine, audit-table
+  mutations) require `min_approvers: 2`. The HITL gate is documented to sit
+  OUTSIDE the agent loop so prompt injection cannot spoof approval.
+- **OCSF applicability framing** ([#261](https://github.com/msaad00/cloud-ai-security-skills/issues/261),
+  [#266](https://github.com/msaad00/cloud-ai-security-skills/pull/266)) — docs
+  now state the honest stance: OCSF is the SIEM interop wire format for
+  **ingest** and **detect**; **native / CycloneDX / bridge** are correct for
+  **discover**, **remediate**, and **sinks**. ARCHITECTURE.md, README.md,
+  skills/README.md, and CLAUDE.md all carry the per-layer applicability table.
+- first AI-native detector family slice: `detect-prompt-injection-mcp-proxy`
+  for suspicious prompt-injection and instruction-smuggling language in MCP
+  tool descriptions
+
+### Hardened
+
+- **Dropped redundant `iam:*` allows on iam-departures-aws parser + worker
+  roles** ([#244](https://github.com/msaad00/cloud-ai-security-skills/issues/244),
+  [#262](https://github.com/msaad00/cloud-ai-security-skills/pull/262)).
+  Both Lambdas call IAM exclusively through the cross-account assumed role;
+  direct allows on their own execution roles were never used. Removed and
+  replaced with a defense-in-depth `Deny iam:* Resource: *` so any future edit
+  reintroducing a direct grant is still caught by the Deny. Same change
+  applied across JSON + CloudFormation + Terraform.
+- **CI lint — every `sts:AssumeRole` Allow must carry an org/account/tag
+  boundary condition** ([#256 part 1](https://github.com/msaad00/cloud-ai-security-skills/issues/256),
+  [#263](https://github.com/msaad00/cloud-ai-security-skills/pull/263)).
+  `validate_safe_skill_bar.py` fails the build on any AssumeRole Allow without
+  `aws:PrincipalOrgID` / `aws:SourceAccount` / `aws:PrincipalTag` / `aws:SourceOrgID`
+  (or an explicit `ASSUME_ROLE_CONDITION_OK` justification, symmetric to
+  `WILDCARD_OK`). Trust-policy service-principal statements are exempt.
+
+### Added (earlier)
 
 - first AI-native detector family slice: `detect-prompt-injection-mcp-proxy`
   for suspicious prompt-injection and instruction-smuggling language in MCP
