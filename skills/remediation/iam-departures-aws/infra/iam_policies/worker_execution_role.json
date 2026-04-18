@@ -11,52 +11,15 @@
         "StringEquals": {
           "aws:PrincipalOrgID": "${AWS_ORG_ID}"
         }
-      }
+      },
+      "_comment": "Worker performs ALL IAM actions through credentials returned by this STS AssumeRole. The cross-account role (cross_account_remediation_role.json) carries the enumerated IAM write allow-list plus the defense-in-depth iam:* Deny on root, break-glass-*, emergency-*, and :role/*. No direct iam:* grant on this role is needed; the prior IAMRemediationActions_WILDCARD_OK block was redundant and has been removed for least privilege."
     },
     {
-      "Sid": "IAMRemediationActions_WILDCARD_OK",
-      "Effect": "Allow",
-      "Action": [
-        "iam:GetUser",
-        "iam:DeleteUser",
-        "iam:ListAccessKeys",
-        "iam:UpdateAccessKey",
-        "iam:DeleteAccessKey",
-        "iam:DeleteLoginProfile",
-        "iam:ListGroupsForUser",
-        "iam:RemoveUserFromGroup",
-        "iam:ListAttachedUserPolicies",
-        "iam:DetachUserPolicy",
-        "iam:ListUserPolicies",
-        "iam:DeleteUserPolicy",
-        "iam:ListMFADevices",
-        "iam:DeactivateMFADevice",
-        "iam:DeleteVirtualMFADevice",
-        "iam:ListSigningCertificates",
-        "iam:DeleteSigningCertificate",
-        "iam:ListSSHPublicKeys",
-        "iam:DeleteSSHPublicKey",
-        "iam:ListServiceSpecificCredentials",
-        "iam:DeleteServiceSpecificCredential",
-        "iam:TagUser"
-      ],
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:PrincipalOrgID": "${AWS_ORG_ID}"
-        }
-      }
-    },
-    {
-      "Sid": "DenyRemediationOfProtectedUsers",
+      "Sid": "DenyAllDirectIAMActions_WILDCARD_OK",
       "Effect": "Deny",
       "Action": "iam:*",
-      "Resource": [
-        "arn:aws:iam::*:user/root",
-        "arn:aws:iam::*:user/break-glass-*",
-        "arn:aws:iam::*:user/emergency-*",
-        "arn:aws:iam::*:role/*"
-      ]
+      "Resource": "*",
+      "_comment": "WILDCARD_OK: Deny on iam:* for Resource:* is defense in depth. Even if a future edit reintroduces a direct IAM grant on this role, this Deny forces the caller back through the cross-account path where the protected-principal deny list lives."
     },
     {
       "Sid": "DenyDirectStepFunctionExecution_WILDCARD_OK",

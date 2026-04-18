@@ -44,6 +44,7 @@ Deterministic OCSF-to-finding rules.
 |---|---|
 | [`detect-lateral-movement`](detection/detect-lateral-movement/) | lateral movement / cross-cloud identity pivot + east-west traffic |
 | [`detect-okta-mfa-fatigue`](detection/detect-okta-mfa-fatigue/) | Okta Verify push bombing / MFA fatigue |
+| [`detect-credential-stuffing-okta`](detection/detect-credential-stuffing-okta/) | Okta credential stuffing / password spraying burst followed by successful sign-in (T1110.003) |
 | [`detect-entra-credential-addition`](detection/detect-entra-credential-addition/) | successful Entra application or service-principal credential additions |
 | [`detect-entra-role-grant-escalation`](detection/detect-entra-role-grant-escalation/) | successful Entra app-role grants to service principals |
 | [`detect-google-workspace-suspicious-login`](detection/detect-google-workspace-suspicious-login/) | provider-marked suspicious Workspace login or repeated failures followed by success |
@@ -95,6 +96,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 | Skill | Scope |
 |---|---|
 | [`iam-departures-aws`](remediation/iam-departures-aws/) | AWS IAM cleanup for departed employees (per-cloud split for Azure/GCP/Snowflake/Databricks planned; library modules in `src/lambda_worker/clouds/`) |
+| [`remediate-okta-session-kill`](remediation/remediate-okta-session-kill/) | Okta containment — revoke sessions + OAuth tokens after detect-okta-mfa-fatigue or detect-credential-stuffing-okta; dual-audit, deny-list, declared-incident gate |
 
 ## output/
 

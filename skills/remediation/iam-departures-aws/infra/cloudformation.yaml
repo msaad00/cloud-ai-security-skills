@@ -182,14 +182,15 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:PrincipalOrgID: !Ref OrgId
-              - Sid: ValidateIAMUserExists
-                Effect: Allow
-                Action:
-                  - iam:GetUser
+              # Parser calls iam:GetUser ONLY through credentials returned by
+              # the AssumeRoleInTargetAccounts STS call above. The cross-account
+              # role carries the enumerated IAM read permissions. No direct
+              # iam:* grant on this role.
+              # WILDCARD_OK: Deny on iam:* for Resource:* is defense in depth.
+              - Sid: DenyAllDirectIAMActionsWILDCARDOK
+                Effect: Deny
+                Action: iam:*
                 Resource: '*'
-                Condition:
-                  StringEquals:
-                    aws:PrincipalOrgID: !Ref OrgId
               - Sid: KMSDecrypt
                 Effect: Allow
                 Action:
@@ -233,43 +234,16 @@ Resources:
                 Condition:
                   StringEquals:
                     aws:PrincipalOrgID: !Ref OrgId
-              - Sid: IAMRemediationActions
-                Effect: Allow
-                Action:
-                  - iam:GetUser
-                  - iam:DeleteUser
-                  - iam:ListAccessKeys
-                  - iam:UpdateAccessKey
-                  - iam:DeleteAccessKey
-                  - iam:DeleteLoginProfile
-                  - iam:ListGroupsForUser
-                  - iam:RemoveUserFromGroup
-                  - iam:ListAttachedUserPolicies
-                  - iam:DetachUserPolicy
-                  - iam:ListUserPolicies
-                  - iam:DeleteUserPolicy
-                  - iam:ListMFADevices
-                  - iam:DeactivateMFADevice
-                  - iam:DeleteVirtualMFADevice
-                  - iam:ListSigningCertificates
-                  - iam:DeleteSigningCertificate
-                  - iam:ListSSHPublicKeys
-                  - iam:DeleteSSHPublicKey
-                  - iam:ListServiceSpecificCredentials
-                  - iam:DeleteServiceSpecificCredential
-                  - iam:TagUser
-                Resource: '*'
-                Condition:
-                  StringEquals:
-                    aws:PrincipalOrgID: !Ref OrgId
-              - Sid: DenyProtectedUsers
+              # Worker performs ALL IAM actions through credentials returned
+              # by the AssumeRoleInTargetAccounts STS call above. The cross-
+              # account role carries the enumerated IAM write allow-list plus
+              # the defense-in-depth iam:* Deny on root/break-glass/emergency/
+              # :role/*. No direct iam:* grant on this role is needed.
+              # WILDCARD_OK: Deny on iam:* for Resource:* is defense in depth.
+              - Sid: DenyAllDirectIAMActionsWILDCARDOK
                 Effect: Deny
                 Action: iam:*
-                Resource:
-                  - 'arn:aws:iam::*:user/root'
-                  - 'arn:aws:iam::*:user/break-glass-*'
-                  - 'arn:aws:iam::*:user/emergency-*'
-                  - 'arn:aws:iam::*:role/*'
+                Resource: '*'
               - Sid: DenyDirectStepFunctionExecutionWILDCARDOK
                 Effect: Deny
                 Action: states:StartExecution

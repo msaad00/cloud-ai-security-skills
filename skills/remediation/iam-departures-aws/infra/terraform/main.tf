@@ -278,14 +278,14 @@ resource "aws_iam_role_policy" "parser" {
         }
       },
       {
-        # WILDCARD_OK: iam:GetUser does not support resource-level scoping.
-        Sid      = "ValidateIAMUserExists"
-        Effect   = "Allow"
-        Action   = ["iam:GetUser"]
+        # Parser calls iam:GetUser ONLY through credentials returned by the
+        # AssumeRoleInTargetAccounts STS call above. The cross-account role
+        # carries the enumerated IAM read permissions. No direct iam:* grant.
+        # WILDCARD_OK: explicit deny on direct IAM is intentionally global.
+        Sid      = "DenyAllDirectIAMActions"
+        Effect   = "Deny"
+        Action   = "iam:*"
         Resource = "*"
-        Condition = {
-          StringEquals = { "aws:PrincipalOrgID" = var.org_id }
-        }
       },
       {
         Sid      = "KMSDecrypt"
@@ -340,37 +340,17 @@ resource "aws_iam_role_policy" "worker" {
         }
       },
       {
-        # WILDCARD_OK: the user-remediation IAM APIs in this block do not support tighter resource scoping.
-        Sid    = "IAMRemediationActions"
-        Effect = "Allow"
-        Action = [
-          "iam:GetUser", "iam:DeleteUser",
-          "iam:ListAccessKeys", "iam:UpdateAccessKey", "iam:DeleteAccessKey",
-          "iam:DeleteLoginProfile",
-          "iam:ListGroupsForUser", "iam:RemoveUserFromGroup",
-          "iam:ListAttachedUserPolicies", "iam:DetachUserPolicy",
-          "iam:ListUserPolicies", "iam:DeleteUserPolicy",
-          "iam:ListMFADevices", "iam:DeactivateMFADevice", "iam:DeleteVirtualMFADevice",
-          "iam:ListSigningCertificates", "iam:DeleteSigningCertificate",
-          "iam:ListSSHPublicKeys", "iam:DeleteSSHPublicKey",
-          "iam:ListServiceSpecificCredentials", "iam:DeleteServiceSpecificCredential",
-          "iam:TagUser"
-        ]
+        # Worker performs ALL IAM actions through credentials returned by the
+        # AssumeRoleInTargetAccounts STS call above. The cross-account role
+        # carries the enumerated IAM write allow-list plus the defense-in-depth
+        # iam:* Deny on root/break-glass/emergency/:role/*. No direct iam:*
+        # grant on this role is needed; removing the former IAMRemediationActions
+        # block tightens least privilege.
+        # WILDCARD_OK: explicit deny on direct IAM is intentionally global.
+        Sid      = "DenyAllDirectIAMActions"
+        Effect   = "Deny"
+        Action   = "iam:*"
         Resource = "*"
-        Condition = {
-          StringEquals = { "aws:PrincipalOrgID" = var.org_id }
-        }
-      },
-      {
-        Sid    = "DenyProtectedUsers"
-        Effect = "Deny"
-        Action = "iam:*"
-        Resource = [
-          "arn:aws:iam::*:user/root",
-          "arn:aws:iam::*:user/break-glass-*",
-          "arn:aws:iam::*:user/emergency-*",
-          "arn:aws:iam::*:role/*"
-        ]
       },
       {
         # WILDCARD_OK: explicit deny on direct Step Functions execution is intentionally global.
