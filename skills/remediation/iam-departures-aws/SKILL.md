@@ -1,24 +1,19 @@
 ---
 name: iam-departures-aws
 description: >-
-  Auto-remediate AWS IAM users belonging to departed employees. Reconciles HR
-  termination data (Workday via Snowflake, Databricks, ClickHouse, or direct API)
-  against AWS IAM inside an AWS Organization, exports change-detected manifests
-  to S3, and triggers a Step Function pipeline that safely deletes IAM users with
-  all dependencies through a 13-step cleanup. Every action is grace-period-gated
-  (7 days default), rehire-aware, deny-listed for root / break-glass / emergency
-  users, and dual-audited (S3 with KMS, plus DynamoDB hot lookup and warehouse
-  ingest-back). Use when the user mentions AWS offboarding, AWS IAM cleanup for
-  departed employees, AWS termination remediation, or stale AWS credential
-  removal. Do NOT use for Azure Entra, GCP IAM, Snowflake user, or Databricks
-  user remediation — the library modules under src/lambda_worker/clouds/ exist
-  but per-cloud orchestration (Event Grid + Logic Apps for Azure; Eventarc +
-  Cloud Workflows for GCP; SaaS admin-API workers for Snowflake and Databricks)
-  is not yet shipped in this skill. Do NOT use this skill to bypass the grace
-  period, call the Step Function directly (always go through EventBridge),
-  disable deny policies, or write to the audit table by hand — those are
-  closed-loop guarantees that must not be broken. Do NOT use for access
-  provisioning; this skill only deactivates and deletes.
+  Auto-remediate AWS IAM users belonging to departed employees. Reconciles
+  HR termination data (Workday, Snowflake, Databricks, ClickHouse) against
+  AWS IAM inside an AWS Organization, exports manifests to S3, and triggers
+  a Step Function that deletes IAM users and dependencies in a safe order.
+  Every action is grace-period-gated (7 days default), rehire-aware,
+  deny-listed for root / break-glass / emergency users, and dual-audited
+  (S3+KMS, DynamoDB, warehouse ingest-back). See `references/pipeline.md`
+  for the 13-step cleanup. Use when the user mentions AWS offboarding, AWS
+  IAM cleanup for departed employees, or stale AWS credential removal. Do
+  NOT use for Azure Entra, GCP IAM, Snowflake, or Databricks remediation —
+  those are separate skills (see #238, #239). Do NOT bypass the grace
+  period, call the Step Function directly, disable deny policies, or edit
+  the audit table by hand. Do NOT use for access provisioning.
 license: Apache-2.0
 approval_model: human_required
 execution_modes: jit, persistent
