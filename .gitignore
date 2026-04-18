@@ -51,3 +51,4 @@ terraform.tfvars
 # Build artifacts
 *.zip
 *.tar.gz
+.claude/
