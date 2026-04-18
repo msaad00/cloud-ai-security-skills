@@ -114,7 +114,7 @@ flowchart TD
 
 ## Security Guardrails
 
-- **Dry-run first**: use the parser and cross-cloud worker dry-run paths before any real execution. Planning, examples, and validation should never start with a destructive path.
+- **Dry-run first**: use the parser Lambda and AWS worker Lambda dry-run paths before any real execution. Planning, examples, and validation should never start with a destructive path.
 - **Deny policies**: Root, `break-glass-*`, and `emergency-*` accounts are protected by explicit IAM deny — the pipeline cannot touch them.
 - **Grace period**: 7-day default window before remediation (configurable). HR corrections within this window prevent accidental deletion.
 - **Rehire safety**: 8 scenarios handled. The reconciler/export path applies the primary rehire-aware `should_remediate()` filter before writing the S3 manifest; the parser Lambda rechecks before worker execution.
