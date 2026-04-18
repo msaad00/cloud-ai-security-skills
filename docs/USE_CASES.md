@@ -4,7 +4,7 @@ This guide answers the practical question first: **what are you trying to do, an
 
 Use it when the README feels too high-level and `skills/README.md` feels too catalog-like.
 
-![Start-here guide showing the shortest path from operator goal to the right layer: ingest, discover, detect, evaluate, sink, or remediate.](images/start-here-guide.svg)
+![Every shipped skill in the repo grouped by layer, with vendor marks and per-layer counts.](images/skill-map.svg)
 
 ## Start by goal
 

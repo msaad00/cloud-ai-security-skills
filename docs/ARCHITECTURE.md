@@ -2,7 +2,7 @@
 
 This document is the load-bearing design contract for `cloud-ai-security-skills`. Every future PR is reviewed against it. If you need to deviate, update this doc *in the same PR* — the contract drifts by design, never by accident.
 
-This file is the design contract. It explains how the repo is supposed to work and what future changes must preserve. [`DIAGRAMS.md`](./DIAGRAMS.md) is the visual companion: it indexes the small set of readable SVGs used in rendered docs.
+This file is the design contract. It explains how the repo is supposed to work and what future changes must preserve. The visual set lives in [`images/`](images/) and is indexed inline in [`../README.md`](../README.md).
 
 ## Quick read
 
@@ -25,7 +25,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 - **Canonical schema contract** — see [`./CANONICAL_SCHEMA.md`](./CANONICAL_SCHEMA.md)
 - **Vendor and OCSF normalization reference** — see [`./NORMALIZATION_REFERENCE.md`](./NORMALIZATION_REFERENCE.md)
 - **Raw → canonical → native / OCSF / bridge flow** — see [`./DATA_FLOW.md`](./DATA_FLOW.md)
-- **Visual guide** — see [`./DIAGRAMS.md`](./DIAGRAMS.md) for the architecture and data-flow diagrams in both markdown-native and SVG-friendly form
+- **Visual guide** — see [`../README.md`](../README.md) for the six-diagram visual set (hero, repo architecture, skill map, agent integrations, shipped flows, IAM departures)
 
 ## 1. Purpose and scope
 
@@ -136,7 +136,7 @@ For the detailed contract, see:
 ### How to read this doc
 
 - `ARCHITECTURE.md` is the design contract and review baseline.
-- `DIAGRAMS.md` is the visual index.
+- The visual set lives in `images/` and is indexed in the top-level `README.md`.
 - the SVGs should simplify the design, not replace it
 - if a diagram and this doc disagree, this doc wins until both are updated in the same PR
 

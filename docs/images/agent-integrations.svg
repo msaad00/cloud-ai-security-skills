@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="660" viewBox="0 0 1400 660" role="img" aria-labelledby="title desc">
+  <title id="title">Agent and runtime integrations</title>
+  <desc id="desc">Two parallel paths into the same shared skill bundle. MCP clients — Claude Code, OpenAI Codex, Cursor, Windsurf, Cortex Code CLI — drop straight down into the repo MCP server over stdio. Direct surfaces — CLI, CI, and persistent AWS, GCP, and Azure cloud runners — drop straight down into the shared skill bundle without going through the MCP server. Both rails meet at the shared skill bundle (SKILL.md, src/, tests/, REFERENCES.md). Outputs are native JSONL, OCSF 1.8 (events and Detection Finding 2004), bridge, SARIF, Mermaid attack flow, AI BOM, and audited writes.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#060b17"/>
+      <stop offset="100%" stop-color="#0a1325"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-opacity="0.22" stroke-width="1"/>
+    </pattern>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c4b5fd"/>
+    </marker>
+    <marker id="arrowCyan" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7dd3fc"/>
+    </marker>
+    <marker id="arrowPink" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f0abfc"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+    </marker>
+
+    <symbol id="aws" viewBox="0 0 24 24"><path fill="#fbbf24" d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.063.056.127.056.183 0 .08-.048.16-.152.24l-.503.335a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.239-.112a2.47 2.47 0 0 1-.287-.375 6.18 6.18 0 0 1-.248-.471c-.622.734-1.405 1.101-2.347 1.101-.67 0-1.205-.191-1.596-.574-.391-.384-.59-.894-.59-1.533 0-.678.239-1.23.726-1.644.487-.415 1.133-.623 1.955-.623.272 0 .551.024.846.064.296.04.6.104.918.176v-.583c0-.607-.127-1.03-.375-1.277-.255-.248-.686-.367-1.3-.367-.28 0-.568.031-.863.103-.295.072-.583.16-.862.272a2.287 2.287 0 0 1-.28.104.488.488 0 0 1-.127.023c-.112 0-.168-.08-.168-.247v-.391c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.167c.279-.144.614-.264 1.005-.36a4.84 4.84 0 0 1 1.246-.151c.95 0 1.644.216 2.091.647.439.43.662 1.085.662 1.963v2.586zm-3.24 1.214c.263 0 .534-.048.822-.144.287-.096.543-.271.758-.51.128-.152.224-.32.272-.512.047-.191.08-.423.08-.694v-.335a6.66 6.66 0 0 0-.735-.136 6.02 6.02 0 0 0-.75-.048c-.535 0-.926.104-1.19.32-.263.215-.39.518-.39.917 0 .375.095.655.295.846.191.2.47.296.838.296zM21.698 16.207c-2.626 1.94-6.442 2.969-9.722 2.969-4.598 0-8.74-1.7-11.87-4.526-.247-.223-.024-.527.272-.351 3.384 1.963 7.559 3.153 11.877 3.153 2.914 0 6.114-.607 9.06-1.852.439-.2.814.287.383.607zM22.792 14.961c-.336-.43-2.22-.207-3.074-.103-.255.032-.295-.192-.063-.36 1.5-1.053 3.967-.75 4.254-.399.287.36-.08 2.826-1.485 4.007-.215.184-.423.088-.327-.151.32-.79 1.03-2.57.695-2.994z"/></symbol>
+    <symbol id="gcp" viewBox="0 0 24 24"><path fill="#60a5fa" d="M12.19 2.38a9.344 9.344 0 0 0-9.234 6.893c.053-.02-.055.013 0 0-3.875 2.551-3.922 8.11-.247 10.941l.006-.007-.007.03a6.717 6.717 0 0 0 4.077 1.356h5.173l.03.03h5.192c6.687.053 9.376-8.605 3.835-12.35a9.365 9.365 0 0 0-2.821-4.552l-.043.043.006-.05A9.344 9.344 0 0 0 12.19 2.38zm-.358 4.146c1.244-.04 2.518.368 3.486 1.15a5.186 5.186 0 0 1 1.862 4.078v.518c3.53-.07 3.53 5.262 0 5.193h-5.193l-.008.009v-.04H6.785a2.59 2.59 0 0 1-1.067-.23h.001a2.597 2.597 0 1 1 3.437-3.437l3.013-3.012A6.747 6.747 0 0 0 8.11 8.24c.018-.01.04-.026.054-.023a5.186 5.186 0 0 1 3.67-1.69z"/></symbol>
+    <symbol id="azure" viewBox="0 0 24 24"><path fill="#38bdf8" d="M22.379 23.343a1.62 1.62 0 0 0 1.536-2.14v.002L17.35 1.76A1.62 1.62 0 0 0 15.816.657H8.184A1.62 1.62 0 0 0 6.65 1.76L.086 21.204a1.62 1.62 0 0 0 1.536 2.139h4.741a1.62 1.62 0 0 0 1.535-1.103l.977-2.892 4.947 3.675c.28.208.618.32.966.32m-3.084-12.531 3.624 10.739a.54.54 0 0 1-.51.713v-.001h-.03a.54.54 0 0 1-.322-.106l-9.287-6.9h4.853m6.313 7.006c.116-.326.13-.694.007-1.058L9.79 1.76a1.722 1.722 0 0 0-.007-.02h6.034a.54.54 0 0 1 .512.366l6.562 19.445a.54.54 0 0 1-.338.684"/></symbol>
+  </defs>
+
+  <rect width="1400" height="660" fill="url(#bg)"/>
+  <rect width="1400" height="660" fill="url(#grid)"/>
+
+  <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
+    <text x="72" y="72" fill="#f8fafc" font-size="30" font-weight="800">Agent and runtime integrations</text>
+    <text x="72" y="102" fill="#94a3b8" font-size="15">Two parallel rails, one shared skill bundle. Agents go through the MCP server; CLI, CI, and runners call the bundle directly.</text>
+
+    <!-- ===== TIER 1 — ROW A: MCP CLIENTS (5 cards in one container) ===== -->
+    <g transform="translate(72,132)">
+      <rect x="0" y="0" width="836" height="140" rx="18" fill="#17102e" stroke="#a78bfa" stroke-width="2"/>
+      <text x="20" y="28" fill="#c4b5fd" font-size="11" font-weight="800" letter-spacing="1.6">MCP CLIENTS · agents over stdio</text>
+      <g font-size="13" font-weight="800" fill="#f3e8ff">
+        <g>
+          <rect x="20" y="50" width="154" height="70" rx="10" fill="#241746" stroke="#a78bfa"/>
+          <text x="97" y="80" text-anchor="middle" font-size="14">Claude Code</text>
+          <text x="97" y="102" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">Anthropic</text>
+        </g>
+        <g transform="translate(182,0)">
+          <rect x="20" y="50" width="154" height="70" rx="10" fill="#241746" stroke="#a78bfa"/>
+          <text x="97" y="80" text-anchor="middle" font-size="14">Codex</text>
+          <text x="97" y="102" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">OpenAI CLI</text>
+        </g>
+        <g transform="translate(364,0)">
+          <rect x="20" y="50" width="154" height="70" rx="10" fill="#241746" stroke="#a78bfa"/>
+          <text x="97" y="80" text-anchor="middle" font-size="14">Cursor</text>
+          <text x="97" y="102" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">IDE</text>
+        </g>
+        <g transform="translate(546,0)">
+          <rect x="20" y="50" width="126" height="70" rx="10" fill="#241746" stroke="#a78bfa"/>
+          <text x="83" y="80" text-anchor="middle" font-size="14">Windsurf</text>
+          <text x="83" y="102" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">IDE</text>
+        </g>
+        <g transform="translate(700,0)">
+          <rect x="20" y="50" width="96" height="70" rx="10" fill="#241746" stroke="#a78bfa"/>
+          <text x="68" y="76" text-anchor="middle" font-size="12">Cortex</text>
+          <text x="68" y="92" text-anchor="middle" font-size="12">Code CLI</text>
+          <text x="68" y="110" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="600">Snowflake</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- ===== TIER 1 — ROW A: DIRECT SURFACES (right side) ===== -->
+    <g transform="translate(928,132)">
+      <rect x="0" y="0" width="400" height="140" rx="18" fill="#0b2238" stroke="#7dd3fc" stroke-width="2"/>
+      <text x="20" y="28" fill="#7dd3fc" font-size="11" font-weight="800" letter-spacing="1.6">DIRECT SURFACES</text>
+      <g font-size="13" font-weight="800" fill="#e0f2fe">
+        <g>
+          <rect x="20" y="50" width="110" height="70" rx="10" fill="#10233f" stroke="#7dd3fc"/>
+          <text x="75" y="80" text-anchor="middle" font-size="14">CLI</text>
+          <text x="75" y="102" text-anchor="middle" fill="#bae6fd" font-size="11" font-weight="600">Unix pipes</text>
+        </g>
+        <g transform="translate(120,0)">
+          <rect x="20" y="50" width="110" height="70" rx="10" fill="#10233f" stroke="#7dd3fc"/>
+          <text x="75" y="80" text-anchor="middle" font-size="14">CI</text>
+          <text x="75" y="102" text-anchor="middle" fill="#bae6fd" font-size="11" font-weight="600">GitHub · SARIF</text>
+        </g>
+        <g transform="translate(240,0)">
+          <rect x="20" y="50" width="120" height="70" rx="10" fill="#10233f" stroke="#7dd3fc"/>
+          <use href="#aws" x="44" y="58" width="14" height="14"/>
+          <use href="#gcp" x="62" y="58" width="14" height="14"/>
+          <use href="#azure" x="80" y="58" width="14" height="14"/>
+          <text x="80" y="93" text-anchor="middle" font-size="14">runners</text>
+          <text x="80" y="110" text-anchor="middle" fill="#bae6fd" font-size="11" font-weight="600">event-driven</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- ===== CONNECTOR: MCP CLIENTS (center x=490) → MCP SERVER (y=322) ===== -->
+    <line x1="490" y1="272" x2="490" y2="318" stroke="#c4b5fd" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+    <g font-size="11" font-weight="700" fill="#c4b5fd">
+      <rect x="500" y="280" width="62" height="20" rx="6" fill="#17102e" stroke="#a78bfa"/>
+      <text x="531" y="294" text-anchor="middle">stdio</text>
+    </g>
+
+    <!-- ===== CONNECTOR: DIRECT SURFACES (center x=1128) → BUNDLE (y=460) ===== -->
+    <!-- Straight vertical line passing alongside the MCP server, no crossings -->
+    <line x1="1128" y1="272" x2="1128" y2="456" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrowCyan)"/>
+    <g font-size="11" font-weight="700" fill="#7dd3fc">
+      <rect x="1140" y="340" width="110" height="20" rx="6" fill="#0b2238" stroke="#7dd3fc"/>
+      <text x="1195" y="354" text-anchor="middle">direct invocation</text>
+    </g>
+
+    <!-- ===== TIER 2: MCP SERVER (only under the MCP clients rail) ===== -->
+    <g transform="translate(184,322)">
+      <rect x="0" y="0" width="612" height="90" rx="16" fill="#2a0f2e" stroke="#f0abfc" stroke-width="2"/>
+      <text x="20" y="28" fill="#f0abfc" font-size="11" font-weight="800" letter-spacing="1.6">REPO MCP SERVER · mcp-server/src/server.py</text>
+      <text x="20" y="56" fill="#f8fafc" font-size="16" font-weight="800">auto-discovers skills/*/*/SKILL.md → audited tool calls</text>
+      <text x="20" y="76" fill="#f5d0fe" font-size="12">correlation id per call · stdout = skill · stderr = diagnostics · timeout-governed · no arbitrary shell</text>
+    </g>
+
+    <!-- ===== CONNECTOR: MCP SERVER (center x=490) → BUNDLE ===== -->
+    <line x1="490" y1="412" x2="490" y2="456" stroke="#f0abfc" stroke-width="2.5" marker-end="url(#arrowPink)"/>
+
+    <!-- ===== TIER 3: SHARED SKILL BUNDLE (full width, both rails merge here) ===== -->
+    <g transform="translate(72,460)">
+      <rect x="0" y="0" width="1256" height="110" rx="18" fill="#0e2e2b" stroke="#5eead4" stroke-width="2"/>
+      <text x="20" y="28" fill="#5eead4" font-size="11" font-weight="800" letter-spacing="1.6">SHARED SKILL BUNDLE · 44 shipped</text>
+      <text x="20" y="56" fill="#f8fafc" font-size="18" font-weight="800">SKILL.md · src/ · tests/ · REFERENCES.md</text>
+      <g font-size="11" font-weight="700" fill="#ccfbf1">
+        <rect x="20" y="72" width="124" height="22" rx="6" fill="#0b3d3b" stroke="#5eead4"/>
+        <text x="82" y="87" text-anchor="middle">approval_model</text>
+        <rect x="152" y="72" width="132" height="22" rx="6" fill="#0b3d3b" stroke="#5eead4"/>
+        <text x="218" y="87" text-anchor="middle">execution_modes</text>
+        <rect x="292" y="72" width="110" height="22" rx="6" fill="#0b3d3b" stroke="#5eead4"/>
+        <text x="347" y="87" text-anchor="middle">side_effects</text>
+        <rect x="410" y="72" width="120" height="22" rx="6" fill="#0b3d3b" stroke="#5eead4"/>
+        <text x="470" y="87" text-anchor="middle">input_formats</text>
+        <rect x="538" y="72" width="128" height="22" rx="6" fill="#0b3d3b" stroke="#5eead4"/>
+        <text x="602" y="87" text-anchor="middle">output_formats</text>
+        <rect x="674" y="72" width="112" height="22" rx="6" fill="#0b3d3b" stroke="#5eead4"/>
+        <text x="730" y="87" text-anchor="middle">concurrency</text>
+      </g>
+    </g>
+
+    <!-- ===== CONNECTOR: BUNDLE → OUTPUTS ===== -->
+    <line x1="700" y1="570" x2="700" y2="606" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#arrowAmber)"/>
+
+    <!-- ===== TIER 4: OUTPUTS ===== -->
+    <g transform="translate(72,608)">
+      <rect x="0" y="0" width="1256" height="40" rx="12" fill="#2a1708" stroke="#fbbf24" stroke-width="1.5"/>
+      <text x="20" y="26" fill="#fbbf24" font-size="11" font-weight="800" letter-spacing="1.6">OUTPUTS</text>
+      <g font-size="13" font-weight="700" fill="#fef3c7">
+        <text x="110" y="26">native JSONL</text>
+        <text x="226" y="26" fill="#64748b">·</text>
+        <text x="242" y="26">OCSF 1.8 (events + Detection Finding 2004)</text>
+        <text x="586" y="26" fill="#64748b">·</text>
+        <text x="602" y="26">bridge</text>
+        <text x="664" y="26" fill="#64748b">·</text>
+        <text x="680" y="26">SARIF</text>
+        <text x="736" y="26" fill="#64748b">·</text>
+        <text x="752" y="26">Mermaid</text>
+        <text x="826" y="26" fill="#64748b">·</text>
+        <text x="842" y="26">AI BOM</text>
+        <text x="908" y="26" fill="#64748b">·</text>
+        <text x="924" y="26">audited writes</text>
+      </g>
+    </g>
+  </g>
+</svg>
