@@ -16,20 +16,20 @@
 
 ## What this repo gives you
 
-**44 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus one guarded write path for offboarding. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**45 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus one guarded write path for offboarding. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
 | **Ingest** | 15 | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
 | **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
-| **Detect** | 9 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
+| **Detect** | 10 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
 | **Remediate** | 1 | IAM departures (HITL + dual audit) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 44 shipped skills.**
+**Total: 45 shipped skills.**
 
 ## Architecture
 
