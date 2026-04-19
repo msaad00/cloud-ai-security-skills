@@ -15,7 +15,7 @@ Skills are grouped into layered categories — not by cloud. The category answer
 
 ```
 skills/
-├── ingestion/                     # raw source → OCSF 1.8
+├── ingestion/                     # raw source → OCSF 1.8 (15 ingest-* + 3 source-*)
 │   ├── ingest-cloudtrail-ocsf/
 │   ├── ingest-vpc-flow-logs-ocsf/
 │   ├── ingest-vpc-flow-logs-gcp-ocsf/
@@ -27,7 +27,13 @@ skills/
 │   ├── ingest-gcp-audit-ocsf/
 │   ├── ingest-azure-activity-ocsf/
 │   ├── ingest-k8s-audit-ocsf/
-│   └── ingest-mcp-proxy-ocsf/
+│   ├── ingest-mcp-proxy-ocsf/
+│   ├── ingest-okta-system-log-ocsf/
+│   ├── ingest-entra-directory-audit-ocsf/
+│   ├── ingest-google-workspace-login-ocsf/
+│   ├── source-s3-select/                # warehouse query adapter
+│   ├── source-snowflake-query/          # warehouse query adapter
+│   └── source-databricks-query/         # warehouse query adapter
 │
 ├── discovery/                     # inventory / graph / AI BOM / evidence
 │   ├── discover-environment/
@@ -37,10 +43,16 @@ skills/
 │
 ├── detection/                     # OCSF → Detection Finding 2004 + MITRE
 │   ├── detect-mcp-tool-drift/
+│   ├── detect-prompt-injection-mcp-proxy/
 │   ├── detect-container-escape-k8s/
 │   ├── detect-privilege-escalation-k8s/
 │   ├── detect-sensitive-secret-read-k8s/
-│   └── detect-lateral-movement/
+│   ├── detect-lateral-movement/
+│   ├── detect-okta-mfa-fatigue/
+│   ├── detect-credential-stuffing-okta/
+│   ├── detect-entra-credential-addition/
+│   ├── detect-entra-role-grant-escalation/
+│   └── detect-google-workspace-suspicious-login/
 │
 ├── evaluation/                    # posture and benchmark checks
 │   ├── cspm-aws-cis-benchmark/

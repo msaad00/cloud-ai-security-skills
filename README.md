@@ -74,7 +74,7 @@ flowchart LR
     subgraph Act
         direction TB
         view["L6 View<br/>2 skills · SARIF · Mermaid"]:::act
-        remediate["L5 Remediate<br/>2 skills · HITL · dual audit"]:::act
+        remediate["L5 Remediate<br/>3 skills · HITL · dual audit"]:::act
     end
     output["L7 Output<br/>3 sinks · S3 · Snowflake · ClickHouse"]:::sink
 
@@ -122,7 +122,7 @@ flowchart TB
     end
 
     mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
-    bundle[("Shared skill bundle<br/>46 shipped")]:::bundle
+    bundle[("Shared skill bundle<br/>48 shipped")]:::bundle
     outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
 
     claude -->|stdio| mcp
@@ -176,6 +176,12 @@ Pick the row that matches the job.
 | a suspicious Kubernetes workload to isolate | [`remediate-container-escape-k8s`](skills/remediation/remediate-container-escape-k8s/) | audited deny-all NetworkPolicy plan / action |
 
 Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
+
+### Closed-loop coverage at a glance
+
+![Closed-loop coverage matrix — 3 of 11 detections shipped as closed loops; 5 of the remaining 8 gaps planned via tracking issues; 3 detections still need new remediation skills.](docs/images/coverage-matrix.svg)
+
+Source of truth for detect↔remediate parity. Tracked at [#155](https://github.com/msaad00/cloud-ai-security-skills/issues/155); design + remaining per-layer SVGs at [#248](https://github.com/msaad00/cloud-ai-security-skills/issues/248).
 
 ## Common shipped flows
 

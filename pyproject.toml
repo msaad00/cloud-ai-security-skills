@@ -67,8 +67,15 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.mypy]
+# Skills use a flat src/<entrypoint>.py layout (e.g. src/detect.py, src/ingest.py)
+# repeated across dozens of skill directories. Running `mypy skills/` discovers
+# many same-named modules and aborts with "Duplicate module named 'detect'".
+# The canonical entrypoint is `scripts/run_mypy.sh`, which invokes mypy once
+# per skill src/ directory. `explicit_package_bases` + `namespace_packages`
+# keep ad-hoc per-directory invocations working from the IDE.
 python_version = "3.11"
-files = ["skills"]
+explicit_package_bases = true
+namespace_packages = true
 ignore_missing_imports = true
 warn_redundant_casts = true
 warn_unused_ignores = true
