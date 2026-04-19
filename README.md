@@ -31,7 +31,8 @@
 
 **Total: 48 shipped skills.**
 
-### Why different layers use different formats
+<details>
+<summary><b>Why different layers use different formats</b> — OCSF where interop matters, native where state, evidence, and audit matter more</summary>
 
 OCSF 1.8 is the **SIEM interop wire format** — valuable exactly where events flow to a downstream analyzer. It is not the universal internal format, and this repo is honest about where it fits:
 
@@ -46,6 +47,8 @@ OCSF 1.8 is the **SIEM interop wire format** — valuable exactly where events f
 | **Output (sinks)** | pass-through | Sinks write whatever the producer emitted |
 
 Full discussion: [docs/ARCHITECTURE.md §3 Layer model + §6 Wire contract](docs/ARCHITECTURE.md). The pinned OCSF contract for ingest + detect lives in [skills/detection-engineering/OCSF_CONTRACT.md](skills/detection-engineering/OCSF_CONTRACT.md).
+
+</details>
 
 ## Architecture
 
@@ -160,9 +163,8 @@ Per-client setup docs under [`docs/integrations/`](docs/integrations/). Every cl
 
 Least-privilege scoping across every client via the `CLOUD_SECURITY_MCP_ALLOWED_SKILLS` env var (comma-separated skill names — unlisted skills are not registered as tools).
 
-## Start here
-
-Pick the row that matches the job.
+<details>
+<summary><b>Start here</b> — pick the row that matches the job</summary>
 
 | You have… | Start with | Typical output |
 |---|---|---|
@@ -176,6 +178,8 @@ Pick the row that matches the job.
 | a suspicious Kubernetes workload to isolate | [`remediate-container-escape-k8s`](skills/remediation/remediate-container-escape-k8s/) | audited deny-all NetworkPolicy plan / action |
 
 Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
+
+</details>
 
 ### Closed-loop coverage at a glance
 
@@ -281,7 +285,8 @@ The flagship shipped write path. Guarded, event-driven, dual-audited — and **o
 - **one cloud per worker** — the AWS worker only touches AWS IAM via cross-account `AssumeRole` inside the Org. A single worker principal never spans cloud boundaries
 - **dual audit** — DynamoDB + KMS-encrypted S3 for every write; ingest-back so the next run verifies closure
 
-### Per-cloud service mapping
+<details>
+<summary><b>Per-cloud service mapping</b> — AWS is shipped; GCP and Azure stack patterns documented (worker library code already exists under <code>src/lambda_worker/clouds/</code>)</summary>
 
 Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-departures-aws/infra/)). For Azure and GCP, the **worker library code** lives in [`src/lambda_worker/clouds/`](skills/remediation/iam-departures-aws/src/lambda_worker/clouds/) (`azure_entra.py`, `gcp_iam.py`, `databricks_scim.py`, `snowflake_user.py`); the recommended native orchestration stack per cloud is documented below so operators pick equivalent primitives instead of forcing one stack across all clouds.
 
@@ -297,7 +302,10 @@ Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-
 
 Details: [skills/remediation/iam-departures-aws/](skills/remediation/iam-departures-aws/) · [SKILL.md#cross-cloud-workflow-shape](skills/remediation/iam-departures-aws/SKILL.md)
 
-## Native vs OCSF
+</details>
+
+<details>
+<summary><b>Native vs OCSF</b> — four emit modes and when each is right</summary>
 
 | Mode | When | What it is |
 |---|---|---|
@@ -307,6 +315,8 @@ Details: [skills/remediation/iam-departures-aws/](skills/remediation/iam-departu
 | `canonical` | internal only | the normalization model between ingest and detect |
 
 The `-ocsf` suffix means OCSF is the default, not the only output. Reference: [docs/NATIVE_VS_OCSF.md](docs/NATIVE_VS_OCSF.md) · [docs/CANONICAL_SCHEMA.md](docs/CANONICAL_SCHEMA.md) · [docs/NORMALIZATION_EXAMPLES.md](docs/NORMALIZATION_EXAMPLES.md)
+
+</details>
 
 ## Install and trust
 
