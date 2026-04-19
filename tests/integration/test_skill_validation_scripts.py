@@ -592,3 +592,51 @@ class TestAssumeRoleBoundaryGuardrail:
         skill_like_dirs = COMMON.iter_skill_like_dirs()
         missing = [path for path in skill_like_dirs if not (path / "SKILL.md").exists()]
         assert missing == []
+
+
+COUNT_CONSISTENCY = _load_module(
+    "cloud_security_validate_skill_count_consistency_test",
+    SCRIPTS / "validate_skill_count_consistency.py",
+)
+
+
+class TestCountDriftScan:
+    """Catch the issue #302 class of bug: a stale mermaid count slipped into
+    a doc that wasn't on the explicit CLAIMS allow-list."""
+
+    def test_scan_passes_against_current_repo_state(self):
+        # The script's main() runs both CLAIMS and the catch-all scan.
+        assert COUNT_CONSISTENCY.main() == 0
+
+    def test_scan_resolves_layer_hint_to_specific_metric(self):
+        resolve = COUNT_CONSISTENCY._resolve_metric_for_line
+        assert resolve("L1 Ingest<br/>15 skills") == "ingest_only"
+        assert resolve("L2 Discover<br/>4 skills") == "discovery"
+        assert resolve("L3 Detect<br/>11 skills · ATT&CK") == "detection"
+        assert resolve("L4 Evaluate<br/>7 skills · 82 checks") == "evaluation"
+        assert resolve("L5 Remediate<br/>4 skills · HITL") == "remediation"
+        assert resolve("L6 View<br/>2 skills · SARIF") == "view"
+        assert resolve("L7 Output<br/>3 sinks · S3") == "output"
+        assert resolve("Sources<br/>3 adapters") == "sources"
+
+    def test_ingestion_vs_ingest_only_split(self):
+        """README treats `Ingest = 15` and `Sources = 3` as separate counts,
+        even though both live under skills/ingestion/. The validator must
+        split `ingest_only` from full `ingestion` so it can tell them apart."""
+        ingest_only = COUNT_CONSISTENCY._count_ingest_only()
+        sources = COUNT_CONSISTENCY._count_sources()
+        full = COUNT_CONSISTENCY._count_skills("ingestion")
+        assert full == ingest_only + sources
+
+    def test_scan_falls_back_to_total_when_no_layer_hint(self):
+        resolve = COUNT_CONSISTENCY._resolve_metric_for_line
+        assert resolve("Shared skill bundle<br/>49 shipped") == "total"
+        assert resolve("<br/>49 something-unknown") == "total"
+
+    def test_scan_pattern_matches_mermaid_node_labels(self):
+        pat = COUNT_CONSISTENCY.SCAN_PATTERN
+        assert pat.search('ingest["L1 Ingest<br/>15 skills"]') is not None
+        assert pat.search('node["Shared skill bundle<br/>48 shipped"]') is not None
+        assert pat.search('out["L7 Output<br/>3 sinks · S3"]') is not None
+        # Should NOT match prose (no <br/> prefix)
+        assert pat.search("The repo ships 49 skills today.") is None
