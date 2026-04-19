@@ -6,7 +6,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 
 ## Quick read
 
-- six shipped skill layers stay at the center: ingest, discover, detect, evaluate, remediate, and view
+- seven shipped skill layers stay at the center: ingest, discover, detect, evaluate, remediate, view, and output
 - three edge or runtime layers sit around them: sources and sinks, query packs, and runtime surfaces
 - one skill bundle contract is shared across CLI, CI, MCP, and runners
 - OCSF is the SIEM interop wire format for **ingest and detect**; native / CycloneDX / bridge are correct for discover, remediate, and sinks (see §3.1 for the per-layer applicability table)
@@ -77,7 +77,7 @@ This is how the repo stays secure and reliable without turning every skill into 
 
 ## 3. Layer model
 
-The repo is easiest to read as **six shipped skill layers**, plus **three edge/runtime layers** that sit around the pure skills.
+The repo is easiest to read as **seven shipped skill layers** (ingest, discover, detect, evaluate, remediate, view, output), plus **two edge/runtime layers** (query packs and runtime surfaces) that sit around the pure skills.
 
 ```mermaid
 flowchart LR

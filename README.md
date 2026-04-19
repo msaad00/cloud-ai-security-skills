@@ -57,35 +57,29 @@ flowchart LR
     classDef intake fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe
     classDef analyze fill:#064e3b,stroke:#34d399,color:#d1fae5
     classDef act fill:#78350f,stroke:#fbbf24,color:#fef3c7
-    classDef bundle fill:#1e1b4b,stroke:#a78bfa,color:#ddd6fe
+    classDef sink fill:#422006,stroke:#fbbf24,color:#fef3c7
 
-    cloud["☁️ Cloud APIs<br/>AWS, GCP, Azure"]:::signal
-    logs["📋 Raw logs<br/>CloudTrail, K8s, MCP"]:::signal
-    idp["🔑 Identity<br/>Okta, Entra, Workspace"]:::signal
-    lake["🗄️ Warehouses<br/>Snowflake, Databricks"]:::signal
+    sig["☁️ Cloud APIs · 📋 Raw logs<br/>🔑 Identity · 🗄️ Warehouses"]:::signal
 
     subgraph Intake
+        direction TB
         ingest["L1 Ingest<br/>15 skills"]:::intake
         discover["L2 Discover<br/>4 skills"]:::intake
     end
     subgraph Analyze
+        direction TB
         detect["L3 Detect<br/>10 skills · ATT&amp;CK"]:::analyze
         evaluate["L4 Evaluate<br/>7 skills · 82 checks"]:::analyze
     end
     subgraph Act
-        remediate["L5 Remediate<br/>IAM departures · HITL"]:::act
-        view["L6 View<br/>SARIF · Mermaid"]:::act
+        direction TB
+        view["L6 View<br/>2 skills · SARIF · Mermaid"]:::act
+        remediate["L5 Remediate<br/>2 skills · HITL · dual audit"]:::act
     end
+    output["L7 Output<br/>3 sinks · S3 · Snowflake · ClickHouse"]:::sink
 
-    bundle[("Shared skill bundle<br/>SKILL.md · src · tests")]:::bundle
-
-    cloud --> ingest
-    cloud --> discover
-    logs --> ingest
-    idp --> ingest
-    idp --> discover
-    lake --> ingest
-
+    sig --> ingest
+    sig --> discover
     ingest --> detect
     discover --> detect
     discover --> evaluate
@@ -93,14 +87,11 @@ flowchart LR
     detect --> remediate
     evaluate --> view
     evaluate --> remediate
-
-    bundle -.- ingest
-    bundle -.- discover
-    bundle -.- detect
-    bundle -.- evaluate
-    bundle -.- remediate
-    bundle -.- view
+    view --> output
+    remediate --> output
 ```
+
+Every node above ships as a `SKILL.md + src/ + tests/` bundle that runs unchanged from CLI, CI, MCP, or a persistent cloud runner.
 
 Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
