@@ -144,7 +144,7 @@ per-layer choice, not a repo-wide mandate.
 |---|---|---|---|
 | **L1 Ingest** | OCSF 1.8 (native opt-in) | Default — SIEM interop | Raw vendor → OCSF is what OCSF was built for. Every ingester offers `--output-format ocsf` by default |
 | **L3 Detect** | OCSF Detection Finding 2004 (native opt-in) | Default — SIEM interop | Findings flow to SIEM / SOAR / ticketing. OCSF spares every downstream from writing a custom parser. MITRE ATT&CK lives under `finding_info.attacks[]` |
-| **L4 Evaluate / CSPM** | native today; OCSF Compliance Finding 2003 planned opt-in (#29) | Optional | Ops dashboards prefer native; SIEM pipelines opt into OCSF. The migration ships as **dual output**, not a forced replacement |
+| **L4 Evaluate / CSPM** | native by default; OCSF Compliance Finding 2003 opt-in | Optional | Ops dashboards prefer native; SIEM pipelines can opt into OCSF. Evaluation ships as **dual output**, not a forced replacement |
 | **L2 Discover** | native / CycloneDX ML-BOM / bridge | **Not a good fit** | Inventory graphs, AI BOM, evidence snapshots are state, not events. OCSF Inventory Info 5001 is too thin to be worth forcing |
 | **L5 Remediate** | native | **Not a good fit** | Remediation is a state change with an operator-owned audit record, not a finding. `iam-departures-aws` and `remediate-okta-session-kill` both emit native |
 | **L6 View** | OCSF input required, SARIF / Mermaid output | Consumer of OCSF | The whole point of these converters is rendering OCSF for humans |
@@ -192,11 +192,11 @@ For the detailed contract, see:
 | L0 external sources | external | cloud APIs, raw logs, SaaS identity feeds, lakehouse tables |
 | L1 ingest | shipping | 15 source-specific ingesters plus 3 read-only source adapters; ingest and detect are fully dual-mode where OCSF-native parity makes sense |
 | L2 discover | shipping | environment graph, AI BOM, cloud control evidence, control evidence |
-| L3 detect | shipping | 9 shipped detectors across cloud, identity, Kubernetes, and MCP drift |
-| L4 evaluate | shipping | 8 benchmark and posture skills across AWS, GCP, Azure, Kubernetes, containers, GPU, and model-serving paths |
-| L5 remediate | shipping | IAM departures is the current flagship write path |
+| L3 detect | shipping | 10 shipped detectors across cloud, identity, Kubernetes, and MCP / agent signals |
+| L4 evaluate | shipping | 7 benchmark and posture skills across AWS, GCP, Azure, Kubernetes, containers, GPU, and model-serving paths with native and opt-in OCSF 2003 output |
+| L5 remediate | shipping | IAM departures is the flagship write path; Okta session kill ships as the containment remediator |
 | L6 view | shipping | SARIF and Mermaid attack-flow exports |
-| L7 sinks | shipping | `sink-snowflake-jsonl`, `sink-clickhouse-jsonl`, and `sink-s3-jsonl` ship today under `skills/remediation/` |
+| L7 sinks | shipping | `sink-snowflake-jsonl`, `sink-clickhouse-jsonl`, and `sink-s3-jsonl` ship today under `skills/output/` |
 | L8 query packs | partial shipping | `packs/lateral-movement/` and `packs/privilege-escalation-k8s/` are shipped; broader pack coverage remains future work |
 | L9 agent/runtime surfaces | shipping | `mcp-server`, CLI, CI, and runners call the same skill contract |
 

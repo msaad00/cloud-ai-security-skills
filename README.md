@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 44 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 46 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,7 +16,7 @@
 
 ## What this repo gives you
 
-**45 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus one guarded write path for offboarding. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**46 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus two guarded write paths for offboarding and account containment. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
@@ -24,12 +24,12 @@
 | **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
 | **Detect** | 10 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
-| **Remediate** | 1 | IAM departures (HITL + dual audit) | audited action trail |
+| **Remediate** | 2 | guarded write paths (IAM departures, Okta session kill) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 45 shipped skills.**
+**Total: 46 shipped skills.**
 
 ### Why different layers use different formats
 
@@ -39,7 +39,7 @@ OCSF 1.8 is the **SIEM interop wire format** — valuable exactly where events f
 |---|---|---|
 | **Ingest** | OCSF 1.8 (native opt-in) | Raw vendor → OCSF is what OCSF was built for. SIEMs consume it natively |
 | **Detect** | OCSF 1.8 Detection Finding 2004 (native opt-in) | Findings flow to SIEM / SOAR / ticketing — OCSF spares every downstream system from writing a custom parser |
-| **Evaluate / CSPM** | native today, OCSF Compliance Finding 2003 planned opt-in (#29) | Ops dashboards prefer native; SIEM pipelines opt into OCSF |
+| **Evaluate / CSPM** | native by default, OCSF Compliance Finding 2003 opt-in | Ops dashboards prefer native; SIEM pipelines can opt into OCSF without losing the native path |
 | **Discover** | native / CycloneDX ML-BOM / bridge | Inventory graphs and AI BOM aren't events. OCSF Inventory Info 5001 is too thin to be worth forcing |
 | **Remediate** | native | Remediation is a state change with an operator-owned audit trail, not a finding |
 | **View** | OCSF **input**, SARIF / Mermaid out | The whole point is rendering OCSF for humans |
@@ -69,7 +69,7 @@ flowchart LR
         discover["L2 Discover<br/>4 skills"]:::intake
     end
     subgraph Analyze
-        detect["L3 Detect<br/>9 skills · ATT&amp;CK"]:::analyze
+        detect["L3 Detect<br/>10 skills · ATT&amp;CK"]:::analyze
         evaluate["L4 Evaluate<br/>7 skills · 82 checks"]:::analyze
     end
     subgraph Act
@@ -131,7 +131,7 @@ flowchart TB
     end
 
     mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
-    bundle[("Shared skill bundle<br/>44 shipped")]:::bundle
+    bundle[("Shared skill bundle<br/>46 shipped")]:::bundle
     outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
 
     claude -->|stdio| mcp
@@ -177,7 +177,7 @@ Pick the row that matches the job.
 |---|---|---|
 | a raw log file or stream | [`ingest-*`](skills/ingestion/) → [`detect-*`](skills/detection/) | OCSF Detection Finding |
 | live cloud API access | [`discover-*`](skills/discovery/) or [`evaluation/*`](skills/evaluation/) | graph / benchmark JSON |
-| logs already in your lake (CloudTrail in S3, Okta in Snowflake, Databricks tables) | [`source-*`](skills/ingestion/) → `detect-*` → [`sink-*`](skills/remediation/) | customer-owned persistence |
+| logs already in your lake (CloudTrail in S3, Okta in Snowflake, Databricks tables) | [`source-*`](skills/ingestion/) → `detect-*` → [`sink-*`](skills/output/) | customer-owned persistence |
 | an AI estate to inventory | [`discover-ai-bom`](skills/discovery/discover-ai-bom/) | CycloneDX-aligned AI BOM |
 | audit evidence to produce | [`discover-control-evidence`](skills/discovery/discover-control-evidence/) | PCI / SOC 2 evidence JSON |
 | OCSF findings to publish | [`view/*`](skills/view/) | SARIF · Mermaid |
@@ -189,29 +189,42 @@ Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
 Three lanes. Same skill bundle contract in every lane — input, output, and control boundary are what change.
 
-```
-① Raw log detection
-   raw payload ─▶ ingest-* ─▶ detect-* ─▶ view/*
-                                        └─▶ SARIF · Mermaid attack flow
+```mermaid
+flowchart TB
+    classDef source fill:#0f172a,stroke:#475569,color:#f8fafc
+    classDef lane fill:#111827,stroke:#334155,color:#e5e7eb
+    classDef skill fill:#1d4ed8,stroke:#93c5fd,color:#eff6ff
+    classDef detect fill:#047857,stroke:#6ee7b7,color:#ecfdf5
+    classDef sink fill:#6d28d9,stroke:#c4b5fd,color:#f5f3ff
+    classDef remediate fill:#991b1b,stroke:#fca5a5,color:#fef2f2
+    classDef output fill:#0f2942,stroke:#7dd3fc,color:#e0f2fe
 
-② Detection on data already in your lake
-   CloudTrail in S3 ─┐
-   Okta in Snowflake ─┼─▶ source-* ─▶ detect-* ─▶ sink-*
-   Databricks tables ─┘                        └─▶ customer-owned persistence
+    subgraph lane1["1. Raw log detection and export"]
+        raw["raw payloads<br/>CloudTrail · K8s audit · Okta"]:::source
+        ingest["ingest-*"]:::skill
+        detect1["detect-*"]:::detect
+        view["view/*"]:::sink
+        export["SARIF · Mermaid · JSON"]:::output
+        raw --> ingest --> detect1 --> view --> export
+    end
 
-③ Live posture and guarded action
-   live cloud / SaaS ─▶ discover-* ─┐
-                       evaluation-* ─┼─▶ remediation/* ─▶ HITL + dual audit
-```
+    subgraph lane2["2. Detection on data already in your lake"]
+        lake["warehouse rows or objects<br/>Snowflake · Databricks · S3"]:::source
+        source["source-*"]:::skill
+        detect2["detect-*"]:::detect
+        sink["sink-*"]:::sink
+        persist["customer-owned persistence"]:::output
+        lake --> source --> detect2 --> sink --> persist
+    end
 
-**Example — Kubernetes privilege escalation, end-to-end:**
-
-```bash
-python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
-  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
-  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
-  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
-  > findings.sarif
+    subgraph lane3["3. Live posture and guarded action"]
+        live["live cloud or SaaS state"]:::source
+        discover["discover-* / evaluation-*"]:::skill
+        native["native outputs"]:::output
+        remediate["remediation/*"]:::remediate
+        audit["HITL · dual audit · re-verify"]:::output
+        live --> discover --> native --> remediate --> audit
+    end
 ```
 
 **Same flow from an MCP agent:**
@@ -221,6 +234,19 @@ tools/call name="ingest-k8s-audit-ocsf" args={"args":["skills/detection-engineer
 tools/call name="detect-privilege-escalation-k8s" args={"input":"<stdout>"}
 tools/call name="convert-ocsf-to-sarif"          args={"input":"<stdout>"}
 ```
+
+<details>
+<summary><b>Low-level execution core: the same flow as raw Python entrypoints</b></summary>
+
+```bash
+python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py \
+  skills/detection-engineering/golden/k8s_audit_raw_sample.jsonl \
+  | python skills/detection/detect-privilege-escalation-k8s/src/detect.py \
+  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
+  > findings.sarif
+```
+
+</details>
 
 <details>
 <summary><b>What you get back</b></summary>
@@ -246,7 +272,7 @@ Native wire format is the same content in a repo-owned envelope — see [docs/NA
 
 ## Flagship · IAM departures remediation
 
-The one shipped write path. Guarded, event-driven, dual-audited — and **one cloud per worker**, never cross-cloud.
+The flagship shipped write path. Guarded, event-driven, dual-audited — and **one cloud per worker**, never cross-cloud.
 
 ![AWS-only IAM departures flow. Plan reads HR sources in Snowflake or Databricks, runs the reconciler, writes an S3 manifest of the actionable set. Orchestrate fires an EventBridge rule that starts a Step Function; the Step Function invokes a parser Lambda that re-checks manifest and IAM state, then a worker Lambda with a scoped principal that assumes a cross-account role inside the AWS Organization. Write deletes the AWS IAM user through the nine-step deletion order. Audit lands in DynamoDB plus KMS-encrypted S3, then ingest-back feeds drift checks into the next reconciler run. The footer makes clear that Azure and GCP use their own native orchestration stacks. No single worker ever crosses cloud boundaries.](docs/images/iam-departures-aws.svg)
 

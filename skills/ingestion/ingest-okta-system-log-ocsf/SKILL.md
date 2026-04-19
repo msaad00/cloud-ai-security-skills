@@ -28,7 +28,7 @@ metadata:
   author: msaad00
   homepage: https://github.com/msaad00/cloud-ai-security-skills
   source: https://github.com/msaad00/cloud-ai-security-skills/tree/main/skills/ingestion/ingest-okta-system-log-ocsf
-  version: 0.1.0
+  version: 0.2.0
   frameworks:
     - OCSF 1.8
   cloud: okta
@@ -141,8 +141,60 @@ Each output record includes:
 
 - deterministic `metadata.uid` based on Okta `uuid` or a stable hash fallback
 - UTC epoch-millisecond `time` from `published`
-- Okta session and transaction correlation data preserved under `unmapped`
+- Okta session and transaction correlation data preserved under `unmapped.okta.*`
 - `actor`, `user`, `src_endpoint`, and `resources` where the raw event supports them
+- **expanded v0.2 OCSF-native slots** (see table below) when the Okta payload carries geographicalContext, securityContext, client.userAgent, authenticationContext, debugContext, or request.ipChain
+
+### OCSF 1.8 mapping (v0.2, #271)
+
+| Okta field | OCSF destination |
+|---|---|
+| `client.geographicalContext.{country,state,city,postalCode}` | `src_endpoint.location.{country,region,city,postal_code}` |
+| `client.geographicalContext.geolocation.{lat,lon}` | `src_endpoint.location.coordinates` (`[lon, lat]`) |
+| `client.userAgent.rawUserAgent` | `src_endpoint.svc_name` *and* `http_request.user_agent` |
+| `client.userAgent.browser` + `.os` | `device.name`, `device.os.name` |
+| `client.device` + `client.id` | `device.name`, `device.uid` |
+| `client.zone` | `src_endpoint.zone` |
+| `securityContext.asNumber` + `asOrg` | `src_endpoint.autonomous_system.{number, name}` |
+| `securityContext.domain` | `src_endpoint.domain` |
+| `securityContext.isProxy` | `src_endpoint.is_proxy` (bool) |
+| `authenticationContext.authenticationProvider` | `auth_protocol` |
+| `authenticationContext.credentialType` | `auth_factors[]` |
+| `authenticationContext.interface` / `authenticationStep` | `metadata.labels` (`okta.interface=...`, `okta.authentication_step=...`) |
+| `request.ipChain[]` per-hop `ip` + geo | `observables[]` (type_id=2, with location + reputation) |
+| `debugContext.debugData.riskLevel` | `enrichments[]` (`name: okta.risk_level`, `type: security_risk`) |
+| `debugContext.debugData.riskReasons` | `enrichments[]` (`name: okta.risk_reasons`, `data.reasons: [...]`) |
+| `debugContext.debugData.behaviors` | `enrichments[]` (`name: okta.behaviors`) |
+
+Slots are only emitted when the source field is present; minimal events (the
+v0.1 shape) remain byte-identical except for OCSF-native additions.
+
+### `unmapped.okta.*` (native preservation)
+
+Fields without a clean OCSF slot round-trip verbatim for detectors that need
+full Okta fidelity:
+
+- `debug_data` — full `debugContext.debugData` verbatim (riskLevel, riskReasons,
+  behaviors, factorId, authenticatorId, deviceFingerprint, requestUri,
+  authnRequestId — whatever Okta packs in)
+- `actor_detail_entry`, `target_detail_entries[]` — free-form detail fields
+- `transaction_type`, `transaction_detail`
+- `authn_issuer` — `authenticationContext.issuer` object
+- `event_type`, `legacy_event_type`, `transaction_id`, `root_session_id` — v0.1 correlation keys
+
+### risk signals as enrichments
+
+Okta's risk engine output is surfaced as OCSF `enrichments[]` entries so
+downstream detectors can pattern-match risk without reading `unmapped.*`:
+
+```json
+"enrichments": [
+  {"name": "okta.risk_level", "value": "HIGH", "type": "security_risk"},
+  {"name": "okta.risk_reasons", "data": {"reasons": ["newCountry", "anomalousLocation"]}, "type": "security_risk"}
+]
+```
+
+`riskReasons` accepts both the comma-joined string and list shapes Okta emits.
 
 ## Usage
 
@@ -182,7 +234,8 @@ When `--output-format native` is selected, the skill emits:
 - `status` / `status_id`
 - `time_ms`
 - `actor`, `user`, `src_endpoint`, `session`, `resources`, and `privileges` where present
-- `unmapped.okta.*` vendor-specific detail for transaction and root-session correlation
+- `device`, `http_request`, `auth_protocol`, `auth_factors`, `observables`, `enrichments` where the Okta payload supports them (v0.2)
+- `unmapped.okta.*` vendor-specific detail including verbatim `debug_data` round-trip
 
 ## See also
 

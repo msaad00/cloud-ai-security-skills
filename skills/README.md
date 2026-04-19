@@ -7,7 +7,7 @@ Skills are grouped by **layered function**, not by vendor. Start with the proble
 | [`ingestion/`](ingestion/) | "How do I normalize this raw source into a stable event stream?" | **OCSF 1.8** (native opt-in via `--output-format native`) |
 | [`discovery/`](discovery/) | "What does this cloud / AI estate look like right now?" | **native / CycloneDX / bridge** (OCSF Inventory Info 5001 is too thin to force) |
 | [`detection/`](detection/) | "What attack pattern does this event stream show?" | **OCSF Detection Finding 2004** (native opt-in) |
-| [`evaluation/`](evaluation/) | "Does this posture or event stream meet a benchmark?" | **native** today; OCSF Compliance Finding 2003 planned opt-in ([#29](https://github.com/msaad00/cloud-ai-security-skills/issues/29)) |
+| [`evaluation/`](evaluation/) | "Does this posture or event stream meet a benchmark?" | **native** by default; OCSF Compliance Finding 2003 opt-in |
 | [`view/`](view/) | "How should I render or export this OCSF output?" | **SARIF / Mermaid** — consumer of OCSF |
 | [`remediation/`](remediation/) | "Something is wrong. How do I fix it safely?" | **native** (state change + audit record, not a finding) |
 | [`output/`](output/) | "Where do these findings / evidence / audit rows persist?" | **pass-through** |

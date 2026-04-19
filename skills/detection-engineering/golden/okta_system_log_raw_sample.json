@@ -296,5 +296,174 @@
         "detailEntry": null
       }
     ]
+  },
+  {
+    "uuid": "okta-auth-high-risk-1",
+    "published": "2026-04-13T02:22:00.000Z",
+    "eventType": "user.session.start",
+    "displayMessage": "User signs in to Okta",
+    "severity": "WARN",
+    "actor": {
+      "id": "00u-target-high-1",
+      "type": "User",
+      "alternateId": "henry@example.com",
+      "displayName": "Henry Example",
+      "detailEntry": "actor-detail"
+    },
+    "client": {
+      "id": "cli-device-abc",
+      "device": "Computer",
+      "zone": "corp-perimeter",
+      "ipAddress": "203.0.113.50",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        "browser": "CHROME",
+        "os": "Mac OS X"
+      },
+      "geographicalContext": {
+        "country": "Russia",
+        "state": "Moscow",
+        "city": "Moscow",
+        "postalCode": "101000",
+        "geolocation": {
+          "lat": 55.7558,
+          "lon": 37.6173
+        }
+      }
+    },
+    "securityContext": {
+      "asNumber": 13335,
+      "asOrg": "Cloudflare, Inc.",
+      "isp": "cloudflare",
+      "domain": "cloudflare.com",
+      "isProxy": true
+    },
+    "authenticationContext": {
+      "authenticationProvider": "OKTA_AUTHENTICATION_PROVIDER",
+      "credentialType": "PASSWORD",
+      "interface": "Okta FastPass",
+      "authenticationStep": 0,
+      "externalSessionId": "sess-hr-1",
+      "rootSessionId": "root-hr-1",
+      "issuer": {
+        "id": "idp-okta",
+        "type": "OKTA"
+      }
+    },
+    "debugContext": {
+      "debugData": {
+        "riskLevel": "HIGH",
+        "riskReasons": "newCountry, anomalousLocation",
+        "behaviors": {
+          "New Geo-Location": "POSITIVE",
+          "New Device": "POSITIVE"
+        },
+        "deviceFingerprint": "fp-xyz-123",
+        "factorId": "opf-factor-abc",
+        "requestUri": "/login/do-login"
+      }
+    },
+    "request": {
+      "ipChain": [
+        {
+          "ip": "203.0.113.50",
+          "geographicalContext": {
+            "country": "Russia",
+            "city": "Moscow",
+            "geolocation": {
+              "lat": 55.7558,
+              "lon": 37.6173
+            }
+          },
+          "source": "ATTACKER"
+        },
+        {
+          "ip": "198.51.100.7",
+          "geographicalContext": {
+            "country": "United States",
+            "city": "Ashburn"
+          },
+          "source": "PROXY"
+        }
+      ]
+    },
+    "outcome": {
+      "result": "FAILURE",
+      "reason": "INVALID_CREDENTIALS"
+    },
+    "transaction": {
+      "id": "txn-hr-1",
+      "type": "WEB",
+      "detail": {
+        "requestApiTokenId": "api-xyz"
+      }
+    },
+    "target": [
+      {
+        "id": "00u-target-high-1",
+        "type": "User",
+        "alternateId": "henry@example.com",
+        "displayName": "Henry Example",
+        "detailEntry": "target-detail"
+      }
+    ]
+  },
+  {
+    "uuid": "okta-auth-proxy-1",
+    "published": "2026-04-13T02:23:00.000Z",
+    "eventType": "user.session.start",
+    "displayMessage": "User signs in to Okta",
+    "severity": "INFO",
+    "actor": {
+      "id": "00u-target-proxy-1",
+      "type": "User",
+      "alternateId": "ian@example.com",
+      "displayName": "Ian Example",
+      "detailEntry": null
+    },
+    "client": {
+      "ipAddress": "185.220.101.5",
+      "userAgent": {
+        "rawUserAgent": "Mozilla/5.0",
+        "browser": "FIREFOX",
+        "os": "Linux"
+      },
+      "geographicalContext": {
+        "country": "Germany",
+        "city": "Frankfurt",
+        "geolocation": {
+          "lat": 50.1109,
+          "lon": 8.6821
+        }
+      }
+    },
+    "securityContext": {
+      "asNumber": 208294,
+      "asOrg": "Tor Exit Node Operator",
+      "isp": "tor",
+      "domain": "torproject.org",
+      "isProxy": true
+    },
+    "authenticationContext": {
+      "authenticationProvider": "OKTA_AUTHENTICATION_PROVIDER",
+      "credentialType": "PASSWORD",
+      "externalSessionId": "sess-px-1"
+    },
+    "outcome": {
+      "result": "FAILURE",
+      "reason": "INVALID_CREDENTIALS"
+    },
+    "transaction": {
+      "id": "txn-px-1"
+    },
+    "target": [
+      {
+        "id": "00u-target-proxy-1",
+        "type": "User",
+        "alternateId": "ian@example.com",
+        "displayName": "Ian Example",
+        "detailEntry": null
+      }
+    ]
   }
 ]
