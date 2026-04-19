@@ -56,7 +56,9 @@ skills/
 │   └── convert-ocsf-to-mermaid-attack-flow/
 │
 ├── remediation/                   # active fix workflows, gated and audited
-│   └── iam-departures-aws/
+│   ├── iam-departures-aws/
+│   ├── remediate-okta-session-kill/
+│   └── remediate-container-escape-k8s/
 │
 ├── output/                        # append-only persistence sinks
 │   ├── sink-s3-jsonl/
@@ -82,7 +84,7 @@ Every skill in every category is a closed loop: **detect → act → audit → r
 
 The full layered architecture (Sources → Ingestion → Discovery / Enrich → Detection / Evaluation → View → Remediation) is documented in [`ARCHITECTURE.md`](ARCHITECTURE.md). The eleven-principle security contract is in [`SECURITY_BAR.md`](SECURITY_BAR.md). Per-skill official references and IAM policies live in each skill's `REFERENCES.md`.
 The CSPM skills are detection-only and re-verify the same `control_id` on the next run.
-The remediation skills (IAM departures, vuln pipeline) write back to a dual audit
+The remediation skills (IAM departures, Okta session kill, K8s quarantine) write back to a dual audit
 trail (DynamoDB + S3) and ingest results into the source warehouse so the next
 reconciler run *cross-checks* the previous remediation actually landed.
 
