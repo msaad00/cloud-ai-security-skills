@@ -70,7 +70,7 @@ skills/
 └── output/         ← L7 (sink-* skills: append-only persistence)
 ```
 
-The repo ships **48 skills** across these seven layers and the three `source-*` adapters (15 + 4 + 11 + 7 + 3 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
+The repo ships **49 skills** across these seven layers and the three `source-*` adapters (15 + 4 + 11 + 7 + 4 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
 
 `skills/detection-engineering/` holds the shared OCSF contract and frozen
 golden fixtures. Executable skills live only under the six layered
