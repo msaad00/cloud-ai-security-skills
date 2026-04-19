@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
   <title id="title">IAM departures · AWS flagship write path</title>
-  <desc id="desc">The AWS-only IAM departures remediation flow. Four horizontal stages: Plan reads HR sources in Snowflake or Databricks, runs the reconciler, and writes an S3 manifest containing only the actionable set. Orchestrate fires an EventBridge rule that starts a Step Function; the Step Function invokes a parser Lambda that re-checks manifest and current IAM state, then a worker Lambda that scopes writes. Write deletes AWS IAM users via cross-account role assumption inside the AWS Organization only — it never reaches into other clouds. Audit lands every action in DynamoDB and KMS-encrypted S3; a drift-check arrow runs back to the reconciler so the next run verifies closure. A footer note makes clear that per-cloud workflows for Azure Entra, GCP IAM, Databricks, and Snowflake run in their own execution environments and no single Lambda crosses cloud boundaries. Real Simple Icons (CC0) for AWS, Snowflake, Databricks, AWS Lambda, Amazon S3, and Amazon DynamoDB are used where brand marks exist; text cards are used for EventBridge, Step Functions, and IAM where Simple Icons does not yet ship a service mark.</desc>
+  <desc id="desc">The AWS-only IAM departures remediation flow, accurate to the shipped code in skills/remediation/iam-departures-aws/. Four horizontal stages. Plan reads HR sources in Snowflake or Databricks, runs the reconciler, and writes an S3 manifest containing only the actionable set after rehire and grace-window filtering. Orchestrate fires an EventBridge rule on the S3 PutObject; the rule starts a Step Function whose Map state fans out one execution per user; each execution invokes the parser Lambda (which re-checks manifest and current IAM state) followed by the worker Lambda (which assumes a cross-account role scoped by aws:PrincipalOrgID). Write performs the eleven-step IAM teardown sequence defined by the _remediation_steps() tuple in lambda_worker/handler.py: deactivate access keys, delete login profile, remove from groups, detach managed policies, delete inline policies, delete MFA devices, delete signing certificates, delete SSH keys, delete service credentials, tag user for audit, and finally delete the IAM user. Audit dual-writes every action to DynamoDB (fast lookup keyed by user and timestamp) and KMS-encrypted S3 (immutable evidence with seven-year retention); a closed-loop arrow runs back from the audit feed into the reconciler so the next run verifies closure or flags drift. A footer note explains that per-cloud workflows for Azure Entra, GCP IAM, Databricks, and Snowflake run in their own native execution environments and no single Lambda ever crosses cloud boundaries.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -42,198 +42,165 @@
   </defs>
 
   <!-- Background -->
-  <rect width="1400" height="700" fill="url(#bg)"/>
-  <rect width="1400" height="700" fill="url(#grid)"/>
-  <rect width="1400" height="700" fill="url(#glow)"/>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="720" fill="url(#grid)"/>
+  <rect width="1280" height="720" fill="url(#glow)"/>
 
   <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
     <!-- Title -->
-    <g transform="translate(56,52)">
+    <g transform="translate(56,48)">
       <rect x="0" y="0" width="148" height="28" rx="14" fill="#2a1708" stroke="#f59e0b"/>
       <use href="#aws" x="10" y="6" width="16" height="16"/>
       <text x="34" y="19" fill="#fbbf24" font-size="11" font-weight="800" letter-spacing="1.4">AWS FLAGSHIP WRITE PATH</text>
     </g>
-    <text x="56" y="120" font-size="38" font-weight="900" fill="url(#title)" letter-spacing="-0.6">IAM departures remediation</text>
-    <text x="58" y="148" fill="#94a3b8" font-size="15">Guarded · event-driven · cross-account · dual-audited · one cloud per worker</text>
+    <text x="56" y="116" font-size="36" font-weight="900" fill="url(#title)" letter-spacing="-0.6">IAM departures remediation</text>
+    <text x="58" y="142" fill="#94a3b8" font-size="14">Guarded · event-driven · cross-account · dual-audited · one cloud per worker</text>
 
-    <!-- Stage header labels -->
+    <!-- Stage header labels (4 columns at x=56, 332, 608, 884; gutter ≈ 36px each) -->
     <g font-size="11" font-weight="800" letter-spacing="1.5">
-      <text x="96" y="198" fill="#67e8f9">① PLAN</text>
-      <text x="436" y="198" fill="#93c5fd">② ORCHESTRATE</text>
-      <text x="776" y="198" fill="#fdba74">③ WRITE</text>
-      <text x="1116" y="198" fill="#5eead4">④ AUDIT</text>
+      <text x="56"  y="184" fill="#67e8f9">① PLAN</text>
+      <text x="332" y="184" fill="#93c5fd">② ORCHESTRATE</text>
+      <text x="608" y="184" fill="#fdba74">③ WRITE · 11-step IAM teardown</text>
+      <text x="956" y="184" fill="#5eead4">④ AUDIT · closed loop</text>
     </g>
-    <g font-size="12" fill="#64748b">
-      <text x="96" y="218">decide scope</text>
-      <text x="436" y="218">gate + re-check before act</text>
-      <text x="776" y="218">scoped write · AWS only</text>
-      <text x="1116" y="218">dual store · drift check</text>
-    </g>
-
-    <!-- Lane separators (subtle) -->
-    <g stroke="#1e293b" stroke-width="1" stroke-dasharray="3 6">
-      <line x1="400" y1="244" x2="400" y2="520"/>
-      <line x1="740" y1="244" x2="740" y2="520"/>
-      <line x1="1080" y1="244" x2="1080" y2="520"/>
+    <g font-size="11" fill="#64748b">
+      <text x="56"  y="202">decide scope</text>
+      <text x="332" y="202">gate + re-check before act</text>
+      <text x="608" y="202">scoped write · AWS only · matches handler.py</text>
+      <text x="956" y="202">dual store · drift verified next run</text>
     </g>
 
-    <!-- ============ ① PLAN ============ -->
-    <g transform="translate(56,244)">
-      <!-- HR sources -->
-      <rect x="0" y="0" width="320" height="56" rx="12" fill="#0b1a2e" stroke="#22d3ee" stroke-width="1.5"/>
-      <use href="#snowflake" x="16" y="16" width="24" height="24"/>
-      <use href="#databricks" x="48" y="16" width="24" height="24"/>
-      <text x="84" y="28" fill="#e0f2fe" font-size="14" font-weight="800">HR sources</text>
-      <text x="84" y="46" fill="#94a3b8" font-size="12">Snowflake · Databricks</text>
+    <!-- ============ ① PLAN ============ (x=56, width=240) -->
+    <g transform="translate(56,224)">
+      <rect x="0" y="0" width="240" height="56" rx="12" fill="#0b1a2e" stroke="#22d3ee" stroke-width="1.5"/>
+      <use href="#snowflake" x="14" y="16" width="22" height="22"/>
+      <use href="#databricks" x="42" y="16" width="22" height="22"/>
+      <text x="74" y="28" fill="#e0f2fe" font-size="14" font-weight="800">HR sources</text>
+      <text x="74" y="46" fill="#94a3b8" font-size="11">Snowflake · Databricks</text>
 
-      <!-- Arrow down to reconciler -->
-      <path d="M160,60 L160,80" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <path d="M120,60 L120,80" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 
-      <!-- Reconciler -->
-      <rect x="20" y="86" width="280" height="54" rx="12" fill="#0b1a2e" stroke="#22d3ee" stroke-width="1.5"/>
-      <text x="36" y="112" fill="#e0f2fe" font-size="14" font-weight="800">Reconciler</text>
-      <text x="36" y="130" fill="#94a3b8" font-size="12">rehire + grace filter · actionable set</text>
+      <rect x="0" y="86" width="240" height="56" rx="12" fill="#0b1a2e" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="16" y="108" fill="#e0f2fe" font-size="14" font-weight="800">Reconciler</text>
+      <text x="16" y="126" fill="#94a3b8" font-size="11">rehire + grace filter · actionable set</text>
 
-      <!-- Arrow down to S3 manifest -->
-      <path d="M160,144 L160,164" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+      <path d="M120,146 L120,166" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 
-      <!-- S3 manifest -->
-      <rect x="0" y="170" width="320" height="56" rx="12" fill="#0b2a1e" stroke="#34d399" stroke-width="1.5"/>
-      <use href="#s3" x="16" y="186" width="24" height="24"/>
-      <text x="52" y="198" fill="#d1fae5" font-size="14" font-weight="800">S3 manifest</text>
-      <text x="52" y="216" fill="#94a3b8" font-size="12">actionable set only · immutable</text>
+      <rect x="0" y="172" width="240" height="56" rx="12" fill="#0b2a1e" stroke="#34d399" stroke-width="1.5"/>
+      <use href="#s3" x="14" y="188" width="22" height="22"/>
+      <text x="46" y="200" fill="#d1fae5" font-size="14" font-weight="800">S3 manifest</text>
+      <text x="46" y="218" fill="#94a3b8" font-size="11">actionable set only · immutable</text>
     </g>
 
-    <!-- Plan → Orchestrate arrow -->
-    <!-- Label sized to fit entirely within the 64px column-gutter gap (x=376 to x=440).
-         "PutObject" at font-size 11/700 is ~63px; anchored at x=408 (arrow midpoint) with
-         text-anchor middle so it never clips into the Orchestrate column content (x>=456). -->
-    <path d="M376,360 L440,360" stroke="#64748b" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
-    <text x="408" y="352" text-anchor="middle" fill="#64748b" font-size="11" font-weight="700">PutObject</text>
+    <!-- Plan → Orchestrate arrow (gutter x=296 to x=332) -->
+    <path d="M298,310 L330,310" stroke="#64748b" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+    <text x="314" y="302" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">PutObject</text>
 
-    <!-- ============ ② ORCHESTRATE ============ -->
-    <g transform="translate(456,244)">
-      <!-- EventBridge (text card — no SI icon) -->
+    <!-- ============ ② ORCHESTRATE ============ (x=332, width=240) -->
+    <g transform="translate(332,224)">
       <rect x="0" y="0" width="240" height="56" rx="12" fill="#0f1d36" stroke="#60a5fa" stroke-width="1.5"/>
       <rect x="12" y="14" width="30" height="28" rx="6" fill="#1e3a8a" stroke="#60a5fa"/>
       <text x="27" y="33" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="800">EB</text>
       <text x="52" y="28" fill="#dbeafe" font-size="14" font-weight="800">EventBridge rule</text>
-      <text x="52" y="46" fill="#94a3b8" font-size="12">pattern · S3 PutObject</text>
+      <text x="52" y="46" fill="#94a3b8" font-size="11">pattern · S3 ObjectCreated</text>
 
       <path d="M120,60 L120,80" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 
-      <!-- Step Function -->
-      <rect x="0" y="86" width="240" height="54" rx="12" fill="#0f1d36" stroke="#60a5fa" stroke-width="1.5"/>
+      <rect x="0" y="86" width="240" height="56" rx="12" fill="#0f1d36" stroke="#60a5fa" stroke-width="1.5"/>
       <rect x="12" y="100" width="30" height="28" rx="6" fill="#1e3a8a" stroke="#60a5fa"/>
       <text x="27" y="119" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="800">SFN</text>
-      <text x="52" y="114" fill="#dbeafe" font-size="14" font-weight="800">Step Function</text>
-      <text x="52" y="132" fill="#94a3b8" font-size="12">Map state · fan out per user</text>
-
-      <path d="M120,144 L120,164" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-
-      <!-- Parser Lambda -->
-      <rect x="0" y="170" width="240" height="54" rx="12" fill="#2a1708" stroke="#fbbf24" stroke-width="1.5"/>
-      <use href="#lambda" x="12" y="184" width="26" height="26"/>
-      <text x="48" y="196" fill="#fef3c7" font-size="14" font-weight="800">Parser Lambda</text>
-      <text x="48" y="214" fill="#94a3b8" font-size="12">re-check manifest + IAM state</text>
-
-      <path d="M120,228 L120,248" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-
-      <!-- Worker Lambda -->
-      <rect x="0" y="254" width="240" height="54" rx="12" fill="#2a1708" stroke="#fbbf24" stroke-width="1.5"/>
-      <use href="#lambda" x="12" y="268" width="26" height="26"/>
-      <text x="48" y="280" fill="#fef3c7" font-size="14" font-weight="800">Worker Lambda</text>
-      <text x="48" y="298" fill="#94a3b8" font-size="12">scoped principal · cross-account STS</text>
-    </g>
-
-    <!-- Orchestrate → Write arrow -->
-    <!-- Label centered on arrow midpoint to stay within the 64px column-gutter gap. -->
-    <path d="M716,360 L780,360" stroke="#64748b" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
-    <text x="748" y="352" text-anchor="middle" fill="#64748b" font-size="11" font-weight="700">AssumeRole</text>
-
-    <!-- ============ ③ WRITE ============ -->
-    <g transform="translate(796,244)">
-      <!-- AWS IAM (text card, AWS orange) -->
-      <rect x="0" y="0" width="240" height="86" rx="12" fill="#2a1708" stroke="#fdba74" stroke-width="1.5"/>
-      <use href="#aws" x="14" y="14" width="26" height="26"/>
-      <text x="48" y="28" fill="#fef3c7" font-size="14" font-weight="800">AWS IAM</text>
-      <text x="48" y="46" fill="#94a3b8" font-size="12">across AWS Organization</text>
-      <rect x="14" y="54" width="212" height="22" rx="6" fill="#3a2410" stroke="#f59e0b"/>
-      <text x="22" y="69" fill="#fbbf24" font-size="11" font-weight="700">cross-account role · PrincipalOrgID</text>
-
-      <!-- 13-step deletion card — two columns fit within the 176 height.
-           Matches SKILL.md and handler.py _remediation_steps(). -->
-      <rect x="0" y="100" width="240" height="176" rx="12" fill="#12112e" stroke="#a78bfa" stroke-width="1.5"/>
-      <text x="16" y="118" fill="#c4b5fd" font-size="11" font-weight="800" letter-spacing="1.2">DELETION ORDER · AWS IAM · 13</text>
-      <line x1="116" y1="126" x2="116" y2="266" stroke="#2a2446" stroke-width="1"/>
-      <g font-size="10" fill="#ddd6fe">
-        <!-- Left column: 1–7 -->
-        <text x="10" y="138">1. deactivate access keys</text>
-        <text x="10" y="154">2. delete access keys</text>
-        <text x="10" y="170">3. delete login profile</text>
-        <text x="10" y="186">4. remove from groups</text>
-        <text x="10" y="202">5. detach mgd policies</text>
-        <text x="10" y="218">6. delete inline policies</text>
-        <text x="10" y="234">7. deactivate MFA</text>
-        <!-- Right column: 8–13 -->
-        <text x="124" y="138">8. delete MFA devices</text>
-        <text x="124" y="154">9. delete signing certs</text>
-        <text x="124" y="170">10. delete SSH keys</text>
-        <text x="124" y="186">11. delete svc creds</text>
-        <text x="124" y="202">12. tag user for audit</text>
-        <text x="124" y="220" font-weight="800" fill="#f3e8ff">13. delete IAM user</text>
-      </g>
-    </g>
-
-    <!-- Write → Audit arrow -->
-    <!-- Label centered on arrow midpoint; shortened to "audit" so the text is
-         bounded by the 64px column-gutter gap and never touches the DynamoDB
-         card that sits on the right side of the arrow (x>=1136). -->
-    <path d="M1056,286 L1120,286" stroke="#fbbf24" stroke-width="2.5" fill="none" marker-end="url(#arrowAmber)"/>
-    <text x="1088" y="278" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">audit</text>
-
-    <!-- ============ ④ AUDIT ============ -->
-    <g transform="translate(1136,244)">
-      <!-- DynamoDB -->
-      <rect x="0" y="0" width="240" height="56" rx="12" fill="#0b1b2e" stroke="#60a5fa" stroke-width="1.5"/>
-      <use href="#dynamo" x="16" y="16" width="24" height="24"/>
-      <text x="52" y="28" fill="#dbeafe" font-size="14" font-weight="800">DynamoDB audit</text>
-      <text x="52" y="46" fill="#94a3b8" font-size="12">fast lookup · (user, ts) key</text>
-
-      <path d="M120,60 L120,80" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-
-      <!-- S3 audit (KMS) -->
-      <rect x="0" y="86" width="240" height="56" rx="12" fill="#0b2a1e" stroke="#34d399" stroke-width="1.5"/>
-      <use href="#s3" x="16" y="102" width="24" height="24"/>
-      <text x="52" y="114" fill="#d1fae5" font-size="14" font-weight="800">S3 audit · KMS</text>
-      <text x="52" y="132" fill="#94a3b8" font-size="12">immutable evidence · 7y</text>
+      <text x="52" y="108" fill="#dbeafe" font-size="14" font-weight="800">Step Function</text>
+      <text x="52" y="126" fill="#94a3b8" font-size="11">Map state · 1 execution per user</text>
 
       <path d="M120,146 L120,166" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 
-      <!-- Ingest-back for drift -->
-      <rect x="0" y="172" width="240" height="56" rx="12" fill="#0b3d3b" stroke="#2dd4bf" stroke-width="1.5"/>
-      <text x="16" y="196" fill="#ccfbf1" font-size="14" font-weight="800">Ingest back · drift feed</text>
-      <text x="16" y="214" fill="#94a3b8" font-size="12">next run verifies closure</text>
+      <rect x="0" y="172" width="240" height="56" rx="12" fill="#2a1708" stroke="#fbbf24" stroke-width="1.5"/>
+      <use href="#lambda" x="14" y="188" width="22" height="22"/>
+      <text x="46" y="194" fill="#fef3c7" font-size="14" font-weight="800">Parser Lambda</text>
+      <text x="46" y="214" fill="#94a3b8" font-size="11">re-check manifest + IAM state</text>
+
+      <path d="M120,234 L120,254" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+      <rect x="0" y="260" width="240" height="56" rx="12" fill="#2a1708" stroke="#fbbf24" stroke-width="1.5"/>
+      <use href="#lambda" x="14" y="276" width="22" height="22"/>
+      <text x="46" y="282" fill="#fef3c7" font-size="14" font-weight="800">Worker Lambda</text>
+      <text x="46" y="302" fill="#94a3b8" font-size="11">cross-account STS · per-user scope</text>
     </g>
 
-    <!-- Drift verification rail — positioned BELOW Worker Lambda (ends y=552)
-         with a 20px clearance so the three pills never touch any column card. -->
-    <g transform="translate(220,572)">
-      <rect x="0" y="0" width="220" height="30" rx="15" fill="#12112e" stroke="#f472b6"/>
-      <text x="110" y="20" text-anchor="middle" fill="#f9a8d4" font-size="11" font-weight="800">audit export</text>
-      <rect x="292" y="0" width="260" height="30" rx="15" fill="#12112e" stroke="#f472b6"/>
-      <text x="422" y="20" text-anchor="middle" fill="#f9a8d4" font-size="11" font-weight="800">next reconciler run</text>
-      <rect x="624" y="0" width="260" height="30" rx="15" fill="#12112e" stroke="#f472b6"/>
-      <text x="754" y="20" text-anchor="middle" fill="#f9a8d4" font-size="11" font-weight="800">closed or flagged drift</text>
-      <path d="M220,15 L290,15" fill="none" stroke="#f472b6" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowDashed)"/>
-      <path d="M552,15 L622,15" fill="none" stroke="#f472b6" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowDashed)"/>
+    <!-- Orchestrate → Write arrow (gutter x=572 to x=608, target IAM card mid y) -->
+    <path d="M574,288 L606,288" stroke="#64748b" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+    <text x="590" y="280" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">AssumeRole</text>
+
+    <!-- ============ ③ WRITE ============ (x=608, width=320 — wider for the deletion list) -->
+    <g transform="translate(608,224)">
+      <rect x="0" y="0" width="320" height="80" rx="12" fill="#2a1708" stroke="#fdba74" stroke-width="1.5"/>
+      <use href="#aws" x="14" y="14" width="24" height="24"/>
+      <text x="46" y="28" fill="#fef3c7" font-size="14" font-weight="800">AWS IAM</text>
+      <text x="46" y="44" fill="#94a3b8" font-size="11">across AWS Organization</text>
+      <rect x="14" y="52" width="292" height="20" rx="6" fill="#3a2410" stroke="#f59e0b"/>
+      <text x="22" y="66" fill="#fbbf24" font-size="11" font-weight="700">cross-account role · aws:PrincipalOrgID</text>
+
+      <!-- 11-step deletion card — single column matching _remediation_steps() in lambda_worker/handler.py.
+           Stride = 18px, header at y=22, list y starts at 42, ends at 42 + 11*18 = 240. Box height 252. -->
+      <rect x="0" y="92" width="320" height="252" rx="12" fill="#12112e" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="16" y="114" fill="#c4b5fd" font-size="11" font-weight="800" letter-spacing="1.2">DELETION ORDER · AWS IAM · 11</text>
+      <text x="16" y="128" fill="#64748b" font-size="9">handler.py _remediation_steps()</text>
+      <g font-size="11" fill="#ddd6fe">
+        <text x="16" y="148">1.  deactivate access keys</text>
+        <text x="16" y="166">2.  delete login profile</text>
+        <text x="16" y="184">3.  remove from groups</text>
+        <text x="16" y="202">4.  detach managed policies</text>
+        <text x="16" y="220">5.  delete inline policies</text>
+        <text x="16" y="238">6.  delete MFA devices</text>
+        <text x="16" y="256">7.  delete signing certificates</text>
+        <text x="16" y="274">8.  delete SSH keys</text>
+        <text x="16" y="292">9.  delete service credentials</text>
+        <text x="16" y="310">10. tag user for audit</text>
+        <text x="16" y="330" font-weight="800" fill="#f3e8ff">11. delete IAM user</text>
+      </g>
     </g>
 
-    <!-- Footer honesty note — below drift rail (ends y=602) with 18px clearance. -->
-    <g transform="translate(56,620)">
-      <rect x="0" y="0" width="1288" height="44" rx="10" fill="#12112e" stroke="#64748b"/>
+    <!-- Write → Audit arrow (gutter x=928 to x=956) -->
+    <path d="M930,264 L954,264" stroke="#fbbf24" stroke-width="2.5" fill="none" marker-end="url(#arrowAmber)"/>
+    <text x="942" y="256" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700">audit</text>
+
+    <!-- ============ ④ AUDIT ============ (x=956, width=268) -->
+    <g transform="translate(956,224)">
+      <rect x="0" y="0" width="268" height="56" rx="12" fill="#0b1b2e" stroke="#60a5fa" stroke-width="1.5"/>
+      <use href="#dynamo" x="14" y="16" width="22" height="22"/>
+      <text x="46" y="28" fill="#dbeafe" font-size="14" font-weight="800">DynamoDB audit</text>
+      <text x="46" y="46" fill="#94a3b8" font-size="11">fast lookup · (user, ts) key</text>
+
+      <path d="M134,60 L134,80" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+      <rect x="0" y="86" width="268" height="56" rx="12" fill="#0b2a1e" stroke="#34d399" stroke-width="1.5"/>
+      <use href="#s3" x="14" y="102" width="22" height="22"/>
+      <text x="46" y="114" fill="#d1fae5" font-size="14" font-weight="800">S3 audit · KMS</text>
+      <text x="46" y="132" fill="#94a3b8" font-size="11">immutable evidence · 7y retention</text>
+
+      <path d="M134,146 L134,166" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+      <rect x="0" y="172" width="268" height="56" rx="12" fill="#0b3d3b" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="16" y="194" fill="#ccfbf1" font-size="14" font-weight="800">Ingest back · drift feed</text>
+      <text x="16" y="212" fill="#94a3b8" font-size="11">next reconciler run verifies closure</text>
+    </g>
+
+    <!-- Closed-loop arrow: from "Ingest back" (x=956+134=1090, y=224+228=452) curves down and
+         back to the Reconciler box (x=296, y=224+114=338) — single arc replaces the redundant
+         three-pill drift rail. Pink/dashed = audit→reconcile feedback edge. -->
+    <path d="M1090,452 C1090,560 600,610 176,610 C100,610 60,560 60,510 L60,338 L296,338"
+          fill="none" stroke="#f472b6" stroke-width="2" stroke-dasharray="6 5"
+          marker-end="url(#arrowDashed)"/>
+    <g transform="translate(560,594)">
+      <rect x="0" y="0" width="200" height="28" rx="14" fill="#12112e" stroke="#f472b6"/>
+      <text x="100" y="18" text-anchor="middle" fill="#f9a8d4" font-size="11" font-weight="800">closed-loop drift check</text>
+    </g>
+
+    <!-- Footer honesty note (full-width, ends y=712) -->
+    <g transform="translate(56,648)">
+      <rect x="0" y="0" width="1168" height="44" rx="10" fill="#12112e" stroke="#64748b"/>
       <text x="20" y="20" fill="#f1f5f9" font-size="12" font-weight="800" letter-spacing="0.4">One cloud per worker · no cross-cloud blast radius</text>
-      <text x="20" y="36" fill="#94a3b8" font-size="12">Only the AWS stack above is shipped. GCP and Azure use equivalent native stacks: Eventarc + Cloud Workflows + Cloud Run Jobs for GCP; Event Grid + Logic Apps + Azure Functions for Azure. Per-cloud workers never cross cloud boundaries. See the README mapping table.</text>
+      <text x="20" y="36" fill="#94a3b8" font-size="11">Only the AWS stack above is shipped. Azure uses Event Grid + Logic Apps + Azure Functions; GCP uses Eventarc + Cloud Workflows + Cloud Run Jobs. Per-cloud workers never cross cloud boundaries — see the README per-cloud service mapping.</text>
     </g>
   </g>
 </svg>

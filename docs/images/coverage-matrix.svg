@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820" role="img" aria-labelledby="cm-title cm-desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="cm-title cm-desc">
   <title id="cm-title">cloud-ai-security-skills — detection and posture coverage matrix with MITRE ATT&amp;CK mapping</title>
-  <desc id="cm-desc">Coverage matrix visualizing the gap between shipped detection and posture skills and their paired remediation, with the MITRE ATT&amp;CK technique IDs (or MITRE ATLAS for AI threats) that each detection emits in OCSF finding_info.attacks. Rows list every detection (11) plus every CSPM benchmark family (4 native CIS scopes). Columns are: skill name, MITRE technique IDs, detector or check shipped, paired remediation shipped, paired remediation planned with tracking issue, and notes. Green cells mean a closed loop is shipped; amber cells mean a remediation skill is on the roadmap; red cells mean no remediation exists or is planned. Three of eleven detection rows are closed loops today (Okta MFA fatigue T1621, Okta credential stuffing T1110.003, K8s container escape T1611 and T1610). Eight detection rows lack remediation; five are amber via issues 238, 241, and 242, and three are red because no remediation skill is scoped yet for Workspace login, lateral movement, and MCP tool drift or prompt injection. The matrix is the single source of truth for closed-loop coverage and updates whenever a remediation skill ships.</desc>
+  <desc id="cm-desc">Coverage matrix visualizing the gap between shipped detection and posture skills and their paired remediation, with the MITRE ATT&amp;CK technique IDs (or MITRE ATLAS for AI threats) that each detection emits in OCSF finding_info.attacks. Rows list every detection (11) plus every CSPM benchmark family (4 native CIS scopes). Columns are: skill name, MITRE technique IDs, detector or check shipped status, paired remediation status, and the tracking issue or notes. Green cells mean a closed loop is shipped; amber cells mean a remediation skill is on the roadmap; red cells mean no remediation exists or is planned. Three of eleven detection rows are closed loops today: Okta MFA fatigue T1621, Okta credential stuffing T1110.003, and K8s container escape T1611 and T1610. Eight detection rows lack remediation; five are amber via issues 238, 241, and 242, and three are red because no remediation skill is scoped yet for Workspace login, lateral movement, and MCP tool drift or prompt injection. The matrix is the single source of truth for closed-loop coverage and updates whenever a remediation skill ships.</desc>
 
   <defs>
     <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
@@ -12,188 +12,160 @@
     </pattern>
   </defs>
 
-  <rect width="1400" height="820" fill="url(#bg2)"/>
-  <rect width="1400" height="820" fill="url(#grid2)"/>
+  <rect width="1200" height="900" fill="url(#bg2)"/>
+  <rect width="1200" height="900" fill="url(#grid2)"/>
 
   <!-- Title block -->
-  <text x="48" y="56" fill="#f1f5f9" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="900">Closed-loop coverage matrix</text>
-  <text x="48" y="84" fill="#94a3b8" font-family="Inter, system-ui, sans-serif" font-size="13">Every shipped detection (with its MITRE ATT&amp;CK / ATLAS technique IDs) and posture check, mapped to whether a paired</text>
-  <text x="48" y="102" fill="#94a3b8" font-family="Inter, system-ui, sans-serif" font-size="13">remediation exists, is planned, or is missing. Green rows are closed loops. The red wall is tracked at issue #155.</text>
+  <text x="48" y="62" fill="#f1f5f9" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="900">Closed-loop coverage matrix</text>
+  <text x="48" y="94" fill="#94a3b8" font-family="Inter, system-ui, sans-serif" font-size="16">Every shipped detection (with MITRE ATT&amp;CK / ATLAS technique IDs) and posture check, mapped to whether a paired</text>
+  <text x="48" y="116" fill="#94a3b8" font-family="Inter, system-ui, sans-serif" font-size="16">remediation exists, is planned, or is missing. Green rows are closed loops. The red wall is tracked at issue #155.</text>
 
   <!-- Legend -->
-  <g transform="translate(48,124)" font-family="Inter, system-ui, sans-serif" font-size="12">
+  <g transform="translate(48,144)" font-family="Inter, system-ui, sans-serif" font-size="14">
     <g>
-      <rect x="0" y="0" width="14" height="14" rx="3" fill="#16a34a" stroke="#22c55e"/>
-      <text x="22" y="11" fill="#dcfce7">shipped (closed loop)</text>
+      <rect x="0" y="0" width="18" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
+      <text x="28" y="14" fill="#dcfce7">shipped (closed loop)</text>
     </g>
-    <g transform="translate(190,0)">
-      <rect x="0" y="0" width="14" height="14" rx="3" fill="#b45309" stroke="#f59e0b"/>
-      <text x="22" y="11" fill="#fef3c7">planned (issue tracked)</text>
+    <g transform="translate(230,0)">
+      <rect x="0" y="0" width="18" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
+      <text x="28" y="14" fill="#fef3c7">planned (issue tracked)</text>
     </g>
-    <g transform="translate(380,0)">
-      <rect x="0" y="0" width="14" height="14" rx="3" fill="#7f1d1d" stroke="#ef4444"/>
-      <text x="22" y="11" fill="#fee2e2">missing (no remediation, no issue)</text>
+    <g transform="translate(460,0)">
+      <rect x="0" y="0" width="18" height="18" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
+      <text x="28" y="14" fill="#fee2e2">missing (no issue yet)</text>
     </g>
-    <g transform="translate(660,0)">
-      <rect x="0" y="0" width="14" height="14" rx="3" fill="#1e3a8a" stroke="#3b82f6"/>
-      <text x="22" y="11" fill="#dbeafe">N/A (posture-only)</text>
+    <g transform="translate(680,0)">
+      <rect x="0" y="0" width="18" height="18" rx="4" fill="#1e3a8a" stroke="#3b82f6"/>
+      <text x="28" y="14" fill="#dbeafe">posture-only</text>
     </g>
   </g>
 
-  <!-- Column headers (text baseline at y=164; divider at y=176 — no collision) -->
-  <g font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="800" fill="#cbd5e1">
-    <text x="48"   y="164">Skill</text>
-    <text x="350"  y="164">MITRE ATT&amp;CK / ATLAS</text>
-    <text x="570"  y="164" text-anchor="middle">Detector</text>
-    <text x="700"  y="164" text-anchor="middle">Remediation</text>
-    <text x="830"  y="164" text-anchor="middle">Issue</text>
-    <text x="920"  y="164">Notes</text>
+  <!-- Column headers (text baseline at y=200; divider at y=212 — clean separation) -->
+  <g font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="800" fill="#cbd5e1">
+    <text x="48"   y="200">Skill</text>
+    <text x="430"  y="200">MITRE ATT&amp;CK / ATLAS</text>
+    <text x="780"  y="200" text-anchor="middle">Detector</text>
+    <text x="900"  y="200" text-anchor="middle">Remediation</text>
+    <text x="1020" y="200">Status / issue</text>
   </g>
-  <line x1="48" y1="176" x2="1352" y2="176" stroke="#334155" stroke-width="1"/>
+  <line x1="48" y1="212" x2="1152" y2="212" stroke="#334155" stroke-width="1.5"/>
 
   <!-- DETECTION SECTION -->
-  <text x="48" y="206" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="900">DETECTION (11)</text>
+  <text x="48" y="244" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">DETECTION (11)</text>
 
-  <!-- Row helper: each row y-stride = 30; first row at y=232 -->
-  <!-- 1: detect-okta-mfa-fatigue -->
+  <!-- Row stride 38 starting at y=276; badge y = row_text_y - 16 (badge height 22) -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="246" fill="#f1f5f9" font-size="13">detect-okta-mfa-fatigue</text>
-    <text x="350" y="246" fill="#cbd5e1" font-size="12">T1621</text>
-    <rect x="550" y="234" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="234" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <text x="830" y="246" text-anchor="middle" fill="#94a3b8" font-size="12">—</text>
-    <text x="920" y="246" fill="#dcfce7" font-size="12">→ remediate-okta-session-kill (closed)</text>
+    <text x="48"   y="290" fill="#f1f5f9" font-size="15">detect-okta-mfa-fatigue</text>
+    <text x="430"  y="290" fill="#cbd5e1" font-size="14">T1621</text>
+    <rect x="760"  y="274" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="274" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="290" fill="#dcfce7" font-size="13">→ remediate-okta-session-kill</text>
   </g>
-  <!-- 2 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="276" fill="#f1f5f9" font-size="13">detect-credential-stuffing-okta</text>
-    <text x="350" y="276" fill="#cbd5e1" font-size="12">T1110 · T1110.003</text>
-    <rect x="550" y="264" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="264" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <text x="830" y="276" text-anchor="middle" fill="#94a3b8" font-size="12">—</text>
-    <text x="920" y="276" fill="#dcfce7" font-size="12">→ remediate-okta-session-kill (closed)</text>
+    <text x="48"   y="328" fill="#f1f5f9" font-size="15">detect-credential-stuffing-okta</text>
+    <text x="430"  y="328" fill="#cbd5e1" font-size="14">T1110 · T1110.003</text>
+    <rect x="760"  y="312" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="312" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="328" fill="#dcfce7" font-size="13">→ remediate-okta-session-kill</text>
   </g>
-  <!-- 3 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="306" fill="#f1f5f9" font-size="13">detect-container-escape-k8s</text>
-    <text x="350" y="306" fill="#cbd5e1" font-size="12">T1611 · T1610</text>
-    <rect x="550" y="294" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="294" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <text x="830" y="306" text-anchor="middle" fill="#fde68a" font-size="12">#298 #299</text>
-    <text x="920" y="306" fill="#dcfce7" font-size="12">→ remediate-container-escape-k8s (closed)</text>
+    <text x="48"   y="366" fill="#f1f5f9" font-size="15">detect-container-escape-k8s</text>
+    <text x="430"  y="366" fill="#cbd5e1" font-size="14">T1611 · T1610</text>
+    <rect x="760"  y="350" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="350" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="366" fill="#dcfce7" font-size="13">→ remediate-container-escape-k8s</text>
   </g>
-  <!-- 4 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="336" fill="#f1f5f9" font-size="13">detect-privilege-escalation-k8s</text>
-    <text x="350" y="336" fill="#cbd5e1" font-size="12">T1552.007 · T1611 · T1098 · T1550.001</text>
-    <rect x="550" y="324" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="324" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="336" text-anchor="middle" fill="#fde68a" font-size="12">#241</text>
-    <text x="920" y="336" fill="#fef3c7" font-size="12">remediate-k8s-rbac-revoke (planned)</text>
+    <text x="48"   y="404" fill="#f1f5f9" font-size="15">detect-privilege-escalation-k8s</text>
+    <text x="430"  y="404" fill="#cbd5e1" font-size="14">T1552.007 · T1611 · T1098 · T1550.001</text>
+    <rect x="760"  y="388" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="388" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="404" fill="#fef3c7" font-size="13">#241 · k8s-rbac-revoke (planned)</text>
   </g>
-  <!-- 5 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="366" fill="#f1f5f9" font-size="13">detect-sensitive-secret-read-k8s</text>
-    <text x="350" y="366" fill="#cbd5e1" font-size="12">T1552 · T1552.007</text>
-    <rect x="550" y="354" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="354" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="366" text-anchor="middle" fill="#fde68a" font-size="12">#241</text>
-    <text x="920" y="366" fill="#fef3c7" font-size="12">remediate-k8s-rbac-revoke covers (planned)</text>
+    <text x="48"   y="442" fill="#f1f5f9" font-size="15">detect-sensitive-secret-read-k8s</text>
+    <text x="430"  y="442" fill="#cbd5e1" font-size="14">T1552 · T1552.007</text>
+    <rect x="760"  y="426" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="426" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="442" fill="#fef3c7" font-size="13">#241 · k8s-rbac-revoke covers</text>
   </g>
-  <!-- 6 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="396" fill="#f1f5f9" font-size="13">detect-entra-credential-addition</text>
-    <text x="350" y="396" fill="#cbd5e1" font-size="12">T1098 · T1098.001</text>
-    <rect x="550" y="384" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="384" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="396" text-anchor="middle" fill="#fde68a" font-size="12">#238</text>
-    <text x="920" y="396" fill="#fef3c7" font-size="12">iam-departures-azure-entra (planned)</text>
+    <text x="48"   y="480" fill="#f1f5f9" font-size="15">detect-entra-credential-addition</text>
+    <text x="430"  y="480" fill="#cbd5e1" font-size="14">T1098 · T1098.001</text>
+    <rect x="760"  y="464" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="464" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="480" fill="#fef3c7" font-size="13">#238 · iam-departures-azure-entra</text>
   </g>
-  <!-- 7 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="426" fill="#f1f5f9" font-size="13">detect-entra-role-grant-escalation</text>
-    <text x="350" y="426" fill="#cbd5e1" font-size="12">T1098 · T1098.003</text>
-    <rect x="550" y="414" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="414" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="426" text-anchor="middle" fill="#fde68a" font-size="12">#238</text>
-    <text x="920" y="426" fill="#fef3c7" font-size="12">iam-departures-azure-entra (planned)</text>
+    <text x="48"   y="518" fill="#f1f5f9" font-size="15">detect-entra-role-grant-escalation</text>
+    <text x="430"  y="518" fill="#cbd5e1" font-size="14">T1098 · T1098.003</text>
+    <rect x="760"  y="502" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="502" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="518" fill="#fef3c7" font-size="13">#238 · iam-departures-azure-entra</text>
   </g>
-  <!-- 8 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="456" fill="#f1f5f9" font-size="13">detect-google-workspace-suspicious-login</text>
-    <text x="350" y="456" fill="#cbd5e1" font-size="12">T1110 · T1078</text>
-    <rect x="550" y="444" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="444" width="40" height="18" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
-    <text x="830" y="456" text-anchor="middle" fill="#fca5a5" font-size="12">— file new</text>
-    <text x="920" y="456" fill="#fee2e2" font-size="12">no Workspace session-kill skill yet</text>
+    <text x="48"   y="556" fill="#f1f5f9" font-size="15">detect-google-workspace-suspicious-login</text>
+    <text x="430"  y="556" fill="#cbd5e1" font-size="14">T1110 · T1078</text>
+    <rect x="760"  y="540" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="540" width="40" height="22" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
+    <text x="1020" y="556" fill="#fee2e2" font-size="13">no Workspace session-kill yet</text>
   </g>
-  <!-- 9 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="486" fill="#f1f5f9" font-size="13">detect-lateral-movement</text>
-    <text x="350" y="486" fill="#cbd5e1" font-size="12">T1021 · T1078.004 (TA0008)</text>
-    <rect x="550" y="474" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="474" width="40" height="18" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
-    <text x="830" y="486" text-anchor="middle" fill="#fca5a5" font-size="12">— file new</text>
-    <text x="920" y="486" fill="#fee2e2" font-size="12">cross-cloud · response is per-arm fan-out</text>
+    <text x="48"   y="594" fill="#f1f5f9" font-size="15">detect-lateral-movement</text>
+    <text x="430"  y="594" fill="#cbd5e1" font-size="14">T1021 · T1078.004 (TA0008)</text>
+    <rect x="760"  y="578" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="578" width="40" height="22" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
+    <text x="1020" y="594" fill="#fee2e2" font-size="13">cross-cloud · per-arm fan-out</text>
   </g>
-  <!-- 10 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="516" fill="#f1f5f9" font-size="13">detect-mcp-tool-drift</text>
-    <text x="350" y="516" fill="#cbd5e1" font-size="12">T1195.001 (TA0001)</text>
-    <rect x="550" y="504" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="504" width="40" height="18" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
-    <text x="830" y="516" text-anchor="middle" fill="#fca5a5" font-size="12">— file new</text>
-    <text x="920" y="516" fill="#fee2e2" font-size="12">remediate-mcp-tool-quarantine candidate</text>
+    <text x="48"   y="632" fill="#f1f5f9" font-size="15">detect-mcp-tool-drift</text>
+    <text x="430"  y="632" fill="#cbd5e1" font-size="14">T1195.001 (TA0001)</text>
+    <rect x="760"  y="616" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="616" width="40" height="22" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
+    <text x="1020" y="632" fill="#fee2e2" font-size="13">remediate-mcp-tool-quarantine candidate</text>
   </g>
-  <!-- 11 -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="546" fill="#f1f5f9" font-size="13">detect-prompt-injection-mcp-proxy</text>
-    <text x="350" y="546" fill="#cbd5e1" font-size="12">ATLAS AML.T0051</text>
-    <rect x="550" y="534" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="534" width="40" height="18" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
-    <text x="830" y="546" text-anchor="middle" fill="#fca5a5" font-size="12">— file new</text>
-    <text x="920" y="546" fill="#fee2e2" font-size="12">remediate-mcp-proxy-quarantine candidate</text>
+    <text x="48"   y="670" fill="#f1f5f9" font-size="15">detect-prompt-injection-mcp-proxy</text>
+    <text x="430"  y="670" fill="#cbd5e1" font-size="14">ATLAS AML.T0051</text>
+    <rect x="760"  y="654" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="654" width="40" height="22" rx="4" fill="#7f1d1d" stroke="#ef4444"/>
+    <text x="1020" y="670" fill="#fee2e2" font-size="13">remediate-mcp-proxy-quarantine candidate</text>
   </g>
 
   <!-- EVALUATION SECTION -->
-  <text x="48" y="600" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="900">EVALUATION / CSPM (4 platforms · 82 checks)</text>
+  <text x="48" y="724" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">EVALUATION / CSPM (4 platforms · 82 checks)</text>
 
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="640" fill="#f1f5f9" font-size="13">cspm-aws-cis-benchmark</text>
-    <text x="350" y="640" fill="#cbd5e1" font-size="12">CIS AWS Foundations 1.5</text>
-    <rect x="550" y="628" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="628" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="640" text-anchor="middle" fill="#fde68a" font-size="12">#242 #254</text>
-    <text x="920" y="640" fill="#fef3c7" font-size="12">--auto-remediate flag (planned, top-20)</text>
+    <text x="48"   y="758" fill="#f1f5f9" font-size="15">cspm-aws-cis-benchmark</text>
+    <text x="430"  y="758" fill="#cbd5e1" font-size="14">CIS AWS Foundations 1.5</text>
+    <rect x="760"  y="742" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="742" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="758" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="670" fill="#f1f5f9" font-size="13">cspm-gcp-cis-benchmark</text>
-    <text x="350" y="670" fill="#cbd5e1" font-size="12">CIS GCP Foundations 2.0</text>
-    <rect x="550" y="658" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="658" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="670" text-anchor="middle" fill="#fde68a" font-size="12">#242 #254</text>
-    <text x="920" y="670" fill="#fef3c7" font-size="12">--auto-remediate flag (planned, top-20)</text>
+    <text x="48"   y="788" fill="#f1f5f9" font-size="15">cspm-gcp-cis-benchmark</text>
+    <text x="430"  y="788" fill="#cbd5e1" font-size="14">CIS GCP Foundations 2.0</text>
+    <rect x="760"  y="772" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="772" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="788" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="700" fill="#f1f5f9" font-size="13">cspm-azure-cis-benchmark</text>
-    <text x="350" y="700" fill="#cbd5e1" font-size="12">CIS Azure Foundations 2.1</text>
-    <rect x="550" y="688" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="688" width="40" height="18" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="830" y="700" text-anchor="middle" fill="#fde68a" font-size="12">#242 #254</text>
-    <text x="920" y="700" fill="#fef3c7" font-size="12">--auto-remediate flag (planned, top-20)</text>
+    <text x="48"   y="818" fill="#f1f5f9" font-size="15">cspm-azure-cis-benchmark</text>
+    <text x="430"  y="818" fill="#cbd5e1" font-size="14">CIS Azure Foundations 2.1</text>
+    <rect x="760"  y="802" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="802" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="818" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"  y="730" fill="#f1f5f9" font-size="13">k8s + container + model + gpu benchmarks</text>
-    <text x="350" y="730" fill="#cbd5e1" font-size="12">CIS K8s · NIST SSDF · OWASP LLM</text>
-    <rect x="550" y="718" width="40" height="18" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="680" y="718" width="40" height="18" rx="4" fill="#1e3a8a" stroke="#3b82f6"/>
-    <text x="830" y="730" text-anchor="middle" fill="#94a3b8" font-size="12">—</text>
-    <text x="920" y="730" fill="#dbeafe" font-size="12">posture-only · remediated via k8s-rbac-revoke</text>
+    <text x="48"   y="848" fill="#f1f5f9" font-size="15">k8s + container + model + gpu benchmarks</text>
+    <text x="430"  y="848" fill="#cbd5e1" font-size="14">CIS K8s · NIST SSDF · OWASP LLM</text>
+    <rect x="760"  y="832" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="832" width="40" height="22" rx="4" fill="#1e3a8a" stroke="#3b82f6"/>
+    <text x="1020" y="848" fill="#dbeafe" font-size="13">posture-only · via k8s-rbac-revoke</text>
   </g>
 
   <!-- Footer -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48" y="780" fill="#94a3b8" font-size="12">Closed-loop ratio: <tspan fill="#5eead4" font-weight="900">3 / 11 detections</tspan> · roadmap covers <tspan fill="#fbbf24" font-weight="900">5 of 8 gaps</tspan> via #238 #241 #242 · <tspan fill="#f87171" font-weight="900">3 detections (Workspace, lateral-movement, MCP) need new remediation skills</tspan></text>
-    <text x="48" y="802" fill="#64748b" font-size="11">Every "shipped" remediation cell is HITL-gated, dry-run-by-default, and dual-audited per SECURITY_BAR.md and docs/HITL_POLICY.md. Tracking: #155.</text>
+    <text x="48" y="884" fill="#94a3b8" font-size="13">Closed-loop ratio: <tspan fill="#5eead4" font-weight="900">3 / 11</tspan> · roadmap covers <tspan fill="#fbbf24" font-weight="900">5 of 8 gaps</tspan> via #238 #241 #242 · <tspan fill="#f87171" font-weight="900">3 detections need new remediation skills</tspan> · all writes HITL-gated, dry-run-default, dual-audited (#155)</text>
   </g>
 </svg>
