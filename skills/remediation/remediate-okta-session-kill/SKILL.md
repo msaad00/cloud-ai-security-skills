@@ -52,7 +52,7 @@ Pair skill for:
 - [`detect-okta-mfa-fatigue`](../../detection/detect-okta-mfa-fatigue/) — Okta Verify push-bombing (T1621)
 - [`detect-credential-stuffing-okta`](../../detection/detect-credential-stuffing-okta/) — password spraying followed by success (T1110 / T1110.003)
 
-Together those form the first shipped **detect → act → audit → re-verify** loop in the repo. A finding flows in (stdin OCSF 2004); this skill plans the containment (dry-run); an approver opts in with `--apply`; the Okta API calls run; the audit trail is dual-written; the next ingest-back run proves the user's sessions were actually revoked.
+Together those form the first shipped **detect → act → audit → re-verify** loop in the repo. A finding flows in (stdin OCSF 2004); this skill plans the containment (dry-run); an approver opts in with `--apply`; the Okta API calls run; the audit trail is dual-written. The same skill then runs in `--reverify` mode against the same finding to confirm the user has zero active sessions and zero OAuth refresh tokens — emitting a `remediation_verification` record (and, on DRIFT, a paired OCSF Detection Finding via the shared `_shared/remediation_verifier.py` contract) so the loop closes through the same SIEM/SOAR pipeline as every other finding.
 
 ## Attack pattern it responds to
 

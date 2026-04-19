@@ -31,6 +31,15 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared.remediation_verifier import (  # noqa: E402
+    DEFAULT_VERIFICATION_SLA_MS,
+    RemediationReference,
+    VerificationResult,
+    VerificationStatus,
+    build_drift_finding,
+    build_verification_record,
+    sla_deadline,
+)
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "remediate-okta-session-kill"
@@ -102,6 +111,8 @@ class OktaClient(Protocol):
 
     def revoke_sessions(self, user_id: str) -> None: ...
     def revoke_oauth_tokens(self, user_id: str) -> None: ...
+    def list_active_sessions(self, user_id: str) -> list[dict[str, Any]]: ...
+    def list_active_oauth_tokens(self, user_id: str) -> list[dict[str, Any]]: ...
 
 
 @dataclasses.dataclass
@@ -138,6 +149,37 @@ class HttpxOktaClient:
                 raise RuntimeError(
                     f"Okta revoke_oauth_tokens returned {response.status_code}: {response.text[:200]}"
                 )
+
+    def list_active_sessions(self, user_id: str) -> list[dict[str, Any]]:
+        # Okta provides GET /api/v1/users/{id}/sessions per
+        # https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/#tag/User/operation/listUserSessions
+        # The endpoint returns 200 with a list (possibly empty) when the user
+        # exists; 404 if the user is gone (we treat as no sessions).
+        with self._client() as c:
+            response = c.get(f"/api/v1/users/{user_id}/sessions")
+            if response.status_code == 404:
+                return []
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"Okta list_active_sessions returned {response.status_code}: {response.text[:200]}"
+                )
+            data = response.json()
+            return list(data) if isinstance(data, list) else []
+
+    def list_active_oauth_tokens(self, user_id: str) -> list[dict[str, Any]]:
+        # Okta GET /api/v1/users/{id}/oauth/tokens (refresh tokens for
+        # OAuth/OIDC apps) per
+        # https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/#tag/User/operation/listRefreshTokensForUser
+        with self._client() as c:
+            response = c.get(f"/api/v1/users/{user_id}/oauth/tokens")
+            if response.status_code == 404:
+                return []
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"Okta list_active_oauth_tokens returned {response.status_code}: {response.text[:200]}"
+                )
+            data = response.json()
+            return list(data) if isinstance(data, list) else []
 
 
 # -- Audit writer protocol (injectable for tests) ----------------------------
@@ -435,6 +477,94 @@ def apply_actions(
 # -- Top-level entry ---------------------------------------------------------
 
 
+def reverify_target(
+    target: Target,
+    *,
+    okta_client: OktaClient,
+    remediated_at_ms: int | None = None,
+    now_ms: int | None = None,
+) -> list[dict[str, Any]]:
+    """Re-verify that the user has no active sessions or OAuth refresh tokens
+    after a previous session-kill remediation. Emits one verification record
+    per call; on DRIFT also emits an OCSF Detection Finding so downstream
+    SIEM/SOAR picks it up via the same pipeline.
+
+    `remediated_at_ms` may be None when the verifier doesn't have access to
+    the audit row; we use the verification time as the proxy and note
+    within_sla=True. A future PR can wire DynamoDB lookup to populate this.
+    """
+    checked_at_ms = now_ms if now_ms is not None else int(datetime.now(timezone.utc).timestamp() * 1000)
+    remediated_at_ms_resolved = remediated_at_ms if remediated_at_ms is not None else checked_at_ms
+
+    reference = RemediationReference(
+        remediation_skill=SKILL_NAME,
+        remediation_action_uid=_deterministic_uid("session-kill", target.user_uid),
+        target_provider="Okta",
+        target_identifier=target.user_uid,
+        original_finding_uid=target.finding_uid,
+        remediated_at_ms=remediated_at_ms_resolved,
+    )
+
+    expected = "no active sessions and no active OAuth refresh tokens for the user"
+
+    try:
+        sessions = okta_client.list_active_sessions(target.user_uid)
+        tokens = okta_client.list_active_oauth_tokens(target.user_uid)
+    except Exception as exc:
+        # NEVER silently downgrade unreachable to verified — operator must see it
+        result = VerificationResult(
+            status=VerificationStatus.UNREACHABLE,
+            checked_at_ms=checked_at_ms,
+            sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+            expected_state=expected,
+            actual_state="okta API call raised; cannot determine state",
+            detail=str(exc),
+        )
+        record = build_verification_record(reference=reference, result=result, verifier_skill=SKILL_NAME)
+        record["target"] = {
+            "provider": "Okta",
+            "user_uid": target.user_uid,
+            "user_name": target.user_name,
+        }
+        return [record]
+
+    drift = bool(sessions) or bool(tokens)
+    if drift:
+        actual = (
+            f"sessions={len(sessions)} oauth_tokens={len(tokens)} (expected 0/0)"
+        )
+        result = VerificationResult(
+            status=VerificationStatus.DRIFT,
+            checked_at_ms=checked_at_ms,
+            sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+            expected_state=expected,
+            actual_state=actual,
+            detail="user has active sessions or OAuth refresh tokens after session-kill",
+        )
+    else:
+        result = VerificationResult(
+            status=VerificationStatus.VERIFIED,
+            checked_at_ms=checked_at_ms,
+            sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+            expected_state=expected,
+            actual_state="0 sessions, 0 oauth tokens",
+            detail="session-kill confirmed",
+        )
+
+    record = build_verification_record(reference=reference, result=result, verifier_skill=SKILL_NAME)
+    record["target"] = {
+        "provider": "Okta",
+        "user_uid": target.user_uid,
+        "user_name": target.user_name,
+    }
+    outputs = [record]
+    if result.status == VerificationStatus.DRIFT:
+        outputs.append(
+            build_drift_finding(reference=reference, result=result, verifier_skill=SKILL_NAME)
+        )
+    return outputs
+
+
 def run(
     events: Iterable[dict[str, Any]],
     *,
@@ -445,6 +575,7 @@ def run(
     incident_id: str = "",
     approver: str = "",
     now_ms: int | None = None,
+    reverify: bool = False,
 ) -> Iterator[dict[str, Any]]:
     deny_patterns = deny_patterns if deny_patterns is not None else load_deny_patterns()
     for target, skip_reason in parse_targets(events):
@@ -466,12 +597,18 @@ def run(
                 actions=[],
                 audit_refs={},
                 status=STATUS_SKIPPED_DENY_LIST,
-                dry_run=not apply,
+                dry_run=not apply and not reverify,
                 incident_id=incident_id,
                 approver=approver,
                 now_ms=now_ms,
                 status_detail=f"matched deny pattern `{matched}`",
             )
+            continue
+
+        if reverify:
+            if okta_client is None:
+                raise RuntimeError("reverify=True requires okta_client to be provided")
+            yield from reverify_target(target, okta_client=okta_client, now_ms=now_ms)
             continue
 
         if not apply:
@@ -635,7 +772,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Actually call the Okta API. Requires OKTA_SESSION_KILL_INCIDENT_ID and OKTA_SESSION_KILL_APPROVER.",
     )
+    parser.add_argument(
+        "--reverify",
+        action="store_true",
+        help=(
+            "Read-only verification: confirm the user has no active sessions or "
+            "OAuth refresh tokens after a previous session-kill remediation. "
+            "Emits a verification record always, plus an OCSF Detection Finding "
+            "on DRIFT so SIEM/SOAR picks it up."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    if args.apply and args.reverify:
+        print("--apply and --reverify are mutually exclusive", file=sys.stderr)
+        return 2
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
@@ -659,11 +810,15 @@ def main(argv: list[str] | None = None) -> int:
             incident_id = os.environ["OKTA_SESSION_KILL_INCIDENT_ID"].strip()
             approver = os.environ["OKTA_SESSION_KILL_APPROVER"].strip()
             okta_client, audit = _build_production_clients()
+        elif args.reverify:
+            # Reverify needs Okta read access but no audit writer (read-only path)
+            okta_client, _ = _build_production_clients()
 
         events = list(load_jsonl(in_stream))
         for record in run(
             events,
             apply=args.apply,
+            reverify=args.reverify,
             okta_client=okta_client,
             audit=audit,
             incident_id=incident_id,
