@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-16T05:25:30.637012+00:00",
+  "generated_at": "2026-04-19T08:44:47.797374+00:00",
   "runs_per_case": 3,
   "platform": "darwin",
-  "python": "3.13.5",
+  "python": "3.11.9",
   "measurement_method": {
     "wall_clock": "process start to exit",
     "cpu_time": "resource.getrusage(RUSAGE_CHILDREN) in a fresh helper process per run",
@@ -21,58 +21,58 @@
         "typical": {
           "load_level": "typical",
           "input_records": 1000,
-          "avg_wall_ms": 44.77,
-          "avg_cpu_user_ms": 33.4,
-          "avg_cpu_sys_ms": 8.05,
-          "peak_rss_mib": 19.8,
-          "approx_throughput_rps": 22335.8,
+          "avg_wall_ms": 63.12,
+          "avg_cpu_user_ms": 42.23,
+          "avg_cpu_sys_ms": 6.51,
+          "peak_rss_mib": 20.0,
+          "approx_throughput_rps": 15842.3,
           "runs": [
             {
-              "wall_seconds": 0.04593324998859316,
-              "cpu_user_seconds": 0.033713,
-              "cpu_sys_seconds": 0.008413,
-              "peak_rss_mib": 19.53125
+              "wall_seconds": 0.09104466699999847,
+              "cpu_user_seconds": 0.0422,
+              "cpu_sys_seconds": 0.00889,
+              "peak_rss_mib": 19.953125
             },
             {
-              "wall_seconds": 0.043517582991626114,
-              "cpu_user_seconds": 0.032854999999999995,
-              "cpu_sys_seconds": 0.007456,
-              "peak_rss_mib": 19.4375
+              "wall_seconds": 0.0493319170000035,
+              "cpu_user_seconds": 0.042388999999999996,
+              "cpu_sys_seconds": 0.00537,
+              "peak_rss_mib": 19.828125
             },
             {
-              "wall_seconds": 0.04486254102084786,
-              "cpu_user_seconds": 0.033638999999999995,
-              "cpu_sys_seconds": 0.008291,
-              "peak_rss_mib": 19.75
+              "wall_seconds": 0.048990332999999,
+              "cpu_user_seconds": 0.042093,
+              "cpu_sys_seconds": 0.005281,
+              "peak_rss_mib": 19.78125
             }
           ]
         },
         "10x": {
           "load_level": "10x",
           "input_records": 10000,
-          "avg_wall_ms": 185.96,
-          "avg_cpu_user_ms": 144.34,
-          "avg_cpu_sys_ms": 12.74,
-          "peak_rss_mib": 38.7,
-          "approx_throughput_rps": 53774.3,
+          "avg_wall_ms": 222.87,
+          "avg_cpu_user_ms": 198.47,
+          "avg_cpu_sys_ms": 17.94,
+          "peak_rss_mib": 38.4,
+          "approx_throughput_rps": 44868.3,
           "runs": [
             {
-              "wall_seconds": 0.19090958300512284,
-              "cpu_user_seconds": 0.14879699999999998,
-              "cpu_sys_seconds": 0.013309,
-              "peak_rss_mib": 38.484375
+              "wall_seconds": 0.23465812500000283,
+              "cpu_user_seconds": 0.196007,
+              "cpu_sys_seconds": 0.023517,
+              "peak_rss_mib": 38.296875
             },
             {
-              "wall_seconds": 0.1862108749919571,
-              "cpu_user_seconds": 0.14232699999999998,
-              "cpu_sys_seconds": 0.012444,
-              "peak_rss_mib": 38.671875
+              "wall_seconds": 0.22277108300000492,
+              "cpu_user_seconds": 0.20127499999999998,
+              "cpu_sys_seconds": 0.019252,
+              "peak_rss_mib": 38.015625
             },
             {
-              "wall_seconds": 0.18076666601700708,
-              "cpu_user_seconds": 0.141877,
-              "cpu_sys_seconds": 0.012459999999999999,
-              "peak_rss_mib": 38.625
+              "wall_seconds": 0.211194208000002,
+              "cpu_user_seconds": 0.19812,
+              "cpu_sys_seconds": 0.011042,
+              "peak_rss_mib": 38.359375
             }
           ]
         }
@@ -89,58 +89,58 @@
         "typical": {
           "load_level": "typical",
           "input_records": 1000,
-          "avg_wall_ms": 69.78,
-          "avg_cpu_user_ms": 40.31,
-          "avg_cpu_sys_ms": 10.27,
-          "peak_rss_mib": 25.5,
-          "approx_throughput_rps": 14330.0,
+          "avg_wall_ms": 44.76,
+          "avg_cpu_user_ms": 37.33,
+          "avg_cpu_sys_ms": 5.95,
+          "peak_rss_mib": 25.2,
+          "approx_throughput_rps": 22339.1,
           "runs": [
             {
-              "wall_seconds": 0.0715714999823831,
-              "cpu_user_seconds": 0.038391,
-              "cpu_sys_seconds": 0.00983,
-              "peak_rss_mib": 25.234375
+              "wall_seconds": 0.045110624999999516,
+              "cpu_user_seconds": 0.037600999999999996,
+              "cpu_sys_seconds": 0.005905,
+              "peak_rss_mib": 25.1875
             },
             {
-              "wall_seconds": 0.07059245801065117,
-              "cpu_user_seconds": 0.03499,
-              "cpu_sys_seconds": 0.008857,
-              "peak_rss_mib": 24.9375
+              "wall_seconds": 0.045431082999996875,
+              "cpu_user_seconds": 0.037649999999999996,
+              "cpu_sys_seconds": 0.00652,
+              "peak_rss_mib": 25.25
             },
             {
-              "wall_seconds": 0.0671864589676261,
-              "cpu_user_seconds": 0.047541,
-              "cpu_sys_seconds": 0.012112999999999999,
-              "peak_rss_mib": 25.46875
+              "wall_seconds": 0.04375195800000142,
+              "cpu_user_seconds": 0.036752,
+              "cpu_sys_seconds": 0.005437,
+              "peak_rss_mib": 24.90625
             }
           ]
         },
         "10x": {
           "load_level": "10x",
           "input_records": 10000,
-          "avg_wall_ms": 185.0,
-          "avg_cpu_user_ms": 122.36,
-          "avg_cpu_sys_ms": 17.46,
-          "peak_rss_mib": 84.9,
-          "approx_throughput_rps": 54054.4,
+          "avg_wall_ms": 195.37,
+          "avg_cpu_user_ms": 158.53,
+          "avg_cpu_sys_ms": 22.6,
+          "peak_rss_mib": 89.6,
+          "approx_throughput_rps": 51185.6,
           "runs": [
             {
-              "wall_seconds": 0.2655257920268923,
-              "cpu_user_seconds": 0.130956,
-              "cpu_sys_seconds": 0.016932,
-              "peak_rss_mib": 84.515625
+              "wall_seconds": 0.22725520800000254,
+              "cpu_user_seconds": 0.158292,
+              "cpu_sys_seconds": 0.0319,
+              "peak_rss_mib": 89.359375
             },
             {
-              "wall_seconds": 0.146495875029359,
-              "cpu_user_seconds": 0.118556,
-              "cpu_sys_seconds": 0.018272,
-              "peak_rss_mib": 84.890625
+              "wall_seconds": 0.18459608399999894,
+              "cpu_user_seconds": 0.1606,
+              "cpu_sys_seconds": 0.020767,
+              "peak_rss_mib": 89.625
             },
             {
-              "wall_seconds": 0.14297495904611424,
-              "cpu_user_seconds": 0.11756,
-              "cpu_sys_seconds": 0.01719,
-              "peak_rss_mib": 84.546875
+              "wall_seconds": 0.17425158399999674,
+              "cpu_user_seconds": 0.156689,
+              "cpu_sys_seconds": 0.01513,
+              "peak_rss_mib": 89.328125
             }
           ]
         }
@@ -158,58 +158,58 @@
         "typical": {
           "load_level": "typical",
           "input_records": 500,
-          "avg_wall_ms": 55.78,
-          "avg_cpu_user_ms": 36.95,
-          "avg_cpu_sys_ms": 8.31,
-          "peak_rss_mib": 18.5,
-          "approx_throughput_rps": 8963.8,
+          "avg_wall_ms": 48.64,
+          "avg_cpu_user_ms": 41.09,
+          "avg_cpu_sys_ms": 5.27,
+          "peak_rss_mib": 17.7,
+          "approx_throughput_rps": 10280.4,
           "runs": [
             {
-              "wall_seconds": 0.049222500005271286,
-              "cpu_user_seconds": 0.036877,
-              "cpu_sys_seconds": 0.007903,
-              "peak_rss_mib": 18.453125
+              "wall_seconds": 0.04810900000000373,
+              "cpu_user_seconds": 0.039742,
+              "cpu_sys_seconds": 0.005108,
+              "peak_rss_mib": 17.6875
             },
             {
-              "wall_seconds": 0.04807437502313405,
-              "cpu_user_seconds": 0.036662,
-              "cpu_sys_seconds": 0.008602,
-              "peak_rss_mib": 18.171875
+              "wall_seconds": 0.04864387499999623,
+              "cpu_user_seconds": 0.041235,
+              "cpu_sys_seconds": 0.005415,
+              "peak_rss_mib": 17.15625
             },
             {
-              "wall_seconds": 0.07004295801743865,
-              "cpu_user_seconds": 0.037309999999999996,
-              "cpu_sys_seconds": 0.008435999999999999,
-              "peak_rss_mib": 18.140625
+              "wall_seconds": 0.049156334000002744,
+              "cpu_user_seconds": 0.042296,
+              "cpu_sys_seconds": 0.005291,
+              "peak_rss_mib": 17.453125
             }
           ]
         },
         "10x": {
           "load_level": "10x",
           "input_records": 5000,
-          "avg_wall_ms": 169.92,
-          "avg_cpu_user_ms": 137.1,
-          "avg_cpu_sys_ms": 12.98,
-          "peak_rss_mib": 34.8,
-          "approx_throughput_rps": 29424.5,
+          "avg_wall_ms": 181.9,
+          "avg_cpu_user_ms": 170.72,
+          "avg_cpu_sys_ms": 9.3,
+          "peak_rss_mib": 30.6,
+          "approx_throughput_rps": 27487.5,
           "runs": [
             {
-              "wall_seconds": 0.17552466702181846,
-              "cpu_user_seconds": 0.13865,
-              "cpu_sys_seconds": 0.013588,
-              "peak_rss_mib": 34.765625
+              "wall_seconds": 0.18227449999999834,
+              "cpu_user_seconds": 0.170438,
+              "cpu_sys_seconds": 0.009949999999999999,
+              "peak_rss_mib": 30.265625
             },
             {
-              "wall_seconds": 0.17730083398055285,
-              "cpu_user_seconds": 0.139353,
-              "cpu_sys_seconds": 0.013378999999999999,
-              "peak_rss_mib": 34.4375
+              "wall_seconds": 0.17922437499999688,
+              "cpu_user_seconds": 0.168657,
+              "cpu_sys_seconds": 0.008817,
+              "peak_rss_mib": 30.625
             },
             {
-              "wall_seconds": 0.15695433400105685,
-              "cpu_user_seconds": 0.133303,
-              "cpu_sys_seconds": 0.011970999999999999,
-              "peak_rss_mib": 34.171875
+              "wall_seconds": 0.18420320799999956,
+              "cpu_user_seconds": 0.173061,
+              "cpu_sys_seconds": 0.009139,
+              "peak_rss_mib": 30.171875
             }
           ]
         }
