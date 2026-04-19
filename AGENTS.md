@@ -41,6 +41,8 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 
 **`remediation/`** (active fix workflows, HITL-gated, dual-audited)
 - `iam-departures-aws`
+- `remediate-okta-session-kill`
+- `remediate-container-escape-k8s`
 
 Compose via stdin/stdout pipes. The shared wire contract is pinned in
 [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).

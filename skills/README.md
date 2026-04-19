@@ -100,6 +100,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 |---|---|
 | [`iam-departures-aws`](remediation/iam-departures-aws/) | AWS IAM cleanup for departed employees (per-cloud split for Azure/GCP/Snowflake/Databricks planned; library modules in `src/lambda_worker/clouds/`) |
 | [`remediate-okta-session-kill`](remediation/remediate-okta-session-kill/) | Okta containment — revoke sessions + OAuth tokens after detect-okta-mfa-fatigue or detect-credential-stuffing-okta; dual-audit, deny-list, declared-incident gate |
+| [`remediate-container-escape-k8s`](remediation/remediate-container-escape-k8s/) | Kubernetes containment — apply or re-verify a deny-all NetworkPolicy after detect-container-escape-k8s; protected-namespace deny-list, declared-incident gate, dual audit |
 
 ## output/
 
