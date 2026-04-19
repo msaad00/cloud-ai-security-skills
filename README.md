@@ -74,7 +74,7 @@ flowchart LR
     subgraph Act
         direction TB
         view["L6 View<br/>2 skills · SARIF · Mermaid"]:::act
-        remediate["L5 Remediate<br/>2 skills · HITL · dual audit"]:::act
+        remediate["L5 Remediate<br/>3 skills · HITL · dual audit"]:::act
     end
     output["L7 Output<br/>3 sinks · S3 · Snowflake · ClickHouse"]:::sink
 
@@ -122,7 +122,7 @@ flowchart TB
     end
 
     mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
-    bundle[("Shared skill bundle<br/>46 shipped")]:::bundle
+    bundle[("Shared skill bundle<br/>48 shipped")]:::bundle
     outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
 
     claude -->|stdio| mcp
