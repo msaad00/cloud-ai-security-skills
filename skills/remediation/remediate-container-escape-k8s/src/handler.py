@@ -29,6 +29,15 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared.remediation_verifier import (  # noqa: E402
+    DEFAULT_VERIFICATION_SLA_MS,
+    RemediationReference,
+    VerificationResult,
+    VerificationStatus,
+    build_drift_finding,
+    build_verification_record,
+    sla_deadline,
+)
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "remediate-container-escape-k8s"
@@ -499,27 +508,102 @@ def _skip_record(target: Target, *, status: str, detail: str, dry_run: bool) -> 
     }
 
 
-def _verification_record(resolved: ResolvedTarget, *, status: str, detail: str) -> dict[str, Any]:
-    return {
-        "schema_mode": "native",
-        "canonical_schema_version": CANONICAL_VERSION,
-        "record_type": RECORD_VERIFICATION,
-        "source_skill": SKILL_NAME,
-        "target": {
-            "provider": "Kubernetes",
-            "namespace": resolved.target.namespace,
-            "resource_type": resolved.target.resource_type,
-            "resource_name": resolved.target.resource_name,
-            "pod_name": resolved.target.pod_name,
-        },
-        "policy_name": resolved.policy_name,
-        "selector": resolved.selector,
-        "endpoint": _verification_endpoint(resolved.target.namespace, resolved.policy_name),
-        "status": status,
-        "status_detail": detail,
-        "time_ms": int(datetime.now(timezone.utc).timestamp() * 1000),
-        "finding_uid": resolved.target.finding_uid,
+_VERIFY_STATUS_TO_CONTRACT = {
+    STATUS_VERIFIED: VerificationStatus.VERIFIED,
+    STATUS_DRIFT: VerificationStatus.DRIFT,
+}
+
+
+def _build_verification_outputs(
+    resolved: ResolvedTarget,
+    *,
+    status: str,
+    detail: str,
+    expected_state: str,
+    actual_state: str,
+    remediated_at_ms: int | None = None,
+) -> list[dict[str, Any]]:
+    """Translate a reverify outcome into the shared `_shared.remediation_verifier`
+    contract. Emits one verification record always; on DRIFT also emits an OCSF
+    1.8 Detection Finding so SIEM/SOAR picks it up via the same pipeline as
+    every other finding.
+
+    `remediated_at_ms` may be None when the verifier doesn't have access to the
+    audit row (current code path); we use the verification time as the proxy and
+    note within_sla=True. A future PR can wire DynamoDB lookup to populate this.
+    """
+    contract_status = _VERIFY_STATUS_TO_CONTRACT.get(status, VerificationStatus.UNREACHABLE)
+    checked_at_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    remediated_at_ms = remediated_at_ms if remediated_at_ms is not None else checked_at_ms
+
+    reference = RemediationReference(
+        remediation_skill=SKILL_NAME,
+        remediation_action_uid=resolved.policy_name,
+        target_provider="Kubernetes",
+        target_identifier=(
+            f"{resolved.target.namespace}/{resolved.target.resource_type}/{resolved.target.resource_name}"
+        ),
+        original_finding_uid=resolved.target.finding_uid,
+        remediated_at_ms=remediated_at_ms,
+    )
+    result = VerificationResult(
+        status=contract_status,
+        checked_at_ms=checked_at_ms,
+        sla_deadline_ms=sla_deadline(remediated_at_ms, DEFAULT_VERIFICATION_SLA_MS),
+        expected_state=expected_state,
+        actual_state=actual_state,
+        detail=detail,
+    )
+
+    record = build_verification_record(
+        reference=reference,
+        result=result,
+        verifier_skill=SKILL_NAME,
+    )
+    # Preserve skill-specific context that the shared contract doesn't model
+    record["policy_name"] = resolved.policy_name
+    record["selector"] = resolved.selector
+    record["endpoint"] = _verification_endpoint(resolved.target.namespace, resolved.policy_name)
+    # Preserve the legacy fields tests assert on, to keep drop-in compatibility
+    record.setdefault("status_detail", detail)
+    record["time_ms"] = checked_at_ms
+    record["finding_uid"] = resolved.target.finding_uid
+    record["target"] = {
+        "provider": "Kubernetes",
+        "namespace": resolved.target.namespace,
+        "resource_type": resolved.target.resource_type,
+        "resource_name": resolved.target.resource_name,
+        "pod_name": resolved.target.pod_name,
     }
+
+    outputs = [record]
+    if contract_status == VerificationStatus.DRIFT:
+        outputs.append(
+            build_drift_finding(
+                reference=reference,
+                result=result,
+                verifier_skill=SKILL_NAME,
+            )
+        )
+    return outputs
+
+
+def _verification_record(resolved: ResolvedTarget, *, status: str, detail: str) -> dict[str, Any]:
+    """Back-compat single-record helper retained for tests that imported it
+    directly. New code paths use `_build_verification_outputs` to also emit
+    the drift finding when applicable."""
+    expected = "quarantine NetworkPolicy present and matching expected selector + deny-all shape"
+    actual = (
+        "missing or modified" if status == STATUS_DRIFT
+        else "present and matching expected shape"
+    )
+    return _build_verification_outputs(
+        resolved,
+        status=status,
+        detail=detail,
+        expected_state=expected,
+        actual_state=actual,
+    )[0]
 
 
 def apply_quarantine(
@@ -571,22 +655,60 @@ def apply_quarantine(
     return record
 
 
-def reverify_quarantine(resolved: ResolvedTarget, *, kube_client: KubernetesClient) -> dict[str, Any]:
-    policy = kube_client.get_network_policy(resolved.target.namespace, resolved.policy_name)
+def reverify_quarantine(
+    resolved: ResolvedTarget, *, kube_client: KubernetesClient
+) -> list[dict[str, Any]]:
+    """Re-verify the quarantine NetworkPolicy. Returns a list of records:
+    always one `remediation_verification` record, plus an OCSF Detection
+    Finding (`finding_types: ["remediation-drift"]`) when status is DRIFT.
+
+    Tests asserting on the verification record itself can use ``[0]``;
+    pipelines should iterate the full list and emit each."""
+    expected = "quarantine NetworkPolicy present, podSelector matches, deny-all (no ingress/egress, both policyTypes)"
+    try:
+        policy = kube_client.get_network_policy(resolved.target.namespace, resolved.policy_name)
+    except Exception as exc:
+        # Surface unreachability via the shared contract so it never silently
+        # downgrades to VERIFIED. We piggy-back on _build_verification_outputs
+        # by passing a non-mapped status — the contract maps it to UNREACHABLE.
+        return _build_verification_outputs(
+            resolved,
+            status="unreachable",
+            detail=f"kubernetes API unreachable: {exc}",
+            expected_state=expected,
+            actual_state="api call raised; cannot determine state",
+        )
+
     if not policy:
-        return _verification_record(resolved, status=STATUS_DRIFT, detail="quarantine NetworkPolicy not found")
+        return _build_verification_outputs(
+            resolved,
+            status=STATUS_DRIFT,
+            detail="quarantine NetworkPolicy not found",
+            expected_state=expected,
+            actual_state="NetworkPolicy missing from cluster",
+        )
 
     actual_selector = (((policy.get("spec") or {}).get("podSelector") or {}).get("matchLabels") or {})
     ingress = (policy.get("spec") or {}).get("ingress")
     egress = (policy.get("spec") or {}).get("egress")
     policy_types = tuple((policy.get("spec") or {}).get("policyTypes") or [])
     if actual_selector != resolved.selector or ingress != [] or egress != [] or set(policy_types) != {"Ingress", "Egress"}:
-        return _verification_record(
+        return _build_verification_outputs(
             resolved,
             status=STATUS_DRIFT,
             detail="quarantine NetworkPolicy drifted from expected selector or deny-all shape",
+            expected_state=expected,
+            actual_state=(
+                f"selector={actual_selector} ingress={ingress} egress={egress} policyTypes={list(policy_types)}"
+            ),
         )
-    return _verification_record(resolved, status=STATUS_VERIFIED, detail="quarantine NetworkPolicy still present")
+    return _build_verification_outputs(
+        resolved,
+        status=STATUS_VERIFIED,
+        detail="quarantine NetworkPolicy still present",
+        expected_state=expected,
+        actual_state="NetworkPolicy present and matching expected shape",
+    )
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -655,7 +777,7 @@ def run(
             continue
 
         if reverify:
-            yield reverify_quarantine(resolved, kube_client=kube_client)
+            yield from reverify_quarantine(resolved, kube_client=kube_client)
             continue
 
         if not apply:
