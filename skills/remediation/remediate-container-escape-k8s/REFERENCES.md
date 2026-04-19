@@ -15,6 +15,12 @@
 - **Kubernetes Volumes: hostPath** — https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
   - warns that `hostPath` mounts expose privileged host resources and should be
     avoided unless absolutely necessary
+- **Kubernetes Volume Snapshots** — https://kubernetes.io/docs/concepts/storage/volume-snapshots/
+  - CSI `VolumeSnapshot` objects are the portable snapshot primitive this
+    forensic collector can optionally create for PVC-backed pod volumes
+- **Kubernetes Logging Architecture** — https://kubernetes.io/docs/concepts/cluster-administration/logging/
+  - container logs under `/var/log/containers/` and `/var/log/pods/` are the
+    runtime-log sources bundled by the collector
 
 ## OCSF wire format
 
@@ -51,6 +57,9 @@ rules:
   - apiGroups: ["networking.k8s.io"]
     resources: ["networkpolicies"]
     verbs: ["get", "create", "update"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots"]
+    verbs: ["create", "get"]
 ```
 
 Minimal AWS IAM for audit writes:
