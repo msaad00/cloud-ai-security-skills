@@ -53,6 +53,7 @@ jobs:
       - run: python scripts/validate_framework_coverage.py
       - run: python scripts/validate_ocsf_metadata.py
       - run: python scripts/validate_skill_count_consistency.py
+      - run: python scripts/validate_deny_list_parity.py
       - run: python scripts/generate_framework_coverage_doc.py --check
 
   type-check:

@@ -50,6 +50,8 @@ from typing import Any
 
 import boto3
 
+from .protected_principals import ProtectedPrincipalError, assert_not_protected
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -96,6 +98,24 @@ def handler(event: dict, context: Any) -> dict:
         email = _require_non_empty_str(entry, "email")
         if not ACCOUNT_ID_RE.fullmatch(account_id):
             raise ValueError("recipient_account_id must be a 12-digit AWS account ID")
+        # Defense-in-depth: refuse protected principals before any IAM call.
+        # The IaC deny policy is the authoritative guard; this is a local
+        # second layer in case that policy is ever missing from a deploy.
+        assert_not_protected(iam_username)
+    except ProtectedPrincipalError as exc:
+        logger.error("Refusing protected principal: %s", exc)
+        audit_record = _build_audit_record(
+            entry, [], "refused", error=str(exc), context=context
+        )
+        _write_audit(audit_record)
+        return {
+            "email": entry.get("email", ""),
+            "iam_username": entry.get("iam_username", ""),
+            "account_id": entry.get("recipient_account_id", ""),
+            "status": "refused",
+            "actions_taken": [],
+            "error": str(exc),
+        }
     except ValueError as exc:
         logger.warning("Invalid remediation payload: %s", exc)
         audit_record = _build_audit_record(entry, [], "error", error="Invalid remediation payload", context=context)
