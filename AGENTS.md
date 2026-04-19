@@ -31,7 +31,7 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 - `discover-environment`, `discover-ai-bom`, `discover-control-evidence`, `discover-cloud-control-evidence`
 
 **`detection/`** (OCSF → OCSF Detection Finding 2004 + MITRE)
-- `detect-mcp-tool-drift`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-lateral-movement`, `detect-okta-mfa-fatigue`, `detect-entra-credential-addition`, `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login`
+- `detect-mcp-tool-drift`, `detect-container-escape-k8s`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-lateral-movement`, `detect-okta-mfa-fatigue`, `detect-entra-credential-addition`, `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login`
 
 **`evaluation/`** (read-only posture / benchmark checks)
 - `cspm-aws-cis-benchmark`, `cspm-gcp-cis-benchmark`, `cspm-azure-cis-benchmark`, `k8s-security-benchmark`, `container-security`, `model-serving-security`, `gpu-cluster-security`

@@ -52,6 +52,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-google-workspace-suspicious-login`](detection/detect-google-workspace-suspicious-login/) | provider-marked suspicious Workspace login or repeated failures followed by success |
 | [`detect-prompt-injection-mcp-proxy`](detection/detect-prompt-injection-mcp-proxy/) | suspicious prompt-injection language in MCP tool descriptions |
 | [`detect-mcp-tool-drift`](detection/detect-mcp-tool-drift/) | T1195.001 |
+| [`detect-container-escape-k8s`](detection/detect-container-escape-k8s/) | T1611, T1610 |
 | [`detect-privilege-escalation-k8s`](detection/detect-privilege-escalation-k8s/) | T1552.007, T1611, T1098, T1550.001 |
 | [`detect-sensitive-secret-read-k8s`](detection/detect-sensitive-secret-read-k8s/) | secret access / K8s API misuse |
 

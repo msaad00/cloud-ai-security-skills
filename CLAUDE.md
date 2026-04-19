@@ -37,6 +37,7 @@ skills/
 │
 ├── detection/                     # OCSF → Detection Finding 2004 + MITRE
 │   ├── detect-mcp-tool-drift/
+│   ├── detect-container-escape-k8s/
 │   ├── detect-privilege-escalation-k8s/
 │   ├── detect-sensitive-secret-read-k8s/
 │   └── detect-lateral-movement/

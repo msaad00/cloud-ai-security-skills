@@ -41,7 +41,7 @@ flowchart LR
 | AWS VPC Flow Logs | `ingest-vpc-flow-logs-ocsf` | `detect-lateral-movement` |
 | Azure Activity Logs | `ingest-azure-activity-ocsf` | `detect-lateral-movement` |
 | GCP Audit Logs | `ingest-gcp-audit-ocsf` | `detect-lateral-movement` |
-| Kubernetes audit logs | `ingest-k8s-audit-ocsf` | `detect-privilege-escalation-k8s` or `detect-sensitive-secret-read-k8s` |
+| Kubernetes audit logs | `ingest-k8s-audit-ocsf` | `detect-container-escape-k8s`, `detect-privilege-escalation-k8s`, or `detect-sensitive-secret-read-k8s` |
 | Okta System Log | `ingest-okta-system-log-ocsf` | `detect-okta-mfa-fatigue` |
 | Microsoft Entra / Graph `directoryAudit` | `ingest-entra-directory-audit-ocsf` | `detect-entra-credential-addition` or `detect-entra-role-grant-escalation` |
 | Google Workspace login audit | `ingest-google-workspace-login-ocsf` | `detect-google-workspace-suspicious-login` |

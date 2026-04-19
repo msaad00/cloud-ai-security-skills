@@ -273,6 +273,7 @@ class TestCrossSkillOcsfWireContract:
     ]
 
     DETECT_SKILLS = [
+        ("detect-container-escape-k8s", "detect.py"),
         ("detect-mcp-tool-drift", "detect.py"),
         ("detect-privilege-escalation-k8s", "detect.py"),
     ]

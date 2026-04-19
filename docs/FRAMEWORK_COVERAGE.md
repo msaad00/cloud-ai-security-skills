@@ -4,14 +4,14 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **46**
+- Total shipped skills in registry: **47**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **36** | — |
-| MITRE ATT&CK | v14 | **23** | 100% mapped coverage |
+| OCSF | 1.8.0 | **37** | — |
+| MITRE ATT&CK | v14 | **24** | 100% mapped coverage |
 | MITRE ATLAS | current | **7** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **1** | — |
 | CIS GCP Foundations | v3.0 | **1** | — |
@@ -36,10 +36,11 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **36**
+Shipped skills mapped: **37**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-container-escape-k8s`](../skills/detection/detect-container-escape-k8s) | detection | kubernetes | clusters, containers, runtime |
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
@@ -84,10 +85,11 @@ Shipped skills mapped: **36**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **23**
+Shipped skills mapped: **24**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-container-escape-k8s`](../skills/detection/detect-container-escape-k8s) | detection | kubernetes | clusters, containers, runtime |
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
