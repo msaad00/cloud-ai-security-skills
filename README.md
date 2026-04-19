@@ -177,6 +177,12 @@ Pick the row that matches the job.
 
 Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
+### Closed-loop coverage at a glance
+
+![Closed-loop coverage matrix — 3 of 11 detections shipped as closed loops; 5 of the remaining 8 gaps planned via tracking issues; 3 detections still need new remediation skills.](docs/images/coverage-matrix.svg)
+
+Source of truth for detect↔remediate parity. Tracked at [#155](https://github.com/msaad00/cloud-ai-security-skills/issues/155); design + remaining per-layer SVGs at [#248](https://github.com/msaad00/cloud-ai-security-skills/issues/248).
+
 ## Common shipped flows
 
 Three lanes. Same skill bundle contract in every lane — input, output, and control boundary are what change.
