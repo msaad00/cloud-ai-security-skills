@@ -147,54 +147,7 @@ Each output record includes:
 
 ### OCSF 1.8 mapping (v0.2, #271)
 
-| Okta field | OCSF destination |
-|---|---|
-| `client.geographicalContext.{country,state,city,postalCode}` | `src_endpoint.location.{country,region,city,postal_code}` |
-| `client.geographicalContext.geolocation.{lat,lon}` | `src_endpoint.location.coordinates` (`[lon, lat]`) |
-| `client.userAgent.rawUserAgent` | `src_endpoint.svc_name` *and* `http_request.user_agent` |
-| `client.userAgent.browser` + `.os` | `device.name`, `device.os.name` |
-| `client.device` + `client.id` | `device.name`, `device.uid` |
-| `client.zone` | `src_endpoint.zone` |
-| `securityContext.asNumber` + `asOrg` | `src_endpoint.autonomous_system.{number, name}` |
-| `securityContext.domain` | `src_endpoint.domain` |
-| `securityContext.isProxy` | `src_endpoint.is_proxy` (bool) |
-| `authenticationContext.authenticationProvider` | `auth_protocol` |
-| `authenticationContext.credentialType` | `auth_factors[]` |
-| `authenticationContext.interface` / `authenticationStep` | `metadata.labels` (`okta.interface=...`, `okta.authentication_step=...`) |
-| `request.ipChain[]` per-hop `ip` + geo | `observables[]` (type_id=2, with location + reputation) |
-| `debugContext.debugData.riskLevel` | `enrichments[]` (`name: okta.risk_level`, `type: security_risk`) |
-| `debugContext.debugData.riskReasons` | `enrichments[]` (`name: okta.risk_reasons`, `data.reasons: [...]`) |
-| `debugContext.debugData.behaviors` | `enrichments[]` (`name: okta.behaviors`) |
-
-Slots are only emitted when the source field is present; minimal events (the
-v0.1 shape) remain byte-identical except for OCSF-native additions.
-
-### `unmapped.okta.*` (native preservation)
-
-Fields without a clean OCSF slot round-trip verbatim for detectors that need
-full Okta fidelity:
-
-- `debug_data` — full `debugContext.debugData` verbatim (riskLevel, riskReasons,
-  behaviors, factorId, authenticatorId, deviceFingerprint, requestUri,
-  authnRequestId — whatever Okta packs in)
-- `actor_detail_entry`, `target_detail_entries[]` — free-form detail fields
-- `transaction_type`, `transaction_detail`
-- `authn_issuer` — `authenticationContext.issuer` object
-- `event_type`, `legacy_event_type`, `transaction_id`, `root_session_id` — v0.1 correlation keys
-
-### risk signals as enrichments
-
-Okta's risk engine output is surfaced as OCSF `enrichments[]` entries so
-downstream detectors can pattern-match risk without reading `unmapped.*`:
-
-```json
-"enrichments": [
-  {"name": "okta.risk_level", "value": "HIGH", "type": "security_risk"},
-  {"name": "okta.risk_reasons", "data": {"reasons": ["newCountry", "anomalousLocation"]}, "type": "security_risk"}
-]
-```
-
-`riskReasons` accepts both the comma-joined string and list shapes Okta emits.
+The full Okta-field → OCSF-field table, the `unmapped.okta.*` native preservation list, and the risk-signal enrichment shape live in [`references/field-map.md`](references/field-map.md). Keeping the detail there keeps this file under the progressive-disclosure word target ([#247](https://github.com/msaad00/cloud-ai-security-skills/issues/247)) while detectors and reviewers still get the exact mapping one click away.
 
 ## Usage
 
