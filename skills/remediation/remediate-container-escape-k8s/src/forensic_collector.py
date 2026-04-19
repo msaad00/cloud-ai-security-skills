@@ -14,6 +14,7 @@ import argparse
 import dataclasses
 import gzip
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -28,26 +29,38 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 SRC_DIR = Path(__file__).resolve().parent
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
-from handler import (  # noqa: E402
-    CANONICAL_VERSION,
-    DEFAULT_DENY_NAMESPACES,
-    RECORD_ACTION,
-    RECORD_PLAN,
-    STATUS_PLANNED,
-    STATUS_SKIPPED_UNSUPPORTED_TARGET,
-    STATUS_SUCCESS,
-    STATUS_WOULD_VIOLATE_DENY_LIST,
-    ResolvedTarget,
-    Target,
-    check_apply_gate,
-    is_protected_namespace,
-    load_jsonl,
-    parse_targets,
-    resolve_target,
-)
+
+def _load_handler_module() -> Any:
+    module_name = "cloud_security_k8s_escape_handler_forensics"
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        return existing
+
+    spec = importlib.util.spec_from_file_location(module_name, SRC_DIR / "handler.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_HANDLER = _load_handler_module()
+CANONICAL_VERSION = _HANDLER.CANONICAL_VERSION
+DEFAULT_DENY_NAMESPACES = _HANDLER.DEFAULT_DENY_NAMESPACES
+RECORD_ACTION = _HANDLER.RECORD_ACTION
+RECORD_PLAN = _HANDLER.RECORD_PLAN
+STATUS_PLANNED = _HANDLER.STATUS_PLANNED
+STATUS_SKIPPED_UNSUPPORTED_TARGET = _HANDLER.STATUS_SKIPPED_UNSUPPORTED_TARGET
+STATUS_SUCCESS = _HANDLER.STATUS_SUCCESS
+STATUS_WOULD_VIOLATE_DENY_LIST = _HANDLER.STATUS_WOULD_VIOLATE_DENY_LIST
+ResolvedTarget = _HANDLER.ResolvedTarget
+Target = _HANDLER.Target
+check_apply_gate = _HANDLER.check_apply_gate
+is_protected_namespace = _HANDLER.is_protected_namespace
+load_jsonl = _HANDLER.load_jsonl
+parse_targets = _HANDLER.parse_targets
+resolve_target = _HANDLER.resolve_target
 
 SKILL_NAME = "remediate-container-escape-k8s"
 STEP_COLLECT_FORENSICS = "collect_forensic_bundle"
