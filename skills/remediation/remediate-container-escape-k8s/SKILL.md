@@ -11,9 +11,9 @@ description: >-
   dual-audited (DynamoDB + KMS-encrypted S3). Use when the user mentions
   "quarantine a suspicious Kubernetes pod," "contain container escape in
   Kubernetes," "apply deny-all NetworkPolicy after escape finding," or
-  "re-verify K8s quarantine policy." Do NOT use for node drain, pod deletion,
-  forensic collection, or identity-session containment — those belong to their
-  own remediation skills.
+  "re-verify K8s quarantine policy," or "collect K8s container-escape
+  forensics." Do NOT use for node drain, pod deletion, or identity-session
+  containment — those belong to their own remediation skills.
 license: Apache-2.0
 capability: write-cloud
 approval_model: human_required
@@ -71,7 +71,9 @@ quarantine policy is still present and still shaped as expected.
 The least-destructive first response is to isolate the affected workload from
 the network while preserving the pod for human investigation. This skill does
 that with a namespace-scoped deny-all `NetworkPolicy` matched to the target
-pod's labels or the workload selector.
+pod's labels or the workload selector. Once quarantine lands, the same skill
+can also build a deterministic forensic bundle from host-mounted `/proc`,
+runtime logs, and optional CSI `VolumeSnapshot` references.
 
 ## Inputs
 
@@ -222,6 +224,39 @@ cat finding.ocsf.jsonl | python src/handler.py --apply
 cat finding.ocsf.jsonl | python src/handler.py --reverify
 ```
 
+## Forensic evidence mode
+
+`src/forensic_collector.py` is the post-quarantine evidence path. It runs in a
+controlled follow-up worker or sidecar with read-only host mounts:
+
+- `/host/proc` for PID discovery and `/proc/<pid>` capture
+- `/host/var/log` for container runtime logs
+- optional CSI `VolumeSnapshot` creation for PVC-backed pod volumes
+
+Dry-run is still the default. Without `--upload`, the collector emits a native
+`remediation_plan` record describing the exact bundle contents it WOULD write.
+With `--upload`, it writes a deterministic `tar.gz` bundle to the same
+KMS-encrypted audit bucket under
+`container-escape/audit/<incident-id>/<timestamp>-<namespace>-<target>-forensics.tar.gz`.
+
+```bash
+# Dry-run forensic plan
+cat finding.ocsf.jsonl | python src/forensic_collector.py \
+  --proc-root /host/proc \
+  --log-root /host/var/log
+
+# Upload bundle + create VolumeSnapshot refs
+export K8S_CONTAINER_ESCAPE_INCIDENT_ID=inc-2026-04-19-001
+export K8S_CONTAINER_ESCAPE_APPROVER=alice@example.com
+export K8S_REMEDIATION_AUDIT_BUCKET=sec-k8s-remediation
+export KMS_KEY_ARN=arn:aws:kms:us-east-1:123456789012:key/...
+
+cat finding.ocsf.jsonl | python src/forensic_collector.py \
+  --upload \
+  --snapshot-volumes \
+  --snapshot-class csi-snapshots
+```
+
 ## Use when
 
 - you need a reversible first-response containment for a suspicious Kubernetes
@@ -229,10 +264,12 @@ cat finding.ocsf.jsonl | python src/handler.py --reverify
 - you want a deny-all `NetworkPolicy` matched to the live selector, not a raw
   pod name
 - you need an auditable quarantine step that can later be re-verified for drift
+- you need a reproducible forensic bundle after quarantine, without killing the
+  target pod first
 
 ## Do NOT use
 
-- to drain a node, delete a pod, or collect forensic artifacts
+- to drain a node or delete a pod
 - against protected namespaces like `kube-system` or `istio-system`
 - as a generic "pause traffic" control for planned maintenance
 - without setting `K8S_CONTAINER_ESCAPE_INCIDENT_ID` and
@@ -260,3 +297,6 @@ future PR can surface that drift as a separate finding stream if needed.
 - audit write lands before the Kubernetes mutating call
 - `--reverify` distinguishes verified from drifted policy state
 - end-to-end dry-run from the frozen container-escape findings golden
+- forensic collector builds deterministic bundles from `/proc` + runtime logs
+- forensic collector can plan or create `VolumeSnapshot` refs and upload a
+  KMS-encrypted bundle to S3
