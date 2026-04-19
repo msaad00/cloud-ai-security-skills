@@ -11,6 +11,7 @@ Contract: see ../OCSF_CONTRACT.md
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import sys
@@ -242,6 +243,21 @@ def _metadata_labels(entry: dict[str, Any]) -> list[str]:
     return labels
 
 
+def _unmapped_payload(entry: dict[str, Any]) -> dict[str, Any]:
+    """Preserve raw K8s audit fields with no clean first-class OCSF slot."""
+    payload: dict[str, Any] = {}
+    request_object = entry.get("requestObject")
+    if request_object is not None:
+        payload["request_object"] = copy.deepcopy(request_object)
+    response_object = entry.get("responseObject")
+    if response_object is not None:
+        payload["response_object"] = copy.deepcopy(response_object)
+    object_ref = entry.get("objectRef")
+    if object_ref is not None:
+        payload["object_ref"] = copy.deepcopy(object_ref)
+    return payload
+
+
 def _activity_name(activity_id: int) -> str:
     return {
         ACTIVITY_CREATE: "create",
@@ -324,6 +340,10 @@ def _build_canonical_event(entry: dict[str, Any]) -> dict[str, Any] | None:
     if status_detail:
         canonical["status_detail"] = status_detail
 
+    unmapped = _unmapped_payload(entry)
+    if unmapped:
+        canonical["unmapped"] = {"k8s": unmapped}
+
     # Service-account namespace as a custom marker for downstream detectors.
     sa_ns = service_account_namespace(((entry.get("user") or {}).get("username")) or "")
     if sa_ns is not None:
@@ -368,6 +388,8 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
         event["status_detail"] = canonical["status_detail"]
     if canonical.get("k8s"):
         event["k8s"] = canonical["k8s"]
+    if canonical.get("unmapped"):
+        event["unmapped"] = canonical["unmapped"]
     return event
 
 
