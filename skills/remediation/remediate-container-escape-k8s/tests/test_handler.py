@@ -266,3 +266,41 @@ class TestApplyAndReverify:
         kube.policies[("payments", plan["policy_name"])] = drifted
         record = next(run([_finding()], kube_client=kube, reverify=True))
         assert record["status"] == STATUS_DRIFT
+
+    def test_reverify_emits_ocsf_drift_finding_alongside_verification_record(self):
+        """DRIFT outcome must emit BOTH a remediation_verification record
+        AND an OCSF Detection Finding (class_uid 2004) so the drift flows
+        through the same SIEM/SOAR pipeline as every other finding."""
+        kube = _FakeKube(
+            workload_selectors={("payments", "deployments", "api"): {"app": "api"}}
+        )
+        # Quarantine policy is missing entirely → DRIFT
+        records = list(run([_finding()], kube_client=kube, reverify=True))
+        assert len(records) == 2
+        verification, finding = records
+        assert verification["record_type"] == "remediation_verification"
+        assert verification["status"] == STATUS_DRIFT
+        # OCSF Detection Finding shape
+        assert finding["class_uid"] == 2004
+        assert finding["category_uid"] == 2
+        assert finding["severity_id"] == 4  # SEVERITY_HIGH
+        assert finding["finding_info"]["types"] == ["remediation-drift"]
+        assert any(
+            obs["name"] == "remediation.skill" and obs["value"] == "remediate-container-escape-k8s"
+            for obs in finding["observables"]
+        )
+        # The drift finding must reference the original finding so SIEM can correlate
+        assert any(
+            obs["name"] == "original.finding_uid" and obs["value"] == "find-1"
+            for obs in finding["observables"]
+        )
+
+    def test_reverify_verified_path_does_not_emit_drift_finding(self):
+        kube = _FakeKube(
+            workload_selectors={("payments", "deployments", "api"): {"app": "api"}}
+        )
+        plan = next(run([_finding()], kube_client=kube))
+        kube.policies[("payments", plan["policy_name"])] = plan["manifest"]
+        records = list(run([_finding()], kube_client=kube, reverify=True))
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_VERIFIED
