@@ -4,7 +4,15 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from defusedxml import ElementTree as ET
+try:
+    from defusedxml import ElementTree as ET
+except ModuleNotFoundError:  # pragma: no cover - exercised when dev deps not installed
+    sys.stderr.write(
+        "error: validate_test_coverage.py requires `defusedxml` "
+        "(listed in pyproject.toml `[dependency-groups].dev`). "
+        "Install dev dependencies: `uv sync --group dev` or `pip install defusedxml`.\n"
+    )
+    sys.exit(2)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_XML = ROOT / "coverage.xml"

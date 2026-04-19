@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import ast
 import sys
-import tomllib
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised only on Python <3.11
+    sys.stderr.write(
+        "error: validate_dependency_consistency.py requires Python 3.11+ "
+        "(stdlib `tomllib`). Detected Python "
+        f"{sys.version_info.major}.{sys.version_info.minor}. "
+        "See pyproject.toml `requires-python = \">=3.11\"`.\n"
+    )
+    sys.exit(2)
 
 from skill_validation_common import ROOT
 
