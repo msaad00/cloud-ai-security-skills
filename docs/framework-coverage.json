@@ -302,6 +302,15 @@
       "execution_modes": ["cli", "ci", "mcp", "persistent"]
     },
     {
+      "path": "skills/detection/detect-container-escape-k8s",
+      "layer": "detection",
+      "providers": ["kubernetes"],
+      "asset_classes": ["clusters", "containers", "runtime"],
+      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "coverage_status": "validated",
+      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+    },
+    {
       "path": "skills/detection/detect-sensitive-secret-read-k8s",
       "layer": "detection",
       "providers": ["kubernetes"],
