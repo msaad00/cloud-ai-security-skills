@@ -54,80 +54,13 @@ OCSF 1.8 IAM records by default, or the repo-owned native IAM projection when
 - To infer ATT&CK techniques or create findings directly
 - To mutate Workspace users, sessions, or 2-step settings
 
-## Input contract
+## Input + output contract
 
-Accepts one of three raw Admin SDK Reports login audit shapes:
+Accepts three raw Admin SDK Reports shapes (activities list, single activity, JSONL stream) and supports a narrow, verified event family: `login_success`, `login_failure`, `logout`, `2sv_enroll`, `2sv_disable`. Unsupported event names are skipped with a warning to `stderr`.
 
-1. **Activities list response**
+Emits OCSF 1.8 JSONL with verified class mappings: **Authentication (3002)** for login/logout events, **Account Change (3001)** for 2sv enroll/disable. Records carry deterministic `metadata.uid`, epoch-ms `time`, actor + session IDs, and raw `parameters[]` preserved under `unmapped.google_workspace_login`.
 
-```json
-{
-  "items": [
-    {
-      "id": {
-        "time": "2026-04-13T06:00:00.000Z",
-        "uniqueQualifier": "workspace-1",
-        "applicationName": "login"
-      },
-      "events": [
-        {
-          "type": "login",
-          "name": "login_success"
-        }
-      ]
-    }
-  ]
-}
-```
-
-2. **Single activity**
-
-```json
-{
-  "id": {
-    "time": "2026-04-13T06:00:00.000Z",
-    "uniqueQualifier": "workspace-1",
-    "applicationName": "login"
-  },
-  "events": [
-    {
-      "type": "login",
-      "name": "login_success"
-    }
-  ]
-}
-```
-
-3. **JSONL stream of activities**
-
-```json
-{"id":{"time":"2026-04-13T06:00:00.000Z","uniqueQualifier":"workspace-1","applicationName":"login"},"events":[{"type":"login","name":"login_success"}]}
-```
-
-The first slice intentionally supports a narrow, verified event family from the
-Workspace login audit appendix:
-
-- `login_success`
-- `login_failure`
-- `logout`
-- `2sv_enroll`
-- `2sv_disable`
-
-Unsupported event names are skipped with a warning to `stderr`.
-
-## Output contract
-
-Emits OCSF 1.8 JSONL with verified class mappings:
-
-- **Authentication (3002)** for `login_success`, `login_failure`, and `logout`
-- **Account Change (3001)** for `2sv_enroll` and `2sv_disable`
-
-Each OCSF output record includes:
-
-- deterministic `metadata.uid` based on `applicationName`, `time`, `uniqueQualifier`, and event name
-- UTC epoch-millisecond `time` from `id.time`
-- Workspace actor and profile IDs preserved under `actor` and `session`
-- raw event parameters preserved under `unmapped.google_workspace_login`
+Full input shapes, the supported event-family table, and the output guarantees live in [`references/event-types.md`](references/event-types.md) — kept out of `SKILL.md` per progressive disclosure ([#247](https://github.com/msaad00/cloud-ai-security-skills/issues/247)).
 
 ## Usage
 

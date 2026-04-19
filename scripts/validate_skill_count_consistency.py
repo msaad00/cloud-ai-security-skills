@@ -32,7 +32,10 @@ CLAIMS: list[Claim] = [
     # README.md claims
     (REPO_ROOT / "README.md", r"(\d+) shipped skill bundles", "total"),
     (REPO_ROOT / "README.md", r"\*\*Total: (\d+) shipped skills", "total"),
-    (REPO_ROOT / "README.md", r"L3 Detect<br/>(\d+) skills", "detection"),
+    # The L3 Detect mermaid claim was removed when both README mermaids were
+    # replaced by docs/images/architecture.svg in #248 phase 1. The new SVG
+    # also embeds skill counts but is binary-rendered text, not regex-checkable;
+    # totals remain enforced via the two claims above.
     # docs/ARCHITECTURE.md claims
     (REPO_ROOT / "docs" / "ARCHITECTURE.md", r"(\d+) shipped detectors", "detection"),
 ]

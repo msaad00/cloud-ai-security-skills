@@ -52,93 +52,15 @@ Full discussion: [docs/ARCHITECTURE.md §3 Layer model + §6 Wire contract](docs
 
 ## Architecture
 
-External signals enter through two intake layers, pass through two analyze layers, and exit through two act layers. The same skill bundle contract sits underneath every layer.
+External signals enter through two intake layers, pass through two analyze layers, and exit through two act layers, persisting through one output layer. Every node ships as a `SKILL.md + src/ + tests/` bundle that runs unchanged from CLI, CI, MCP, or a cloud runner.
 
-```mermaid
-flowchart LR
-    classDef signal fill:#0f172a,stroke:#475569,color:#f1f5f9
-    classDef intake fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe
-    classDef analyze fill:#064e3b,stroke:#34d399,color:#d1fae5
-    classDef act fill:#78350f,stroke:#fbbf24,color:#fef3c7
-    classDef sink fill:#422006,stroke:#fbbf24,color:#fef3c7
-
-    sig["☁️ Cloud APIs · 📋 Raw logs<br/>🔑 Identity · 🗄️ Warehouses"]:::signal
-
-    subgraph Intake
-        direction TB
-        ingest["L1 Ingest<br/>15 skills"]:::intake
-        discover["L2 Discover<br/>4 skills"]:::intake
-    end
-    subgraph Analyze
-        direction TB
-        detect["L3 Detect<br/>11 skills · ATT&amp;CK"]:::analyze
-        evaluate["L4 Evaluate<br/>7 skills · 82 checks"]:::analyze
-    end
-    subgraph Act
-        direction TB
-        view["L6 View<br/>2 skills · SARIF · Mermaid"]:::act
-        remediate["L5 Remediate<br/>4 skills · HITL · dual audit"]:::act
-    end
-    output["L7 Output<br/>3 sinks · S3 · Snowflake · ClickHouse"]:::sink
-
-    sig --> ingest
-    sig --> discover
-    ingest --> detect
-    discover --> detect
-    discover --> evaluate
-    detect --> view
-    detect --> remediate
-    evaluate --> view
-    evaluate --> remediate
-    view --> output
-    remediate --> output
-```
-
-Every node above ships as a `SKILL.md + src/ + tests/` bundle that runs unchanged from CLI, CI, MCP, or a persistent cloud runner.
+![Canonical architecture — 7 skill layers (L1 Ingest 15+3 source, L2 Discover 4, L3 Detect 11, L4 Evaluate 7, L5 Remediate 4, L6 View 2, L7 Output 3 sinks) and 4 runtime surfaces (MCP clients via stdio, CLI pipes, CI GitHub Actions, cloud runners). The same shipped bundle is invoked from every surface.](docs/images/architecture.svg)
 
 Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Agent and runtime integrations
 
-MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation.
-
-```mermaid
-flowchart TB
-    classDef client fill:#1e1b4b,stroke:#a78bfa,color:#ddd6fe
-    classDef direct fill:#083344,stroke:#22d3ee,color:#cffafe
-    classDef mcp fill:#4a044e,stroke:#e879f9,color:#fae8ff
-    classDef bundle fill:#022c22,stroke:#2dd4bf,color:#ccfbf1
-    classDef output fill:#422006,stroke:#fbbf24,color:#fef3c7
-
-    subgraph Clients["MCP clients · agents over stdio"]
-        claude[Claude Code]:::client
-        codex[Codex]:::client
-        cursor[Cursor]:::client
-        windsurf[Windsurf]:::client
-        cortex[Cortex Code CLI]:::client
-    end
-
-    subgraph Direct["Direct surfaces"]
-        cli[CLI · Unix pipes]:::direct
-        ci[CI · GitHub · SARIF]:::direct
-        runners["Cloud runners<br/>AWS · GCP · Azure"]:::direct
-    end
-
-    mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
-    bundle[("Shared skill bundle<br/>49 shipped")]:::bundle
-    outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
-
-    claude -->|stdio| mcp
-    codex -->|stdio| mcp
-    cursor -->|stdio| mcp
-    windsurf -->|stdio| mcp
-    cortex -->|stdio| mcp
-    mcp --> bundle
-    cli --> bundle
-    ci --> bundle
-    runners --> bundle
-    bundle --> outputs
-```
+MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation — see the runtime band of the architecture diagram above.
 
 - **MCP** · [.mcp.json](.mcp.json) · [mcp-server/README.md](mcp-server/README.md) · [docs/MCP_AUDIT_CONTRACT.md](docs/MCP_AUDIT_CONTRACT.md)
 - **CLI / pipes** · stdin/stdout bundles compose into one-liners
