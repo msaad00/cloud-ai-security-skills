@@ -26,24 +26,58 @@ is the row you can take to your auditor.
 
 ## Per-skill matrix
 
-| Skill | Read-only | Agentless | Least privilege | Closed loop | OCSF wire | No telemetry |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|
-| `cspm-aws-cis-benchmark` | ✅ | ✅ | ✅ `SecurityAudit` only | ✅ re-scan verifies | n/a | ✅ |
-| `cspm-gcp-cis-benchmark` | ✅ | ✅ | ✅ `viewer` + `iam.securityReviewer` | ✅ | n/a | ✅ |
-| `cspm-azure-cis-benchmark` | ✅ | ✅ | ✅ Reader role | ✅ | n/a | ✅ |
-| `k8s-security-benchmark` | ✅ | ✅ | ✅ kubectl viewer | ✅ | n/a | ✅ |
-| `container-security` | ✅ | ✅ | ✅ filesystem read only | ✅ | n/a | ✅ |
-| `iam-departures-aws` | ⚠️ writes via worker only | ✅ | ✅ deny on root/break-glass | ✅ DDB + S3 + ingest-back | n/a | ✅ |
-| `model-serving-security` | ✅ | ✅ | ✅ config-only | ✅ | n/a | ✅ |
-| `gpu-cluster-security` | ✅ | ✅ | ✅ config-only | ✅ | n/a | ✅ |
-| `discover-environment` | ✅ | ✅ | ✅ viewer | ✅ snapshot diff | n/a | ✅ |
-| `ingest-cloudtrail-ocsf` | ✅ | ✅ | ✅ `s3:GetObject` on one prefix | ✅ golden fixture | ✅ 1.8 | ✅ |
-| `ingest-gcp-audit-ocsf` | ✅ | ✅ | ✅ `roles/logging.viewer` | ✅ golden fixture | ✅ 1.8 | ✅ |
-| `ingest-azure-activity-ocsf` | ✅ | ✅ | ✅ Monitoring Reader | ✅ golden fixture | ✅ 1.8 | ✅ |
-| `ingest-k8s-audit-ocsf` | ✅ | ✅ | ✅ filesystem read of audit log | ✅ golden fixture | ✅ 1.8 | ✅ |
-| `ingest-mcp-proxy-ocsf` | ✅ | ✅ | ✅ stdin read | ✅ golden fixture | ✅ 1.8 | ✅ |
-| `detect-mcp-tool-drift` | ✅ | ✅ | ✅ stdin read | ✅ golden fixture | ✅ 1.8 | ✅ |
-| `detect-privilege-escalation-k8s` | ✅ | ✅ | ✅ stdin read | ✅ golden fixture | ✅ 1.8 | ✅ |
+<!-- AUTO-GENERATED MATRIX START — do not edit by hand; run scripts/generate_security_bar_matrix.py -->
+| Skill | Layer | Read-only | Agentless | Least privilege | Closed loop | OCSF wire | No telemetry |
+|---|---|:-:|:-:|---|---|---|:-:|
+| `ingest-azure-activity-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-azure-defender-for-cloud-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-cloudtrail-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-entra-directory-audit-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-gcp-audit-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-gcp-scc-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-google-workspace-login-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-guardduty-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-k8s-audit-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-mcp-proxy-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-nsg-flow-logs-azure-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-okta-system-log-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-security-hub-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-vpc-flow-logs-gcp-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-vpc-flow-logs-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `source-databricks-query` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `source-s3-select` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `source-snowflake-query` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `discover-ai-bom` | discovery | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
+| `discover-cloud-control-evidence` | discovery | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
+| `discover-control-evidence` | discovery | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
+| `discover-environment` | discovery | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
+| `detect-credential-stuffing-okta` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-entra-credential-addition` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-entra-role-grant-escalation` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-google-workspace-suspicious-login` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-lateral-movement` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-mcp-tool-drift` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-okta-mfa-fatigue` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-privilege-escalation-k8s` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-prompt-injection-mcp-proxy` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-sensitive-secret-read-k8s` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `container-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `cspm-aws-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `cspm-azure-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `cspm-gcp-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `gpu-cluster-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `k8s-security-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `model-serving-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `iam-departures-aws` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `remediate-okta-session-kill` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `convert-ocsf-to-mermaid-attack-flow` | view | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
+| `convert-ocsf-to-sarif` | view | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
+| `sink-clickhouse-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+
+_46 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+<!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar
 

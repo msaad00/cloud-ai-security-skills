@@ -55,6 +55,7 @@ jobs:
       - run: python scripts/validate_skill_count_consistency.py
       - run: python scripts/validate_deny_list_parity.py
       - run: python scripts/generate_framework_coverage_doc.py --check
+      - run: python scripts/generate_security_bar_matrix.py --check
 
   type-check:
     runs-on: ubuntu-latest
