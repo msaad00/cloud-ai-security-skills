@@ -70,7 +70,8 @@ skills/
 ├── remediation/                   # active fix workflows, gated and audited
 │   ├── iam-departures-aws/
 │   ├── remediate-okta-session-kill/
-│   └── remediate-container-escape-k8s/
+│   ├── remediate-container-escape-k8s/
+│   └── remediate-k8s-rbac-revoke/
 │
 ├── output/                        # append-only persistence sinks
 │   ├── sink-s3-jsonl/

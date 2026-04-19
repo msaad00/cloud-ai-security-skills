@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 48 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 49 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,7 +16,7 @@
 
 ## What this repo gives you
 
-**48 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus three guarded write paths for offboarding, account containment, and Kubernetes workload quarantine. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**49 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus four guarded write paths for offboarding, account containment, Kubernetes workload quarantine, and Kubernetes RBAC revocation. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
@@ -24,12 +24,12 @@
 | **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
 | **Detect** | 11 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
-| **Remediate** | 3 | guarded write paths (IAM departures, Okta session kill, K8s quarantine) | audited action trail |
+| **Remediate** | 4 | guarded write paths (IAM departures, Okta session kill, K8s quarantine, K8s RBAC revoke) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 48 shipped skills.**
+**Total: 49 shipped skills.**
 
 <details>
 <summary><b>Why different layers use different formats</b> — OCSF where interop matters, native where state, evidence, and audit matter more</summary>
@@ -77,7 +77,7 @@ flowchart LR
     subgraph Act
         direction TB
         view["L6 View<br/>2 skills · SARIF · Mermaid"]:::act
-        remediate["L5 Remediate<br/>3 skills · HITL · dual audit"]:::act
+        remediate["L5 Remediate<br/>4 skills · HITL · dual audit"]:::act
     end
     output["L7 Output<br/>3 sinks · S3 · Snowflake · ClickHouse"]:::sink
 
@@ -125,7 +125,7 @@ flowchart TB
     end
 
     mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
-    bundle[("Shared skill bundle<br/>48 shipped")]:::bundle
+    bundle[("Shared skill bundle<br/>49 shipped")]:::bundle
     outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
 
     claude -->|stdio| mcp

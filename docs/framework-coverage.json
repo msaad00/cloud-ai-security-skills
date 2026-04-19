@@ -3,488 +3,1411 @@
   "updated": "2026-04-17",
   "repo_version": "0.4.0",
   "frameworks": [
-    { "id": "ocsf-1.8", "name": "OCSF", "version": "1.8.0", "scope": "wire-contract" },
-    { "id": "mitre-attack-v14", "name": "MITRE ATT&CK", "version": "v14", "scope": "threat-mapping" },
-    { "id": "mitre-atlas", "name": "MITRE ATLAS", "version": "current", "scope": "ai-threat-mapping" },
-    { "id": "cis-aws-v3", "name": "CIS AWS Foundations", "version": "v3.0", "scope": "benchmark" },
-    { "id": "cis-gcp-v3", "name": "CIS GCP Foundations", "version": "v3.0", "scope": "benchmark" },
-    { "id": "cis-azure-v2.1", "name": "CIS Azure Foundations", "version": "v2.1", "scope": "benchmark" },
-    { "id": "cis-k8s", "name": "CIS Kubernetes Benchmark", "version": "current", "scope": "benchmark" },
-    { "id": "cis-docker", "name": "CIS Docker Benchmark", "version": "current", "scope": "benchmark" },
-    { "id": "cis-controls-v8", "name": "CIS Controls", "version": "v8", "scope": "control-framework" },
-    { "id": "nist-csf-2.0", "name": "NIST CSF", "version": "2.0", "scope": "control-framework" },
-    { "id": "nist-ai-rmf", "name": "NIST AI RMF", "version": "current", "scope": "ai-control-framework" },
-    { "id": "soc2-tsc", "name": "SOC 2 TSC", "version": "current", "scope": "control-framework" },
-    { "id": "pci-dss-4.0", "name": "PCI DSS", "version": "4.0", "scope": "control-framework" },
-    { "id": "iso-27001-2022", "name": "ISO 27001", "version": "2022", "scope": "control-framework" },
-    { "id": "owasp-llm-top-10", "name": "OWASP LLM Top 10", "version": "current", "scope": "ai-control-framework" },
-    { "id": "owasp-mcp-top-10", "name": "OWASP MCP Top 10", "version": "current", "scope": "agent-control-framework" },
-    { "id": "cyclonedx-ml-bom", "name": "CycloneDX ML-BOM", "version": "current", "scope": "inventory-artifact" }
+    {
+      "id": "ocsf-1.8",
+      "name": "OCSF",
+      "version": "1.8.0",
+      "scope": "wire-contract"
+    },
+    {
+      "id": "mitre-attack-v14",
+      "name": "MITRE ATT&CK",
+      "version": "v14",
+      "scope": "threat-mapping"
+    },
+    {
+      "id": "mitre-atlas",
+      "name": "MITRE ATLAS",
+      "version": "current",
+      "scope": "ai-threat-mapping"
+    },
+    {
+      "id": "cis-aws-v3",
+      "name": "CIS AWS Foundations",
+      "version": "v3.0",
+      "scope": "benchmark"
+    },
+    {
+      "id": "cis-gcp-v3",
+      "name": "CIS GCP Foundations",
+      "version": "v3.0",
+      "scope": "benchmark"
+    },
+    {
+      "id": "cis-azure-v2.1",
+      "name": "CIS Azure Foundations",
+      "version": "v2.1",
+      "scope": "benchmark"
+    },
+    {
+      "id": "cis-k8s",
+      "name": "CIS Kubernetes Benchmark",
+      "version": "current",
+      "scope": "benchmark"
+    },
+    {
+      "id": "cis-docker",
+      "name": "CIS Docker Benchmark",
+      "version": "current",
+      "scope": "benchmark"
+    },
+    {
+      "id": "cis-controls-v8",
+      "name": "CIS Controls",
+      "version": "v8",
+      "scope": "control-framework"
+    },
+    {
+      "id": "nist-csf-2.0",
+      "name": "NIST CSF",
+      "version": "2.0",
+      "scope": "control-framework"
+    },
+    {
+      "id": "nist-ai-rmf",
+      "name": "NIST AI RMF",
+      "version": "current",
+      "scope": "ai-control-framework"
+    },
+    {
+      "id": "soc2-tsc",
+      "name": "SOC 2 TSC",
+      "version": "current",
+      "scope": "control-framework"
+    },
+    {
+      "id": "pci-dss-4.0",
+      "name": "PCI DSS",
+      "version": "4.0",
+      "scope": "control-framework"
+    },
+    {
+      "id": "iso-27001-2022",
+      "name": "ISO 27001",
+      "version": "2022",
+      "scope": "control-framework"
+    },
+    {
+      "id": "owasp-llm-top-10",
+      "name": "OWASP LLM Top 10",
+      "version": "current",
+      "scope": "ai-control-framework"
+    },
+    {
+      "id": "owasp-mcp-top-10",
+      "name": "OWASP MCP Top 10",
+      "version": "current",
+      "scope": "agent-control-framework"
+    },
+    {
+      "id": "cyclonedx-ml-bom",
+      "name": "CycloneDX ML-BOM",
+      "version": "current",
+      "scope": "inventory-artifact"
+    }
   ],
   "skills": [
     {
       "path": "skills/ingestion/source-snowflake-query",
       "layer": "ingestion",
-      "providers": ["snowflake"],
-      "asset_classes": ["lakehouse", "query-results", "audit-logs"],
-      "execution_modes": ["cli", "ci", "mcp", "persistent"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "snowflake"
+      ],
+      "asset_classes": [
+        "lakehouse",
+        "query-results",
+        "audit-logs"
+      ],
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated"
     },
     {
       "path": "skills/ingestion/source-databricks-query",
       "layer": "ingestion",
-      "providers": ["databricks"],
-      "asset_classes": ["lakehouse", "query-results", "audit-logs"],
-      "execution_modes": ["cli", "ci", "mcp", "persistent"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "databricks"
+      ],
+      "asset_classes": [
+        "lakehouse",
+        "query-results",
+        "audit-logs"
+      ],
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated"
     },
     {
       "path": "skills/ingestion/source-s3-select",
       "layer": "ingestion",
-      "providers": ["aws"],
-      "asset_classes": ["object-storage", "query-results", "audit-logs"],
-      "execution_modes": ["cli", "ci", "mcp", "persistent"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "object-storage",
+        "query-results",
+        "audit-logs"
+      ],
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated"
     },
     {
       "path": "skills/ingestion/ingest-cloudtrail-ocsf",
       "layer": "ingestion",
-      "providers": ["aws"],
-      "asset_classes": ["iam", "api", "audit-logs"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "iam",
+        "api",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-vpc-flow-logs-ocsf",
       "layer": "ingestion",
-      "providers": ["aws"],
-      "asset_classes": ["network", "flow-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "network",
+        "flow-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-vpc-flow-logs-gcp-ocsf",
       "layer": "ingestion",
-      "providers": ["gcp"],
-      "asset_classes": ["network", "flow-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "network",
+        "flow-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-nsg-flow-logs-azure-ocsf",
       "layer": "ingestion",
-      "providers": ["azure"],
-      "asset_classes": ["network", "flow-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "azure"
+      ],
+      "asset_classes": [
+        "network",
+        "flow-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-guardduty-ocsf",
       "layer": "ingestion",
-      "providers": ["aws"],
-      "asset_classes": ["findings", "threat-detections"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "findings",
+        "threat-detections"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-security-hub-ocsf",
       "layer": "ingestion",
-      "providers": ["aws"],
-      "asset_classes": ["findings", "security-posture"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "findings",
+        "security-posture"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-gcp-scc-ocsf",
       "layer": "ingestion",
-      "providers": ["gcp"],
-      "asset_classes": ["findings", "security-posture"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "findings",
+        "security-posture"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-azure-defender-for-cloud-ocsf",
       "layer": "ingestion",
-      "providers": ["azure"],
-      "asset_classes": ["findings", "security-posture"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "azure"
+      ],
+      "asset_classes": [
+        "findings",
+        "security-posture"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-gcp-audit-ocsf",
       "layer": "ingestion",
-      "providers": ["gcp"],
-      "asset_classes": ["api", "audit-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "api",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-azure-activity-ocsf",
       "layer": "ingestion",
-      "providers": ["azure"],
-      "asset_classes": ["api", "audit-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "azure"
+      ],
+      "asset_classes": [
+        "api",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-entra-directory-audit-ocsf",
       "layer": "ingestion",
-      "providers": ["azure", "entra", "microsoft-graph"],
-      "asset_classes": ["identities", "applications", "service-principals", "federated-credentials", "audit-logs"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "azure",
+        "entra",
+        "microsoft-graph"
+      ],
+      "asset_classes": [
+        "identities",
+        "applications",
+        "service-principals",
+        "federated-credentials",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-okta-system-log-ocsf",
       "layer": "ingestion",
-      "providers": ["okta"],
-      "asset_classes": ["identities", "authentication", "user-access", "groups", "applications", "audit-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "okta"
+      ],
+      "asset_classes": [
+        "identities",
+        "authentication",
+        "user-access",
+        "groups",
+        "applications",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-google-workspace-login-ocsf",
       "layer": "ingestion",
-      "providers": ["google-workspace"],
-      "asset_classes": ["identities", "authentication", "mfa", "sessions", "audit-logs"],
-      "frameworks": ["ocsf-1.8"],
+      "providers": [
+        "google-workspace"
+      ],
+      "asset_classes": [
+        "identities",
+        "authentication",
+        "mfa",
+        "sessions",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-k8s-audit-ocsf",
       "layer": "ingestion",
-      "providers": ["kubernetes"],
-      "asset_classes": ["clusters", "audit-logs", "identities"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "clusters",
+        "audit-logs",
+        "identities"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/ingestion/ingest-mcp-proxy-ocsf",
       "layer": "ingestion",
-      "providers": ["mcp", "multi"],
-      "asset_classes": ["agent-tools", "application-activity"],
-      "frameworks": ["ocsf-1.8", "owasp-mcp-top-10"],
+      "providers": [
+        "mcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "agent-tools",
+        "application-activity"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "owasp-mcp-top-10"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/discovery/discover-environment",
       "layer": "discovery",
-      "providers": ["aws", "azure", "gcp", "kubernetes", "containers", "multi"],
-      "asset_classes": ["inventory", "compute", "storage", "network", "logging", "clusters", "ai-endpoints"],
-      "frameworks": ["mitre-attack-v14", "mitre-atlas", "nist-csf-2.0", "ocsf-1.8"],
+      "providers": [
+        "aws",
+        "azure",
+        "gcp",
+        "kubernetes",
+        "containers",
+        "multi"
+      ],
+      "asset_classes": [
+        "inventory",
+        "compute",
+        "storage",
+        "network",
+        "logging",
+        "clusters",
+        "ai-endpoints"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "mitre-atlas",
+        "nist-csf-2.0",
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/discovery/discover-ai-bom",
       "layer": "discovery",
-      "providers": ["aws", "azure", "gcp", "multi"],
-      "asset_classes": ["inventory", "ai-endpoints", "models", "datasets", "vector-stores", "gpu-fleets"],
-      "frameworks": ["cyclonedx-ml-bom", "nist-ai-rmf", "mitre-atlas", "pci-dss-4.0", "soc2-tsc"],
+      "providers": [
+        "aws",
+        "azure",
+        "gcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "inventory",
+        "ai-endpoints",
+        "models",
+        "datasets",
+        "vector-stores",
+        "gpu-fleets"
+      ],
+      "frameworks": [
+        "cyclonedx-ml-bom",
+        "nist-ai-rmf",
+        "mitre-atlas",
+        "pci-dss-4.0",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp"
+      ]
     },
     {
       "path": "skills/discovery/discover-control-evidence",
       "layer": "discovery",
-      "providers": ["multi"],
-      "asset_classes": ["evidence", "inventory", "ai-endpoints"],
-      "frameworks": ["pci-dss-4.0", "soc2-tsc", "cyclonedx-ml-bom", "mitre-atlas", "ocsf-1.8"],
+      "providers": [
+        "multi"
+      ],
+      "asset_classes": [
+        "evidence",
+        "inventory",
+        "ai-endpoints"
+      ],
+      "frameworks": [
+        "pci-dss-4.0",
+        "soc2-tsc",
+        "cyclonedx-ml-bom",
+        "mitre-atlas",
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp"
+      ]
     },
     {
       "path": "skills/discovery/discover-cloud-control-evidence",
       "layer": "discovery",
-      "providers": ["aws", "azure", "gcp", "multi"],
-      "asset_classes": ["evidence", "inventory", "network", "logging", "encryption", "ai-endpoints"],
-      "frameworks": ["pci-dss-4.0", "soc2-tsc", "nist-ai-rmf", "mitre-attack-v14", "mitre-atlas", "ocsf-1.8"],
+      "providers": [
+        "aws",
+        "azure",
+        "gcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "evidence",
+        "inventory",
+        "network",
+        "logging",
+        "encryption",
+        "ai-endpoints"
+      ],
+      "frameworks": [
+        "pci-dss-4.0",
+        "soc2-tsc",
+        "nist-ai-rmf",
+        "mitre-attack-v14",
+        "mitre-atlas",
+        "ocsf-1.8"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp"
+      ]
     },
     {
       "path": "skills/detection/detect-lateral-movement",
       "layer": "detection",
-      "providers": ["aws", "azure", "gcp", "multi"],
-      "asset_classes": ["identities", "applications", "service-accounts", "service-principals", "managed-identities", "federated-credentials", "app-role-assignments", "sessions", "api", "network"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "aws",
+        "azure",
+        "gcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "identities",
+        "applications",
+        "service-accounts",
+        "service-principals",
+        "managed-identities",
+        "federated-credentials",
+        "app-role-assignments",
+        "sessions",
+        "api",
+        "network"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-google-workspace-suspicious-login",
       "layer": "detection",
-      "providers": ["google-workspace"],
-      "asset_classes": ["identities", "authentication", "sessions", "mfa"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "google-workspace"
+      ],
+      "asset_classes": [
+        "identities",
+        "authentication",
+        "sessions",
+        "mfa"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-okta-mfa-fatigue",
       "layer": "detection",
-      "providers": ["okta"],
-      "asset_classes": ["identities", "authentication", "mfa", "sessions"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "okta"
+      ],
+      "asset_classes": [
+        "identities",
+        "authentication",
+        "mfa",
+        "sessions"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-credential-stuffing-okta",
       "layer": "detection",
-      "providers": ["okta"],
-      "asset_classes": ["identities", "authentication", "sessions"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "okta"
+      ],
+      "asset_classes": [
+        "identities",
+        "authentication",
+        "sessions"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-entra-credential-addition",
       "layer": "detection",
-      "providers": ["azure", "entra", "microsoft-graph"],
-      "asset_classes": ["identities", "applications", "service-principals", "federated-credentials"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "azure",
+        "entra",
+        "microsoft-graph"
+      ],
+      "asset_classes": [
+        "identities",
+        "applications",
+        "service-principals",
+        "federated-credentials"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-entra-role-grant-escalation",
       "layer": "detection",
-      "providers": ["azure", "entra", "microsoft-graph"],
-      "asset_classes": ["identities", "applications", "service-principals", "app-role-assignments"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "azure",
+        "entra",
+        "microsoft-graph"
+      ],
+      "asset_classes": [
+        "identities",
+        "applications",
+        "service-principals",
+        "app-role-assignments"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-mcp-tool-drift",
       "layer": "detection",
-      "providers": ["mcp", "multi"],
-      "asset_classes": ["agent-tools", "supply-chain", "tool-metadata"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14", "owasp-mcp-top-10"],
+      "providers": [
+        "mcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "agent-tools",
+        "supply-chain",
+        "tool-metadata"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14",
+        "owasp-mcp-top-10"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp"
+      ]
     },
     {
       "path": "skills/detection/detect-prompt-injection-mcp-proxy",
       "layer": "detection",
-      "providers": ["mcp", "multi"],
-      "asset_classes": ["agent-tools", "tool-metadata", "guardrails"],
-      "frameworks": ["ocsf-1.8", "mitre-atlas", "owasp-llm-top-10", "owasp-mcp-top-10"],
+      "providers": [
+        "mcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "agent-tools",
+        "tool-metadata",
+        "guardrails"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-atlas",
+        "owasp-llm-top-10",
+        "owasp-mcp-top-10"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-privilege-escalation-k8s",
       "layer": "detection",
-      "providers": ["kubernetes"],
-      "asset_classes": ["clusters", "containers", "identities", "secrets"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "clusters",
+        "containers",
+        "identities",
+        "secrets"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-container-escape-k8s",
       "layer": "detection",
-      "providers": ["kubernetes"],
-      "asset_classes": ["clusters", "containers", "runtime"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "clusters",
+        "containers",
+        "runtime"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/detection/detect-sensitive-secret-read-k8s",
       "layer": "detection",
-      "providers": ["kubernetes"],
-      "asset_classes": ["clusters", "secrets", "identities"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "clusters",
+        "secrets",
+        "identities"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/cspm-aws-cis-benchmark",
       "layer": "evaluation",
-      "providers": ["aws"],
-      "asset_classes": ["identities", "storage", "logging", "network"],
-      "frameworks": ["cis-aws-v3", "nist-csf-2.0", "iso-27001-2022", "soc2-tsc", "pci-dss-4.0"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "identities",
+        "storage",
+        "logging",
+        "network"
+      ],
+      "frameworks": [
+        "cis-aws-v3",
+        "nist-csf-2.0",
+        "iso-27001-2022",
+        "soc2-tsc",
+        "pci-dss-4.0"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/cspm-gcp-cis-benchmark",
       "layer": "evaluation",
-      "providers": ["gcp"],
-      "asset_classes": ["identities", "storage", "logging", "network"],
-      "frameworks": ["cis-gcp-v3", "nist-csf-2.0", "iso-27001-2022"],
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "identities",
+        "storage",
+        "logging",
+        "network"
+      ],
+      "frameworks": [
+        "cis-gcp-v3",
+        "nist-csf-2.0",
+        "iso-27001-2022"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/cspm-azure-cis-benchmark",
       "layer": "evaluation",
-      "providers": ["azure"],
-      "asset_classes": ["identities", "storage", "logging", "network"],
-      "frameworks": ["cis-azure-v2.1", "nist-csf-2.0", "iso-27001-2022"],
+      "providers": [
+        "azure"
+      ],
+      "asset_classes": [
+        "identities",
+        "storage",
+        "logging",
+        "network"
+      ],
+      "frameworks": [
+        "cis-azure-v2.1",
+        "nist-csf-2.0",
+        "iso-27001-2022"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/k8s-security-benchmark",
       "layer": "evaluation",
-      "providers": ["kubernetes"],
-      "asset_classes": ["clusters", "identities", "network", "logging"],
-      "frameworks": ["cis-k8s", "nist-csf-2.0"],
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "clusters",
+        "identities",
+        "network",
+        "logging"
+      ],
+      "frameworks": [
+        "cis-k8s",
+        "nist-csf-2.0"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/container-security",
       "layer": "evaluation",
-      "providers": ["containers"],
-      "asset_classes": ["containers", "runtime", "images"],
-      "frameworks": ["cis-docker", "nist-csf-2.0"],
+      "providers": [
+        "containers"
+      ],
+      "asset_classes": [
+        "containers",
+        "runtime",
+        "images"
+      ],
+      "frameworks": [
+        "cis-docker",
+        "nist-csf-2.0"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/model-serving-security",
       "layer": "evaluation",
-      "providers": ["aws", "azure", "gcp", "multi"],
-      "asset_classes": ["ai-endpoints", "models", "identities", "network", "logging", "guardrails"],
-      "frameworks": ["mitre-atlas", "nist-csf-2.0", "owasp-llm-top-10", "soc2-tsc", "nist-ai-rmf"],
+      "providers": [
+        "aws",
+        "azure",
+        "gcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "ai-endpoints",
+        "models",
+        "identities",
+        "network",
+        "logging",
+        "guardrails"
+      ],
+      "frameworks": [
+        "mitre-atlas",
+        "nist-csf-2.0",
+        "owasp-llm-top-10",
+        "soc2-tsc",
+        "nist-ai-rmf"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/evaluation/gpu-cluster-security",
       "layer": "evaluation",
-      "providers": ["aws", "azure", "gcp", "kubernetes", "containers", "multi"],
-      "asset_classes": ["gpu-fleets", "clusters", "containers", "runtime", "tenancy"],
-      "frameworks": ["mitre-attack-v14", "mitre-atlas", "nist-csf-2.0", "nist-ai-rmf", "cis-controls-v8", "cis-k8s"],
+      "providers": [
+        "aws",
+        "azure",
+        "gcp",
+        "kubernetes",
+        "containers",
+        "multi"
+      ],
+      "asset_classes": [
+        "gpu-fleets",
+        "clusters",
+        "containers",
+        "runtime",
+        "tenancy"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "mitre-atlas",
+        "nist-csf-2.0",
+        "nist-ai-rmf",
+        "cis-controls-v8",
+        "cis-k8s"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/view/convert-ocsf-to-sarif",
       "layer": "view",
-      "providers": ["multi"],
-      "asset_classes": ["findings", "review-output"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "multi"
+      ],
+      "asset_classes": [
+        "findings",
+        "review-output"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp"
+      ]
     },
     {
       "path": "skills/view/convert-ocsf-to-mermaid-attack-flow",
       "layer": "view",
-      "providers": ["multi"],
-      "asset_classes": ["findings", "review-output", "graphs"],
-      "frameworks": ["ocsf-1.8", "mitre-attack-v14"],
+      "providers": [
+        "multi"
+      ],
+      "asset_classes": [
+        "findings",
+        "review-output",
+        "graphs"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp"
+      ]
     },
     {
       "path": "skills/remediation/iam-departures-aws",
       "layer": "remediation",
-      "providers": ["aws", "snowflake", "databricks", "clickhouse"],
-      "asset_classes": ["identities", "access", "audit", "hr-events"],
-      "frameworks": ["mitre-attack-v14", "nist-csf-2.0", "cis-controls-v8", "soc2-tsc"],
+      "providers": [
+        "aws",
+        "snowflake",
+        "databricks",
+        "clickhouse"
+      ],
+      "asset_classes": [
+        "identities",
+        "access",
+        "audit",
+        "hr-events"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "nist-csf-2.0",
+        "cis-controls-v8",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/remediation/remediate-okta-session-kill",
       "layer": "remediation",
-      "providers": ["okta"],
-      "asset_classes": ["identities", "sessions", "oauth-tokens", "audit"],
-      "frameworks": ["mitre-attack-v14", "nist-csf-2.0", "soc2-tsc"],
+      "providers": [
+        "okta"
+      ],
+      "asset_classes": [
+        "identities",
+        "sessions",
+        "oauth-tokens",
+        "audit"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "nist-csf-2.0",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/remediation/remediate-container-escape-k8s",
       "layer": "remediation",
-      "providers": ["kubernetes"],
-      "asset_classes": ["pods", "workloads", "networkpolicy", "audit"],
-      "frameworks": ["mitre-attack-v14", "nist-csf-2.0", "soc2-tsc"],
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "pods",
+        "workloads",
+        "networkpolicy",
+        "audit"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "nist-csf-2.0",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "ci", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
+      "path": "skills/remediation/remediate-k8s-rbac-revoke",
+      "layer": "remediation",
+      "providers": [
+        "kubernetes"
+      ],
+      "asset_classes": [
+        "rolebindings",
+        "clusterrolebindings",
+        "rbac",
+        "audit"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "nist-csf-2.0",
+        "soc2-tsc"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/output/sink-snowflake-jsonl",
       "layer": "output",
-      "providers": ["snowflake"],
-      "asset_classes": ["findings", "evidence", "audit-logs", "lakehouse"],
-      "frameworks": ["ocsf-1.8", "soc2-tsc"],
+      "providers": [
+        "snowflake"
+      ],
+      "asset_classes": [
+        "findings",
+        "evidence",
+        "audit-logs",
+        "lakehouse"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/output/sink-clickhouse-jsonl",
       "layer": "output",
-      "providers": ["clickhouse"],
-      "asset_classes": ["findings", "evidence", "audit-logs", "lakehouse"],
-      "frameworks": ["ocsf-1.8", "soc2-tsc"],
+      "providers": [
+        "clickhouse"
+      ],
+      "asset_classes": [
+        "findings",
+        "evidence",
+        "audit-logs",
+        "lakehouse"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "mcp",
+        "persistent"
+      ]
     },
     {
       "path": "skills/output/sink-s3-jsonl",
       "layer": "output",
-      "providers": ["aws"],
-      "asset_classes": ["findings", "evidence", "audit-logs", "object-storage"],
-      "frameworks": ["ocsf-1.8", "soc2-tsc"],
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "findings",
+        "evidence",
+        "audit-logs",
+        "object-storage"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "soc2-tsc"
+      ],
       "coverage_status": "validated",
-      "execution_modes": ["cli", "mcp", "persistent"]
+      "execution_modes": [
+        "cli",
+        "mcp",
+        "persistent"
+      ]
     }
   ],
   "coverage_targets": [
     {
       "framework": "mitre-attack-v14",
       "target": "100% mapped coverage",
-      "providers_in_scope": ["aws", "azure", "gcp", "kubernetes", "containers", "mcp"],
-      "asset_classes_in_scope": ["identities", "api", "network", "clusters", "containers", "findings"]
+      "providers_in_scope": [
+        "aws",
+        "azure",
+        "gcp",
+        "kubernetes",
+        "containers",
+        "mcp"
+      ],
+      "asset_classes_in_scope": [
+        "identities",
+        "api",
+        "network",
+        "clusters",
+        "containers",
+        "findings"
+      ]
     },
     {
       "framework": "mitre-atlas",
       "target": "100% mapped coverage",
-      "providers_in_scope": ["aws", "azure", "gcp"],
-      "asset_classes_in_scope": ["ai-endpoints", "models", "datasets", "vector-stores", "gpu-fleets", "evidence"]
+      "providers_in_scope": [
+        "aws",
+        "azure",
+        "gcp"
+      ],
+      "asset_classes_in_scope": [
+        "ai-endpoints",
+        "models",
+        "datasets",
+        "vector-stores",
+        "gpu-fleets",
+        "evidence"
+      ]
     },
     {
       "framework": "nist-csf-2.0",
       "target": "100% mapped coverage",
-      "providers_in_scope": ["aws", "azure", "gcp", "kubernetes", "containers", "multi"],
-      "asset_classes_in_scope": ["identities", "storage", "logging", "network", "clusters", "runtime", "evidence"]
+      "providers_in_scope": [
+        "aws",
+        "azure",
+        "gcp",
+        "kubernetes",
+        "containers",
+        "multi"
+      ],
+      "asset_classes_in_scope": [
+        "identities",
+        "storage",
+        "logging",
+        "network",
+        "clusters",
+        "runtime",
+        "evidence"
+      ]
     },
     {
       "framework": "pci-dss-4.0",
       "target": "100% mapped coverage",
-      "providers_in_scope": ["aws", "azure", "gcp", "multi"],
-      "asset_classes_in_scope": ["network", "logging", "encryption", "evidence", "inventory"]
+      "providers_in_scope": [
+        "aws",
+        "azure",
+        "gcp",
+        "multi"
+      ],
+      "asset_classes_in_scope": [
+        "network",
+        "logging",
+        "encryption",
+        "evidence",
+        "inventory"
+      ]
     },
     {
       "framework": "soc2-tsc",
       "target": "100% mapped coverage",
-      "providers_in_scope": ["aws", "azure", "gcp", "multi"],
-      "asset_classes_in_scope": ["access", "logging", "change", "evidence", "inventory", "ai-endpoints"]
+      "providers_in_scope": [
+        "aws",
+        "azure",
+        "gcp",
+        "multi"
+      ],
+      "asset_classes_in_scope": [
+        "access",
+        "logging",
+        "change",
+        "evidence",
+        "inventory",
+        "ai-endpoints"
+      ]
     }
   ]
 }
