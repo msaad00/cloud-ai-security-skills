@@ -23,12 +23,15 @@ import sys
 import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Protocol
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Protocol
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 SRC_DIR = Path(__file__).resolve().parent
+
+if TYPE_CHECKING:
+    from handler import ResolvedTarget, Target
 
 
 def _load_handler_module() -> Any:
@@ -54,8 +57,6 @@ STATUS_PLANNED = _HANDLER.STATUS_PLANNED
 STATUS_SKIPPED_UNSUPPORTED_TARGET = _HANDLER.STATUS_SKIPPED_UNSUPPORTED_TARGET
 STATUS_SUCCESS = _HANDLER.STATUS_SUCCESS
 STATUS_WOULD_VIOLATE_DENY_LIST = _HANDLER.STATUS_WOULD_VIOLATE_DENY_LIST
-ResolvedTarget = _HANDLER.ResolvedTarget
-Target = _HANDLER.Target
 check_apply_gate = _HANDLER.check_apply_gate
 is_protected_namespace = _HANDLER.is_protected_namespace
 load_jsonl = _HANDLER.load_jsonl
@@ -764,7 +765,7 @@ def run(
             )
             continue
 
-        resolved = resolve_target(target, kube_client)  # type: ignore[arg-type]
+        resolved = resolve_target(target, kube_client)
         if resolved is None:
             yield _skip_record(
                 target,
