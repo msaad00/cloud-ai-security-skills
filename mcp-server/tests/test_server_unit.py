@@ -171,6 +171,61 @@ def test_call_tool_audit_records_resolved_timeout(monkeypatch):
     assert audit_events[0]["timeout_seconds"] == 150
 
 
+def test_allowed_skills_filter_unset_returns_none(monkeypatch):
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
+    assert MODULE._allowed_skills_filter() is None
+
+
+def test_allowed_skills_filter_blank_returns_none(monkeypatch):
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", "   ")
+    assert MODULE._allowed_skills_filter() is None
+
+
+def test_allowed_skills_filter_parses_csv_and_trims(monkeypatch):
+    monkeypatch.setenv(
+        "CLOUD_SECURITY_MCP_ALLOWED_SKILLS",
+        " cspm-aws-cis-benchmark , detect-lateral-movement ,, ",
+    )
+    assert MODULE._allowed_skills_filter() == {
+        "cspm-aws-cis-benchmark",
+        "detect-lateral-movement",
+    }
+
+
+def test_filtered_tool_map_restricts_to_allowlist(monkeypatch):
+    fake_tools = {
+        "cspm-aws-cis-benchmark": _FakeSkill(),
+        "iam-departures-aws": _FakeSkill(),
+        "detect-lateral-movement": _FakeSkill(),
+    }
+    monkeypatch.setattr(MODULE, "tool_map", lambda: fake_tools)
+    monkeypatch.setenv(
+        "CLOUD_SECURITY_MCP_ALLOWED_SKILLS",
+        "cspm-aws-cis-benchmark,detect-lateral-movement",
+    )
+    filtered = MODULE._filtered_tool_map()
+    assert set(filtered) == {"cspm-aws-cis-benchmark", "detect-lateral-movement"}
+    assert "iam-departures-aws" not in filtered
+
+
+def test_filtered_tool_map_unset_exposes_all(monkeypatch):
+    fake_tools = {"a": _FakeSkill(), "b": _FakeSkill()}
+    monkeypatch.setattr(MODULE, "tool_map", lambda: fake_tools)
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
+    assert set(MODULE._filtered_tool_map()) == {"a", "b"}
+
+
+def test_call_tool_rejects_skill_outside_allowlist(monkeypatch):
+    monkeypatch.setattr(MODULE, "tool_map", lambda: {"blocked-skill": _FakeSkill()})
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", "other-skill")
+    try:
+        MODULE._call_tool("blocked-skill", {"args": []})
+    except KeyError as exc:
+        assert "unknown tool" in str(exc)
+    else:
+        raise AssertionError("expected KeyError for allowlist-blocked tool")
+
+
 def test_runtime_telemetry_includes_env_correlation_id(monkeypatch, capsys):
     monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
     monkeypatch.setenv("SKILL_CORRELATION_ID", "corr-123")
