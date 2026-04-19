@@ -102,6 +102,18 @@ K8s audit events are emitted at 4 stages: `RequestReceived`, `ResponseStarted`, 
 
 `cloud.provider` is hard-coded to `"Kubernetes"` (even though K8s is not a cloud, OCSF uses the `cloud` object as the deployment-context holder).
 
+### `unmapped.k8s.*` preservation
+
+Fields without a clean first-class OCSF slot round-trip verbatim under
+`unmapped.k8s.*` in both native and OCSF output:
+
+- `requestObject` → `unmapped.k8s.request_object`
+- `responseObject` → `unmapped.k8s.response_object`
+- raw `objectRef` → `unmapped.k8s.object_ref`
+
+This preserves spec-patch and response-body detail for downstream detectors
+without overloading the normalized `resources[]` shape.
+
 ## Service-account marker
 
 When `user.username` starts with `system:serviceaccount:<namespace>:<name>`, the skill sets `actor.user.type = "ServiceAccount"` and records `mcp.sa_namespace` under a non-standard k8s custom profile so detection skills can key off it without parsing the username string.
@@ -144,6 +156,7 @@ python src/ingest.py --output-format native /var/log/k8s-audit.log > k8s-audit.n
 - `resources`
 - `source`
 - `k8s.service_account_namespace` when the actor is a service account
+- `unmapped.k8s.*` when raw request / response / objectRef detail is present
 
 ## Tests
 

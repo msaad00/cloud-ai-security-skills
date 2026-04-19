@@ -205,7 +205,7 @@ Abbreviated example:
 | Main operation mapping | `verb -> api.operation` |
 | Main resource mapping | `objectRef.* -> resources[0]` |
 | Stable ID rule | preserve `auditID` as the event and request identity when available |
-| Vendor-specific note | service-account detail is preserved in repo-native fields such as `k8s.service_account_namespace` |
+| Vendor-specific note | service-account detail is preserved in repo-native fields such as `k8s.service_account_namespace`; raw `requestObject`, `responseObject`, and `objectRef` survive under `unmapped.k8s.*` |
 
 ### Identity vendors
 

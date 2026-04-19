@@ -226,7 +226,8 @@ tail of raw audit metadata.
 |---|---|---|---|---|
 | `auditID`, `verb`, `requestURI`, `user.*`, `sourceIPs`, `userAgent`, `objectRef.*`, `responseStatus.code` | no | no | no | yes |
 | service-account namespace derivation and normalized authz labels | no | no | yes, some fields are native-first | partial |
-| `requestObject`, `responseObject`, `managedFields`, long raw audit envelope detail | yes | no | no | no |
+| `requestObject`, `responseObject`, raw `objectRef` detail beyond the normalized resource projection | no | yes under `unmapped.k8s.*` | no | partial |
+| `managedFields`, long raw audit envelope detail | yes | no | no | no |
 | `RequestReceived` stage entries | yes, intentionally skipped | no | no | no |
 | repo-owned envelope fields such as `canonical_schema_version`, `record_type`, `source.kind`, `source.stage` | no | no | yes | partial |
 

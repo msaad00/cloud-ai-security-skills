@@ -253,6 +253,54 @@ class TestConvertEvent:
         assert "class_uid" not in e
         assert "metadata" not in e
 
+    def test_unmapped_round_trips_request_response_and_object_ref_in_ocsf(self):
+        raw = self._event(
+            verb="patch",
+            objectRef={
+                "resource": "pods",
+                "namespace": "default",
+                "name": "web-01",
+                "apiVersion": "v1",
+            },
+            requestObject={
+                "spec": {
+                    "containers": [
+                        {
+                            "name": "web",
+                            "securityContext": {"privileged": True},
+                        }
+                    ]
+                }
+            },
+            responseObject={
+                "metadata": {"name": "web-01"},
+                "spec": {
+                    "hostPID": True,
+                },
+            },
+        )
+        e = convert_event(raw)
+        assert e["unmapped"]["k8s"]["request_object"] == raw["requestObject"]
+        assert e["unmapped"]["k8s"]["response_object"] == raw["responseObject"]
+        assert e["unmapped"]["k8s"]["object_ref"] == raw["objectRef"]
+
+    def test_unmapped_round_trips_request_response_and_object_ref_in_native(self):
+        raw = self._event(
+            verb="patch",
+            objectRef={
+                "resource": "pods",
+                "namespace": "default",
+                "name": "web-01",
+                "apiVersion": "v1",
+            },
+            requestObject={"spec": {"hostNetwork": True}},
+            responseObject={"spec": {"ephemeralContainers": [{"name": "debugger"}]}},
+        )
+        e = convert_event_native(raw)
+        assert e["unmapped"]["k8s"]["request_object"] == raw["requestObject"]
+        assert e["unmapped"]["k8s"]["response_object"] == raw["responseObject"]
+        assert e["unmapped"]["k8s"]["object_ref"] == raw["objectRef"]
+
 
 # ── Golden fixture parity ──────────────────────────────────────────────
 
