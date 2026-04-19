@@ -56,20 +56,18 @@ jobs:
           ls -l "${out}"
           echo "SOURCE_TARBALL=${out}" >> "$GITHUB_ENV"
 
-      - uses: sigstore/cosign-installer@v3.8.1
+      - uses: sigstore/cosign-installer@v4.1.1
 
       - name: Sign SBOM with GitHub OIDC
         run: |
           cosign sign-blob --yes \
-            --output-signature cloud-ai-security-skills-full-lock.cdx.json.sig \
-            --output-certificate cloud-ai-security-skills-full-lock.cdx.json.pem \
+            --bundle cloud-ai-security-skills-full-lock.cdx.json.sigstore.json \
             cloud-ai-security-skills-full-lock.cdx.json
 
       - name: Sign source tarball with GitHub OIDC
         run: |
           cosign sign-blob --yes \
-            --output-signature "${SOURCE_TARBALL}.sig" \
-            --output-certificate "${SOURCE_TARBALL}.pem" \
+            --bundle "${SOURCE_TARBALL}.sigstore.json" \
             "${SOURCE_TARBALL}"
 
       - name: Generate SLSA build provenance attestation for SBOM
@@ -83,7 +81,7 @@ jobs:
           subject-path: ${{ env.SOURCE_TARBALL }}
 
       - name: Generate CycloneDX SBOM attestation
-        uses: actions/attest-sbom@v3
+        uses: actions/attest-sbom@v4
         with:
           subject-path: ${{ env.SOURCE_TARBALL }}
           sbom-path: cloud-ai-security-skills-full-lock.cdx.json
@@ -94,9 +92,7 @@ jobs:
         run: |
           gh release upload "${{ steps.meta.outputs.tag }}" \
             cloud-ai-security-skills-full-lock.cdx.json \
-            cloud-ai-security-skills-full-lock.cdx.json.sig \
-            cloud-ai-security-skills-full-lock.cdx.json.pem \
+            cloud-ai-security-skills-full-lock.cdx.json.sigstore.json \
             "${SOURCE_TARBALL}" \
-            "${SOURCE_TARBALL}.sig" \
-            "${SOURCE_TARBALL}.pem" \
+            "${SOURCE_TARBALL}.sigstore.json" \
             --clobber
