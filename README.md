@@ -267,7 +267,7 @@ Native wire format is the same content in a repo-owned envelope — see [docs/NA
 
 The flagship shipped write path. Guarded, event-driven, dual-audited — and **one cloud per worker**, never cross-cloud.
 
-![AWS-only IAM departures flow. Plan reads HR sources in Snowflake or Databricks, runs the reconciler, writes an S3 manifest of the actionable set. Orchestrate fires an EventBridge rule that starts a Step Function; the Step Function invokes a parser Lambda that re-checks manifest and IAM state, then a worker Lambda with a scoped principal that assumes a cross-account role inside the AWS Organization. Write deletes the AWS IAM user through the nine-step deletion order. Audit lands in DynamoDB plus KMS-encrypted S3, then ingest-back feeds drift checks into the next reconciler run. The footer makes clear that Azure and GCP use their own native orchestration stacks. No single worker ever crosses cloud boundaries.](docs/images/iam-departures-aws.svg)
+![AWS-only IAM departures flow. Plan reads HR sources in Snowflake or Databricks, runs the reconciler, writes an S3 manifest of the actionable set. Orchestrate fires an EventBridge rule that starts a Step Function; the Step Function invokes a parser Lambda that re-checks manifest and IAM state, then a worker Lambda with a scoped principal that assumes a cross-account role inside the AWS Organization. Write deletes the AWS IAM user through the 13-step deletion order (11 worker functions spanning 13 distinct IAM API operations). Audit lands in DynamoDB plus KMS-encrypted S3, then ingest-back feeds drift checks into the next reconciler run. The footer makes clear that Azure and GCP use their own native orchestration stacks. No single worker ever crosses cloud boundaries.](docs/images/iam-departures-aws.svg)
 
 - **scope first** — rehire and grace-window logic run in the reconciler before the manifest is written
 - **separate principals** — EventBridge, Step Function, parser Lambda, worker Lambda each have their own execution role
@@ -331,9 +331,9 @@ Per-skill framework mapping: [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPING
 |---|---|---|
 | **Ingest** | 15 ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources |
 | **Discover** | 4 skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence |
-| **Detect** | 9 detectors tied to MITRE ATT&CK | credential stuffing, impossible travel, more MCP patterns |
-| **Evaluate** | 7 benchmarks (82 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, model serving | OCSF Compliance Finding class `2003` outputs |
-| **Remediate** | IAM departures with HITL, dry-run, dual audit | broader remediation families as detection matures |
+| **Detect** | 10 detectors tied to MITRE ATT&CK (inc. credential stuffing, Okta MFA fatigue, K8s priv-esc, MCP tool drift, prompt injection) | impossible travel, container escape (#274), more MCP patterns |
+| **Evaluate** | 7 benchmarks (82 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, model serving — native + OCSF 2003 opt-in | 50 % per-platform CIS coverage (#254), `--auto-remediate` flag |
+| **Remediate** | `iam-departures-aws` + `remediate-okta-session-kill` — both HITL-gated, dry-run default, dual audit | broader remediation families as detection matures |
 | **View** | SARIF, Mermaid attack flow | graph overlay, warehouse-ready converters |
 | **Sinks** | Snowflake, ClickHouse, S3 | Security Lake, BigQuery |
 | **Packs** | `lateral-movement`, `privilege-escalation-k8s` | broader warehouse dialect coverage |

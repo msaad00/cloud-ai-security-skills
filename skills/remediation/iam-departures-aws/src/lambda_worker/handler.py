@@ -219,6 +219,19 @@ def handler(event: dict, context: Any) -> dict:
 
 
 def _remediation_steps() -> tuple[tuple[str, Any], ...]:
+    """11 worker functions that collectively perform 13 distinct IAM API operations.
+
+    Why the two numbers differ: `_deactivate_access_keys` below issues BOTH
+    `iam:UpdateAccessKey(Inactive)` and `iam:DeleteAccessKey` per key, and
+    `_delete_mfa_devices` issues BOTH `iam:DeactivateMFADevice` and
+    `iam:DeleteVirtualMFADevice` per device. The SVG + SKILL.md "13-step
+    deletion order" counts distinct IAM API calls (what shows up in
+    CloudTrail); this tuple counts function-level steps for the checkpoint
+    loop. Both views are truthful; the numbers describe different things.
+
+    Keep in sync with `SKILL.md § Deletion order` and
+    `docs/images/iam-departures-aws.svg` DELETION ORDER card.
+    """
     return (
         ("deactivate_access_keys", lambda iam, username, _entry, actions: _deactivate_access_keys(iam, username, actions)),
         ("delete_login_profile", lambda iam, username, _entry, actions: _delete_login_profile(iam, username, actions)),

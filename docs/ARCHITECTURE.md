@@ -7,7 +7,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 ## Quick read
 
 - seven shipped skill layers stay at the center: ingest, discover, detect, evaluate, remediate, view, and output
-- three edge or runtime layers sit around them: sources and sinks, query packs, and runtime surfaces
+- two edge or runtime layers sit around them: query packs (L8) and runtime surfaces (L9) — source adapters and sinks are now first-class skill layers under `skills/ingestion/source-*` and `skills/output/`
 - one skill bundle contract is shared across CLI, CI, MCP, and runners
 - OCSF is the SIEM interop wire format for **ingest and detect**; native / CycloneDX / bridge are correct for discover, remediate, and sinks (see §3.1 for the per-layer applicability table)
 
