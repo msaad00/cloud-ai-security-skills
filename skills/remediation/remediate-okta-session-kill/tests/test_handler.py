@@ -72,6 +72,9 @@ class _FakeOkta:
 
     fail_on: str | None = None
     calls: list[tuple[str, str]] = field(default_factory=list)
+    # For reverify tests
+    sessions_by_user: dict[str, list[dict]] = field(default_factory=dict)
+    tokens_by_user: dict[str, list[dict]] = field(default_factory=dict)
 
     def revoke_sessions(self, user_id: str) -> None:
         self.calls.append(("revoke_sessions", user_id))
@@ -82,6 +85,18 @@ class _FakeOkta:
         self.calls.append(("revoke_oauth_tokens", user_id))
         if self.fail_on == "revoke_oauth_tokens":
             raise RuntimeError("simulated Okta 500")
+
+    def list_active_sessions(self, user_id: str) -> list[dict]:
+        self.calls.append(("list_active_sessions", user_id))
+        if self.fail_on == "list_active_sessions":
+            raise RuntimeError("simulated Okta 500")
+        return list(self.sessions_by_user.get(user_id, []))
+
+    def list_active_oauth_tokens(self, user_id: str) -> list[dict]:
+        self.calls.append(("list_active_oauth_tokens", user_id))
+        if self.fail_on == "list_active_oauth_tokens":
+            raise RuntimeError("simulated Okta 500")
+        return list(self.tokens_by_user.get(user_id, []))
 
 
 @dataclass
@@ -474,3 +489,99 @@ class TestApplyEndToEnd:
         assert {r["target"]["user_uid"] for r in records} == {"00u-a", "00u-b"}
         # 2 steps × 2 writes each × 2 users = 8 audit rows
         assert len(fake_audit.writes) == 8
+
+
+class TestReverify:
+    """Re-verification path: confirm session-kill landed and didn't drift."""
+
+    def test_reverify_verified_when_no_sessions_or_tokens(self):
+        fake_okta = _FakeOkta()  # no sessions, no tokens
+        records = list(run([_finding()], apply=False, reverify=True, okta_client=fake_okta, audit=None))
+        assert len(records) == 1
+        rec = records[0]
+        assert rec["record_type"] == "remediation_verification"
+        assert rec["status"] == "verified"
+        assert rec["reference"]["remediation_skill"] == "remediate-okta-session-kill"
+        assert rec["reference"]["target_provider"] == "Okta"
+
+    def test_reverify_drift_emits_verification_record_plus_ocsf_finding(self):
+        """DRIFT must yield BOTH a remediation_verification record AND an OCSF
+        Detection Finding (class_uid 2004) so the drift flows through the
+        same SIEM/SOAR pipeline as every other finding."""
+        fake_okta = _FakeOkta(
+            sessions_by_user={"00u-a": [{"id": "sess-1"}]},
+        )
+        records = list(
+            run(
+                [_finding(user_uid="00u-a")],
+                apply=False,
+                reverify=True,
+                okta_client=fake_okta,
+                audit=None,
+            )
+        )
+        assert len(records) == 2
+        verification, finding = records
+        assert verification["record_type"] == "remediation_verification"
+        assert verification["status"] == "drift"
+        assert finding["class_uid"] == 2004
+        assert finding["category_uid"] == 2
+        assert finding["severity_id"] == 4
+        assert finding["finding_info"]["types"] == ["remediation-drift"]
+        assert any(
+            obs["name"] == "remediation.skill" and obs["value"] == "remediate-okta-session-kill"
+            for obs in finding["observables"]
+        )
+
+    def test_reverify_drift_when_oauth_tokens_remain(self):
+        fake_okta = _FakeOkta(
+            tokens_by_user={"00u-a": [{"id": "tok-1"}]},
+        )
+        records = list(
+            run(
+                [_finding(user_uid="00u-a")],
+                apply=False,
+                reverify=True,
+                okta_client=fake_okta,
+                audit=None,
+            )
+        )
+        assert len(records) == 2
+        assert records[0]["status"] == "drift"
+
+    def test_reverify_unreachable_never_silently_downgrades_to_verified(self):
+        """If Okta API throws, the verifier must surface UNREACHABLE — never
+        silently report VERIFIED. Operator must see the gap."""
+        fake_okta = _FakeOkta(fail_on="list_active_sessions")
+        records = list(
+            run([_finding()], apply=False, reverify=True, okta_client=fake_okta, audit=None)
+        )
+        assert len(records) == 1
+        rec = records[0]
+        assert rec["status"] == "unreachable"
+        # No drift finding emitted on UNREACHABLE — only on DRIFT
+        assert rec["record_type"] == "remediation_verification"
+
+    def test_reverify_requires_okta_client(self):
+        import pytest
+        with pytest.raises(RuntimeError, match="reverify=True requires okta_client"):
+            list(run([_finding()], apply=False, reverify=True, okta_client=None, audit=None))
+
+    def test_reverify_skips_protected_principal(self):
+        """Protected principals are skipped before any reverify call —
+        the deny-list is enforced regardless of mode."""
+        fake_okta = _FakeOkta()
+        records = list(
+            run(
+                [_finding(user_name="root@example.com")],
+                apply=False,
+                reverify=True,
+                okta_client=fake_okta,
+                audit=None,
+                deny_patterns=("root",),
+            )
+        )
+        # No Okta API call should have been made
+        assert fake_okta.calls == []
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_SKIPPED_DENY_LIST
