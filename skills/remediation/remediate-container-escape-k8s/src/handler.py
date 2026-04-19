@@ -119,7 +119,7 @@ class KubernetesApiClient:
 
     def _apis(self) -> tuple[Any, Any, Any, Any]:
         from kubernetes import client  # local import
-        from kubernetes.config import load_kube_config, load_incluster_config
+        from kubernetes.config import load_incluster_config, load_kube_config
 
         try:
             load_incluster_config()
