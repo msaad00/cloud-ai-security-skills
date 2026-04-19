@@ -6,7 +6,7 @@ This file is the design contract. It explains how the repo is supposed to work a
 
 ## Quick read
 
-- six shipped skill layers stay at the center: ingest, discover, detect, evaluate, remediate, and view
+- seven shipped skill layers stay at the center: ingest, discover, detect, evaluate, remediate, view, and output
 - three edge or runtime layers sit around them: sources and sinks, query packs, and runtime surfaces
 - one skill bundle contract is shared across CLI, CI, MCP, and runners
 - OCSF is the SIEM interop wire format for **ingest and detect**; native / CycloneDX / bridge are correct for discover, remediate, and sinks (see §3.1 for the per-layer applicability table)
@@ -77,7 +77,7 @@ This is how the repo stays secure and reliable without turning every skill into 
 
 ## 3. Layer model
 
-The repo is easiest to read as **six shipped skill layers**, plus **three edge/runtime layers** that sit around the pure skills.
+The repo is easiest to read as **seven shipped skill layers** (ingest, discover, detect, evaluate, remediate, view, output), plus **two edge/runtime layers** (query packs and runtime surfaces) that sit around the pure skills.
 
 ```mermaid
 flowchart LR
@@ -192,7 +192,7 @@ For the detailed contract, see:
 | L0 external sources | external | cloud APIs, raw logs, SaaS identity feeds, lakehouse tables |
 | L1 ingest | shipping | 15 source-specific ingesters plus 3 read-only source adapters; ingest and detect are fully dual-mode where OCSF-native parity makes sense |
 | L2 discover | shipping | environment graph, AI BOM, cloud control evidence, control evidence |
-| L3 detect | shipping | 9 shipped detectors across cloud, identity, Kubernetes, and MCP drift |
+| L3 detect | shipping | 10 shipped detectors across cloud, identity, Kubernetes, and MCP drift |
 | L4 evaluate | shipping | 8 benchmark and posture skills across AWS, GCP, Azure, Kubernetes, containers, GPU, and model-serving paths |
 | L5 remediate | shipping | IAM departures is the current flagship write path |
 | L6 view | shipping | SARIF and Mermaid attack-flow exports |

@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 44 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 46 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,20 +16,20 @@
 
 ## What this repo gives you
 
-**45 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus one guarded write path for offboarding. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**46 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus guarded write paths for offboarding and Okta session kill. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
 | **Ingest** | 15 | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
 | **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
 | **Detect** | 10 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
-| **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
-| **Remediate** | 1 | IAM departures (HITL + dual audit) | audited action trail |
+| **Evaluate** | 7 | 82 posture and benchmark checks | compliance result (native + OCSF 2003) |
+| **Remediate** | 2 | IAM departures · Okta session kill (HITL + dual audit) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 45 shipped skills.**
+**Total: 46 shipped skills.**
 
 ### Why different layers use different formats
 
@@ -39,7 +39,7 @@ OCSF 1.8 is the **SIEM interop wire format** — valuable exactly where events f
 |---|---|---|
 | **Ingest** | OCSF 1.8 (native opt-in) | Raw vendor → OCSF is what OCSF was built for. SIEMs consume it natively |
 | **Detect** | OCSF 1.8 Detection Finding 2004 (native opt-in) | Findings flow to SIEM / SOAR / ticketing — OCSF spares every downstream system from writing a custom parser |
-| **Evaluate / CSPM** | native today, OCSF Compliance Finding 2003 planned opt-in (#29) | Ops dashboards prefer native; SIEM pipelines opt into OCSF |
+| **Evaluate / CSPM** | native default, OCSF Compliance Finding 2003 opt-in via `--output-format ocsf` (shipped 0.6.0, #29) | Ops dashboards prefer native; SIEM pipelines opt into OCSF |
 | **Discover** | native / CycloneDX ML-BOM / bridge | Inventory graphs and AI BOM aren't events. OCSF Inventory Info 5001 is too thin to be worth forcing |
 | **Remediate** | native | Remediation is a state change with an operator-owned audit trail, not a finding |
 | **View** | OCSF **input**, SARIF / Mermaid out | The whole point is rendering OCSF for humans |
@@ -57,35 +57,29 @@ flowchart LR
     classDef intake fill:#1e3a8a,stroke:#60a5fa,color:#dbeafe
     classDef analyze fill:#064e3b,stroke:#34d399,color:#d1fae5
     classDef act fill:#78350f,stroke:#fbbf24,color:#fef3c7
-    classDef bundle fill:#1e1b4b,stroke:#a78bfa,color:#ddd6fe
+    classDef sink fill:#422006,stroke:#fbbf24,color:#fef3c7
 
-    cloud["☁️ Cloud APIs<br/>AWS, GCP, Azure"]:::signal
-    logs["📋 Raw logs<br/>CloudTrail, K8s, MCP"]:::signal
-    idp["🔑 Identity<br/>Okta, Entra, Workspace"]:::signal
-    lake["🗄️ Warehouses<br/>Snowflake, Databricks"]:::signal
+    sig["☁️ Cloud APIs · 📋 Raw logs<br/>🔑 Identity · 🗄️ Warehouses"]:::signal
 
     subgraph Intake
+        direction TB
         ingest["L1 Ingest<br/>15 skills"]:::intake
         discover["L2 Discover<br/>4 skills"]:::intake
     end
     subgraph Analyze
-        detect["L3 Detect<br/>9 skills · ATT&amp;CK"]:::analyze
+        direction TB
+        detect["L3 Detect<br/>10 skills · ATT&amp;CK"]:::analyze
         evaluate["L4 Evaluate<br/>7 skills · 82 checks"]:::analyze
     end
     subgraph Act
-        remediate["L5 Remediate<br/>IAM departures · HITL"]:::act
-        view["L6 View<br/>SARIF · Mermaid"]:::act
+        direction TB
+        view["L6 View<br/>2 skills · SARIF · Mermaid"]:::act
+        remediate["L5 Remediate<br/>2 skills · HITL · dual audit"]:::act
     end
+    output["L7 Output<br/>3 sinks · S3 · Snowflake · ClickHouse"]:::sink
 
-    bundle[("Shared skill bundle<br/>SKILL.md · src · tests")]:::bundle
-
-    cloud --> ingest
-    cloud --> discover
-    logs --> ingest
-    idp --> ingest
-    idp --> discover
-    lake --> ingest
-
+    sig --> ingest
+    sig --> discover
     ingest --> detect
     discover --> detect
     discover --> evaluate
@@ -93,14 +87,11 @@ flowchart LR
     detect --> remediate
     evaluate --> view
     evaluate --> remediate
-
-    bundle -.- ingest
-    bundle -.- discover
-    bundle -.- detect
-    bundle -.- evaluate
-    bundle -.- remediate
-    bundle -.- view
+    view --> output
+    remediate --> output
 ```
+
+Every node above ships as a `SKILL.md + src/ + tests/` bundle that runs unchanged from CLI, CI, MCP, or a persistent cloud runner.
 
 Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -131,7 +122,7 @@ flowchart TB
     end
 
     mcp["Repo MCP server<br/>mcp-server/src/server.py<br/>auto-discovers SKILL.md, audited calls, timeout-governed"]:::mcp
-    bundle[("Shared skill bundle<br/>44 shipped")]:::bundle
+    bundle[("Shared skill bundle<br/>46 shipped")]:::bundle
     outputs[/"native · OCSF 1.8 · bridge · SARIF · Mermaid · AI BOM · audited writes"/]:::output
 
     claude -->|stdio| mcp
