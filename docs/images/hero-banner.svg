@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340" role="img" aria-labelledby="title desc">
   <title id="title">cloud-ai-security-skills — production-grade security skills for cloud and AI systems</title>
-  <desc id="desc">Compact hero banner for the cloud-ai-security-skills repository. Wordmark plus one-line tagline, five metric pills (44 skills, OCSF 1.8, 82 CIS and Kubernetes checks, MITRE ATT&amp;CK, MCP audited), and one horizontal strip of real Simple Icons brand marks for AWS, Google Cloud, Microsoft Azure, Kubernetes, Okta, Microsoft (as Entra stand-in), Google (as Workspace stand-in), Snowflake, Databricks, and ClickHouse, plus a text pill for MCP.</desc>
+  <desc id="desc">Compact hero banner for the cloud-ai-security-skills repository. Wordmark plus one-line tagline, five metric pills (46 skills, OCSF 1.8, 82 CIS and Kubernetes checks, MITRE ATT&amp;CK, MCP audited), and one horizontal strip of real Simple Icons brand marks for AWS, Google Cloud, Microsoft Azure, Kubernetes, Okta, Microsoft (as Entra stand-in), Google (as Workspace stand-in), Snowflake, Databricks, and ClickHouse, plus a text pill for MCP.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -54,7 +54,7 @@
     <g transform="translate(72,200)">
       <g>
         <rect x="0" y="0" width="102" height="32" rx="10" fill="#0f1d36" stroke="#3b82f6"/>
-        <text x="14" y="21" fill="#93c5fd" font-size="15" font-weight="800">44</text>
+        <text x="14" y="21" fill="#93c5fd" font-size="15" font-weight="800">46</text>
         <text x="38" y="21" fill="#dbe4f0" font-size="12" font-weight="700">skills</text>
       </g>
       <g transform="translate(114,0)">

@@ -13,9 +13,9 @@ them. One shared skill bundle contract.
 |---|---|---|
 | L1 Ingest | raw source → native, OCSF, or bridge stream | `ingest-cloudtrail-ocsf`, `ingest-k8s-audit-ocsf`, `ingest-okta-system-log-ocsf`, `ingest-entra-directory-audit-ocsf`, `ingest-google-workspace-login-ocsf`, `ingest-mcp-proxy-ocsf`, `ingest-vpc-flow-logs-*-ocsf`, `ingest-guardduty-ocsf`, `ingest-security-hub-ocsf`, `ingest-gcp-audit-ocsf`, `ingest-gcp-scc-ocsf`, `ingest-azure-activity-ocsf`, `ingest-azure-defender-for-cloud-ocsf`, `ingest-nsg-flow-logs-azure-ocsf` |
 | L2 Discover | live inventory, evidence, AI BOM, graph context | `discover-ai-bom`, `discover-cloud-control-evidence`, `discover-control-evidence`, `discover-environment` |
-| L3 Detect | deterministic attack-pattern findings | `detect-lateral-movement`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-mcp-tool-drift`, `detect-okta-mfa-fatigue`, `detect-entra-credential-addition`, `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login` |
+| L3 Detect | deterministic attack-pattern findings | `detect-lateral-movement`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, `detect-okta-mfa-fatigue`, `detect-credential-stuffing-okta`, `detect-entra-credential-addition`, `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login` |
 | L4 Evaluate | benchmark and posture results | `cspm-aws-cis-benchmark`, `cspm-gcp-cis-benchmark`, `cspm-azure-cis-benchmark`, `k8s-security-benchmark`, `container-security`, `gpu-cluster-security`, `model-serving-security` |
-| L5 Remediate | guarded writes with HITL and dual audit | `iam-departures-aws` |
+| L5 Remediate | guarded writes with HITL and dual audit | `iam-departures-aws`, `remediate-okta-session-kill` |
 | L6 View | export into downstream formats | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow` |
 
 OCSF 1.8 is the default interoperable wire format, not a layer. It is pinned
@@ -52,8 +52,8 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.jsonl \
 | L1 Ingest | 15 shipped ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources as demand justifies |
 | L2 Discover | 4 shipped skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence sources |
 | L3 Detect | 10 shipped detectors tied to MITRE ATT&CK techniques (lateral movement, K8s privesc + secret read, MCP tool drift, MCP prompt injection, Okta MFA fatigue, Okta credential stuffing, Entra credential addition, Entra role grant, Workspace suspicious login) | impossible travel, more AI-agent signals |
-| L4 Evaluate | 7 shipped benchmarks (CIS AWS / GCP / Azure, K8s, Docker / container, GPU cluster, model serving) | migrate to OCSF Compliance Finding (`class_uid=2003`) outputs |
-| L5 Remediate | `iam-departures-aws` with HITL, dual audit, dry-run | broader remediation families (see issues #155, #240, #241, #242) |
+| L4 Evaluate | 7 shipped benchmarks (CIS AWS / GCP / Azure, K8s, Docker / container, GPU cluster, model serving) | native by default, OCSF Compliance Finding (`class_uid=2003`) shipped as opt-in output |
+| L5 Remediate | `iam-departures-aws` and `remediate-okta-session-kill` with HITL, dual audit, dry-run | broader remediation families (see issues #155, #240, #241, #242) |
 | L6 View | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow` | graph overlay, warehouse-ready converters |
 | L7 Output | 3 shipped sinks (`sink-s3-jsonl`, `sink-snowflake-jsonl`, `sink-clickhouse-jsonl`) | BigQuery, Security Lake |
 
@@ -70,7 +70,7 @@ skills/
 └── output/         ← L7 (sink-* skills: append-only persistence)
 ```
 
-The repo ships **45 skills** across these seven layers (15 + 4 + 10 + 7 + 1 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
+The repo ships **46 skills** across these seven layers (15 + 4 + 10 + 7 + 2 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
 
 `skills/detection-engineering/` holds the shared OCSF contract and frozen
 golden fixtures. Executable skills live only under the six layered
