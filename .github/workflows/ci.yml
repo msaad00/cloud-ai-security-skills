@@ -270,16 +270,14 @@ jobs:
       - name: Sign SBOM with GitHub OIDC
         run: |
           cosign sign-blob --yes \
-            --output-signature cloud-ai-security-skills-full-lock.cdx.json.sig \
-            --output-certificate cloud-ai-security-skills-full-lock.cdx.json.pem \
+            --bundle cloud-ai-security-skills-full-lock.cdx.json.sigstore.json \
             cloud-ai-security-skills-full-lock.cdx.json
       - uses: actions/upload-artifact@v7
         with:
           name: cyclonedx-sbom
           path: |
             cloud-ai-security-skills-full-lock.cdx.json
-            cloud-ai-security-skills-full-lock.cdx.json.sig
-            cloud-ai-security-skills-full-lock.cdx.json.pem
+            cloud-ai-security-skills-full-lock.cdx.json.sigstore.json
 
   # ── IaC + shell validation (CloudFormation, Terraform, Bicep, Bash) ─
   validate-iac:
