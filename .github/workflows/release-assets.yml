@@ -81,7 +81,7 @@ jobs:
           subject-path: ${{ env.SOURCE_TARBALL }}
 
       - name: Generate CycloneDX SBOM attestation
-        uses: actions/attest-sbom@v3
+        uses: actions/attest-sbom@v4
         with:
           subject-path: ${{ env.SOURCE_TARBALL }}
           sbom-path: cloud-ai-security-skills-full-lock.cdx.json
