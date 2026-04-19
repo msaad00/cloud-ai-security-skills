@@ -97,8 +97,7 @@ That artifact is intended to support:
 The uploaded artifact set contains:
 
 - `cloud-ai-security-skills-full-lock.cdx.json`
-- `cloud-ai-security-skills-full-lock.cdx.json.sig`
-- `cloud-ai-security-skills-full-lock.cdx.json.pem`
+- `cloud-ai-security-skills-full-lock.cdx.json.sigstore.json`
 
 This gives consumers both the SBOM itself and the materials needed to verify
 that the CI workflow, not an out-of-band process, produced it.
@@ -116,9 +115,9 @@ signed source tarball, each with a SLSA build-provenance attestation and a
 CycloneDX SBOM attestation linking the tarball to its dependency graph:
 
 - SBOM: `cloud-ai-security-skills-full-lock.cdx.json` plus the matching
-  `.sig` and `.pem` Sigstore materials
+  `.sigstore.json` Sigstore bundle
 - Source tarball: `cloud-ai-security-skills-<tag>-source.tar.gz` plus the
-  matching `.sig` and `.pem` Sigstore materials, downloaded from the
+  matching `.sigstore.json` Sigstore bundle, downloaded from the
   GitHub `tarball/refs/tags/<tag>` endpoint at release time and signed
   keylessly via `cosign sign-blob` with GitHub OIDC
 - Attestations: `actions/attest-build-provenance@v2` publishes SLSA
