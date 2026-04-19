@@ -40,6 +40,51 @@ CLAIMS: list[Claim] = [
     (REPO_ROOT / "docs" / "ARCHITECTURE.md", r"(\d+) shipped detectors", "detection"),
 ]
 
+# Catch-all scan: any mermaid label of the form `<br/>N skills` or `<br/>N shipped`
+# inside a `*.md` file MUST equal an on-disk count for the layer it names. This
+# is what catches drift like the issue #302 case where README mermaid said
+# "46 shipped" while the actual total was 48 — a stale label that escaped CLAIMS.
+#
+# The scan parses the layer name from the same mermaid node text. Recognized
+# layer hints map to the truth dict keys; unknown hints fall back to the
+# repo-wide total. Lines inside ALLOWED_DRIFT_LINES are skipped (e.g. example
+# snippets in skill-authoring docs).
+
+# Ordered: more specific terms first. The README/diagrams treat "L1 Ingest" as
+# the count of `ingest-*` skills only, with `source-*` adapters listed
+# separately in the layer table. Hence the `ingest_only` (= 15 today) vs
+# `ingestion` (= 18 today, includes source-*) split.
+LAYER_HINT_TO_METRIC = (
+    ("source", "sources"),
+    ("ingestion", "ingestion"),
+    ("ingest", "ingest_only"),
+    ("discover", "discovery"),
+    ("detect", "detection"),
+    ("evaluate", "evaluation"),
+    ("evaluation", "evaluation"),
+    ("remediate", "remediation"),
+    ("remediation", "remediation"),
+    ("view", "view"),
+    ("output", "output"),
+    ("sink", "output"),
+    ("shipped", "total"),
+    ("bundle", "total"),
+)
+
+# Substrings (matched on the line) that mark a count-claim as intentionally
+# decorative or example-only and exclude it from the scan. Add sparingly.
+ALLOWED_DRIFT_LINES: tuple[str, ...] = (
+    "<!-- skill-count-scan: ignore -->",
+)
+
+# Pattern: `<br/>N <something> skills|shipped|sinks` inside a mermaid node.
+# The `<br/>` prefix anchors us to flowchart node labels (single-line text in
+# rect labels) and avoids matching every `\d+` in prose.
+SCAN_PATTERN = re.compile(
+    r"<br/>(\d+)\s+(?:[A-Za-z·\-/+]+\s+)?(skills?|shipped|sinks?)\b",
+    re.IGNORECASE,
+)
+
 
 def _count_skills(layer: str | None = None) -> int:
     """Count SKILL.md files under skills/<layer>/*/ (or all layers when None)."""
@@ -48,10 +93,82 @@ def _count_skills(layer: str | None = None) -> int:
     return sum(1 for _ in (REPO_ROOT / "skills" / layer).glob("*/SKILL.md"))
 
 
+def _count_ingest_only() -> int:
+    """Count `ingest-*` skills under ingestion/, excluding `source-*` adapters.
+    Mirrors the layer-table convention used in README and the architecture
+    diagram (Ingest = 15 + Sources = 3 listed separately)."""
+    return sum(
+        1 for _ in (REPO_ROOT / "skills" / "ingestion").glob("ingest-*/SKILL.md")
+    )
+
+
+def _count_sources() -> int:
+    """Count `source-*` warehouse query adapters under ingestion/."""
+    return sum(
+        1 for _ in (REPO_ROOT / "skills" / "ingestion").glob("source-*/SKILL.md")
+    )
+
+
+def _resolve_metric_for_line(line: str) -> str:
+    """Inspect the mermaid node text and pick the truth-dict key it should equal.
+
+    Heuristic: if the line names a specific layer (e.g. `L1 Ingest`, `Remediate`),
+    use that layer's count; otherwise default to total. Keeps the scan honest
+    about what each label is claiming. Order in LAYER_HINT_TO_METRIC matters:
+    the first matching hint wins, so more specific terms (e.g. `source`,
+    `ingestion`) come before broader ones (`ingest`, `shipped`).
+    """
+    lowered = line.lower()
+    for hint, metric in LAYER_HINT_TO_METRIC:
+        if hint in lowered:
+            return metric
+    return "total"
+
+
+def _scan_drift(truth: dict[str, int]) -> list[str]:
+    """Walk every tracked `*.md` file and flag any `<br/>N (skills|shipped|sinks)`
+    label whose number does not equal the on-disk count for the layer it names.
+
+    Catches the failure mode from issue #302: a stale mermaid count in README
+    or any other doc that wasn't on the explicit CLAIMS allow-list.
+    """
+    errors: list[str] = []
+    md_paths = sorted(
+        p
+        for p in REPO_ROOT.rglob("*.md")
+        if ".venv" not in p.parts and "node_modules" not in p.parts
+    )
+    for path in md_paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for match in SCAN_PATTERN.finditer(text):
+            claimed = int(match.group(1))
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            line_end = text.find("\n", match.end())
+            line = text[line_start : line_end if line_end != -1 else None]
+            if any(skip in line for skip in ALLOWED_DRIFT_LINES):
+                continue
+            metric = _resolve_metric_for_line(line)
+            expected = truth.get(metric)
+            if expected is None or claimed == expected:
+                continue
+            line_no = text[: match.start()].count("\n") + 1
+            errors.append(
+                f"{path.relative_to(REPO_ROOT)}:{line_no}: mermaid label claims "
+                f"{claimed} for `{metric}`, on-disk count is {expected} — "
+                f"line: `{line.strip()}`"
+            )
+    return errors
+
+
 def main() -> int:
     truth: dict[str, int] = {
         "total": _count_skills(),
         "ingestion": _count_skills("ingestion"),
+        "ingest_only": _count_ingest_only(),
+        "sources": _count_sources(),
         "discovery": _count_skills("discovery"),
         "detection": _count_skills("detection"),
         "evaluation": _count_skills("evaluation"),
@@ -82,6 +199,9 @@ def main() -> int:
                     f"{path.relative_to(REPO_ROOT)}:{line_no}: claims {claimed} for `{metric}`, "
                     f"but on-disk count is {expected} (pattern `{pattern}`)"
                 )
+
+    # Catch-all scan for any unauthorized mermaid count drift (issue #302 class)
+    errors.extend(_scan_drift(truth))
 
     if errors:
         print("Skill-count consistency check FAILED:\n")
