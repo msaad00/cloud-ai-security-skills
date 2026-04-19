@@ -188,9 +188,46 @@ def _subject_user(event: dict[str, Any]) -> dict[str, Any]:
     return user
 
 
+def _location_from_geo(geo: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(geo, dict):
+        return {}
+    location: dict[str, Any] = {}
+    for src_key, dst_key in (
+        ("country", "country"),
+        ("state", "region"),
+        ("city", "city"),
+        ("postalCode", "postal_code"),
+    ):
+        value = geo.get(src_key)
+        if isinstance(value, str) and value:
+            location[dst_key] = value
+    geoloc = geo.get("geolocation") or {}
+    if isinstance(geoloc, dict):
+        lat = geoloc.get("lat")
+        lon = geoloc.get("lon")
+        if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+            # OCSF src_endpoint.location.coordinates: [longitude, latitude]
+            location["coordinates"] = [float(lon), float(lat)]
+    return location
+
+
+def _autonomous_system(sec_ctx: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(sec_ctx, dict):
+        return {}
+    asn: dict[str, Any] = {}
+    as_number = sec_ctx.get("asNumber")
+    if isinstance(as_number, int):
+        asn["number"] = as_number
+    as_org = sec_ctx.get("asOrg")
+    if isinstance(as_org, str) and as_org:
+        asn["name"] = as_org
+    return asn
+
+
 def _src_endpoint(event: dict[str, Any]) -> dict[str, Any]:
     client = event.get("client") or {}
     request = event.get("request") or {}
+    sec_ctx = event.get("securityContext") or {}
     ip = client.get("ipAddress") or ""
     if not ip:
         ip_chain = request.get("ipChain") or []
@@ -201,8 +238,116 @@ def _src_endpoint(event: dict[str, Any]) -> dict[str, Any]:
         endpoint["ip"] = ip
     user_agent = (client.get("userAgent") or {}).get("rawUserAgent") or ""
     if user_agent:
+        # Kept for cross-ingester consistency (cloudtrail, gcp-audit, k8s-audit
+        # all expose raw UA under src_endpoint.svc_name). Also duplicated into
+        # http_request.user_agent for OCSF-native consumers.
         endpoint["svc_name"] = user_agent
+    zone = client.get("zone")
+    if isinstance(zone, str) and zone:
+        endpoint["zone"] = zone
+    location = _location_from_geo(client.get("geographicalContext"))
+    if location:
+        endpoint["location"] = location
+    asn = _autonomous_system(sec_ctx)
+    if asn:
+        endpoint["autonomous_system"] = asn
+    is_proxy = sec_ctx.get("isProxy")
+    if isinstance(is_proxy, bool):
+        endpoint["is_proxy"] = is_proxy
+    domain = sec_ctx.get("domain")
+    if isinstance(domain, str) and domain:
+        endpoint["domain"] = domain
     return endpoint
+
+
+def _device(event: dict[str, Any]) -> dict[str, Any]:
+    client = event.get("client") or {}
+    device: dict[str, Any] = {}
+    client_id = client.get("id")
+    if isinstance(client_id, str) and client_id:
+        device["uid"] = client_id
+    device_name = client.get("device")
+    user_agent = client.get("userAgent") or {}
+    browser = user_agent.get("browser") if isinstance(user_agent, dict) else None
+    # Prefer Okta's `client.device` label ("Computer", "Mobile"); fall back to
+    # parsed browser name so a device object is emitted when either is present.
+    if isinstance(device_name, str) and device_name:
+        device["name"] = device_name
+    elif isinstance(browser, str) and browser:
+        device["name"] = browser
+    os_name = user_agent.get("os") if isinstance(user_agent, dict) else None
+    if isinstance(os_name, str) and os_name:
+        device["os"] = {"name": os_name}
+    return device
+
+
+def _http_request(event: dict[str, Any]) -> dict[str, Any]:
+    client = event.get("client") or {}
+    user_agent = (client.get("userAgent") or {}).get("rawUserAgent") or ""
+    if not user_agent:
+        return {}
+    return {"user_agent": user_agent}
+
+
+def _observables_from_ip_chain(event: dict[str, Any]) -> list[dict[str, Any]]:
+    chain = ((event.get("request") or {}).get("ipChain")) or []
+    if not isinstance(chain, list):
+        return []
+    observables: list[dict[str, Any]] = []
+    for hop in chain:
+        if not isinstance(hop, dict):
+            continue
+        hop_ip = hop.get("ip")
+        if not isinstance(hop_ip, str) or not hop_ip:
+            continue
+        entry: dict[str, Any] = {
+            "name": "src_endpoint.ip",
+            "type": "IP Address",
+            "type_id": 2,
+            "value": hop_ip,
+        }
+        location = _location_from_geo(hop.get("geographicalContext"))
+        if location:
+            entry["location"] = location
+        source = hop.get("source")
+        if isinstance(source, str) and source:
+            entry["reputation"] = {"provider": "okta", "base_score": 0, "score": source}
+        observables.append(entry)
+    return observables
+
+
+def _enrichments_from_risk(event: dict[str, Any]) -> list[dict[str, Any]]:
+    debug_data = ((event.get("debugContext") or {}).get("debugData")) or {}
+    if not isinstance(debug_data, dict):
+        return []
+    enrichments: list[dict[str, Any]] = []
+    risk_level = debug_data.get("riskLevel")
+    if isinstance(risk_level, str) and risk_level:
+        enrichments.append(
+            {"name": "okta.risk_level", "value": risk_level, "type": "security_risk"}
+        )
+    risk_reasons = debug_data.get("riskReasons")
+    # Okta emits riskReasons as a comma-joined string or a list depending on the
+    # surface. Normalize to list[str] so downstream rules can iterate.
+    reasons_list: list[str] = []
+    if isinstance(risk_reasons, str) and risk_reasons:
+        reasons_list = [part.strip() for part in risk_reasons.split(",") if part.strip()]
+    elif isinstance(risk_reasons, list):
+        reasons_list = [str(part) for part in risk_reasons if isinstance(part, (str, int, float))]
+    if reasons_list:
+        enrichments.append(
+            {
+                "name": "okta.risk_reasons",
+                "data": {"reasons": reasons_list},
+                "type": "security_risk",
+            }
+        )
+    behaviors = debug_data.get("behaviors")
+    if isinstance(behaviors, dict) and behaviors:
+        enrichments.append(
+            {"name": "okta.behaviors", "data": {"behaviors": behaviors}, "type": "security_risk"}
+        )
+    return enrichments
 
 
 def _session(event: dict[str, Any]) -> dict[str, Any]:
@@ -290,9 +435,77 @@ def _record_type(class_uid: int) -> str:
     }.get(class_uid, "iam_activity")
 
 
+def _auth_metadata(event: dict[str, Any]) -> tuple[str | None, list[str], dict[str, str]]:
+    """Extract `auth_protocol`, `auth_factors[]`, and a label dict from authenticationContext."""
+    auth_ctx = event.get("authenticationContext") or {}
+    if not isinstance(auth_ctx, dict):
+        return None, [], {}
+    protocol = auth_ctx.get("authenticationProvider")
+    protocol_str = protocol if isinstance(protocol, str) and protocol else None
+    factors: list[str] = []
+    cred_type = auth_ctx.get("credentialType")
+    if isinstance(cred_type, str) and cred_type:
+        factors.append(cred_type)
+    extra_labels: dict[str, str] = {}
+    interface = auth_ctx.get("interface")
+    if isinstance(interface, str) and interface:
+        extra_labels["okta.interface"] = interface
+    step = auth_ctx.get("authenticationStep")
+    if step is not None:
+        extra_labels["okta.authentication_step"] = str(step)
+    return protocol_str, factors, extra_labels
+
+
+def _unmapped_payload(event: dict[str, Any]) -> dict[str, Any]:
+    """Full Okta-native preservation under `unmapped.okta.*`.
+
+    Captures fields OCSF 1.8 has no clean slot for so downstream detectors can
+    reach for Okta-specific signal without re-parsing the raw System Log event.
+    `debug_data` round-trips verbatim per #271 acceptance.
+    """
+    auth_ctx = event.get("authenticationContext") or {}
+    transaction = event.get("transaction") or {}
+    debug_ctx = event.get("debugContext") or {}
+    payload: dict[str, Any] = {
+        "event_type": event.get("eventType"),
+        "legacy_event_type": event.get("legacyEventType"),
+        "transaction_id": transaction.get("id") if isinstance(transaction, dict) else None,
+        "root_session_id": auth_ctx.get("rootSessionId") if isinstance(auth_ctx, dict) else None,
+    }
+    if isinstance(debug_ctx, dict):
+        debug_data = debug_ctx.get("debugData")
+        if debug_data is not None:
+            payload["debug_data"] = debug_data
+    actor = event.get("actor")
+    if isinstance(actor, dict):
+        detail = actor.get("detailEntry")
+        if detail:
+            payload["actor_detail_entry"] = detail
+    target_details: list[dict[str, Any]] = []
+    for target in event.get("target") or []:
+        if not isinstance(target, dict):
+            continue
+        detail = target.get("detailEntry")
+        if detail:
+            target_details.append({"id": target.get("id"), "detail_entry": detail})
+    if target_details:
+        payload["target_detail_entries"] = target_details
+    if isinstance(transaction, dict):
+        if transaction.get("type"):
+            payload["transaction_type"] = transaction.get("type")
+        if transaction.get("detail"):
+            payload["transaction_detail"] = transaction.get("detail")
+    if isinstance(auth_ctx, dict):
+        issuer = auth_ctx.get("issuer")
+        if isinstance(issuer, dict) and issuer:
+            payload["authn_issuer"] = issuer
+    return payload
+
+
 def _build_canonical_event(event: dict[str, Any], class_uid: int, activity_id: int) -> dict[str, Any]:
     status_id, status_detail = status_from_outcome(event.get("outcome") or {})
     severity_id = severity_to_id(event.get("severity"))
+    auth_protocol, auth_factors, extra_labels = _auth_metadata(event)
     canonical: dict[str, Any] = {
         "schema_mode": "canonical",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -310,17 +523,28 @@ def _build_canonical_event(event: dict[str, Any], class_uid: int, activity_id: i
         "message": str(event.get("displayMessage") or event.get("eventType") or _record_type(class_uid)),
         "actor": _actor(event),
         "src_endpoint": _src_endpoint(event),
-        "unmapped": {
-            "okta": {
-                "event_type": event.get("eventType"),
-                "legacy_event_type": event.get("legacyEventType"),
-                "transaction_id": (event.get("transaction") or {}).get("id"),
-                "root_session_id": (event.get("authenticationContext") or {}).get("rootSessionId"),
-            }
-        },
+        "unmapped": {"okta": _unmapped_payload(event)},
     }
     if status_detail:
         canonical["status_detail"] = status_detail
+    device = _device(event)
+    if device:
+        canonical["device"] = device
+    http_request = _http_request(event)
+    if http_request:
+        canonical["http_request"] = http_request
+    if auth_protocol:
+        canonical["auth_protocol"] = auth_protocol
+    if auth_factors:
+        canonical["auth_factors"] = auth_factors
+    observables = _observables_from_ip_chain(event)
+    if observables:
+        canonical["observables"] = observables
+    enrichments = _enrichments_from_risk(event)
+    if enrichments:
+        canonical["enrichments"] = enrichments
+    if extra_labels:
+        canonical["extra_labels"] = extra_labels
     return canonical
 
 
@@ -367,6 +591,11 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
         ACCOUNT_CHANGE_CLASS_UID: ACCOUNT_CHANGE_CLASS_NAME,
         USER_ACCESS_CLASS_UID: USER_ACCESS_CLASS_NAME,
     }[class_uid]
+    labels: list[str] = ["identity", "okta", "system-log", "ingest"]
+    extra_labels = canonical.get("extra_labels") or {}
+    if isinstance(extra_labels, dict):
+        for key, value in extra_labels.items():
+            labels.append(f"{key}={value}")
     out: dict[str, Any] = {
         "activity_id": canonical["activity_id"],
         "category_uid": CATEGORY_UID,
@@ -386,11 +615,26 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
                 "vendor_name": "msaad00/cloud-ai-security-skills",
                 "feature": {"name": SKILL_NAME},
             },
-            "labels": ["identity", "okta", "system-log", "ingest"],
+            "labels": labels,
         },
         "unmapped": canonical["unmapped"],
     }
-    for field in ("actor", "src_endpoint", "user", "session", "resources", "service", "privileges", "status_detail"):
+    for field in (
+        "actor",
+        "src_endpoint",
+        "user",
+        "session",
+        "resources",
+        "service",
+        "privileges",
+        "status_detail",
+        "device",
+        "http_request",
+        "auth_protocol",
+        "auth_factors",
+        "observables",
+        "enrichments",
+    ):
         if canonical.get(field):
             out[field] = canonical[field]
     return out
