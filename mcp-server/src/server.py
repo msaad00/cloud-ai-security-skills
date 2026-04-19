@@ -27,6 +27,30 @@ SERVER_NAME = "cloud-ai-security-skills"
 SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_TIMEOUT_SECONDS = 60
+ALLOWED_SKILLS_ENV = "CLOUD_SECURITY_MCP_ALLOWED_SKILLS"
+
+
+def _allowed_skills_filter() -> set[str] | None:
+    """Return the set of skill names the current process is allowed to expose.
+
+    `None` = no filter (default, all skills exposed). A non-empty comma-separated
+    `CLOUD_SECURITY_MCP_ALLOWED_SKILLS` value restricts both `tools/list` and
+    `tools/call` to the named skills — the model cannot call what isn't listed.
+    Whitespace around names is tolerated; an empty string is treated as unset.
+    """
+    raw = os.environ.get(ALLOWED_SKILLS_ENV, "").strip()
+    if not raw:
+        return None
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
+def _filtered_tool_map() -> dict[str, SkillSpec]:
+    """`tool_map()` plus the operator-scoped allowlist, if any."""
+    tools = tool_map()
+    allowed = _allowed_skills_filter()
+    if allowed is None:
+        return tools
+    return {name: spec for name, spec in tools.items() if name in allowed}
 
 
 def _resolve_timeout(skill: SkillSpec, env: dict[str, str]) -> int:
@@ -141,7 +165,7 @@ def _validate_context(raw_context: Any, field_name: str) -> dict[str, Any] | Non
 
 
 def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
-    tools = tool_map()
+    tools = _filtered_tool_map()
     if name not in tools:
         raise KeyError(f"unknown tool `{name}`")
 
@@ -264,7 +288,7 @@ def _handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
         return _result_response(request_id, {})
 
     if method == "tools/list":
-        tools = [tool_definition(skill) for skill in tool_map().values()]
+        tools = [tool_definition(skill) for skill in _filtered_tool_map().values()]
         return _result_response(request_id, {"tools": tools})
 
     if method == "tools/call":

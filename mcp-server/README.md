@@ -35,6 +35,17 @@ Each tool call runs the skill in a subprocess with a hard timeout.
 
 Resolution order, highest wins: env override > per-skill value > default.
 
+Skill allowlist:
+
+Operators can constrain which skills are exposed as MCP tools via the
+`CLOUD_SECURITY_MCP_ALLOWED_SKILLS` environment variable — a comma-separated
+list of skill names (e.g. `cspm-aws-cis-benchmark,detect-lateral-movement`).
+When set, unlisted skills are filtered out of both `tools/list` and
+`tools/call`, so a client (or an agent loop) cannot invoke a skill that
+isn't on the allowlist. Unset / empty = all discovered skills exposed
+(default). This is the per-client least-privilege gate referenced in
+`docs/integrations/*.md`.
+
 Run locally:
 
 ```bash

@@ -151,6 +151,24 @@ flowchart TB
 - **CI** · GitHub Actions publishes SARIF to the Security tab
 - **Runners** · reference runners under [runners/](runners/) for S3/SQS, GCS/PubSub, Blob/EventGrid
 
+### Agent + IDE integrations
+
+Per-client setup docs under [`docs/integrations/`](docs/integrations/). Every client goes through the same stdio MCP wrapper, so audit trail, HITL gates, and timeouts are identical across clients.
+
+| Client | Doc |
+|---|---|
+| Claude Code (CLI) | repo-root [`.mcp.json`](.mcp.json) (shipped) |
+| Claude Desktop | [`docs/integrations/claude-desktop.md`](docs/integrations/claude-desktop.md) |
+| Claude.ai (web) | [`docs/integrations/claude-ai-web.md`](docs/integrations/claude-ai-web.md) — local MCP not supported; pointers to alternatives |
+| Codex (CLI + IDE) | [`docs/integrations/codex.md`](docs/integrations/codex.md) |
+| Cursor | [`docs/integrations/cursor.md`](docs/integrations/cursor.md) |
+| Windsurf | [`docs/integrations/windsurf.md`](docs/integrations/windsurf.md) |
+| Cortex Code CLI | [`docs/integrations/cortex.md`](docs/integrations/cortex.md) |
+| Zed | [`docs/integrations/zed.md`](docs/integrations/zed.md) |
+| Continue / Cody / generic | [`docs/integrations/ide-agents.md`](docs/integrations/ide-agents.md) |
+
+Least-privilege scoping across every client via the `CLOUD_SECURITY_MCP_ALLOWED_SKILLS` env var (comma-separated skill names — unlisted skills are not registered as tools).
+
 ## Start here
 
 Pick the row that matches the job.
