@@ -71,12 +71,12 @@ jobs:
             "${SOURCE_TARBALL}"
 
       - name: Generate SLSA build provenance attestation for SBOM
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: cloud-ai-security-skills-full-lock.cdx.json
 
       - name: Generate SLSA build provenance attestation for source tarball
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: ${{ env.SOURCE_TARBALL }}
 
