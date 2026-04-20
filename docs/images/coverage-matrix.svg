@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="940" viewBox="0 0 1200 940" role="img" aria-labelledby="cm-title cm-desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1016" viewBox="0 0 1200 1016" role="img" aria-labelledby="cm-title cm-desc">
   <title id="cm-title">cloud-ai-security-skills — detection and posture coverage matrix with MITRE ATT&amp;CK mapping</title>
-  <desc id="cm-desc">Coverage matrix visualizing the gap between shipped detection and posture skills and their paired remediation, with the MITRE ATT&amp;CK technique IDs (or MITRE ATLAS for AI threats) that each detection emits in OCSF finding_info.attacks. Rows list every detection (11) plus every CSPM benchmark family (4 native CIS scopes). Columns are: skill name, MITRE technique IDs, detector or check shipped status, paired remediation status, and the tracking issue or notes. Green cells mean a closed loop is shipped; amber cells mean a remediation skill is on the roadmap; red cells mean no remediation exists or is planned. Three of eleven detection rows are closed loops today: Okta MFA fatigue T1621, Okta credential stuffing T1110.003, and K8s container escape T1611 and T1610. Eight detection rows lack remediation; five are amber via issues 238, 241, and 242, and three are red because no remediation skill is scoped yet for Workspace login, lateral movement, and MCP tool drift or prompt injection. The matrix is the single source of truth for closed-loop coverage and updates whenever a remediation skill ships.</desc>
+  <desc id="cm-desc">Coverage matrix visualizing the gap between shipped detection and posture skills and their paired remediation, with the MITRE ATT&amp;CK technique IDs (or MITRE ATLAS for AI threats) that each detection emits in OCSF finding_info.attacks. Rows list every detection (14) plus every CSPM benchmark family (4 native CIS scopes). Columns are: skill name, MITRE technique IDs, detector or check shipped status, paired remediation status, and the tracking issue or notes. Green cells mean a closed loop is shipped; amber cells mean a remediation skill is on the roadmap; red cells mean no remediation exists or is planned. Thirteen of fourteen detection rows are closed loops today; lateral-movement is intentionally detection-only because the response is per-arm fan-out via existing remediation skills. The matrix is the single source of truth for closed-loop coverage and updates whenever a remediation skill ships.</desc>
 
   <defs>
     <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
@@ -12,8 +12,8 @@
     </pattern>
   </defs>
 
-  <rect width="1200" height="940" fill="url(#bg2)"/>
-  <rect width="1200" height="940" fill="url(#grid2)"/>
+  <rect width="1200" height="1016" fill="url(#bg2)"/>
+  <rect width="1200" height="1016" fill="url(#grid2)"/>
 
   <!-- Title block -->
   <text x="48" y="62" fill="#f1f5f9" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="900">Closed-loop coverage matrix</text>
@@ -51,7 +51,7 @@
   <line x1="48" y1="212" x2="1152" y2="212" stroke="#334155" stroke-width="1.5"/>
 
   <!-- DETECTION SECTION -->
-  <text x="48" y="244" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">DETECTION (12)</text>
+  <text x="48" y="244" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">DETECTION (14)</text>
 
   <!-- Row stride 38 starting at y=276; badge y = row_text_y - 16 (badge height 22) -->
   <g font-family="Inter, system-ui, sans-serif">
@@ -138,42 +138,56 @@
     <rect x="880"  y="692" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
     <text x="1020" y="708" fill="#dcfce7" font-size="13">→ remediate-aws-sg-revoke (#307 phase A)</text>
   </g>
+  <g font-family="Inter, system-ui, sans-serif">
+    <text x="48"   y="746" fill="#f1f5f9" font-size="15">detect-gcp-open-firewall</text>
+    <text x="430"  y="746" fill="#cbd5e1" font-size="14">T1190 (TA0001)</text>
+    <rect x="760"  y="730" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="730" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="746" fill="#dcfce7" font-size="13">→ remediate-gcp-firewall-revoke (#307 phase B-1)</text>
+  </g>
+  <g font-family="Inter, system-ui, sans-serif">
+    <text x="48"   y="784" fill="#f1f5f9" font-size="15">detect-azure-open-nsg</text>
+    <text x="430"  y="784" fill="#cbd5e1" font-size="14">T1190 (TA0001)</text>
+    <rect x="760"  y="768" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="768" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="784" fill="#dcfce7" font-size="13">→ remediate-azure-nsg-revoke (#307 phase B-2)</text>
+  </g>
 
   <!-- EVALUATION SECTION -->
-  <text x="48" y="762" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">EVALUATION / CSPM (4 platforms · 82 checks)</text>
+  <text x="48" y="838" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">EVALUATION / CSPM (4 platforms · 82 checks)</text>
 
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"   y="796" fill="#f1f5f9" font-size="15">cspm-aws-cis-benchmark</text>
-    <text x="430"  y="796" fill="#cbd5e1" font-size="14">CIS AWS Foundations 1.5</text>
-    <rect x="760"  y="780" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="880"  y="780" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="1020" y="796" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
+    <text x="48"   y="872" fill="#f1f5f9" font-size="15">cspm-aws-cis-benchmark</text>
+    <text x="430"  y="872" fill="#cbd5e1" font-size="14">CIS AWS Foundations 1.5</text>
+    <rect x="760"  y="856" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="856" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="872" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"   y="826" fill="#f1f5f9" font-size="15">cspm-gcp-cis-benchmark</text>
-    <text x="430"  y="826" fill="#cbd5e1" font-size="14">CIS GCP Foundations 2.0</text>
-    <rect x="760"  y="810" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="880"  y="810" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="1020" y="826" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
+    <text x="48"   y="902" fill="#f1f5f9" font-size="15">cspm-gcp-cis-benchmark</text>
+    <text x="430"  y="902" fill="#cbd5e1" font-size="14">CIS GCP Foundations 2.0</text>
+    <rect x="760"  y="886" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="886" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="902" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"   y="856" fill="#f1f5f9" font-size="15">cspm-azure-cis-benchmark</text>
-    <text x="430"  y="856" fill="#cbd5e1" font-size="14">CIS Azure Foundations 2.1</text>
-    <rect x="760"  y="840" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="880"  y="840" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="1020" y="856" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
+    <text x="48"   y="932" fill="#f1f5f9" font-size="15">cspm-azure-cis-benchmark</text>
+    <text x="430"  y="932" fill="#cbd5e1" font-size="14">CIS Azure Foundations 2.1</text>
+    <rect x="760"  y="916" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="916" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
+    <text x="1020" y="932" fill="#fef3c7" font-size="13">#242 #254 · --auto-remediate</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48"   y="886" fill="#f1f5f9" font-size="15">k8s + container + model + gpu benchmarks</text>
-    <text x="430"  y="886" fill="#cbd5e1" font-size="14">CIS K8s · NIST SSDF · OWASP LLM</text>
-    <rect x="760"  y="870" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="880"  y="870" width="40" height="22" rx="4" fill="#1e3a8a" stroke="#3b82f6"/>
-    <text x="1020" y="886" fill="#dbeafe" font-size="13">posture-only · via k8s-rbac-revoke</text>
+    <text x="48"   y="962" fill="#f1f5f9" font-size="15">k8s + container + model + gpu benchmarks</text>
+    <text x="430"  y="962" fill="#cbd5e1" font-size="14">CIS K8s · NIST SSDF · OWASP LLM</text>
+    <rect x="760"  y="946" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <rect x="880"  y="946" width="40" height="22" rx="4" fill="#1e3a8a" stroke="#3b82f6"/>
+    <text x="1020" y="962" fill="#dbeafe" font-size="13">posture-only · via k8s-rbac-revoke</text>
   </g>
 
   <!-- Footer (two lines to fit 1200px canvas) -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48" y="916" fill="#94a3b8" font-size="13">Closed-loop ratio: <tspan fill="#5eead4" font-weight="900">11 / 12</tspan> · <tspan fill="#f87171" font-weight="900">lateral-movement is detection-only by design (per-arm fan-out)</tspan> · CSPM auto-remediation tracked at #242 #254</text>
-    <text x="48" y="934" fill="#94a3b8" font-size="13">All writes HITL-gated, dry-run-default, dual-audited (DynamoDB + KMS S3, before + after) · contract enforced by scripts/validate_safe_skill_bar.py · #155</text>
+    <text x="48" y="992" fill="#94a3b8" font-size="13">Closed-loop ratio: <tspan fill="#5eead4" font-weight="900">13 / 14</tspan> · <tspan fill="#f87171" font-weight="900">lateral-movement is detection-only by design (per-arm fan-out)</tspan> · CSPM auto-remediation tracked at #242 #254</text>
+    <text x="48" y="1010" fill="#94a3b8" font-size="13">All writes HITL-gated, dry-run-default, dual-audited (DynamoDB + KMS S3, before + after) · contract enforced by scripts/validate_safe_skill_bar.py · #155</text>
   </g>
 </svg>
