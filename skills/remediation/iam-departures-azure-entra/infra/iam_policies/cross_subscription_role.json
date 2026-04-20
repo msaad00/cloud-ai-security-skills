@@ -1,0 +1,47 @@
+{
+  "_comment": "Custom Azure RBAC role assigned to the Worker Function's MSI at the management-group scope (NOT subscription wildcard, NOT tenant root). The management group bounds the blast radius to the in-scope subscriptions; the Worker Function cannot escape to another tenant or to subscriptions outside the management-group hierarchy. The DenyProtectedUsers section enumerates the protected ObjectIds and UPN patterns that this skill refuses to touch — mirrored in src/function_worker/handler.py DEFAULT_PROTECTED_UPN_PATTERNS.",
+  "Name": "iam-departures-azure-entra-worker",
+  "Description": "Cross-subscription role for the iam-departures-azure-entra Worker Function. Bounded to a management group; cannot escape the tenant.",
+  "AssignableScopes": [
+    "/providers/Microsoft.Management/managementGroups/${ManagementGroupId}"
+  ],
+  "Permissions": [
+    {
+      "Sid": "AzureRBACReadAndDelete",
+      "Actions": [
+        "Microsoft.Authorization/roleAssignments/read",
+        "Microsoft.Authorization/roleAssignments/delete",
+        "Microsoft.Resources/subscriptions/read",
+        "Microsoft.Resources/subscriptions/resourceGroups/read",
+        "Microsoft.Management/managementGroups/read"
+      ],
+      "DataActions": [],
+      "NotActions": [
+        "Microsoft.Authorization/roleAssignments/write",
+        "Microsoft.Authorization/roleDefinitions/write",
+        "Microsoft.Authorization/roleDefinitions/delete"
+      ],
+      "_justification": "Read + delete role assignments at the bound scope. write/delete on definitions is denied so this role cannot widen its own permissions."
+    },
+    {
+      "Sid": "DenyProtectedUsers",
+      "Effect": "Deny",
+      "_explanation": "Even though Azure custom-role permissions do not natively support principalId-based deny semantics the way AWS IAM Deny statements do, this section is the authoritative deny list mirrored into the Worker Function's protected_principals check. Any change here MUST also be reflected in src/function_worker/handler.py DEFAULT_PROTECTED_UPN_PATTERNS or scripts/validate_safe_skill_bar.py will fail the build. The runtime guard is the actual enforcer; this section documents the operator's contract for what the role must never do.",
+      "ProtectedUpnPatterns": [
+        "admin@*",
+        "breakglass-*",
+        "emergency-*",
+        "sync_*"
+      ],
+      "ProtectedObjectIds": [
+        "${TenantGlobalAdministratorObjectId}",
+        "${TenantPrivilegedRoleAdminObjectId}",
+        "${TenantUserAdministratorObjectId}"
+      ]
+    }
+  ],
+  "_deployment_notes": {
+    "method": "Deploy via az role definition create + az role assignment create at the management group scope from the security OU subscription.",
+    "command": "az role definition create --role-definition cross_subscription_role.json && az role assignment create --assignee ${WorkerMsiObjectId} --role iam-departures-azure-entra-worker --scope /providers/Microsoft.Management/managementGroups/${ManagementGroupId}"
+  }
+}

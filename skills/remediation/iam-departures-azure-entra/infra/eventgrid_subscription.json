@@ -1,0 +1,38 @@
+{
+  "_comment": "EventGrid subscription that fires the Logic App orchestrator when a new manifest blob lands in the manifest container. Mirrors the AWS EventBridge rule on s3:ObjectCreated. Filtered to suffix `.json` and prefix `departures/` so the reconciler's `.last_hash` companion file does not trigger remediation.",
+  "properties": {
+    "destination": {
+      "endpointType": "AzureFunction",
+      "properties": {
+        "_resourceIdNote": "Replace ${LogicAppFunctionResourceId} with the Logic-App-bound Function trigger resource id at deploy time, e.g. /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/${LogicAppName}/functions/${EventGridTriggerName}",
+        "resourceId": "${LogicAppFunctionResourceId}",
+        "maxEventsPerBatch": 1,
+        "preferredBatchSizeInKilobytes": 64
+      }
+    },
+    "filter": {
+      "subjectBeginsWith": "/blobServices/default/containers/${ManifestContainer}/blobs/departures/",
+      "subjectEndsWith": ".json",
+      "includedEventTypes": [ "Microsoft.Storage.BlobCreated" ],
+      "advancedFilters": [
+        { "operatorType": "StringNotContains", "key": "data.url", "values": [ ".last_hash" ] }
+      ]
+    },
+    "eventDeliverySchema": "EventGridSchema",
+    "retryPolicy": { "maxDeliveryAttempts": 5, "eventTimeToLiveInMinutes": 60 },
+    "deadLetterDestination": {
+      "endpointType": "StorageBlob",
+      "properties": {
+        "resourceId": "${AuditStorageAccountResourceId}",
+        "blobContainerName": "deadletter"
+      }
+    }
+  },
+  "_notes": {
+    "prerequisites": [
+      "Manifest storage account must have an EventGrid system topic created (see arm_template.json).",
+      "Logic App must expose an HTTP-trigger Function bound via the Microsoft.Web/sites/functions resource type.",
+      "Dead-letter container `deadletter` must exist on the audit storage account."
+    ]
+  }
+}

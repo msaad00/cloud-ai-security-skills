@@ -1,0 +1,10 @@
+# Example terraform.tfvars for iam-departures-azure-entra.
+# Copy to terraform.tfvars and edit. NEVER commit real values.
+
+name_prefix         = "iam-dep"
+location            = "eastus"
+resource_group_name = "rg-iam-departures"
+management_group_id = "mg-acme-prod"
+key_vault_key_id    = "https://kv-acme-iam.vault.azure.net/keys/audit-cmk/abc123"
+grace_period_days   = 7
+alert_email         = "security-oncall@example.com"

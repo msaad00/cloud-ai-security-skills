@@ -1,0 +1,26 @@
+{
+  "_comment": "Microsoft Graph application + Azure RBAC permissions for the Parser Function's user-assigned managed identity. Read-only by construction — the parser only needs to read the manifest blob and confirm a user exists in Entra. NO write permissions.",
+  "identity": "${ParserFunctionMsiObjectId}",
+  "microsoftGraphApplicationPermissions": [
+    "User.Read.All",
+    "Directory.Read.All"
+  ],
+  "azureRoleAssignments": [
+    {
+      "roleDefinition": "Storage Blob Data Reader",
+      "scope": "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroup}/providers/Microsoft.Storage/storageAccounts/${ManifestStorageAccount}/blobServices/default/containers/${ManifestContainer}",
+      "principalId": "${ParserFunctionMsiObjectId}",
+      "_justification": "Parser must read the manifest blob created by the reconciler. Scoped to the single container, not the storage account."
+    },
+    {
+      "roleDefinition": "Key Vault Crypto User",
+      "scope": "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroup}/providers/Microsoft.KeyVault/vaults/${KeyVaultName}/keys/${ManifestCmkKeyName}",
+      "principalId": "${ParserFunctionMsiObjectId}",
+      "_justification": "Parser unwraps the CMK to read the encrypted manifest blob. Scoped to the single key, not the vault."
+    }
+  ],
+  "deniedActions": [
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write",
+    "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete"
+  ]
+}

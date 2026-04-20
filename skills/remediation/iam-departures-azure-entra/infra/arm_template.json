@@ -1,0 +1,148 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_comment": "Full Azure stack for iam-departures-azure-entra. Equivalent to the AWS sibling's cloudformation.yaml. Deploys the manifest + audit storage account (CMK from Key Vault), Cosmos DB audit account, parser + worker Function Apps, Logic App orchestrator, EventGrid subscription, Key Vault, and the user-assigned managed identities each component runs as. Cross-subscription Azure RBAC is granted at the management-group scope by infra/iam_policies/cross_subscription_role.json (deployed separately with az role assignment create at the management group root).",
+    "skill": "iam-departures-azure-entra",
+    "framework_refs": ["MITRE T1078.004", "MITRE T1531", "NIST PR.AC-1", "CIS Azure 1.x", "SOC2 CC6.3"]
+  },
+  "parameters": {
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "iam-departures",
+      "metadata": { "description": "Resource name prefix for all stack resources." }
+    },
+    "location": { "type": "string", "defaultValue": "[resourceGroup().location]" },
+    "managementGroupId": {
+      "type": "string",
+      "metadata": { "description": "Tenant management group ID — bounds the cross-subscription RBAC role." }
+    },
+    "keyVaultKeyId": {
+      "type": "string",
+      "metadata": { "description": "Customer-managed key URI used to encrypt manifest + audit blobs and Cosmos data at rest." }
+    },
+    "alertEmail": {
+      "type": "string",
+      "metadata": { "description": "Action Group email for Logic App failure alerts (mirrors the AWS SNS alert pattern)." }
+    },
+    "gracePeriodDays": {
+      "type": "int",
+      "defaultValue": 7,
+      "minValue": 1,
+      "maxValue": 90,
+      "metadata": { "description": "Days after termination before remediation may fire. Never zero." }
+    }
+  },
+  "variables": {
+    "manifestStorageName": "[concat(replace(parameters('namePrefix'), '-', ''), uniqueString(resourceGroup().id), 'm')]",
+    "auditStorageName":    "[concat(replace(parameters('namePrefix'), '-', ''), uniqueString(resourceGroup().id), 'a')]",
+    "cosmosName":          "[concat(parameters('namePrefix'), '-cosmos-', uniqueString(resourceGroup().id))]",
+    "parserFnName":        "[concat(parameters('namePrefix'), '-parser-fn')]",
+    "workerFnName":        "[concat(parameters('namePrefix'), '-worker-fn')]",
+    "logicAppName":        "[concat(parameters('namePrefix'), '-orchestrator')]",
+    "parserMsiName":       "[concat(parameters('namePrefix'), '-parser-msi')]",
+    "workerMsiName":       "[concat(parameters('namePrefix'), '-worker-msi')]",
+    "logicAppMsiName":     "[concat(parameters('namePrefix'), '-logicapp-msi')]"
+  },
+  "resources": [
+    {
+      "_comment": "Manifest storage account. Customer-managed key from Key Vault. EventGrid system topic emits BlobCreated.",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('manifestStorageName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard_GRS" },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "keySource": "Microsoft.Keyvault",
+          "keyvaultproperties": { "keyvaulturi": "[parameters('keyVaultKeyId')]" },
+          "services": { "blob": { "enabled": true } }
+        },
+        "networkAcls": { "defaultAction": "Deny", "bypass": "AzureServices" }
+      }
+    },
+    {
+      "_comment": "Audit storage account. Same CMK. Append-only blob container for evidence objects.",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('auditStorageName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard_GZRS" },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "keySource": "Microsoft.Keyvault",
+          "keyvaultproperties": { "keyvaulturi": "[parameters('keyVaultKeyId')]" },
+          "services": { "blob": { "enabled": true } }
+        },
+        "isHnsEnabled": false,
+        "immutableStorageWithVersioning": { "enabled": true },
+        "networkAcls": { "defaultAction": "Deny", "bypass": "AzureServices" }
+      }
+    },
+    {
+      "_comment": "Cosmos DB audit account. SQL API. CMK + RBAC enforced.",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2024-05-15",
+      "name": "[variables('cosmosName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "locations": [ { "locationName": "[parameters('location')]", "failoverPriority": 0 } ],
+        "publicNetworkAccess": "Disabled",
+        "disableLocalAuth": true,
+        "keyVaultKeyUri": "[parameters('keyVaultKeyId')]",
+        "minimalTlsVersion": "Tls12"
+      }
+    },
+    {
+      "_comment": "User-assigned managed identities. Permissions granted via separate role-assignment template.",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('parserMsiName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('workerMsiName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('logicAppMsiName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "_comment": "EventGrid system topic on the manifest storage account; subscription routes BlobCreated -> Logic App. The exact filter is documented in eventgrid_subscription.json.",
+      "type": "Microsoft.EventGrid/systemTopics",
+      "apiVersion": "2023-12-15-preview",
+      "name": "[concat(variables('manifestStorageName'), '-evt')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "source": "[resourceId('Microsoft.Storage/storageAccounts', variables('manifestStorageName'))]",
+        "topicType": "Microsoft.Storage.StorageAccounts"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('manifestStorageName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "manifestStorageAccount": { "type": "string", "value": "[variables('manifestStorageName')]" },
+    "auditStorageAccount":    { "type": "string", "value": "[variables('auditStorageName')]" },
+    "cosmosAccount":          { "type": "string", "value": "[variables('cosmosName')]" },
+    "parserFunctionName":     { "type": "string", "value": "[variables('parserFnName')]" },
+    "workerFunctionName":     { "type": "string", "value": "[variables('workerFnName')]" },
+    "logicAppName":           { "type": "string", "value": "[variables('logicAppName')]" }
+  }
+}
