@@ -1,12 +1,10 @@
-from __future__ import annotations
+"""Per-skill pytest conftest: delegate sibling-module isolation to the shared helper.
 
-import os
-import sys
-from pathlib import Path
+The repo-root `conftest.py` puts the repo on sys.path so this import resolves;
+`tests/_pytest_isolation.py` carries the actual sys.modules + sys.path scrub
+logic (formerly duplicated 14 lines per skill).
+"""
 
-THIS = Path(__file__).resolve().parent
-SRC = THIS.parent / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+from tests._pytest_isolation import isolate_skill_src
 
-os.environ.setdefault("TZ", "UTC")
+isolate_skill_src(__file__)
