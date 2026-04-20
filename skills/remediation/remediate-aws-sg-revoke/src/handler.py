@@ -90,6 +90,9 @@ class Target:
     account_uid: str
     cidrs: tuple[str, ...]
     ports: tuple[int, ...]
+    ip_protocol: str
+    from_port: int | None
+    to_port: int | None
     actor: str
     rule: str
     producer_skill: str
@@ -101,7 +104,13 @@ class EC2Client(Protocol):
 
     def describe_security_group(self, sg_id: str) -> dict[str, Any] | None: ...
     def revoke_security_group_ingress(
-        self, sg_id: str, *, cidrs: list[str], ports: list[int]
+        self,
+        sg_id: str,
+        *,
+        cidrs: list[str],
+        ip_protocol: str,
+        from_port: int | None,
+        to_port: int | None,
     ) -> None: ...
 
 
@@ -140,28 +149,30 @@ class Boto3EC2Client:
         return groups[0] if groups else None
 
     def revoke_security_group_ingress(
-        self, sg_id: str, *, cidrs: list[str], ports: list[int]
+        self,
+        sg_id: str,
+        *,
+        cidrs: list[str],
+        ip_protocol: str,
+        from_port: int | None,
+        to_port: int | None,
     ) -> None:
-        # Build IpPermissions for the revoke. We split per-port (every port
-        # in `ports` is revoked across every cidr in `cidrs`). EC2 accepts
-        # multiple IpPermissions in one call so this is one round trip.
-        ip_permissions: list[dict[str, Any]] = []
-        for port in ports:
-            perm: dict[str, Any] = {
-                "IpProtocol": "tcp",
-                "FromPort": port,
-                "ToPort": port,
-                "IpRanges": [{"CidrIp": cidr} for cidr in cidrs if "/" in cidr and ":" not in cidr],
-                "Ipv6Ranges": [{"CidrIpv6": cidr} for cidr in cidrs if ":" in cidr],
-            }
-            # Strip empty range lists so boto3 doesn't complain
-            if not perm["IpRanges"]:
-                del perm["IpRanges"]
-            if not perm["Ipv6Ranges"]:
-                del perm["Ipv6Ranges"]
-            ip_permissions.append(perm)
+        perm: dict[str, Any] = {
+            "IpProtocol": ip_protocol or "tcp",
+            "IpRanges": [{"CidrIp": cidr} for cidr in cidrs if "/" in cidr and ":" not in cidr],
+            "Ipv6Ranges": [{"CidrIpv6": cidr} for cidr in cidrs if ":" in cidr],
+        }
+        if perm["IpProtocol"] != "-1":
+            if from_port is not None:
+                perm["FromPort"] = from_port
+            if to_port is not None:
+                perm["ToPort"] = to_port
+        if not perm["IpRanges"]:
+            del perm["IpRanges"]
+        if not perm["Ipv6Ranges"]:
+            del perm["Ipv6Ranges"]
         self._client().revoke_security_group_ingress(
-            GroupId=sg_id, IpPermissions=ip_permissions
+            GroupId=sg_id, IpPermissions=[perm]
         )
 
 
@@ -272,6 +283,28 @@ def _observable_values(event: dict[str, Any], name: str) -> tuple[str, ...]:
     return tuple(values)
 
 
+def _safe_int(value: str) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _event_reference_time_ms(event: dict[str, Any]) -> int | None:
+    candidates = (
+        event.get("remediated_at_ms"),
+        event.get("time_ms"),
+        event.get("time"),
+        ((event.get("finding_info") or {}).get("last_seen_time")),
+        ((event.get("finding_info") or {}).get("first_seen_time")),
+    )
+    for value in candidates:
+        parsed = _safe_int(str(value)) if value is not None else None
+        if parsed is not None and parsed > 0:
+            return parsed
+    return None
+
+
 def _target_from_event(event: dict[str, Any]) -> Target | None:
     producer = _finding_product(event)
     if producer not in ACCEPTED_PRODUCERS:
@@ -292,14 +325,21 @@ def _target_from_event(event: dict[str, Any]) -> Target | None:
     port_strs = _observable_values(event, "permission.port")
     ports: list[int] = []
     for p in port_strs:
-        try:
-            ports.append(int(p))
-        except ValueError:
-            continue
+        parsed = _safe_int(p)
+        if parsed is not None:
+            ports.append(parsed)
+    ip_protocol = _observable_value(event, "permission.protocol") or "tcp"
+    from_port = _safe_int(_observable_value(event, "permission.from_port"))
+    to_port = _safe_int(_observable_value(event, "permission.to_port"))
+    if from_port is None and len(ports) == 1:
+        from_port = ports[0]
+    if to_port is None and len(ports) == 1:
+        to_port = ports[0]
 
     return Target(
         sg_id=sg_id, sg_name=sg_name, region=region, account_uid=account_uid,
-        cidrs=cidrs, ports=tuple(ports), actor=actor, rule=rule,
+        cidrs=cidrs, ports=tuple(ports), ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+        actor=actor, rule=rule,
         producer_skill=producer, finding_uid=_finding_uid(event),
     )
 
@@ -348,7 +388,11 @@ def check_apply_gate() -> tuple[bool, str]:
 
 
 def _revoke_endpoint(target: Target) -> str:
-    return f"POST ec2:RevokeSecurityGroupIngress GroupId={target.sg_id}"
+    return (
+        "POST ec2:RevokeSecurityGroupIngress "
+        f"GroupId={target.sg_id} IpProtocol={target.ip_protocol or 'tcp'} "
+        f"FromPort={target.from_port!r} ToPort={target.to_port!r}"
+    )
 
 
 def _verify_endpoint(target: Target) -> str:
@@ -369,6 +413,9 @@ def _plan_record(target: Target, *, status: str, detail: str | None, dry_run: bo
             "account_uid": target.account_uid,
             "cidrs": list(target.cidrs),
             "ports": list(target.ports),
+            "ip_protocol": target.ip_protocol,
+            "from_port": target.from_port,
+            "to_port": target.to_port,
             "actor": target.actor,
             "rule": target.rule,
         },
@@ -395,6 +442,7 @@ def _skip_record(target: Target, *, status: str, detail: str, dry_run: bool) -> 
             "provider": "AWS", "sg_id": target.sg_id, "sg_name": target.sg_name,
             "region": target.region, "account_uid": target.account_uid,
             "cidrs": list(target.cidrs), "ports": list(target.ports),
+            "ip_protocol": target.ip_protocol, "from_port": target.from_port, "to_port": target.to_port,
             "actor": target.actor, "rule": target.rule,
         },
         "actions": [],
@@ -416,12 +464,19 @@ def revoke_ingress(
 ) -> dict[str, Any]:
     first = audit.record(
         target=target, step=STEP_REVOKE_INGRESS, status=STATUS_IN_PROGRESS,
-        detail=f"about to revoke {target.cidrs}:{target.ports} on {target.sg_id}",
+        detail=(
+            f"about to revoke {target.cidrs} protocol={target.ip_protocol or 'tcp'} "
+            f"ports={target.from_port!r}-{target.to_port!r} on {target.sg_id}"
+        ),
         incident_id=incident_id, approver=approver,
     )
     try:
         ec2_client.revoke_security_group_ingress(
-            target.sg_id, cidrs=list(target.cidrs), ports=list(target.ports),
+            target.sg_id,
+            cidrs=list(target.cidrs),
+            ip_protocol=target.ip_protocol,
+            from_port=target.from_port,
+            to_port=target.to_port,
         )
     except Exception as exc:
         audit.record(
@@ -434,7 +489,10 @@ def revoke_ingress(
 
     last = audit.record(
         target=target, step=STEP_REVOKE_INGRESS, status=STATUS_SUCCESS,
-        detail=f"revoked ingress {target.cidrs}:{target.ports} on {target.sg_id}",
+        detail=(
+            f"revoked ingress {target.cidrs} protocol={target.ip_protocol or 'tcp'} "
+            f"ports={target.from_port!r}-{target.to_port!r} on {target.sg_id}"
+        ),
         incident_id=incident_id, approver=approver,
     )
     rec = _plan_record(target, status=STATUS_SUCCESS, detail=None, dry_run=False)
@@ -458,15 +516,25 @@ def reverify_target(
 
     reference = RemediationReference(
         remediation_skill=SKILL_NAME,
-        remediation_action_uid=_deterministic_uid("revoke", target.sg_id, ",".join(target.cidrs)),
+        remediation_action_uid=_deterministic_uid(
+            "revoke",
+            target.sg_id,
+            ",".join(target.cidrs),
+            target.ip_protocol or "tcp",
+            str(target.from_port),
+            str(target.to_port),
+        ),
         target_provider="AWS",
-        target_identifier=f"{target.sg_id}/{','.join(target.cidrs)}:{','.join(str(p) for p in target.ports)}",
+        target_identifier=(
+            f"{target.sg_id}/{','.join(target.cidrs)}:"
+            f"{target.ip_protocol or 'tcp'}:{target.from_port!r}-{target.to_port!r}"
+        ),
         original_finding_uid=target.finding_uid,
         remediated_at_ms=remediated_at_ms_resolved,
     )
     expected = (
-        f"no IpPermissions on `{target.sg_id}` granting `{list(target.cidrs)}` to ports "
-        f"{list(target.ports)}"
+        f"no IpPermissions on `{target.sg_id}` granting `{list(target.cidrs)}` for protocol "
+        f"`{target.ip_protocol or 'tcp'}` ports `{target.from_port!r}`-`{target.to_port!r}`"
     )
 
     try:
@@ -495,31 +563,35 @@ def reverify_target(
             detail="containment confirmed via absence",
         )
     else:
-        # Look for any IpPermission still granting any cidr in target.cidrs to any
-        # port in target.ports
+        # Look for any IpPermission still granting the original protocol/range
+        # shape to any cidr in target.cidrs.
         offending: list[dict[str, Any]] = []
         target_cidrs = set(target.cidrs)
-        target_ports = set(target.ports)
+        target_protocol = (target.ip_protocol or "tcp").lower()
         for perm in sg.get("IpPermissions") or []:
-            from_p = perm.get("FromPort")
-            to_p = perm.get("ToPort")
-            try:
-                lo = int(from_p) if from_p is not None else None
-                hi = int(to_p) if to_p is not None else None
-            except (TypeError, ValueError):
-                lo = hi = None
-            if lo is not None and hi is not None:
-                covered = {p for p in target_ports if lo <= p <= hi}
+            perm_protocol = str(perm.get("IpProtocol") or "").lower()
+            protocol_matches = perm_protocol == target_protocol
+            if target_protocol == "-1":
+                ports_match = True
             else:
-                covered = set()
+                perm_from = _safe_int(str(perm.get("FromPort"))) if perm.get("FromPort") is not None else None
+                perm_to = _safe_int(str(perm.get("ToPort"))) if perm.get("ToPort") is not None else None
+                ports_match = perm_from == target.from_port and perm_to == target.to_port
             cidrs_in_perm = {
                 str((r or {}).get("CidrIp", "")) for r in perm.get("IpRanges") or []
             } | {
                 str((r or {}).get("CidrIpv6", "")) for r in perm.get("Ipv6Ranges") or []
             }
             cidr_overlap = target_cidrs & cidrs_in_perm
-            if covered and cidr_overlap:
-                offending.append({"cidrs": sorted(cidr_overlap), "ports": sorted(covered)})
+            if protocol_matches and ports_match and cidr_overlap:
+                offending.append(
+                    {
+                        "cidrs": sorted(cidr_overlap),
+                        "ip_protocol": perm_protocol,
+                        "from_port": perm.get("FromPort"),
+                        "to_port": perm.get("ToPort"),
+                    }
+                )
 
         if offending:
             result = VerificationResult(
@@ -581,7 +653,7 @@ def run(
     name_prefixes = tuple(name_prefixes)
     sg_ids = tuple(sg_ids)
 
-    for target, _ in parse_targets(events):
+    for target, event in parse_targets(events):
         if target is None:
             continue
 
@@ -614,13 +686,20 @@ def run(
             continue
 
         if reverify:
-            yield from reverify_target(target, ec2_client=ec2_client)
+            yield from reverify_target(
+                target,
+                ec2_client=ec2_client,
+                remediated_at_ms=_event_reference_time_ms(event),
+            )
             continue
 
         if not apply:
             yield _plan_record(
                 target, status=STATUS_PLANNED,
-                detail=f"dry-run: would revoke {list(target.cidrs)}:{list(target.ports)} on {target.sg_id}",
+                detail=(
+                    f"dry-run: would revoke {list(target.cidrs)} protocol={target.ip_protocol or 'tcp'} "
+                    f"ports={target.from_port!r}-{target.to_port!r} on {target.sg_id}"
+                ),
                 dry_run=True,
             )
             continue

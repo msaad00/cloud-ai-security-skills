@@ -56,12 +56,14 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import hashlib
+import http.client
 import json
 import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Protocol
+from urllib import parse as urllib_parse
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -133,9 +135,19 @@ class Target:
     finding_uid: str
 
 
+@dataclasses.dataclass(frozen=True)
+class ResolvedServicePrincipal:
+    object_id: str
+    display_name: str
+    app_id: str
+    source_target_type: str
+    source_object_id: str
+
+
 class GraphClient(Protocol):
     """Microsoft Graph API surface this skill needs. Tests inject a stub."""
 
+    def resolve_service_principal(self, target: Target) -> ResolvedServicePrincipal | None: ...
     def get_service_principal(self, object_id: str) -> dict[str, Any] | None: ...
     def disable_service_principal(self, object_id: str) -> None: ...
     def list_key_credentials(self, object_id: str) -> list[dict[str, Any]]: ...
@@ -159,45 +171,185 @@ class AuditWriter(Protocol):
 
 @dataclasses.dataclass
 class MsGraphClient:
-    """Real Microsoft Graph client. Built lazily so tests don't require msgraph-sdk."""
+    """Real Microsoft Graph REST client. Built lazily so tests don't require Azure SDKs."""
 
     tenant_id: str
     client_id: str
     client_secret: str
 
-    def _client(self) -> Any:
-        # Lazy import — tests inject a stub Protocol implementation.
+    def _credential(self) -> Any:
         from azure.identity import ClientSecretCredential
-        from msgraph import GraphServiceClient
 
-        credential = ClientSecretCredential(
+        return ClientSecretCredential(
             tenant_id=self.tenant_id,
             client_id=self.client_id,
             client_secret=self.client_secret,
         )
-        return GraphServiceClient(credentials=credential)
+
+    def _token(self) -> str:
+        return self._credential().get_token("https://graph.microsoft.com/.default").token
+
+    def _request_json(
+        self,
+        method: str,
+        url: str,
+        *,
+        body: dict[str, Any] | None = None,
+        allow_not_found: bool = False,
+    ) -> Any | None:
+        parsed = urllib_parse.urlsplit(url)
+        if parsed.scheme != "https" or parsed.netloc != "graph.microsoft.com":
+            raise RuntimeError(f"refusing non-Microsoft Graph URL `{url}`")
+        body_bytes = None
+        headers = {"Authorization": f"Bearer {self._token()}"}
+        if body is not None:
+            body_bytes = json.dumps(body, separators=(",", ":")).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        path = parsed.path or "/"
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        connection = http.client.HTTPSConnection(parsed.netloc)
+        try:
+            connection.request(method.upper(), path, body=body_bytes, headers=headers)
+            response = connection.getresponse()
+            payload = response.read()
+        except OSError as exc:
+            raise RuntimeError(f"Microsoft Graph connection failed: {exc}") from exc
+        finally:
+            connection.close()
+        if response.status >= 400:
+            if response.status == 404 and allow_not_found:
+                return None
+            detail = payload.decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Microsoft Graph {response.status}: {detail or response.reason}"
+            )
+        if not payload:
+            return None
+        return json.loads(payload)
+
+    def _collection(self, url: str) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        next_url: str | None = url
+        while next_url:
+            payload = self._request_json("GET", next_url)
+            if not isinstance(payload, dict):
+                break
+            value = payload.get("value")
+            if isinstance(value, list):
+                items.extend(item for item in value if isinstance(item, dict))
+            raw_next = payload.get("@odata.nextLink")
+            next_url = str(raw_next) if raw_next else None
+        return items
+
+    def _service_principal_base_url(self, object_id: str) -> str:
+        object_id_q = urllib_parse.quote(object_id, safe="")
+        return f"https://graph.microsoft.com/v1.0/servicePrincipals/{object_id_q}"
+
+    def _service_principal_url(self, object_id: str, *, select: str) -> str:
+        return f"{self._service_principal_base_url(object_id)}?$select={select}"
+
+    def _application_url(self, object_id: str, *, select: str) -> str:
+        object_id_q = urllib_parse.quote(object_id, safe="")
+        return f"https://graph.microsoft.com/v1.0/applications/{object_id_q}?$select={select}"
+
+    def _service_principals_by_app_id_url(self, app_id: str, *, select: str) -> str:
+        escaped = app_id.replace("'", "''")
+        filter_expr = urllib_parse.quote(f"appId eq '{escaped}'", safe="'")
+        return (
+            "https://graph.microsoft.com/v1.0/servicePrincipals"
+            f"?$filter={filter_expr}&$select={select}"
+        )
+
+    def resolve_service_principal(self, target: Target) -> ResolvedServicePrincipal | None:
+        if target.target_type == "Application":
+            app = self._request_json(
+                "GET",
+                self._application_url(target.object_id, select="id,appId,displayName"),
+                allow_not_found=True,
+            )
+            if app is None:
+                return None
+            if not isinstance(app, dict):
+                raise RuntimeError("Microsoft Graph returned a non-object application response")
+            app_id = str(app.get("appId") or "")
+            if not app_id:
+                raise RuntimeError(f"application `{target.object_id}` is missing appId")
+            matches = self._collection(
+                self._service_principals_by_app_id_url(
+                    app_id,
+                    select="id,appId,displayName,accountEnabled",
+                )
+            )
+            if not matches:
+                return None
+            if len(matches) > 1:
+                raise RuntimeError(
+                    f"application `{target.object_id}` resolved to multiple service principals for appId `{app_id}`"
+                )
+            match = matches[0]
+            return ResolvedServicePrincipal(
+                object_id=str(match.get("id") or ""),
+                display_name=str(match.get("displayName") or target.display_name or target.object_id),
+                app_id=str(match.get("appId") or app_id),
+                source_target_type=target.target_type,
+                source_object_id=target.object_id,
+            )
+        sp = self.get_service_principal(target.object_id)
+        if sp is None:
+            return None
+        return ResolvedServicePrincipal(
+            object_id=str(sp.get("id") or target.object_id),
+            display_name=str(sp.get("displayName") or target.display_name or target.object_id),
+            app_id=str(sp.get("appId") or ""),
+            source_target_type=target.target_type or "ServicePrincipal",
+            source_object_id=target.object_id,
+        )
 
     def get_service_principal(self, object_id: str) -> dict[str, Any] | None:
-        # Implementation note: msgraph-sdk is async; production wiring runs
-        # this under asyncio.run() in the entrypoint when --apply is set.
-        # For dry-run / reverify without msgraph-sdk available, tests stub
-        # this method entirely.
-        raise NotImplementedError("MsGraphClient is a thin shell; production path requires msgraph-sdk wiring")
+        payload = self._request_json(
+            "GET",
+            self._service_principal_url(
+                object_id,
+                select="id,appId,displayName,accountEnabled,keyCredentials,passwordCredentials",
+            ),
+            allow_not_found=True,
+        )
+        if payload is None:
+            return None
+        if not isinstance(payload, dict):
+            raise RuntimeError("Microsoft Graph returned a non-object servicePrincipal response")
+        return payload
 
     def disable_service_principal(self, object_id: str) -> None:
-        raise NotImplementedError
+        self._request_json(
+            "PATCH",
+            self._service_principal_base_url(object_id),
+            body={"accountEnabled": False},
+        )
 
     def list_key_credentials(self, object_id: str) -> list[dict[str, Any]]:
-        raise NotImplementedError
+        sp = self.get_service_principal(object_id) or {}
+        values = sp.get("keyCredentials") or []
+        return [item for item in values if isinstance(item, dict)]
 
     def list_password_credentials(self, object_id: str) -> list[dict[str, Any]]:
-        raise NotImplementedError
+        sp = self.get_service_principal(object_id) or {}
+        values = sp.get("passwordCredentials") or []
+        return [item for item in values if isinstance(item, dict)]
 
     def list_app_role_assignments(self, object_id: str) -> list[dict[str, Any]]:
-        raise NotImplementedError
+        return self._collection(
+            f"{self._service_principal_base_url(object_id)}/appRoleAssignments"
+        )
 
     def list_oauth2_permission_grants(self, object_id: str) -> list[dict[str, Any]]:
-        raise NotImplementedError
+        escaped = object_id.replace("'", "''")
+        filter_expr = urllib_parse.quote(f"clientId eq '{escaped}'", safe="'")
+        return self._collection(
+            "https://graph.microsoft.com/v1.0/oauth2PermissionGrants"
+            f"?$filter={filter_expr}&$select=id,clientId,resourceId,scope,consentType"
+        )
 
 
 @dataclasses.dataclass
@@ -313,6 +465,28 @@ def _observable_value(event: dict[str, Any], name: str) -> str:
     return ""
 
 
+def _safe_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _event_reference_time_ms(event: dict[str, Any]) -> int | None:
+    candidates = (
+        event.get("remediated_at_ms"),
+        event.get("time_ms"),
+        event.get("time"),
+        ((event.get("finding_info") or {}).get("last_seen_time")),
+        ((event.get("finding_info") or {}).get("first_seen_time")),
+    )
+    for value in candidates:
+        parsed = _safe_int(value)
+        if parsed is not None and parsed > 0:
+            return parsed
+    return None
+
+
 def _target_from_event(event: dict[str, Any]) -> Target | None:
     producer = _finding_product(event)
     if producer not in ACCEPTED_PRODUCERS:
@@ -372,25 +546,38 @@ def check_apply_gate() -> tuple[bool, str]:
     return True, ""
 
 
-def _disable_endpoint(object_id: str) -> str:
+def _disable_endpoint(resolved: ResolvedServicePrincipal) -> str:
     # Microsoft Graph: PATCH /servicePrincipals/{id} with {"accountEnabled": false}
-    return f"PATCH /v1.0/servicePrincipals/{object_id}"
+    return f"PATCH /v1.0/servicePrincipals/{resolved.object_id}"
 
 
-def _triage_endpoint(object_id: str) -> str:
+def _triage_endpoint(resolved: ResolvedServicePrincipal) -> str:
     return (
-        f"GET /v1.0/servicePrincipals/{object_id} "
+        f"GET /v1.0/servicePrincipals/{resolved.object_id} "
         "(keyCredentials, passwordCredentials, appRoleAssignments, oauth2PermissionGrants)"
     )
 
 
-def _build_triage_payload(target: Target, *, graph_client: GraphClient) -> dict[str, Any]:
+def _resolved_target(target: Target, resolved: ResolvedServicePrincipal) -> Target:
+    return Target(
+        object_id=resolved.object_id,
+        display_name=resolved.display_name or target.display_name,
+        target_type="ServicePrincipal",
+        actor=target.actor,
+        api_operation=target.api_operation,
+        rule=target.rule,
+        producer_skill=target.producer_skill,
+        finding_uid=target.finding_uid,
+    )
+
+
+def _build_triage_payload(resolved: ResolvedServicePrincipal, *, graph_client: GraphClient) -> dict[str, Any]:
     """Read the SP's current credentials + assignments; bundle for operator triage."""
     return {
-        "key_credentials": graph_client.list_key_credentials(target.object_id),
-        "password_credentials": graph_client.list_password_credentials(target.object_id),
-        "app_role_assignments": graph_client.list_app_role_assignments(target.object_id),
-        "oauth2_permission_grants": graph_client.list_oauth2_permission_grants(target.object_id),
+        "key_credentials": graph_client.list_key_credentials(resolved.object_id),
+        "password_credentials": graph_client.list_password_credentials(resolved.object_id),
+        "app_role_assignments": graph_client.list_app_role_assignments(resolved.object_id),
+        "oauth2_permission_grants": graph_client.list_oauth2_permission_grants(resolved.object_id),
     }
 
 
@@ -401,7 +588,17 @@ def _plan_record(
     detail: str | None,
     dry_run: bool,
     triage: dict[str, Any] | None = None,
+    resolved: ResolvedServicePrincipal | None = None,
 ) -> dict[str, Any]:
+    resolved_section = None
+    if resolved is not None:
+        resolved_section = {
+            "object_id": resolved.object_id,
+            "display_name": resolved.display_name,
+            "app_id": resolved.app_id,
+            "source_target_type": resolved.source_target_type,
+            "source_object_id": resolved.source_object_id,
+        }
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -418,17 +615,18 @@ def _plan_record(
         "actions": [
             {
                 "step": STEP_DISABLE_SP,
-                "endpoint": _disable_endpoint(target.object_id),
+                "endpoint": _disable_endpoint(resolved) if resolved is not None else "PATCH /v1.0/servicePrincipals/<resolved-target>",
                 "status": status,
                 "detail": detail,
             },
             {
                 "step": STEP_TRIAGE_LIST,
-                "endpoint": _triage_endpoint(target.object_id),
+                "endpoint": _triage_endpoint(resolved) if resolved is not None else "GET /v1.0/servicePrincipals/<resolved-target> (...)",
                 "status": status,
                 "detail": "list current credentials + assignments for operator triage",
             },
         ],
+        "resolved_service_principal": resolved_section,
         "triage": triage,
         "status": status,
         "dry_run": dry_run,
@@ -468,34 +666,52 @@ def disable_and_triage(
     incident_id: str,
     approver: str,
 ) -> dict[str, Any]:
+    resolved = graph_client.resolve_service_principal(target)
+    if resolved is None:
+        return _plan_record(
+            target,
+            status=STATUS_FAILURE,
+            detail=(
+                "could not resolve a backing service principal for "
+                f"{target.target_type or 'target'} `{target.object_id}`"
+            ),
+            dry_run=False,
+        )
+    audit_target = _resolved_target(target, resolved)
     first_audit = audit.record(
-        target=target,
+        target=audit_target,
         step=STEP_DISABLE_SP,
         status=STATUS_IN_PROGRESS,
-        detail=f"about to disable service principal `{target.object_id}`",
+        detail=f"about to disable service principal `{resolved.object_id}`",
         incident_id=incident_id,
         approver=approver,
     )
     try:
-        graph_client.disable_service_principal(target.object_id)
+        graph_client.disable_service_principal(resolved.object_id)
     except Exception as exc:
         audit.record(
-            target=target,
+            target=audit_target,
             step=STEP_DISABLE_SP,
             status=STATUS_FAILURE,
             detail=str(exc),
             incident_id=incident_id,
             approver=approver,
         )
-        record = _plan_record(target, status=STATUS_FAILURE, detail=str(exc), dry_run=False)
+        record = _plan_record(
+            target,
+            status=STATUS_FAILURE,
+            detail=str(exc),
+            dry_run=False,
+            resolved=resolved,
+        )
         record["audit"] = first_audit
         return record
 
     audit.record(
-        target=target,
+        target=audit_target,
         step=STEP_DISABLE_SP,
         status=STATUS_SUCCESS,
-        detail=f"disabled `{target.object_id}` (accountEnabled=false)",
+        detail=f"disabled `{resolved.object_id}` (accountEnabled=false)",
         incident_id=incident_id,
         approver=approver,
     )
@@ -504,7 +720,7 @@ def disable_and_triage(
     # disable step — the SP is contained either way and the operator can rerun
     # triage manually.
     try:
-        triage = _build_triage_payload(target, graph_client=graph_client)
+        triage = _build_triage_payload(resolved, graph_client=graph_client)
         triage_detail = (
             f"listed {len(triage['key_credentials'])} keys, "
             f"{len(triage['password_credentials'])} passwords, "
@@ -512,7 +728,7 @@ def disable_and_triage(
             f"{len(triage['oauth2_permission_grants'])} OAuth2 grants"
         )
         triage_audit = audit.record(
-            target=target,
+            target=audit_target,
             step=STEP_TRIAGE_LIST,
             status=STATUS_SUCCESS,
             detail=triage_detail,
@@ -523,7 +739,7 @@ def disable_and_triage(
         triage = None
         triage_detail = f"triage list failed: {exc}"
         triage_audit = audit.record(
-            target=target,
+            target=audit_target,
             step=STEP_TRIAGE_LIST,
             status=STATUS_FAILURE,
             detail=str(exc),
@@ -537,6 +753,7 @@ def disable_and_triage(
         detail="disabled service principal; triage payload attached",
         dry_run=False,
         triage=triage,
+        resolved=resolved,
     )
     # Mark the second action with the actual triage outcome
     record["actions"][1]["status"] = "success" if triage is not None else "failure"
@@ -570,14 +787,14 @@ def reverify_target(
     expected = f"service principal `{target.object_id}` has accountEnabled=false"
 
     try:
-        sp = graph_client.get_service_principal(target.object_id)
+        resolved = graph_client.resolve_service_principal(target)
     except Exception as exc:
         result = VerificationResult(
             status=VerificationStatus.UNREACHABLE,
             checked_at_ms=checked_at_ms,
             sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
             expected_state=expected,
-            actual_state="microsoft graph call raised; cannot determine state",
+            actual_state="microsoft graph resolution raised; cannot determine state",
             detail=str(exc),
         )
         record = build_verification_record(reference=reference, result=result, verifier_skill=SKILL_NAME)
@@ -588,7 +805,7 @@ def reverify_target(
         }
         return [record]
 
-    if sp is None:
+    if resolved is None:
         # SP is gone entirely. That's a STRONGER state than disabled — counts as
         # verified containment. Operator may also want to know it was deleted.
         result = VerificationResult(
@@ -596,27 +813,49 @@ def reverify_target(
             checked_at_ms=checked_at_ms,
             sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
             expected_state=expected,
-            actual_state="service principal not found (deleted or never existed) — stronger than disabled",
+            actual_state="backing service principal not found (deleted or never existed) — stronger than disabled",
             detail="containment confirmed via absence",
         )
-    elif sp.get("accountEnabled") is False:
-        result = VerificationResult(
-            status=VerificationStatus.VERIFIED,
-            checked_at_ms=checked_at_ms,
-            sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
-            expected_state=expected,
-            actual_state="accountEnabled=false",
-            detail="service principal still disabled",
-        )
     else:
-        result = VerificationResult(
-            status=VerificationStatus.DRIFT,
-            checked_at_ms=checked_at_ms,
-            sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
-            expected_state=expected,
-            actual_state=f"accountEnabled={sp.get('accountEnabled')!r}",
-            detail="service principal was re-enabled after remediation",
-        )
+        try:
+            sp = graph_client.get_service_principal(resolved.object_id)
+        except Exception as exc:
+            result = VerificationResult(
+                status=VerificationStatus.UNREACHABLE,
+                checked_at_ms=checked_at_ms,
+                sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+                expected_state=expected,
+                actual_state="microsoft graph call raised; cannot determine state",
+                detail=str(exc),
+            )
+        else:
+            if sp is None:
+                result = VerificationResult(
+                    status=VerificationStatus.VERIFIED,
+                    checked_at_ms=checked_at_ms,
+                    sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+                    expected_state=expected,
+                    actual_state="service principal not found (deleted) — stronger than disabled",
+                    detail="containment confirmed via absence",
+                )
+            elif sp.get("accountEnabled") is False:
+                result = VerificationResult(
+                    status=VerificationStatus.VERIFIED,
+                    checked_at_ms=checked_at_ms,
+                    sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+                    expected_state=expected,
+                    actual_state="accountEnabled=false",
+                    detail="service principal still disabled",
+                )
+            else:
+                result = VerificationResult(
+                    status=VerificationStatus.DRIFT,
+                    checked_at_ms=checked_at_ms,
+                    sla_deadline_ms=sla_deadline(remediated_at_ms_resolved, DEFAULT_VERIFICATION_SLA_MS),
+                    expected_state=expected,
+                    actual_state=f"accountEnabled={sp.get('accountEnabled')!r}",
+                    detail="service principal was re-enabled after remediation",
+                )
 
     record = build_verification_record(reference=reference, result=result, verifier_skill=SKILL_NAME)
     record["target"] = {
@@ -675,7 +914,7 @@ def run(
     name_prefixes = tuple(name_prefixes)
     object_ids = tuple(object_ids)
 
-    for target, _ in parse_targets(events):
+    for target, event in parse_targets(events):
         if target is None:
             continue
 
@@ -716,7 +955,11 @@ def run(
             continue
 
         if reverify:
-            yield from reverify_target(target, graph_client=graph_client)
+            yield from reverify_target(
+                target,
+                graph_client=graph_client,
+                remediated_at_ms=_event_reference_time_ms(event),
+            )
             continue
 
         if not apply:

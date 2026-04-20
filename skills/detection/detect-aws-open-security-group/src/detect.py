@@ -305,6 +305,15 @@ def _to_ocsf(native: dict[str, Any]) -> dict[str, Any]:
         observables.append({"name": "src.ip", "type": "IP Address", "value": native["src_ip"]})
     for cidr in native["public_cidrs_hit"]:
         observables.append({"name": "permission.cidr", "type": "Other", "value": cidr})
+    protocol = str((native["permission"] or {}).get("ipProtocol") or "")
+    if protocol:
+        observables.append({"name": "permission.protocol", "type": "Other", "value": protocol})
+    from_port = (native["permission"] or {}).get("fromPort")
+    if from_port is not None:
+        observables.append({"name": "permission.from_port", "type": "Other", "value": str(from_port)})
+    to_port = (native["permission"] or {}).get("toPort")
+    if to_port is not None:
+        observables.append({"name": "permission.to_port", "type": "Other", "value": str(to_port)})
     for port in native["risky_ports_hit"]:
         observables.append({"name": "permission.port", "type": "Other", "value": str(port)})
 
