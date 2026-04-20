@@ -80,6 +80,7 @@ frontmatter. The policy rubric is in the last three columns.
 | `dry-run` documented in SKILL.md + exercised in tests | same | Writable skill lacks `dry-run` in SKILL.md or fails to test the dry-run path |
 | `sts:AssumeRole` carries a boundary condition | `validate_assume_role_boundaries()` ([#263](https://github.com/msaad00/cloud-ai-security-skills/pull/263)) | Any IAM policy grants AssumeRole without `aws:PrincipalOrgID` / `aws:SourceAccount` / equivalent |
 | Wildcard action/resource justified | `validate_wildcards()` | `Action: "*"` or `Resource: "*"` without a `WILDCARD_OK` comment nearby |
+| Remediation `--apply` gated on incident + approver env vars | `validate_remediation_hitl_env_vars()` | A `remediate-*` skill src/ doesn't reference both an incident-style env var (`*INCIDENT*` / `*TICKET*` / `*CASE_ID*`) and an approver-style env var (`*APPROVER*` / `*APPROVED_BY*` / `*AUTHORIZED_BY*` / `*AUTHORIZER*`); opt out with `HITL_ENV_OK` + justification |
 | Per-skill matrix in SECURITY_BAR.md stays in sync with frontmatter | [#246](https://github.com/msaad00/cloud-ai-security-skills/issues/246) auto-gen (planned) | CI regenerates the matrix and asserts the committed file matches |
 
 ## How to declare in frontmatter

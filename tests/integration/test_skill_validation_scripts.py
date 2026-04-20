@@ -256,6 +256,120 @@ class TestRuntimeContractGuardrails:
         assert errors == []
 
 
+class TestHITLEnvVarGuardrail:
+    """Unit tests for the remediation HITL env-var enforcement check.
+
+    Every remediation skill (excluding sinks and grandfathered iam-departures-aws)
+    must gate its --apply path on an incident env var AND an approver env var,
+    backing up the human_required approval model declared in frontmatter.
+    """
+
+    def _fake_remediation(self, tmp_path: Path, *, src_contents: str,
+                          capability: str = "") -> object:
+        skill_dir = tmp_path / "skills" / "remediation" / "fake-remediation"
+        (skill_dir / "src").mkdir(parents=True, exist_ok=True)
+        (skill_dir / "src" / "handler.py").write_text(src_contents or "# empty\n")
+
+        class _Fake:
+            pass
+
+        fake = _Fake()
+        fake.skill_dir = skill_dir
+        fake.is_write_capable = True
+        fake.approval_model = "human_required"
+        fake.side_effects = ("writes-identity",)
+        fake.frontmatter = {"capability": capability} if capability else {}
+        fake.category = "remediation"
+        return fake
+
+    def _run(self, tmp_path: Path, fake: object) -> list[str]:
+        original_root = SAFE.ROOT
+        SAFE.ROOT = tmp_path
+        try:
+            return SAFE.validate_remediation_hitl_env_vars(fake)
+        finally:
+            SAFE.ROOT = original_root
+
+    def test_passes_with_both_incident_and_approver(self, tmp_path: Path):
+        fake = self._fake_remediation(
+            tmp_path,
+            src_contents=(
+                "import os\n"
+                "INCIDENT_ID = os.environ['MY_SKILL_INCIDENT_ID']\n"
+                "APPROVER = os.environ['MY_SKILL_APPROVER']\n"
+            ),
+        )
+        assert self._run(tmp_path, fake) == []
+
+    def test_passes_with_ticket_and_approved_by(self, tmp_path: Path):
+        """Substring matching means TICKET and APPROVED_BY are also accepted."""
+        fake = self._fake_remediation(
+            tmp_path,
+            src_contents=(
+                "import os\n"
+                "ticket = os.environ['SKILL_APPROVAL_TICKET']\n"
+                "actor = os.environ['SKILL_APPROVED_BY']\n"
+            ),
+        )
+        assert self._run(tmp_path, fake) == []
+
+    def test_fails_when_incident_var_missing(self, tmp_path: Path):
+        fake = self._fake_remediation(
+            tmp_path,
+            src_contents=(
+                "import os\n"
+                "APPROVER = os.environ['MY_SKILL_APPROVER']\n"
+            ),
+        )
+        errors = self._run(tmp_path, fake)
+        assert any("incident env var" in e for e in errors)
+
+    def test_fails_when_approver_var_missing(self, tmp_path: Path):
+        fake = self._fake_remediation(
+            tmp_path,
+            src_contents=(
+                "import os\n"
+                "INCIDENT_ID = os.environ['MY_SKILL_INCIDENT_ID']\n"
+            ),
+        )
+        errors = self._run(tmp_path, fake)
+        assert any("approver env var" in e for e in errors)
+
+    def test_fails_when_both_missing(self, tmp_path: Path):
+        fake = self._fake_remediation(
+            tmp_path,
+            src_contents="def run():\n    iam.delete_user()\n",
+        )
+        errors = self._run(tmp_path, fake)
+        assert any("incident env var" in e for e in errors)
+        assert any("approver env var" in e for e in errors)
+
+    def test_grandfather_marker_skips_check(self, tmp_path: Path):
+        fake = self._fake_remediation(
+            tmp_path,
+            src_contents=(
+                "# HITL_ENV_OK: this skill uses Step-Functions-driven approval, not env vars\n"
+                "def run():\n    iam.delete_user()\n"
+            ),
+        )
+        assert self._run(tmp_path, fake) == []
+
+    def test_sink_exempted(self, tmp_path: Path):
+        """Sinks are the audit destination, not the gated remediation path."""
+        fake = self._fake_remediation(
+            tmp_path,
+            capability="write-sink",
+            src_contents="def run():\n    s3.put_object(Body=x)\n",
+        )
+        assert self._run(tmp_path, fake) == []
+
+    def test_non_remediation_writable_skill_skipped(self, tmp_path: Path):
+        """Output-category skills aren't checked even if write-capable."""
+        fake = self._fake_remediation(tmp_path, src_contents="def run(): pass\n")
+        fake.category = "output"
+        assert self._run(tmp_path, fake) == []
+
+
 class TestAssumeRoleBoundaryGuardrail:
     """Unit tests for the sts:AssumeRole boundary-condition check.
 
