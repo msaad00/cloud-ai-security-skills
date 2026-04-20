@@ -4,28 +4,28 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **49**
+- Total shipped skills in registry: **50**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
 | OCSF | 1.8.0 | **37** | — |
-| MITRE ATT&CK | v14 | **26** | 100% mapped coverage |
-| MITRE ATLAS | current | **7** | 100% mapped coverage |
+| MITRE ATT&CK | v14 | **27** | 100% mapped coverage |
+| MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **1** | — |
 | CIS GCP Foundations | v3.0 | **1** | — |
 | CIS Azure Foundations | v2.1 | **1** | — |
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
 | CIS Controls | v8 | **2** | — |
-| NIST CSF | 2.0 | **12** | 100% mapped coverage |
+| NIST CSF | 2.0 | **13** | 100% mapped coverage |
 | NIST AI RMF | current | **4** | — |
-| SOC 2 TSC | current | **12** | 100% mapped coverage |
+| SOC 2 TSC | current | **13** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
 | OWASP LLM Top 10 | current | **2** | — |
-| OWASP MCP Top 10 | current | **3** | — |
+| OWASP MCP Top 10 | current | **4** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
 Shipped skills mapped counts the number of skills in the registry that declare this framework under `frameworks`. It does not claim per-control depth; see each skill's `SKILL.md` and `REFERENCES.md` for the concrete controls, techniques, or benchmarks covered.
@@ -85,7 +85,7 @@ Shipped skills mapped: **37**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **26**
+Shipped skills mapped: **27**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -112,6 +112,7 @@ Shipped skills mapped: **26**
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
+| [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
 | [`convert-ocsf-to-mermaid-attack-flow`](../skills/view/convert-ocsf-to-mermaid-attack-flow) | view | multi | findings, review-output, graphs |
 | [`convert-ocsf-to-sarif`](../skills/view/convert-ocsf-to-sarif) | view | multi | findings, review-output |
@@ -123,7 +124,7 @@ Shipped skills mapped: **26**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **7**
+Shipped skills mapped: **8**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -134,6 +135,7 @@ Shipped skills mapped: **7**
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
+| [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 
 ### CIS AWS Foundations (v3.0)
 
@@ -204,7 +206,7 @@ Shipped skills mapped: **2**
 - Asset classes in scope: identities, storage, logging, network, clusters, runtime, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **12**
+Shipped skills mapped: **13**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -219,6 +221,7 @@ Shipped skills mapped: **12**
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
+| [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
 
 ### NIST AI RMF (current)
@@ -241,7 +244,7 @@ Shipped skills mapped: **4**
 - Asset classes in scope: access, logging, change, evidence, inventory, ai-endpoints
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **12**
+Shipped skills mapped: **13**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -256,6 +259,7 @@ Shipped skills mapped: **12**
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
+| [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
 
 ### PCI DSS (4.0)
@@ -301,13 +305,14 @@ Shipped skills mapped: **2**
 
 - Registry id: `owasp-mcp-top-10`
 
-Shipped skills mapped: **3**
+Shipped skills mapped: **4**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`ingest-mcp-proxy-ocsf`](../skills/ingestion/ingest-mcp-proxy-ocsf) | ingestion | mcp, multi | agent-tools, application-activity |
+| [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 
 ### CycloneDX ML-BOM (current)
 

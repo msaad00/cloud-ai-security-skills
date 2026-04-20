@@ -102,6 +102,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 | [`remediate-okta-session-kill`](remediation/remediate-okta-session-kill/) | Okta containment — revoke sessions + OAuth tokens after detect-okta-mfa-fatigue or detect-credential-stuffing-okta; dual-audit, deny-list, declared-incident gate |
 | [`remediate-container-escape-k8s`](remediation/remediate-container-escape-k8s/) | Kubernetes containment — apply or re-verify a deny-all NetworkPolicy after detect-container-escape-k8s; protected-namespace deny-list, declared-incident gate, dual audit |
 | [`remediate-k8s-rbac-revoke`](remediation/remediate-k8s-rbac-revoke/) | Kubernetes RBAC revocation — delete or re-verify the offending RoleBinding / ClusterRoleBinding after detect-privilege-escalation-k8s rule r3-rbac-self-grant; protected-namespace + system:* deny-list, declared-incident gate, dual audit |
+| [`remediate-mcp-tool-quarantine`](remediation/remediate-mcp-tool-quarantine/) | MCP tool quarantine — append the offending tool to a JSONL quarantine file the operator's MCP client filters its surface against, after detect-mcp-tool-drift (T1195.001) or detect-prompt-injection-mcp-proxy (ATLAS AML.T0051); protected-prefix (`mcp_`, `system_`, `internal_`) deny-list, declared-incident gate, dual audit |
 
 ## output/
 
