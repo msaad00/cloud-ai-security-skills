@@ -127,7 +127,7 @@ class GoogleComputeClient:
     """Real Compute client. Lazy-imports googleapiclient so tests don't need it."""
 
     def _client(self) -> Any:
-        from googleapiclient.discovery import build  # type: ignore[import-not-found]
+        from googleapiclient.discovery import build
 
         # Credentials picked up from GOOGLE_APPLICATION_CREDENTIALS or ADC.
         return build("compute", "v1", cache_discovery=False)
