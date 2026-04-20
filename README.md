@@ -60,6 +60,8 @@ External signals enter through two intake layers, pass through two analyze layer
 
 Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
+For UI-only audit evidence and screenshot-backed control capture, see the design note in [docs/COMPLIANCE_EVIDENCE_CAPTURE.md](docs/COMPLIANCE_EVIDENCE_CAPTURE.md). The repo direction there is export-first, screenshot-when-necessary.
+
 ## Agent and runtime integrations
 
 MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation — see the runtime surfaces diagram above.
