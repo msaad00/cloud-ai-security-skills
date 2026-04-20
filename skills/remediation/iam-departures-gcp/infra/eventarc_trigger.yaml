@@ -1,0 +1,42 @@
+# Standalone Eventarc trigger spec.
+#
+# Equivalent to the AWS skill's `infra/eventbridge_rule.json`. Eventarc
+# fires on `google.cloud.storage.object.v1.finalized` events for objects
+# under `departures/` in the manifest bucket and starts the
+# `iam-departures-gcp-pipeline` Cloud Workflow.
+#
+# `gcloud eventarc triggers create iam-departures-gcp-manifest-trigger \
+#     --location={{REGION}} \
+#     --service-account=iam-departures-gcp-events@{{SECURITY_PROJECT_ID}}.iam.gserviceaccount.com \
+#     --destination-workflow=iam-departures-gcp-pipeline \
+#     --destination-workflow-location={{REGION}} \
+#     --event-filters=type=google.cloud.storage.object.v1.finalized \
+#     --event-filters=bucket={{MANIFEST_BUCKET}}`
+#
+# Operator pre-requisites:
+#   - The `events` service account needs roles/eventarc.eventReceiver on
+#     the project AND roles/workflows.invoker on the workflow.
+#   - The manifest bucket lives in the SAME location as the trigger
+#     (regional, not multi-region) so Eventarc can subscribe directly.
+#   - Object names that are NOT *.json under `departures/` are ignored
+#     by the workflow's first Choice step.
+
+apiVersion: eventarc.cnrm.cloud.google.com/v1
+kind: EventarcTrigger
+metadata:
+  name: iam-departures-gcp-manifest-trigger
+spec:
+  matchingCriteria:
+    - attribute: type
+      value: google.cloud.storage.object.v1.finalized
+    - attribute: bucket
+      value: '{{MANIFEST_BUCKET}}'
+  destination:
+    workflowRef:
+      name: iam-departures-gcp-pipeline
+  serviceAccountRef:
+    name: iam-departures-gcp-events
+  transport:
+    pubsub:
+      topicRef:
+        name: iam-departures-gcp-eventarc-transport

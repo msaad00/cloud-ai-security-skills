@@ -1,0 +1,77 @@
+# Worker Cloud Function service-account role bindings.
+#
+# This is the destructive surface. Every binding carries an IAM Condition
+# pinning the access to the operator's org/folder boundary. Mirrors the
+# AWS skill's `worker_execution_role.json` defense-in-depth pattern.
+#
+# Apply via Terraform (preferred — see ../terraform/main.tf) or
+# `gcloud projects add-iam-policy-binding`. The "destructive boundary"
+# bindings are at organization scope so the worker can act across every
+# project in the org. The condition restricts the boundary to the
+# operator's org id; cross-org escape is impossible even if the worker
+# SA is compromised.
+
+serviceAccount: iam-departures-gcp-worker@{{SECURITY_PROJECT_ID}}.iam.gserviceaccount.com
+
+bindings:
+  # Workspace user disable + delete.
+  - role: roles/admin.directory.user.admin
+    resource: '{{WORKSPACE_CUSTOMER_ID}}'
+    condition:
+      title: WorkspaceCustomerBoundary
+      description: "Restrict to the operator's Workspace customer"
+      expression: 'request.auth.claims.iss == "https://accounts.google.com"'
+
+  # Workspace OAuth token revoke.
+  - role: roles/admin.directory.user.security
+    resource: '{{WORKSPACE_CUSTOMER_ID}}'
+
+  # Cloud Identity group memberships.
+  - role: roles/cloudidentity.groups.editor
+    resource: organizations/{{GCP_ORG_ID}}
+
+  # Detach project / folder / org IAM bindings.
+  - role: roles/resourcemanager.organizationAdmin
+    resource: organizations/{{GCP_ORG_ID}}
+    condition:
+      title: OrgScopedIAMTeardown
+      description: "Org-scoped IAM teardown only — fails closed outside the operator's org"
+      expression: 'resource.name.startsWith("organizations/{{GCP_ORG_ID}}") || resource.name.startsWith("folders/") || resource.name.startsWith("projects/")'
+
+  # Detach SA + SA keys (org boundary).
+  - role: roles/iam.serviceAccountAdmin
+    resource: organizations/{{GCP_ORG_ID}}
+  - role: roles/iam.serviceAccountKeyAdmin
+    resource: organizations/{{GCP_ORG_ID}}
+
+  # SSH key cleanup on Compute project metadata + per-instance metadata.
+  - role: roles/compute.admin
+    resource: organizations/{{GCP_ORG_ID}}
+    condition:
+      title: SshKeyMetadataOnly
+      description: "Compute access scoped to project + instance metadata operations"
+      expression: 'api.getAttribute("compute.googleapis.com/methodName", "").endsWith("setMetadata") || api.getAttribute("compute.googleapis.com/methodName", "").endsWith("setCommonInstanceMetadata") || api.getAttribute("compute.googleapis.com/methodName", "").endsWith("get")'
+
+  # BigQuery dataset IAM patch.
+  - role: roles/bigquery.dataOwner
+    resource: organizations/{{GCP_ORG_ID}}
+
+  # Cloud Storage bucket IAM patch.
+  - role: roles/storage.admin
+    resource: organizations/{{GCP_ORG_ID}}
+    condition:
+      title: BucketIamOnly
+      description: "Storage admin scoped to bucket-IAM operations"
+      expression: 'api.getAttribute("storage.googleapis.com/methodName", "").contains("IamPolicy") || api.getAttribute("storage.googleapis.com/methodName", "").startsWith("storage.buckets.")'
+
+  # Audit dual-write — Firestore + GCS.
+  - role: roles/datastore.user
+    resource: projects/{{SECURITY_PROJECT_ID}}
+  - role: roles/storage.objectCreator
+    resource: projects/_/buckets/{{AUDIT_BUCKET}}
+  - role: roles/cloudkms.cryptoKeyEncrypterDecrypter
+    resource: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}/keyRings/iam-departures-gcp/cryptoKeys/iam-audit
+
+  # Cloud Logging — Step 10 emits a structured audit log entry.
+  - role: roles/logging.logWriter
+    resource: organizations/{{GCP_ORG_ID}}

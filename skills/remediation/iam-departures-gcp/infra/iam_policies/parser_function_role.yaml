@@ -1,0 +1,38 @@
+# Parser Cloud Function service-account role bindings.
+#
+# Scope: least-privilege. The parser only reads the manifest, checks
+# Workspace / IAM principal existence, and passes results back via the
+# Workflow. No write capability on any GCP surface.
+#
+# Apply via `gcloud projects add-iam-policy-binding` or Terraform.
+
+serviceAccount: iam-departures-gcp-parser@{{SECURITY_PROJECT_ID}}.iam.gserviceaccount.com
+
+bindings:
+  # Read the manifest JSON from the CMEK-protected GCS bucket.
+  - role: roles/storage.objectViewer
+    resource: projects/_/buckets/{{MANIFEST_BUCKET}}
+    condition:
+      title: OnlyDeparturesPrefix
+      description: "Restrict reads to objects under departures/ prefix"
+      expression: 'resource.name.startsWith("projects/_/buckets/{{MANIFEST_BUCKET}}/objects/departures/")'
+
+  # Decrypt the manifest.
+  - role: roles/cloudkms.cryptoKeyDecrypter
+    resource: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}/keyRings/iam-departures-gcp/cryptoKeys/iam-audit
+
+  # Verify Workspace users exist (read-only).
+  - role: roles/admin.directory.user.readonly
+    resource: '{{WORKSPACE_CUSTOMER_ID}}'
+
+  # Verify service accounts exist (read-only).
+  - role: roles/iam.serviceAccountViewer
+    resource: organizations/{{GCP_ORG_ID}}
+    condition:
+      title: OrgScopedSAViewer
+      description: "Read-only SA visibility limited to the operator's org"
+      expression: 'resource.type == "iam.googleapis.com/ServiceAccount"'
+
+  # Cloud Logging for parser traces.
+  - role: roles/logging.logWriter
+    resource: projects/{{SECURITY_PROJECT_ID}}

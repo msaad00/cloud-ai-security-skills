@@ -1,0 +1,228 @@
+# IAM Departures Remediation (GCP) — Deployment Manager template
+#
+# Equivalent to the AWS skill's CloudFormation stack. Deploys the full
+# pipeline: GCS manifest + audit buckets, Cloud KMS CMEK key, Firestore
+# (Native mode) collection for audit + checkpoint rows, two Cloud
+# Functions Gen 2 (parser + worker), one Cloud Workflow, one Eventarc
+# trigger on `google.cloud.storage.object.v1.finalized`, Pub/Sub DLQ +
+# alert topic, and four service accounts with IAM Conditions binding
+# destructive permissions to the operator's org/folder boundary.
+#
+# Substitute `{{...}}` placeholders before running `gcloud deployment-manager
+# deployments create`. Anything in {{angle braces}} is a deployment-time
+# input — these are NOT Jinja directives, they're operator-substituted
+# values.
+#
+# MITRE ATT&CK: T1078.004, T1098.001, T1531, T1552
+# NIST CSF 2.0: PR.AC-1, PR.AC-4, RS.MI-2
+# CIS GCP v3:   1.5, 1.7, 1.10
+# CIS Controls v8: 5.3, 6.2
+
+imports:
+  - path: workflow.yaml
+  - path: eventarc_trigger.yaml
+
+resources:
+  # ── Cloud KMS — manifest + audit CMEK ───────────────────────────
+  - name: iam-departures-gcp-kms-keyring
+    type: cloudkms.v1.projects.locations.keyRings
+    properties:
+      parent: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}
+      keyRingId: iam-departures-gcp
+
+  - name: iam-departures-gcp-kms-key
+    type: cloudkms.v1.projects.locations.keyRings.cryptoKeys
+    properties:
+      parent: $(ref.iam-departures-gcp-kms-keyring.name)
+      cryptoKeyId: iam-audit
+      purpose: ENCRYPT_DECRYPT
+      rotationPeriod: 2592000s  # 30 days
+      nextRotationTime: 2026-05-01T00:00:00Z
+
+  # ── GCS — manifest bucket (Eventarc source) ─────────────────────
+  - name: iam-departures-gcp-manifest
+    type: storage.v1.bucket
+    properties:
+      name: '{{MANIFEST_BUCKET}}'
+      location: '{{REGION}}'
+      storageClass: STANDARD
+      versioning:
+        enabled: true
+      iamConfiguration:
+        uniformBucketLevelAccess:
+          enabled: true
+        publicAccessPrevention: enforced
+      encryption:
+        defaultKmsKeyName: $(ref.iam-departures-gcp-kms-key.name)
+      lifecycle:
+        rule:
+          - action:
+              type: SetStorageClass
+              storageClass: NEARLINE
+            condition:
+              age: 90
+
+  # ── GCS — audit bucket ──────────────────────────────────────────
+  - name: iam-departures-gcp-audit
+    type: storage.v1.bucket
+    properties:
+      name: '{{AUDIT_BUCKET}}'
+      location: '{{REGION}}'
+      storageClass: STANDARD
+      versioning:
+        enabled: true
+      iamConfiguration:
+        uniformBucketLevelAccess:
+          enabled: true
+        publicAccessPrevention: enforced
+      encryption:
+        defaultKmsKeyName: $(ref.iam-departures-gcp-kms-key.name)
+      lifecycle:
+        rule:
+          - action:
+              type: SetStorageClass
+              storageClass: COLDLINE
+            condition:
+              age: 90
+              matchesPrefix: ['departures/audit/']
+
+  # ── Service Accounts ────────────────────────────────────────────
+  - name: iam-departures-gcp-parser-sa
+    type: iam.v1.serviceAccount
+    properties:
+      accountId: iam-departures-gcp-parser
+      displayName: iam-departures-gcp parser Cloud Function
+
+  - name: iam-departures-gcp-worker-sa
+    type: iam.v1.serviceAccount
+    properties:
+      accountId: iam-departures-gcp-worker
+      displayName: iam-departures-gcp worker Cloud Function
+
+  - name: iam-departures-gcp-workflow-sa
+    type: iam.v1.serviceAccount
+    properties:
+      accountId: iam-departures-gcp-workflow
+      displayName: iam-departures-gcp Cloud Workflow
+
+  - name: iam-departures-gcp-events-sa
+    type: iam.v1.serviceAccount
+    properties:
+      accountId: iam-departures-gcp-events
+      displayName: iam-departures-gcp Eventarc trigger
+
+  # ── Firestore — audit + checkpoint database ─────────────────────
+  - name: iam-departures-gcp-firestore
+    type: firestore.v1.projects.databases
+    properties:
+      parent: projects/{{SECURITY_PROJECT_ID}}
+      databaseId: iam-departures-gcp
+      type: FIRESTORE_NATIVE
+      locationId: '{{REGION}}'
+
+  # ── Cloud Functions Gen 2 (parser + worker) ─────────────────────
+  - name: iam-departures-gcp-parser
+    type: cloudfunctions.v2.projects.locations.functions
+    properties:
+      parent: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}
+      functionId: iam-departures-gcp-parser
+      buildConfig:
+        runtime: python311
+        entryPoint: handler
+        source:
+          storageSource:
+            bucket: '{{DEPLOY_BUCKET}}'
+            object: '{{PARSER_SOURCE_OBJECT}}'
+      serviceConfig:
+        availableMemory: 256Mi
+        timeoutSeconds: 300
+        serviceAccountEmail: $(ref.iam-departures-gcp-parser-sa.email)
+        environmentVariables:
+          IAM_DEPARTURES_GCP_GRACE_DAYS: '7'
+          IAM_DEPARTURES_GCP_AUDIT_FIRESTORE_COLLECTION: 'iam-departures-gcp-audit'
+          IAM_DEPARTURES_GCP_AUDIT_BUCKET: '{{AUDIT_BUCKET}}'
+          IAM_DEPARTURES_GCP_KMS_KEY: $(ref.iam-departures-gcp-kms-key.name)
+        ingressSettings: ALLOW_INTERNAL_ONLY
+        vpcConnectorEgressSettings: PRIVATE_RANGES_ONLY
+
+  - name: iam-departures-gcp-worker
+    type: cloudfunctions.v2.projects.locations.functions
+    properties:
+      parent: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}
+      functionId: iam-departures-gcp-worker
+      buildConfig:
+        runtime: python311
+        entryPoint: handler
+        source:
+          storageSource:
+            bucket: '{{DEPLOY_BUCKET}}'
+            object: '{{WORKER_SOURCE_OBJECT}}'
+      serviceConfig:
+        availableMemory: 512Mi
+        timeoutSeconds: 540
+        serviceAccountEmail: $(ref.iam-departures-gcp-worker-sa.email)
+        environmentVariables:
+          IAM_DEPARTURES_GCP_AUDIT_FIRESTORE_COLLECTION: 'iam-departures-gcp-audit'
+          IAM_DEPARTURES_GCP_AUDIT_BUCKET: '{{AUDIT_BUCKET}}'
+          IAM_DEPARTURES_GCP_KMS_KEY: $(ref.iam-departures-gcp-kms-key.name)
+        ingressSettings: ALLOW_INTERNAL_ONLY
+        vpcConnectorEgressSettings: PRIVATE_RANGES_ONLY
+        # NOTE: IAM_DEPARTURES_GCP_INCIDENT_ID + IAM_DEPARTURES_GCP_APPROVER are
+        # NOT pre-populated. Operators inject them per declared incident via
+        # `gcloud functions deploy --update-env-vars` or runtime configuration.
+
+  # ── Cloud Workflow — pipeline orchestrator ──────────────────────
+  - name: iam-departures-gcp-pipeline
+    type: workflows.v1.projects.locations.workflows
+    properties:
+      parent: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}
+      workflowId: iam-departures-gcp-pipeline
+      sourceContents: '{{WORKFLOW_DEFINITION}}'  # see workflow.yaml
+      serviceAccount: $(ref.iam-departures-gcp-workflow-sa.email)
+
+  # ── Eventarc trigger — GCS object.finalized → Workflow ──────────
+  - name: iam-departures-gcp-trigger
+    type: eventarc.v1.projects.locations.triggers
+    properties:
+      parent: projects/{{SECURITY_PROJECT_ID}}/locations/{{REGION}}
+      triggerId: iam-departures-gcp-manifest-trigger
+      eventFilters:
+        - attribute: type
+          value: google.cloud.storage.object.v1.finalized
+        - attribute: bucket
+          value: '{{MANIFEST_BUCKET}}'
+      serviceAccount: $(ref.iam-departures-gcp-events-sa.email)
+      destination:
+        workflow: $(ref.iam-departures-gcp-pipeline.name)
+
+  # ── Pub/Sub — DLQ + alert topic ─────────────────────────────────
+  - name: iam-departures-gcp-dlq
+    type: pubsub.v1.topic
+    properties:
+      topic: iam-departures-gcp-dlq
+      kmsKeyName: $(ref.iam-departures-gcp-kms-key.name)
+      messageRetentionDuration: 1209600s  # 14 days
+
+  - name: iam-departures-gcp-alerts
+    type: pubsub.v1.topic
+    properties:
+      topic: iam-departures-gcp-alerts
+      kmsKeyName: $(ref.iam-departures-gcp-kms-key.name)
+
+outputs:
+  - name: parserFunctionName
+    value: $(ref.iam-departures-gcp-parser.name)
+  - name: workerFunctionName
+    value: $(ref.iam-departures-gcp-worker.name)
+  - name: workflowName
+    value: $(ref.iam-departures-gcp-pipeline.name)
+  - name: manifestBucket
+    value: $(ref.iam-departures-gcp-manifest.name)
+  - name: auditBucket
+    value: $(ref.iam-departures-gcp-audit.name)
+  - name: kmsKey
+    value: $(ref.iam-departures-gcp-kms-key.name)
+  - name: dlqTopic
+    value: $(ref.iam-departures-gcp-dlq.name)
+  - name: alertsTopic
+    value: $(ref.iam-departures-gcp-alerts.name)

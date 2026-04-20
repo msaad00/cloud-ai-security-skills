@@ -73,6 +73,7 @@ is the row you can take to your auditor.
 | `k8s-security-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `model-serving-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `iam-departures-aws` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `iam-departures-gcp` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-aws-sg-revoke` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-azure-nsg-revoke` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-container-escape-k8s` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
@@ -88,7 +89,7 @@ is the row you can take to your auditor.
 | `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 
-_58 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+_59 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
 <!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar
