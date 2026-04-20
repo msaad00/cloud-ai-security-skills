@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in your values
+
+security_project_id   = "acme-sec"
+region                = "us-central1"
+gcp_org_id            = "111122223333"
+workspace_customer_id = "C01abcdef"
+manifest_bucket       = "acme-iam-departures-gcp-manifest"
+audit_bucket          = "acme-iam-departures-gcp-audit"
+deploy_bucket         = "acme-cf-source"
+parser_source_object  = "iam-departures-gcp/parser-source.zip"
+worker_source_object  = "iam-departures-gcp/worker-source.zip"
+grace_period_days     = 7
+alert_email           = "secops-oncall@acme.example"

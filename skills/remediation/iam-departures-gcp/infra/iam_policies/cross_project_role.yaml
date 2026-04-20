@@ -1,0 +1,76 @@
+# Cross-project / cross-folder IAM Condition policy.
+#
+# This file is the GCP analog of the AWS skill's
+# `cross_account_remediation_role.json`. AWS uses
+# `sts:AssumeRole` + `aws:PrincipalOrgID` to bound cross-account access;
+# GCP uses IAM Conditions on the worker SA's role bindings to bound
+# cross-project access.
+#
+# Authoritative protected-principal deny list — mirrored verbatim in
+# `src/cloud_function_worker/steps.py:PROTECTED_USER_PATTERNS` +
+# `PROTECTED_SA_PATTERNS`. The validator script
+# `scripts/validate_deny_list_parity.py` (planned, follow-up) will assert
+# the two lists do not drift.
+
+# ── Boundary condition (applies to every Allow binding) ────────────
+# Operators paste this expression into every binding's IAM Condition:
+#
+#   resource.name.startsWith("organizations/{{GCP_ORG_ID}}") ||
+#   resource.name.startsWith("folders/") ||
+#   (resource.name.startsWith("projects/") &&
+#    resource.name.split("/")[1] in {{ALLOWED_PROJECT_LIST}})
+#
+# This is the analog of `aws:PrincipalOrgID` — an attacker holding the
+# worker SA cannot assume access outside the operator's GCP org. Any
+# binding without this condition is a privilege-escalation surface.
+
+# ── Deny conditions (block protected principals at the API boundary) ─
+# Cloud IAM does not support a top-level "deny binding" the same way IAM
+# JSON does, but Org Policy + IAM Conditions together let us refuse.
+#
+# Operators add an Org Policy (services/iam.googleapis.com/setIamPolicy)
+# of `denyMembers` containing:
+#
+#   user:super-admin*@<workspace-customer-id>
+#   user:break-glass-*@<workspace-customer-id>
+#   user:emergency-*@<workspace-customer-id>
+#   serviceAccount:terraform-*@*.iam.gserviceaccount.com
+#   serviceAccount:cd-*@*.iam.gserviceaccount.com
+#   serviceAccount:org-admin-*@*.iam.gserviceaccount.com
+
+protectedPrincipals:
+  workspaceUsers:
+    - 'super-admin*'
+    - 'break-glass-*'
+    - 'emergency-*'
+  serviceAccounts:
+    - 'terraform-*'
+    - 'cd-*'
+    - 'org-admin-*'
+
+denyPolicy:
+  name: 'organizations/{{GCP_ORG_ID}}/policies/iam.denyMembers/iam-departures-gcp-protected'
+  spec:
+    rules:
+      - condition:
+          expression: |
+            resource.name.startsWith("organizations/{{GCP_ORG_ID}}/")
+        denyAction: DENY
+        deniedPrincipals:
+          - 'principalSet://goog/super-admin*@{{WORKSPACE_DOMAIN}}'
+          - 'principalSet://goog/break-glass-*@{{WORKSPACE_DOMAIN}}'
+          - 'principalSet://goog/emergency-*@{{WORKSPACE_DOMAIN}}'
+          - 'principalSet://goog/serviceAccount:terraform-*@*.iam.gserviceaccount.com'
+          - 'principalSet://goog/serviceAccount:cd-*@*.iam.gserviceaccount.com'
+          - 'principalSet://goog/serviceAccount:org-admin-*@*.iam.gserviceaccount.com'
+        deniedPermissions:
+          - 'iam.serviceAccounts.delete'
+          - 'iam.serviceAccounts.disable'
+          - 'admin.directory.users.delete'
+          - 'admin.directory.users.update'
+
+# ── Deployment notes ────────────────────────────────────────────────
+deploymentNotes:
+  applyVia: 'gcloud iam policies create iam-departures-gcp-protected --policy-file=cross_project_role.yaml --attachment-point=organizations/{{GCP_ORG_ID}}'
+  scope: 'Apply at organization level — every project + folder under the org inherits the deny.'
+  parityCheck: 'PROTECTED_USER_PATTERNS + PROTECTED_SA_PATTERNS in src/cloud_function_worker/steps.py MUST match this file. Drift fails CI.'

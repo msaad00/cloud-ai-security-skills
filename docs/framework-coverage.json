@@ -1244,6 +1244,36 @@
       ]
     },
     {
+      "path": "skills/remediation/iam-departures-gcp",
+      "layer": "remediation",
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "identities",
+        "workspace-users",
+        "service-accounts",
+        "iam-bindings",
+        "oauth-tokens",
+        "ssh-keys",
+        "audit",
+        "hr-events"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "nist-csf-2.0",
+        "soc2-tsc",
+        "cis-gcp-v3"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/remediation/remediate-okta-session-kill",
       "layer": "remediation",
       "providers": [

@@ -102,6 +102,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 | Skill | Scope |
 |---|---|
 | [`iam-departures-aws`](remediation/iam-departures-aws/) | AWS IAM cleanup for departed employees (per-cloud split for Azure/GCP/Snowflake/Databricks planned; library modules in `src/lambda_worker/clouds/`) |
+| [`iam-departures-gcp`](remediation/iam-departures-gcp/) | GCP counterpart to iam-departures-aws — 11-step teardown across Workspace/Cloud Identity, project + folder + org IAM, BigQuery + GCS IAM, OAuth tokens, SSH keys (project + per-instance metadata); Cloud Functions Gen 2 + Cloud Workflows + Eventarc on GCS, Firestore + KMS-encrypted GCS dual audit; grace-period gated, rehire-aware, protected-principal deny list, HITL-gated apply path |
 | [`remediate-okta-session-kill`](remediation/remediate-okta-session-kill/) | Okta containment — revoke sessions + OAuth tokens after detect-okta-mfa-fatigue or detect-credential-stuffing-okta; dual-audit, deny-list, declared-incident gate |
 | [`remediate-container-escape-k8s`](remediation/remediate-container-escape-k8s/) | Kubernetes containment — apply or re-verify a deny-all NetworkPolicy after detect-container-escape-k8s; protected-namespace deny-list, declared-incident gate, dual audit |
 | [`remediate-k8s-rbac-revoke`](remediation/remediate-k8s-rbac-revoke/) | Kubernetes RBAC revocation — delete or re-verify the offending RoleBinding / ClusterRoleBinding after detect-privilege-escalation-k8s rule r3-rbac-self-grant; protected-namespace + system:* deny-list, declared-incident gate, dual audit |

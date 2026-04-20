@@ -1,0 +1,86 @@
+# Cloud Workflow definition.
+#
+# Equivalent to the AWS skill's `infra/step_function.asl.json`. Three steps:
+#   1. Filter: only manifests under `departures/` with `.json` suffix.
+#   2. Parse: invoke the parser Cloud Function.
+#   3. Fan-out: call the worker Cloud Function once per validated entry.
+#   4. Summary: return aggregate result.
+#
+# Workflow execution failures are routed to the Pub/Sub DLQ via the
+# `try/except/raise` block; the alerts topic fires on workflow `FAILED`
+# via a Cloud Monitoring alert policy (see deployment_manager.yaml).
+
+main:
+  params: [event]
+  steps:
+    - filter_object_path:
+        switch:
+          - condition: ${not(text.match_regex(event.data.name, "^departures/.*\\.json$"))}
+            return:
+              status: NO_ACTION
+              reason: "object outside departures/*.json — ignored"
+    - parse_manifest:
+        try:
+          call: http.post
+          args:
+            url: ${"https://" + sys.get_env("REGION") + "-" + sys.get_env("PROJECT") + ".cloudfunctions.net/iam-departures-gcp-parser"}
+            auth:
+              type: OIDC
+            body:
+              bucket: ${event.data.bucket}
+              name: ${event.data.name}
+          result: parse_result
+        except:
+          as: parse_error
+          steps:
+            - publish_dlq:
+                call: googleapis.pubsub.v1.projects.topics.publish
+                args:
+                  topic: ${"projects/" + sys.get_env("PROJECT") + "/topics/iam-departures-gcp-dlq"}
+                  body:
+                    messages:
+                      - data: ${base64.encode(json.encode({"stage": "parse", "error": parse_error, "event": event}))}
+            - raise_parse_error:
+                raise: ${parse_error}
+    - check_validated:
+        switch:
+          - condition: ${len(parse_result.body.validated_entries) == 0}
+            return:
+              status: NO_ACTION
+              reason: "validation produced no actionable entries"
+              summary: ${parse_result.body.validation_summary}
+    - fan_out_workers:
+        parallel:
+          shared: [parse_result, fan_out_results]
+          for:
+            value: entry
+            in: ${parse_result.body.validated_entries}
+            steps:
+              - invoke_worker:
+                  try:
+                    call: http.post
+                    args:
+                      url: ${"https://" + sys.get_env("REGION") + "-" + sys.get_env("PROJECT") + ".cloudfunctions.net/iam-departures-gcp-worker"}
+                      auth:
+                        type: OIDC
+                      body:
+                        entry: ${entry}
+                        source_bucket: ${parse_result.body.source_bucket}
+                        source_object: ${parse_result.body.source_object}
+                    result: worker_result
+                  except:
+                    as: worker_error
+                    steps:
+                      - dlq_worker:
+                          call: googleapis.pubsub.v1.projects.topics.publish
+                          args:
+                            topic: ${"projects/" + sys.get_env("PROJECT") + "/topics/iam-departures-gcp-dlq"}
+                            body:
+                              messages:
+                                - data: ${base64.encode(json.encode({"stage": "worker", "error": worker_error, "entry": entry}))}
+        result: fan_out_results
+    - summary:
+        return:
+          status: COMPLETED
+          summary: ${parse_result.body.validation_summary}
+          remediations: ${fan_out_results}
