@@ -1,17 +1,10 @@
-"""Per-skill pytest conftest: isolate this skill's src/ from sibling skills."""
+"""Per-skill pytest conftest: delegate sibling-module isolation to the shared helper.
 
-from __future__ import annotations
+The repo-root `conftest.py` puts the repo on sys.path so this import resolves;
+`tests/_pytest_isolation.py` carries the actual sys.modules + sys.path scrub
+logic (formerly duplicated 14 lines per skill).
+"""
 
-import sys
-from pathlib import Path
+from tests._pytest_isolation import isolate_skill_src
 
-_SIBLING_MODULE_NAMES = ("ingest", "detect", "checks", "convert", "discover")
-
-_TESTS_DIR = Path(__file__).resolve().parent
-_SRC_DIR = _TESTS_DIR.parent / "src"
-
-for _name in _SIBLING_MODULE_NAMES:
-    sys.modules.pop(_name, None)
-
-sys.path[:] = [p for p in sys.path if not p.endswith("/src")]
-sys.path.insert(0, str(_SRC_DIR))
+isolate_skill_src(__file__)
