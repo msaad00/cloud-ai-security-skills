@@ -1,311 +1,170 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1020" viewBox="0 0 1400 1020" role="img" aria-labelledby="arch-title arch-desc">
-  <title id="arch-title">cloud-ai-security-skills — architecture: 7 skill layers and 4 runtime surfaces</title>
-  <desc id="arch-desc">Canonical architecture diagram. Top half shows the seven shipped skill layers and the data flow between them. External signals (cloud APIs, raw logs, identity, warehouses) enter through two intake layers (L1 Ingest with 15 ingesters plus 3 source adapters, L2 Discover with 4 inventory and evidence skills), pass through two analyze layers (L3 Detect with 12 deterministic MITRE ATT&amp;CK rules emitting OCSF Detection Finding 2004, L4 Evaluate with 7 benchmark families covering 82 checks), and exit through two act layers (L5 Remediate with 8 HITL dual-audited write paths, L6 View with 2 OCSF-to-render converters), with L7 Output sinks (S3, Snowflake, ClickHouse) persisting whatever the producer emitted. Bottom half shows the four runtime surfaces: MCP clients (Claude Code, Codex, Cursor, Windsurf, Cortex) connect over stdio to the repo MCP server which auto-discovers SKILL.md, audits every tool call, and enforces per-skill timeouts; CLI uses Unix pipes between skills; CI invokes skills and publishes SARIF; cloud runners (AWS S3+SQS, GCP GCS+PubSub, Azure Blob+EventGrid) drive the same skill bundles event-driven. All four surfaces share the same shipped skill bundle (54 today). Outputs include native JSONL, OCSF 1.8, bridge format, SARIF, Mermaid attack flow, AI BOM (CycloneDX), and audited write actions.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1120" viewBox="0 0 1400 1120" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">cloud-ai-security-skills canonical architecture</title>
+  <desc id="arch-desc">Canonical architecture diagram for cloud-ai-security-skills. The top section summarizes the seven skill layers from signals through persistence. The bottom section shows runtime surfaces: MCP through the repo MCP server, plus direct invocation from CLI, CI, and cloud runners. The diagram emphasizes one shared skill bundle and the repo's multi-format contract.</desc>
 
   <defs>
-    <linearGradient id="archBg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#060b17"/>
-      <stop offset="100%" stop-color="#0a1325"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06101f"/>
+      <stop offset="100%" stop-color="#0f1a33"/>
     </linearGradient>
-    <radialGradient id="archGlow" cx="50%" cy="20%" r="60%">
-      <stop offset="0%" stop-color="#1e3a8a" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0"/>
+    <radialGradient id="glowA" cx="20%" cy="12%" r="64%">
+      <stop offset="0%" stop-color="#2563eb" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="archTitle" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#93c5fd"/>
-      <stop offset="50%" stop-color="#a7f3d0"/>
-      <stop offset="100%" stop-color="#fbbf24"/>
-    </linearGradient>
-    <pattern id="archGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-opacity="0.25" stroke-width="1"/>
+    <radialGradient id="glowB" cx="82%" cy="24%" r="48%">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#1d2942" stroke-opacity="0.36" stroke-width="1"/>
     </pattern>
-    <marker id="archArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#020617" flood-opacity="0.42"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#7dd3fc"/>
     </marker>
-    <marker id="archArrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#2dd4bf"/>
     </marker>
-    <marker id="archArrowTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2dd4bf"/>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#c084fc"/>
     </marker>
   </defs>
 
-  <rect width="1400" height="1020" fill="url(#archBg)"/>
-  <rect width="1400" height="1020" fill="url(#archGrid)"/>
-  <rect width="1400" height="1020" fill="url(#archGlow)"/>
+  <rect width="1400" height="1120" fill="url(#bg)"/>
+  <rect width="1400" height="1120" fill="url(#grid)"/>
+  <rect width="1400" height="1120" fill="url(#glowA)"/>
+  <rect width="1400" height="1120" fill="url(#glowB)"/>
 
-  <g font-family="Inter, system-ui, sans-serif">
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="56" y="72" font-size="38" font-weight="900" fill="#f8fafc">Canonical architecture: layers on top, runtime surfaces below</text>
+    <text x="56" y="106" font-size="17" fill="#cbd5e1">OCSF where interop matters. Native where state, evidence, and audit matter more. One shared skill bundle across every surface.</text>
 
-    <!-- ========================================================== -->
-    <!-- TITLE BAND                                                  -->
-    <!-- ========================================================== -->
-    <text x="56" y="64" font-size="32" font-weight="900" fill="url(#archTitle)" letter-spacing="-0.5">
-      Architecture · seven skill layers · four runtime surfaces
-    </text>
-    <text x="56" y="92" font-size="14" fill="#94a3b8">
-      OCSF 1.8 where interop matters · native where state, evidence, and audit matter more · the same skill bundle runs unchanged from CLI, CI, MCP, or cloud runners
-    </text>
-
-    <!-- ========================================================== -->
-    <!-- SIGNALS COLUMN (leftmost)                                   -->
-    <!-- ========================================================== -->
-    <g transform="translate(56,140)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#94a3b8">SIGNALS</text>
-      <rect x="0" y="20" width="200" height="384" rx="14" fill="#0f172a" stroke="#475569" stroke-width="1.5"/>
-      <text x="100" y="60" text-anchor="middle" font-size="14" font-weight="800" fill="#f1f5f9">Cloud APIs</text>
-      <text x="100" y="84" text-anchor="middle" font-size="12" fill="#cbd5e1">AWS · GCP · Azure</text>
-      <line x1="20" y1="106" x2="180" y2="106" stroke="#1e293b" stroke-width="1"/>
-      <text x="100" y="138" text-anchor="middle" font-size="14" font-weight="800" fill="#f1f5f9">Raw logs</text>
-      <text x="100" y="162" text-anchor="middle" font-size="12" fill="#cbd5e1">CloudTrail · K8s audit</text>
-      <text x="100" y="180" text-anchor="middle" font-size="12" fill="#cbd5e1">VPC / NSG flow logs</text>
-      <text x="100" y="198" text-anchor="middle" font-size="12" fill="#cbd5e1">MCP proxy</text>
-      <line x1="20" y1="220" x2="180" y2="220" stroke="#1e293b" stroke-width="1"/>
-      <text x="100" y="252" text-anchor="middle" font-size="14" font-weight="800" fill="#f1f5f9">Identity</text>
-      <text x="100" y="276" text-anchor="middle" font-size="12" fill="#cbd5e1">Okta · Entra · Workspace</text>
-      <line x1="20" y1="298" x2="180" y2="298" stroke="#1e293b" stroke-width="1"/>
-      <text x="100" y="330" text-anchor="middle" font-size="14" font-weight="800" fill="#f1f5f9">Warehouses</text>
-      <text x="100" y="354" text-anchor="middle" font-size="12" fill="#cbd5e1">Snowflake · Databricks</text>
-      <text x="100" y="372" text-anchor="middle" font-size="12" fill="#cbd5e1">S3 Select · ClickHouse</text>
+    <g filter="url(#shadow)">
+      <rect x="56" y="140" width="1288" height="478" rx="32" fill="#0b1628" stroke="#26344f"/>
+      <rect x="56" y="664" width="1288" height="392" rx="32" fill="#0b1628" stroke="#26344f"/>
     </g>
 
-    <!-- Arrow signals -> intake band -->
-    <path d="M260,332 L296,332" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
+    <text x="88" y="184" font-size="14" font-weight="800" fill="#93c5fd" letter-spacing="1.7">LAYER MODEL</text>
+    <text x="88" y="214" font-size="30" font-weight="900" fill="#f8fafc">Signal to action across seven shipped layers</text>
 
-    <!-- ========================================================== -->
-    <!-- INTAKE BAND (L1 + L2)                                       -->
-    <!-- ========================================================== -->
-    <g transform="translate(296,140)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#60a5fa">① INTAKE</text>
-      <text x="0" y="18" font-size="11" fill="#64748b">read-only · normalize</text>
-      <!-- L1 Ingest -->
-      <rect x="0" y="36" width="240" height="170" rx="14" fill="#0f1d36" stroke="#3b82f6" stroke-width="1.5"/>
-      <text x="20" y="64" font-size="11" font-weight="800" letter-spacing="1.4" fill="#93c5fd">L1 · INGEST</text>
-      <text x="20" y="92" font-size="22" font-weight="900" fill="#dbeafe">15 + 3</text>
-      <text x="80" y="92" font-size="13" fill="#94a3b8">ingest-* + source-*</text>
-      <text x="20" y="118" font-size="11" fill="#cbd5e1">CloudTrail · GuardDuty · SecurityHub</text>
-      <text x="20" y="134" font-size="11" fill="#cbd5e1">GCP audit · GCP SCC · GCP VPC flow</text>
-      <text x="20" y="150" font-size="11" fill="#cbd5e1">Azure activity · Defender · NSG flow</text>
-      <text x="20" y="166" font-size="11" fill="#cbd5e1">K8s audit · Okta · Entra · Workspace</text>
-      <text x="20" y="186" font-size="11" fill="#cbd5e1">MCP proxy · Snowflake / Databricks / S3</text>
-
-      <!-- L2 Discover -->
-      <rect x="0" y="222" width="240" height="142" rx="14" fill="#0f1d36" stroke="#3b82f6" stroke-width="1.5"/>
-      <text x="20" y="250" font-size="11" font-weight="800" letter-spacing="1.4" fill="#93c5fd">L2 · DISCOVER</text>
-      <text x="20" y="278" font-size="22" font-weight="900" fill="#dbeafe">4</text>
-      <text x="48" y="278" font-size="13" fill="#94a3b8">inventory · graph · BOM · evidence</text>
-      <text x="20" y="304" font-size="11" fill="#cbd5e1">discover-environment</text>
-      <text x="20" y="320" font-size="11" fill="#cbd5e1">discover-ai-bom (CycloneDX ML-BOM)</text>
-      <text x="20" y="336" font-size="11" fill="#cbd5e1">discover-control-evidence</text>
-      <text x="20" y="352" font-size="11" fill="#cbd5e1">discover-cloud-control-evidence</text>
+    <g transform="translate(88,244)">
+      <rect x="0" y="0" width="150" height="34" rx="17" fill="#111827" stroke="#475569"/>
+      <text x="75" y="22" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="800" letter-spacing="1.5">SIGNALS</text>
+      <rect x="254" y="0" width="136" height="34" rx="17" fill="#102345" stroke="#60a5fa"/>
+      <text x="322" y="22" text-anchor="middle" fill="#dbeafe" font-size="12" font-weight="800" letter-spacing="1.5">INTAKE</text>
+      <rect x="538" y="0" width="150" height="34" rx="17" fill="#10342e" stroke="#2dd4bf"/>
+      <text x="613" y="22" text-anchor="middle" fill="#d1fae5" font-size="12" font-weight="800" letter-spacing="1.5">ANALYZE</text>
+      <rect x="832" y="0" width="110" height="34" rx="17" fill="#3c2407" stroke="#f59e0b"/>
+      <text x="887" y="22" text-anchor="middle" fill="#fde68a" font-size="12" font-weight="800" letter-spacing="1.5">ACT</text>
+      <rect x="1096" y="0" width="128" height="34" rx="17" fill="#0a3130" stroke="#2dd4bf"/>
+      <text x="1160" y="22" text-anchor="middle" fill="#ccfbf1" font-size="12" font-weight="800" letter-spacing="1.5">PERSIST</text>
     </g>
 
-    <!-- Arrows intake -> analyze (one for each layer pair) -->
-    <path d="M540,234 L580,234" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-    <path d="M540,308 L580,308" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-    <path d="M540,418 L580,418" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-
-    <!-- ========================================================== -->
-    <!-- ANALYZE BAND (L3 + L4)                                      -->
-    <!-- ========================================================== -->
-    <g transform="translate(580,140)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#34d399">② ANALYZE</text>
-      <text x="0" y="18" font-size="11" fill="#64748b">deterministic · MITRE-tagged</text>
-
-      <!-- L3 Detect -->
-      <rect x="0" y="36" width="240" height="170" rx="14" fill="#064e3b" stroke="#34d399" stroke-width="1.5"/>
-      <text x="20" y="64" font-size="11" font-weight="800" letter-spacing="1.4" fill="#86efac">L3 · DETECT</text>
-      <text x="20" y="92" font-size="22" font-weight="900" fill="#d1fae5">12</text>
-      <text x="56" y="92" font-size="13" fill="#94a3b8">OCSF Detection Finding 2004</text>
-      <text x="20" y="118" font-size="11" fill="#bbf7d0">okta-mfa-fatigue · okta-credential-stuffing</text>
-      <text x="20" y="134" font-size="11" fill="#bbf7d0">entra-credential-add · entra-role-grant</text>
-      <text x="20" y="150" font-size="11" fill="#bbf7d0">workspace-suspicious-login</text>
-      <text x="20" y="166" font-size="11" fill="#bbf7d0">k8s container-escape · privesc · secret-read</text>
-      <text x="20" y="186" font-size="11" fill="#bbf7d0">lateral-movement · mcp-tool-drift · prompt-inj</text>
-      <text x="20" y="202" font-size="11" fill="#bbf7d0">aws-open-security-group (T1190)</text>
-
-      <!-- L4 Evaluate -->
-      <rect x="0" y="222" width="240" height="142" rx="14" fill="#064e3b" stroke="#34d399" stroke-width="1.5"/>
-      <text x="20" y="250" font-size="11" font-weight="800" letter-spacing="1.4" fill="#86efac">L4 · EVALUATE</text>
-      <text x="20" y="278" font-size="22" font-weight="900" fill="#d1fae5">7</text>
-      <text x="48" y="278" font-size="13" fill="#94a3b8">82 benchmark checks · CIS · OWASP</text>
-      <text x="20" y="304" font-size="11" fill="#bbf7d0">cspm-aws / gcp / azure CIS Foundations</text>
-      <text x="20" y="320" font-size="11" fill="#bbf7d0">k8s-security-benchmark</text>
-      <text x="20" y="336" font-size="11" fill="#bbf7d0">container-security · gpu-cluster-security</text>
-      <text x="20" y="352" font-size="11" fill="#bbf7d0">model-serving-security (OWASP LLM)</text>
+    <g filter="url(#shadow)">
+      <rect x="88" y="302" width="176" height="232" rx="26" fill="#0f172a" stroke="#334155"/>
+      <rect x="326" y="302" width="214" height="102" rx="22" fill="#112244" stroke="#60a5fa"/>
+      <rect x="326" y="432" width="214" height="102" rx="22" fill="#112244" stroke="#60a5fa"/>
+      <rect x="588" y="302" width="214" height="102" rx="22" fill="#10342e" stroke="#2dd4bf"/>
+      <rect x="588" y="432" width="214" height="102" rx="22" fill="#10342e" stroke="#2dd4bf"/>
+      <rect x="850" y="302" width="214" height="102" rx="22" fill="#3c2407" stroke="#f59e0b"/>
+      <rect x="850" y="432" width="214" height="102" rx="22" fill="#3c2407" stroke="#f59e0b"/>
+      <rect x="1112" y="302" width="192" height="232" rx="26" fill="#0a3130" stroke="#2dd4bf"/>
     </g>
 
-    <!-- Arrows analyze -> act -->
-    <path d="M824,234 L864,234" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-    <path d="M824,308 L864,308" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#archArrowAmber)"/>
-    <path d="M824,418 L864,418" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#archArrowAmber)"/>
+    <text x="116" y="346" font-size="26" font-weight="800" fill="#f8fafc">Signals</text>
+    <text x="116" y="388" font-size="16" fill="#cbd5e1">Cloud APIs</text>
+    <text x="116" y="418" font-size="16" fill="#cbd5e1">Raw logs</text>
+    <text x="116" y="448" font-size="16" fill="#cbd5e1">Identity</text>
+    <text x="116" y="478" font-size="16" fill="#cbd5e1">Warehouses</text>
+    <text x="116" y="516" font-size="14" fill="#94a3b8">AWS, GCP, Azure, K8s, Okta,</text>
+    <text x="116" y="538" font-size="14" fill="#94a3b8">Entra, Workspace, Snowflake,</text>
+    <text x="116" y="560" font-size="14" fill="#94a3b8">Databricks, ClickHouse, MCP.</text>
 
-    <!-- ========================================================== -->
-    <!-- ACT BAND (L5 + L6)                                          -->
-    <!-- ========================================================== -->
-    <g transform="translate(864,140)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#fbbf24">③ ACT</text>
-      <text x="0" y="18" font-size="11" fill="#64748b">HITL · dual-audit · dry-run default</text>
+    <text x="354" y="336" font-size="18" font-weight="800" fill="#dbeafe">L1 Ingest</text>
+    <text x="354" y="372" font-size="46" font-weight="900" fill="#ffffff">15 + 3</text>
+    <text x="354" y="392" font-size="16" fill="#bfdbfe">normalize raw sources into OCSF</text>
+    <text x="354" y="412" font-size="16" fill="#bfdbfe">or repo-native events</text>
 
-      <!-- L5 Remediate -->
-      <rect x="0" y="36" width="240" height="258" rx="14" fill="#78350f" stroke="#fbbf24" stroke-width="1.5"/>
-      <text x="20" y="64" font-size="11" font-weight="800" letter-spacing="1.4" fill="#fcd34d">L5 · REMEDIATE</text>
-      <text x="20" y="92" font-size="22" font-weight="900" fill="#fef3c7">8</text>
-      <text x="48" y="92" font-size="13" fill="#94a3b8">audited write paths</text>
-      <text x="20" y="116" font-size="11" fill="#fef3c7">iam-departures-aws</text>
-      <text x="20" y="134" font-size="11" fill="#fef3c7">remediate-aws-sg-revoke</text>
-      <text x="20" y="152" font-size="11" fill="#fef3c7">remediate-okta-session-kill</text>
-      <text x="20" y="170" font-size="11" fill="#fef3c7">remediate-workspace-session-kill</text>
-      <text x="20" y="188" font-size="11" fill="#fef3c7">remediate-container-escape-k8s</text>
-      <text x="20" y="206" font-size="11" fill="#fef3c7">remediate-k8s-rbac-revoke</text>
-      <text x="20" y="224" font-size="11" fill="#fef3c7">remediate-mcp-tool-quarantine</text>
-      <text x="20" y="242" font-size="11" fill="#fef3c7">remediate-entra-credential-revoke</text>
-      <text x="20" y="260" font-size="11" fill="#94a3b8">  HITL · dry-run · dual audit</text>
+    <text x="354" y="466" font-size="18" font-weight="800" fill="#dbeafe">L2 Discover</text>
+    <text x="354" y="502" font-size="46" font-weight="900" fill="#ffffff">4</text>
+    <text x="354" y="522" font-size="16" fill="#bfdbfe">inventory, graph, AI BOM,</text>
+    <text x="354" y="542" font-size="16" fill="#bfdbfe">and evidence collection</text>
 
-      <!-- L6 View -->
-      <rect x="0" y="222" width="240" height="142" rx="14" fill="#78350f" stroke="#fbbf24" stroke-width="1.5"/>
-      <text x="20" y="250" font-size="11" font-weight="800" letter-spacing="1.4" fill="#fcd34d">L6 · VIEW</text>
-      <text x="20" y="278" font-size="22" font-weight="900" fill="#fef3c7">2</text>
-      <text x="48" y="278" font-size="13" fill="#94a3b8">OCSF input → render</text>
-      <text x="20" y="304" font-size="11" fill="#fef3c7">convert-ocsf-to-sarif</text>
-      <text x="20" y="320" font-size="11" fill="#94a3b8">  → GitHub Code Scanning / Defender</text>
-      <text x="20" y="336" font-size="11" fill="#fef3c7">convert-ocsf-to-mermaid-attack-flow</text>
-      <text x="20" y="352" font-size="11" fill="#94a3b8">  → human review</text>
+    <text x="616" y="336" font-size="18" font-weight="800" fill="#d1fae5">L3 Detect</text>
+    <text x="616" y="372" font-size="46" font-weight="900" fill="#ffffff">12</text>
+    <text x="616" y="392" font-size="16" fill="#99f6e4">deterministic MITRE-tagged</text>
+    <text x="616" y="412" font-size="16" fill="#99f6e4">OCSF finding producers</text>
+
+    <text x="616" y="466" font-size="18" font-weight="800" fill="#d1fae5">L4 Evaluate</text>
+    <text x="616" y="502" font-size="46" font-weight="900" fill="#ffffff">7</text>
+    <text x="616" y="522" font-size="16" fill="#99f6e4">82 benchmark checks across CIS,</text>
+    <text x="616" y="542" font-size="16" fill="#99f6e4">container, K8s, and AI surfaces</text>
+
+    <text x="878" y="336" font-size="18" font-weight="800" fill="#fde68a">L5 Remediate</text>
+    <text x="878" y="372" font-size="46" font-weight="900" fill="#ffffff">8</text>
+    <text x="878" y="392" font-size="16" fill="#fcd34d">HITL-gated, dry-run-first,</text>
+    <text x="878" y="412" font-size="16" fill="#fcd34d">dual-audited write paths</text>
+
+    <text x="878" y="466" font-size="18" font-weight="800" fill="#fde68a">L6 View</text>
+    <text x="878" y="502" font-size="46" font-weight="900" fill="#ffffff">2</text>
+    <text x="878" y="522" font-size="16" fill="#fcd34d">render OCSF into SARIF or</text>
+    <text x="878" y="542" font-size="16" fill="#fcd34d">Mermaid for human review</text>
+
+    <text x="1140" y="346" font-size="20" font-weight="800" fill="#ccfbf1">L7 Output</text>
+    <text x="1140" y="382" font-size="46" font-weight="900" fill="#ffffff">3</text>
+    <text x="1140" y="404" font-size="16" fill="#99f6e4">append-only sinks</text>
+    <text x="1140" y="450" font-size="18" fill="#ecfeff">S3</text>
+    <text x="1140" y="482" font-size="18" fill="#ecfeff">Snowflake</text>
+    <text x="1140" y="514" font-size="18" fill="#ecfeff">ClickHouse</text>
+
+    <path d="M264 418H302" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
+    <path d="M540 352H566" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
+    <path d="M540 482H566" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
+    <path d="M802 352H828" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
+    <path d="M802 482H828" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
+    <path d="M1064 418H1090" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
+
+    <rect x="88" y="566" width="1216" height="28" rx="14" fill="#091120" stroke="#334155"/>
+    <text x="108" y="584" font-size="13" fill="#cbd5e1">Wire contract: OCSF 1.8 on ingest and detect, native on discovery and remediation, rendered output on view, pass-through on sinks.</text>
+
+    <text x="88" y="708" font-size="14" font-weight="800" fill="#c4b5fd" letter-spacing="1.7">RUNTIME SURFACES</text>
+    <text x="88" y="738" font-size="30" font-weight="900" fill="#f8fafc">One shared skill bundle, four invocation paths</text>
+
+    <g filter="url(#shadow)">
+      <rect x="88" y="774" width="246" height="184" rx="26" fill="#2c1a57" stroke="#a78bfa"/>
+      <rect x="394" y="774" width="280" height="184" rx="26" fill="#4a114f" stroke="#e879f9"/>
+      <rect x="734" y="744" width="376" height="244" rx="30" fill="#0b4a44" stroke="#2dd4bf"/>
+      <rect x="1170" y="774" width="134" height="184" rx="26" fill="#3c2407" stroke="#f59e0b"/>
     </g>
 
-    <!-- Arrows act -> output -->
-    <path d="M1108,234 L1144,234" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#archArrowTeal)"/>
-    <path d="M1108,308 L1144,308" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#archArrowTeal)"/>
+    <text x="118" y="826" font-size="24" font-weight="800" fill="#f5f3ff">MCP clients</text>
+    <text x="118" y="862" font-size="18" fill="#ddd6fe">Claude, Codex, Cursor, Windsurf,</text>
+    <text x="118" y="888" font-size="18" fill="#ddd6fe">Zed, Continue, and other IDE agents</text>
 
-    <!-- ========================================================== -->
-    <!-- OUTPUT COLUMN (L7)                                          -->
-    <!-- ========================================================== -->
-    <g transform="translate(1144,140)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#2dd4bf">④ PERSIST</text>
-      <text x="0" y="18" font-size="11" fill="#64748b">append-only sinks</text>
-      <rect x="0" y="36" width="200" height="328" rx="14" fill="#0b3d3b" stroke="#2dd4bf" stroke-width="1.5"/>
-      <text x="20" y="64" font-size="11" font-weight="800" letter-spacing="1.4" fill="#5eead4">L7 · OUTPUT</text>
-      <text x="20" y="92" font-size="22" font-weight="900" fill="#ccfbf1">3</text>
-      <text x="48" y="92" font-size="13" fill="#94a3b8">JSONL sinks</text>
-      <text x="20" y="124" font-size="12" font-weight="800" fill="#ccfbf1">sink-s3-jsonl</text>
-      <text x="20" y="142" font-size="11" fill="#94a3b8">immutable · KMS · multipart</text>
-      <text x="20" y="172" font-size="12" font-weight="800" fill="#ccfbf1">sink-snowflake-jsonl</text>
-      <text x="20" y="190" font-size="11" fill="#94a3b8">stage → COPY INTO</text>
-      <text x="20" y="220" font-size="12" font-weight="800" fill="#ccfbf1">sink-clickhouse-jsonl</text>
-      <text x="20" y="238" font-size="11" fill="#94a3b8">batched insert · retries</text>
-      <line x1="20" y1="262" x2="180" y2="262" stroke="#1e293b" stroke-width="1"/>
-      <text x="20" y="284" font-size="11" font-weight="800" fill="#5eead4">Audit destinations:</text>
-      <text x="20" y="300" font-size="11" fill="#94a3b8">DynamoDB (fast lookup)</text>
-      <text x="20" y="316" font-size="11" fill="#94a3b8">S3 + KMS (immutable evidence)</text>
-      <text x="20" y="332" font-size="11" fill="#94a3b8">SIEM via SARIF / OCSF</text>
-      <text x="20" y="348" font-size="11" fill="#94a3b8">ingest-back for re-verify</text>
-    </g>
+    <text x="426" y="826" font-size="24" font-weight="800" fill="#fae8ff">Repo MCP server</text>
+    <text x="426" y="862" font-size="18" fill="#f5d0fe">auto-discovers `SKILL.md`</text>
+    <text x="426" y="888" font-size="18" fill="#f5d0fe">audits tool calls and timeouts</text>
+    <text x="426" y="914" font-size="18" fill="#f5d0fe">applies allowlist policy</text>
 
-    <!-- Layer footnote band -->
-    <g transform="translate(56,564)">
-      <rect x="0" y="0" width="1288" height="34" rx="10" fill="#12112e" stroke="#475569" stroke-width="1"/>
-      <text x="20" y="22" font-size="12" fill="#cbd5e1">
-        Wire format by layer: <tspan font-weight="800" fill="#5eead4">OCSF 1.8</tspan> on Ingest + Detect ·
-        <tspan font-weight="800" fill="#fbbf24">native</tspan> on Discover (CycloneDX) and Remediate (state changes) ·
-        <tspan font-weight="800" fill="#a78bfa">SARIF / Mermaid</tspan> on View ·
-        <tspan font-weight="800" fill="#22d3ee">pass-through</tspan> on Output ·
-        opt-in OCSF Compliance Finding 2003 on Evaluate
-      </text>
-    </g>
+    <text x="770" y="820" font-size="30" font-weight="900" fill="#ecfeff">Shared skill bundle</text>
+    <text x="770" y="902" font-size="84" font-weight="900" fill="#ffffff">54</text>
+    <text x="882" y="902" font-size="40" font-weight="800" fill="#ffffff">skills</text>
+    <text x="770" y="946" font-size="22" fill="#99f6e4">same audit behavior, same HITL gates,</text>
+    <text x="770" y="974" font-size="22" fill="#99f6e4">same dry-run and schema contracts</text>
 
-    <!-- ========================================================== -->
-    <!-- DIVIDER + RUNTIME INTEGRATION BAND                          -->
-    <!-- ========================================================== -->
-    <line x1="56" y1="624" x2="1344" y2="624" stroke="#1e293b" stroke-width="1" stroke-dasharray="6 6"/>
+    <text x="1198" y="826" font-size="24" font-weight="800" fill="#fef3c7">Outputs</text>
+    <text x="1198" y="862" font-size="18" fill="#fde68a">native</text>
+    <text x="1198" y="892" font-size="18" fill="#fde68a">OCSF</text>
+    <text x="1198" y="922" font-size="18" fill="#fde68a">SARIF</text>
+    <text x="1198" y="952" font-size="18" fill="#fde68a">Mermaid</text>
 
-    <text x="56" y="666" font-size="22" font-weight="900" fill="#f1f5f9">
-      Runtime surfaces · same skill bundle, four invocation paths
-    </text>
-    <text x="56" y="688" font-size="13" fill="#94a3b8">
-      Every shipped skill is a self-contained `SKILL.md + src/ + tests/` bundle. No surface re-implements the skill — they all invoke the same code.
-    </text>
+    <path d="M334 854H374" stroke="#c084fc" stroke-width="4" fill="none" marker-end="url(#arrowPurple)"/>
+    <path d="M674 854H708" stroke="#c084fc" stroke-width="4" fill="none" marker-end="url(#arrowPurple)"/>
+    <path d="M1110 884H1144" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
 
-    <!-- MCP clients column -->
-    <g transform="translate(56,720)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#a78bfa">MCP CLIENTS</text>
-      <rect x="0" y="14" width="240" height="240" rx="14" fill="#1e1b4b" stroke="#a78bfa" stroke-width="1.5"/>
-      <text x="120" y="44" text-anchor="middle" font-size="13" font-weight="800" fill="#ddd6fe">over stdio</text>
-      <g font-size="13" fill="#ede9fe">
-        <text x="20" y="78">▸ Claude Code (CLI)</text>
-        <text x="20" y="104">▸ Claude Desktop</text>
-        <text x="20" y="130">▸ Codex (CLI + IDE)</text>
-        <text x="20" y="156">▸ Cursor</text>
-        <text x="20" y="182">▸ Windsurf</text>
-        <text x="20" y="208">▸ Cortex Code CLI</text>
-        <text x="20" y="234">▸ Zed · Continue · Cody</text>
-      </g>
-    </g>
-
-    <!-- Arrow MCP clients -> MCP server -->
-    <path d="M300,840 L424,840" stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-    <text x="362" y="832" text-anchor="middle" font-size="11" font-weight="700" fill="#c4b5fd">stdio</text>
-
-    <!-- MCP server box -->
-    <g transform="translate(424,720)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#e879f9">MCP SERVER</text>
-      <rect x="0" y="14" width="260" height="240" rx="14" fill="#4a044e" stroke="#e879f9" stroke-width="1.5"/>
-      <text x="130" y="44" text-anchor="middle" font-size="14" font-weight="800" fill="#fae8ff">Repo MCP server</text>
-      <text x="130" y="62" text-anchor="middle" font-size="11" fill="#f5d0fe">mcp-server/src/server.py</text>
-      <line x1="20" y1="80" x2="240" y2="80" stroke="#86198f" stroke-width="1"/>
-      <g font-size="12" fill="#fae8ff">
-        <text x="20" y="106">▸ auto-discovers SKILL.md</text>
-        <text x="20" y="132">▸ audited tool calls</text>
-        <text x="20" y="158">▸ per-skill timeout (mcp_timeout_seconds)</text>
-        <text x="20" y="184">▸ allowlist via</text>
-        <text x="20" y="200" font-size="11" fill="#f5d0fe">  CLOUD_SECURITY_MCP_ALLOWED_SKILLS</text>
-        <text x="20" y="226">▸ stdin/stdout JSONL ⇆ skill</text>
-      </g>
-    </g>
-
-    <!-- Arrow MCP server -> bundle -->
-    <path d="M688,840 L800,840" stroke="#e879f9" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-    <text x="744" y="832" text-anchor="middle" font-size="11" font-weight="700" fill="#f0abfc">invoke</text>
-
-    <!-- Direct surfaces column (top-right) -->
-    <g transform="translate(1056,720)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#22d3ee">DIRECT SURFACES</text>
-      <rect x="0" y="14" width="288" height="240" rx="14" fill="#083344" stroke="#22d3ee" stroke-width="1.5"/>
-      <text x="20" y="44" font-size="14" font-weight="800" fill="#cffafe">CLI · Unix pipes</text>
-      <text x="20" y="62" font-size="11" fill="#a5f3fc">stdin/stdout JSONL bundles compose into one-liners</text>
-      <line x1="20" y1="84" x2="268" y2="84" stroke="#0e7490" stroke-width="1"/>
-      <text x="20" y="108" font-size="14" font-weight="800" fill="#cffafe">CI · GitHub Actions</text>
-      <text x="20" y="126" font-size="11" fill="#a5f3fc">SARIF → Code Scanning · CodeQL-like surface</text>
-      <line x1="20" y1="148" x2="268" y2="148" stroke="#0e7490" stroke-width="1"/>
-      <text x="20" y="172" font-size="14" font-weight="800" fill="#cffafe">Cloud runners (event-driven)</text>
-      <text x="20" y="190" font-size="11" fill="#a5f3fc">aws-s3-sqs-detect</text>
-      <text x="20" y="206" font-size="11" fill="#a5f3fc">gcp-gcs-pubsub-detect</text>
-      <text x="20" y="222" font-size="11" fill="#a5f3fc">azure-blob-eventgrid-detect</text>
-      <text x="20" y="240" font-size="11" fill="#94a3b8">runners/ — see DEPLOYMENT_VERIFICATION.md</text>
-    </g>
-
-    <!-- Arrow direct surfaces -> bundle (curve in from the right) -->
-    <path d="M1056,840 C 1000,840 980,840 960,840" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#archArrow)"/>
-
-    <!-- Shared bundle (centered below MCP arrow + direct arrow) -->
-    <g transform="translate(800,720)">
-      <text x="0" y="0" font-size="11" font-weight="800" letter-spacing="1.5" fill="#2dd4bf">SHARED BUNDLE</text>
-      <rect x="0" y="14" width="240" height="160" rx="20" fill="#022c22" stroke="#2dd4bf" stroke-width="2"/>
-      <text x="120" y="56" text-anchor="middle" font-size="22" font-weight="900" fill="#ccfbf1">54 skills</text>
-      <text x="120" y="78" text-anchor="middle" font-size="13" fill="#5eead4">SKILL.md · src/ · tests/</text>
-      <line x1="20" y1="100" x2="220" y2="100" stroke="#0d9488" stroke-width="1"/>
-      <text x="120" y="124" text-anchor="middle" font-size="12" font-weight="800" fill="#ccfbf1">No surface re-implements</text>
-      <text x="120" y="140" text-anchor="middle" font-size="12" font-weight="800" fill="#ccfbf1">— all paths invoke this code</text>
-      <text x="120" y="160" text-anchor="middle" font-size="11" fill="#94a3b8">audit + HITL identical across surfaces</text>
-
-      <!-- outputs flow out the bottom -->
-      <text x="0" y="206" font-size="11" font-weight="800" letter-spacing="1.5" fill="#fbbf24">OUTPUTS</text>
-      <rect x="0" y="220" width="240" height="34" rx="10" fill="#422006" stroke="#fbbf24" stroke-width="1.5"/>
-      <text x="120" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#fef3c7">native · OCSF 1.8 · SARIF · Mermaid · BOM · audit</text>
-    </g>
-
-    <!-- Footer attribution -->
-    <text x="56" y="998" font-size="11" fill="#475569">
-      docs/images/architecture.svg — canonical 7-layer flow + 4-surface runtime · regenerate via the per-layer SVGs in #248 ·
-      <tspan fill="#64748b">cloud-ai-security-skills · 2026-04</tspan>
-    </text>
+    <rect x="88" y="990" width="1216" height="32" rx="16" fill="#091120" stroke="#334155"/>
+    <text x="108" y="1010" font-size="13" fill="#cbd5e1">CLI, CI, and cloud runners invoke the same bundle directly; MCP adds transport and audited tool mediation, not a second implementation.</text>
   </g>
 </svg>
