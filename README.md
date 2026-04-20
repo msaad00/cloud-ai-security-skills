@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 51 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 52 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,7 +16,7 @@
 
 ## What this repo gives you
 
-**51 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus six guarded write paths for offboarding, account containment, Kubernetes workload quarantine, Kubernetes RBAC revocation, MCP tool quarantine, and Entra service-principal containment. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**52 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus seven guarded write paths spanning AWS IAM, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
@@ -24,12 +24,12 @@
 | **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
 | **Detect** | 11 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
-| **Remediate** | 6 | guarded write paths (IAM departures, Okta session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
+| **Remediate** | 7 | guarded write paths (IAM departures, Okta session kill, Workspace session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 51 shipped skills.**
+**Total: 52 shipped skills.**
 
 <details>
 <summary><b>Why different layers use different formats</b> — OCSF where interop matters, native where state, evidence, and audit matter more</summary>

@@ -75,13 +75,14 @@ is the row you can take to your auditor.
 | `remediate-k8s-rbac-revoke` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-mcp-tool-quarantine` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-okta-session-kill` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `remediate-workspace-session-kill` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `convert-ocsf-to-mermaid-attack-flow` | view | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
 | `convert-ocsf-to-sarif` | view | ✅ | ✅ | ✅ | ✅ deterministic | n/a | ✅ |
 | `sink-clickhouse-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 
-_51 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+_52 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
 <!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar

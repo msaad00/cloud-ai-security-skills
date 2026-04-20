@@ -4,14 +4,14 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **51**
+- Total shipped skills in registry: **52**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
 | OCSF | 1.8.0 | **37** | — |
-| MITRE ATT&CK | v14 | **28** | 100% mapped coverage |
+| MITRE ATT&CK | v14 | **29** | 100% mapped coverage |
 | MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **1** | — |
 | CIS GCP Foundations | v3.0 | **1** | — |
@@ -19,9 +19,9 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
 | CIS Controls | v8 | **2** | — |
-| NIST CSF | 2.0 | **14** | 100% mapped coverage |
+| NIST CSF | 2.0 | **15** | 100% mapped coverage |
 | NIST AI RMF | current | **4** | — |
-| SOC 2 TSC | current | **14** | 100% mapped coverage |
+| SOC 2 TSC | current | **15** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
 | OWASP LLM Top 10 | current | **2** | — |
@@ -85,7 +85,7 @@ Shipped skills mapped: **37**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **28**
+Shipped skills mapped: **29**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -115,6 +115,7 @@ Shipped skills mapped: **28**
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
+| [`remediate-workspace-session-kill`](../skills/remediation/remediate-workspace-session-kill) | remediation | google-workspace | users, sessions, audit |
 | [`convert-ocsf-to-mermaid-attack-flow`](../skills/view/convert-ocsf-to-mermaid-attack-flow) | view | multi | findings, review-output, graphs |
 | [`convert-ocsf-to-sarif`](../skills/view/convert-ocsf-to-sarif) | view | multi | findings, review-output |
 
@@ -208,7 +209,7 @@ Shipped skills mapped: **2**
 - Asset classes in scope: identities, storage, logging, network, clusters, runtime, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **14**
+Shipped skills mapped: **15**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -226,6 +227,7 @@ Shipped skills mapped: **14**
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
+| [`remediate-workspace-session-kill`](../skills/remediation/remediate-workspace-session-kill) | remediation | google-workspace | users, sessions, audit |
 
 ### NIST AI RMF (current)
 
@@ -247,7 +249,7 @@ Shipped skills mapped: **4**
 - Asset classes in scope: access, logging, change, evidence, inventory, ai-endpoints
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **14**
+Shipped skills mapped: **15**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -265,6 +267,7 @@ Shipped skills mapped: **14**
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
+| [`remediate-workspace-session-kill`](../skills/remediation/remediate-workspace-session-kill) | remediation | google-workspace | users, sessions, audit |
 
 ### PCI DSS (4.0)
 
