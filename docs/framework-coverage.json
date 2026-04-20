@@ -715,6 +715,30 @@
       ]
     },
     {
+      "path": "skills/detection/detect-gcp-open-firewall",
+      "layer": "detection",
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "vpc-firewall-rules",
+        "ingress-rules",
+        "cloud-audit-logs"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "ocsf-1.8",
+        "cis-gcp-v3"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-okta-mfa-fatigue",
       "layer": "detection",
       "providers": [
@@ -1363,6 +1387,31 @@
         "nist-csf-2.0",
         "soc2-tsc",
         "cis-aws-v3"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
+      "path": "skills/remediation/remediate-gcp-firewall-revoke",
+      "layer": "remediation",
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "vpc-firewall-rules",
+        "ingress-rules",
+        "audit"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "nist-csf-2.0",
+        "soc2-tsc",
+        "cis-gcp-v3"
       ],
       "coverage_status": "validated",
       "execution_modes": [
