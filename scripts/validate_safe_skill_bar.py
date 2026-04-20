@@ -345,6 +345,76 @@ def validate_assume_role_boundaries() -> list[str]:
     return errors
 
 
+# -- Guardrail: every remediation skill's --apply path must require HITL ------
+#
+# A remediation skill's frontmatter declares `approval_model: human_required`.
+# The src/ must back that up by gating its destructive (--apply) path on TWO
+# env vars: an incident identifier (pinning the action to a declared incident)
+# AND an approver identifier (pinning who authorized it). Both end up in the
+# dual-audit row.
+#
+# Without this check, a skill could declare `human_required` in frontmatter
+# while shipping a src/ that runs --apply on a bare CLI invocation — a silent
+# HITL bypass that would only be caught by manual review.
+#
+# Heuristic (case-insensitive substring): any of {INCIDENT, TICKET, CASE_ID}
+# for the incident var, AND any of {APPROVER, APPROVED_BY, AUTHORIZED_BY,
+# AUTHORIZER} for the approver var. The remediation suite uses the per-skill
+# prefix pattern (e.g. AWS_SG_REVOKE_INCIDENT_ID + AWS_SG_REVOKE_APPROVER), so
+# substring matching is robust to renames.
+#
+# Exempt: `iam-departures-aws` predates this convention and uses a richer
+# Step-Functions-driven approval model (grace-period + EventBridge gate +
+# multi-layer deny lists). It is grandfathered via HITL_ENV_OK at the file
+# level. New remediation skills must use the env-var pattern or add the same
+# grandfather marker with a documented justification.
+
+_INCIDENT_ENV_TOKENS = ("INCIDENT", "TICKET", "CASE_ID")
+_APPROVER_ENV_TOKENS = ("APPROVER", "APPROVED_BY", "AUTHORIZED_BY", "AUTHORIZER")
+
+
+def validate_remediation_hitl_env_vars(skill: object) -> list[str]:
+    """Remediation skill src/ must gate --apply on incident + approver env vars."""
+    errors: list[str] = []
+    skill_dir = getattr(skill, "skill_dir")
+    is_write_capable = bool(getattr(skill, "is_write_capable"))
+    category = getattr(skill, "category", "")
+    capability = getattr(skill, "frontmatter", {}).get("capability", "")
+
+    if not is_write_capable or category != "remediation":
+        return errors
+    if capability == "write-sink":
+        return errors
+
+    src_files = _src_python_files(skill_dir)
+    if not src_files:
+        return errors
+
+    src_text = "\n".join(path.read_text() for path in src_files)
+    if "HITL_ENV_OK" in src_text:
+        return errors
+
+    has_incident = any(token in src_text for token in _INCIDENT_ENV_TOKENS)
+    has_approver = any(token in src_text for token in _APPROVER_ENV_TOKENS)
+    rel = skill_dir.relative_to(ROOT)
+
+    if not has_incident:
+        errors.append(
+            f"{rel}: remediation skill src/ must gate --apply on an incident env var "
+            f"(name containing one of {_INCIDENT_ENV_TOKENS}). Frontmatter declares "
+            "approval_model: human_required; the src/ must enforce it. "
+            "Use HITL_ENV_OK with a justification to grandfather a non-conforming gate."
+        )
+    if not has_approver:
+        errors.append(
+            f"{rel}: remediation skill src/ must gate --apply on an approver env var "
+            f"(name containing one of {_APPROVER_ENV_TOKENS}). Frontmatter declares "
+            "approval_model: human_required; the src/ must enforce it. "
+            "Use HITL_ENV_OK with a justification to grandfather a non-conforming gate."
+        )
+    return errors
+
+
 def main() -> int:
     errors: list[str] = []
     for skill in discover_skill_contracts():
@@ -352,6 +422,7 @@ def main() -> int:
         errors.extend(validate_read_only_no_cloud_writes(skill))
         errors.extend(validate_write_skill_dry_run(skill))
         errors.extend(validate_write_skill_source_guards(skill))
+        errors.extend(validate_remediation_hitl_env_vars(skill))
     errors.extend(validate_wildcards())
     errors.extend(validate_assume_role_boundaries())
 
