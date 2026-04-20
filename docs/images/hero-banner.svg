@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="500" viewBox="0 0 1400 500" role="img" aria-labelledby="title desc">
   <title id="title">cloud-ai-security-skills — production-grade security skills for cloud and AI systems</title>
-  <desc id="desc">Hero banner for the cloud-ai-security-skills repository. Left panel shows the wordmark, tagline, and six capability pills for 51 shipped skill bundles, OCSF 1.8, 82 benchmark checks, MITRE ATT&amp;CK coverage, MCP-audited tool calls, and HITL dual-audited remediation. Right panel shows the current shipped layer counts: 15 ingest, 4 discover, 11 detect, 7 evaluate, 6 remediate, 2 view, 3 output, and 3 source adapters. A footer strip shows vendor coverage across AWS, GCP, Azure, Kubernetes, Okta, Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP plus access surfaces for CLI, CI, MCP, and runners.</desc>
+  <desc id="desc">Hero banner for the cloud-ai-security-skills repository. Left panel shows the wordmark, tagline, and six capability pills for 52 shipped skill bundles, OCSF 1.8, 82 benchmark checks, MITRE ATT&amp;CK coverage, MCP-audited tool calls, and HITL dual-audited remediation. Right panel shows the current shipped layer counts: 15 ingest, 4 discover, 11 detect, 7 evaluate, 7 remediate, 2 view, 3 output, and 3 source adapters. A footer strip shows vendor coverage across AWS, GCP, Azure, Kubernetes, Okta, Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP plus access surfaces for CLI, CI, MCP, and runners.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -57,7 +57,7 @@
     <g transform="translate(88,252)">
       <g>
         <rect x="0" y="0" width="162" height="36" rx="12" fill="#0f1d36" stroke="#3b82f6"/>
-        <text x="16" y="23" fill="#93c5fd" font-size="16" font-weight="900">51</text>
+        <text x="16" y="23" fill="#93c5fd" font-size="16" font-weight="900">52</text>
         <text x="48" y="23" fill="#dbe4f0" font-size="13" font-weight="700">shipped skills</text>
       </g>
       <g transform="translate(174,0)">
@@ -117,7 +117,7 @@
       <g transform="translate(0,96)">
         <rect x="0" y="0" width="210" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
         <text x="14" y="23" fill="#fef3c7" font-size="13" font-weight="800">L5 Remediate</text>
-        <text x="182" y="23" text-anchor="end" fill="#fbbf24" font-size="13" font-weight="900">6</text>
+        <text x="182" y="23" text-anchor="end" fill="#fbbf24" font-size="13" font-weight="900">7</text>
       </g>
       <g transform="translate(222,96)">
         <rect x="0" y="0" width="210" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
