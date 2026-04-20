@@ -74,21 +74,21 @@ class _FakeAudit:
 @dataclass
 class _FakeWorkspace:
     fail_on: str | None = None
-    calls: list[tuple[str, str]] = field(default_factory=list)
+    calls: list[tuple[str, str, int | None]] = field(default_factory=list)
     recent_logins_by_user: dict[str, list[dict]] = field(default_factory=dict)
 
     def sign_out(self, user_key):
-        self.calls.append(("sign_out", user_key))
+        self.calls.append(("sign_out", user_key, None))
         if self.fail_on == "sign_out":
             raise RuntimeError("simulated workspace 500")
 
     def force_password_change(self, user_key):
-        self.calls.append(("force_password_change", user_key))
+        self.calls.append(("force_password_change", user_key, None))
         if self.fail_on == "force_password_change":
             raise RuntimeError("simulated workspace 403")
 
     def list_recent_successful_logins(self, user_key, *, since_ms):
-        self.calls.append(("list_recent_successful_logins", user_key))
+        self.calls.append(("list_recent_successful_logins", user_key, since_ms))
         if self.fail_on == "list_recent_successful_logins":
             raise RuntimeError("simulated workspace 502")
         return list(self.recent_logins_by_user.get(user_key, []))
@@ -325,6 +325,15 @@ def test_run_reverify_unreachable_never_silently_downgrades():
     records = list(run([_finding()], workspace_client=ws, reverify=True))
     assert len(records) == 1  # no drift finding on UNREACHABLE
     assert records[0]["status"] == "unreachable"
+
+
+def test_run_reverify_uses_finding_time_as_remediation_reference():
+    ws = _FakeWorkspace()
+    event = _finding()
+    event["time"] = 1700000000456
+    records = list(run([event], workspace_client=ws, reverify=True))
+    assert records[0]["reference"]["remediated_at_ms"] == 1700000000456
+    assert ws.calls[-1] == ("list_recent_successful_logins", "alice@example.com", 1700000000456)
 
 
 def test_run_reverify_requires_workspace_client():

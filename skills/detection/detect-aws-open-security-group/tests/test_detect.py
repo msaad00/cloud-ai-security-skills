@@ -99,6 +99,18 @@ def test_fires_on_ssh_open_to_world():
         obs["name"] == "permission.port" and obs["value"] == "22"
         for obs in f["observables"]
     )
+    assert any(
+        obs["name"] == "permission.protocol" and obs["value"] == "tcp"
+        for obs in f["observables"]
+    )
+    assert any(
+        obs["name"] == "permission.from_port" and obs["value"] == "22"
+        for obs in f["observables"]
+    )
+    assert any(
+        obs["name"] == "permission.to_port" and obs["value"] == "22"
+        for obs in f["observables"]
+    )
 
 
 def test_fires_on_ipv6_world_open():
@@ -123,6 +135,10 @@ def test_fires_on_protocol_neg_one_all_ports():
     """ipProtocol=-1 means all protocols+all ports; must fire."""
     findings = list(detect([_ct_event(cidrs_v4=["0.0.0.0/0"], protocol="-1", from_port=-1, to_port=-1)]))
     assert len(findings) == 1
+    assert any(
+        obs["name"] == "permission.protocol" and obs["value"] == "-1"
+        for obs in findings[0]["observables"]
+    )
 
 
 def test_native_output_format():

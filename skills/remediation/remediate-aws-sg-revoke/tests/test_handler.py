@@ -33,10 +33,17 @@ def _finding(
     sg_name: str = "web-tier",
     cidrs: list[str] | None = None,
     ports: list[int] | None = None,
+    ip_protocol: str = "tcp",
+    from_port: int | None = None,
+    to_port: int | None = None,
     omit_sg_id: bool = False,
 ) -> dict:
     cidrs = cidrs if cidrs is not None else ["0.0.0.0/0"]
     ports = ports if ports is not None else [22]
+    if from_port is None and ports:
+        from_port = ports[0]
+    if to_port is None and ports:
+        to_port = ports[-1]
     obs: list[dict] = [
         {"name": "cloud.provider", "type": "Other", "value": "AWS"},
         {"name": "actor.name", "type": "Other", "value": "alice"},
@@ -46,9 +53,14 @@ def _finding(
         {"name": "target.type", "type": "Other", "value": "SecurityGroup"},
         {"name": "account.uid", "type": "Other", "value": "111122223333"},
         {"name": "region", "type": "Other", "value": "us-east-1"},
+        {"name": "permission.protocol", "type": "Other", "value": ip_protocol},
     ]
     if not omit_sg_id:
         obs.append({"name": "target.uid", "type": "Other", "value": sg_id})
+    if from_port is not None:
+        obs.append({"name": "permission.from_port", "type": "Other", "value": str(from_port)})
+    if to_port is not None:
+        obs.append({"name": "permission.to_port", "type": "Other", "value": str(to_port)})
     for c in cidrs:
         obs.append({"name": "permission.cidr", "type": "Other", "value": c})
     for p in ports:
@@ -78,27 +90,25 @@ class _FakeEC2:
     sgs: dict[str, dict] = field(default_factory=dict)
     raise_on_describe: bool = False
     raise_on_revoke: bool = False
-    revokes: list[tuple[str, list[str], list[int]]] = field(default_factory=list)
+    revokes: list[tuple[str, list[str], str, int | None, int | None]] = field(default_factory=list)
 
     def describe_security_group(self, sg_id):
         if self.raise_on_describe:
             raise RuntimeError("simulated ec2 502")
         return self.sgs.get(sg_id)
 
-    def revoke_security_group_ingress(self, sg_id, *, cidrs, ports):
+    def revoke_security_group_ingress(self, sg_id, *, cidrs, ip_protocol, from_port, to_port):
         if self.raise_on_revoke:
             raise RuntimeError("simulated ec2 403")
-        self.revokes.append((sg_id, list(cidrs), list(ports)))
+        self.revokes.append((sg_id, list(cidrs), ip_protocol, from_port, to_port))
         # Update the in-memory SG to reflect the revoke
         sg = self.sgs.setdefault(sg_id, {"GroupId": sg_id, "GroupName": "x", "IpPermissions": [], "Tags": []})
         keep = []
         for perm in sg.get("IpPermissions") or []:
-            from_p, to_p = perm.get("FromPort"), perm.get("ToPort")
-            try:
-                lo, hi = int(from_p), int(to_p)
-            except (TypeError, ValueError):
-                lo = hi = None
-            if lo is not None and hi is not None and any(lo <= p <= hi for p in ports):
+            perm_protocol = str(perm.get("IpProtocol") or "")
+            if perm_protocol == ip_protocol and (
+                ip_protocol == "-1" or (perm.get("FromPort") == from_port and perm.get("ToPort") == to_port)
+            ):
                 # Drop cidrs that match
                 new_v4 = [r for r in perm.get("IpRanges") or []
                           if (r or {}).get("CidrIp") not in cidrs]
@@ -146,10 +156,17 @@ def test_check_apply_gate_requires_both_envs(monkeypatch):
 
 
 def test_parse_targets_extracts_full_target():
-    target, _ = next(parse_targets([_finding(cidrs=["0.0.0.0/0", "::/0"], ports=[22, 3306])]))
+    target, _ = next(
+        parse_targets(
+            [_finding(cidrs=["0.0.0.0/0", "::/0"], ports=[22, 3306], from_port=22, to_port=3306)]
+        )
+    )
     assert target.sg_id == "sg-rogue"
     assert target.cidrs == ("0.0.0.0/0", "::/0")
     assert target.ports == (22, 3306)
+    assert target.ip_protocol == "tcp"
+    assert target.from_port == 22
+    assert target.to_port == 3306
     assert target.account_uid == "111122223333"
 
 
@@ -166,7 +183,7 @@ def test_parse_targets_rejects_wrong_producer(capsys):
 
 def _t(**overrides) -> Target:
     base = dict(sg_id="sg-x", sg_name="x", region="us-east-1", account_uid="1",
-                cidrs=("0.0.0.0/0",), ports=(22,), actor="a", rule="r",
+                cidrs=("0.0.0.0/0",), ports=(22,), ip_protocol="tcp", from_port=22, to_port=22, actor="a", rule="r",
                 producer_skill="detect-aws-open-security-group", finding_uid="f")
     base.update(overrides)
     return Target(**base)
@@ -264,10 +281,37 @@ def test_run_apply_revokes_with_dual_audit():
     rec = records[0]
     assert rec["status"] == STATUS_SUCCESS
     assert rec["dry_run"] is False
-    assert ec2.revokes == [("sg-rogue", ["0.0.0.0/0"], [22])]
+    assert ec2.revokes == [("sg-rogue", ["0.0.0.0/0"], "tcp", 22, 22)]
     assert len(audit.writes) == 2
     assert audit.writes[0]["status"] == STATUS_IN_PROGRESS
     assert audit.writes[1]["status"] == STATUS_SUCCESS
+
+
+def test_run_apply_revokes_all_protocol_permission_with_exact_shape():
+    audit = _FakeAudit()
+    ec2 = _FakeEC2(
+        sgs={
+            "sg-rogue": {
+                "GroupId": "sg-rogue",
+                "Tags": [],
+                "IpPermissions": [
+                    {"IpProtocol": "-1", "IpRanges": [{"CidrIp": "0.0.0.0/0"}]},
+                ],
+            }
+        }
+    )
+    records = list(
+        run(
+            [_finding(ports=[22, 3389], ip_protocol="-1", from_port=-1, to_port=-1)],
+            ec2_client=ec2,
+            apply=True,
+            audit=audit,
+            incident_id="INC-1",
+            approver="alice@security",
+        )
+    )
+    assert records[0]["status"] == STATUS_SUCCESS
+    assert ec2.revokes == [("sg-rogue", ["0.0.0.0/0"], "-1", -1, -1)]
 
 
 def test_run_apply_writes_failure_audit_when_revoke_throws():
@@ -321,6 +365,14 @@ def test_run_reverify_drift_emits_ocsf_finding_alongside_verification():
         obs["name"] == "remediation.skill" and obs["value"] == "remediate-aws-sg-revoke"
         for obs in finding["observables"]
     )
+
+
+def test_run_reverify_uses_finding_time_as_remediation_reference():
+    ec2 = _FakeEC2(sgs={"sg-rogue": {"GroupId": "sg-rogue", "Tags": [], "IpPermissions": []}})
+    event = _finding()
+    event["time"] = 1700000000123
+    records = list(run([event], ec2_client=ec2, reverify=True))
+    assert records[0]["reference"]["remediated_at_ms"] == 1700000000123
 
 
 def test_run_reverify_unreachable_never_silently_downgrades():

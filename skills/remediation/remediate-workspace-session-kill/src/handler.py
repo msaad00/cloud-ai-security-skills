@@ -295,6 +295,28 @@ def _observable_values(event: dict[str, Any], name: str) -> tuple[str, ...]:
     return tuple(values)
 
 
+def _safe_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _event_reference_time_ms(event: dict[str, Any]) -> int | None:
+    candidates = (
+        event.get("remediated_at_ms"),
+        event.get("time_ms"),
+        event.get("time"),
+        ((event.get("finding_info") or {}).get("last_seen_time")),
+        ((event.get("finding_info") or {}).get("first_seen_time")),
+    )
+    for value in candidates:
+        parsed = _safe_int(value)
+        if parsed is not None and parsed > 0:
+            return parsed
+    return None
+
+
 def _target_from_event(event: dict[str, Any]) -> Target | None:
     producer = _finding_product(event)
     if producer not in ACCEPTED_PRODUCERS:
@@ -577,7 +599,7 @@ def run(
     now_ms: int | None = None,
 ) -> Iterator[dict[str, Any]]:
     deny_patterns = deny_patterns if deny_patterns is not None else load_deny_patterns()
-    for target, _ in parse_targets(events):
+    for target, event in parse_targets(events):
         if target is None:
             continue
 
@@ -610,7 +632,12 @@ def run(
         if reverify:
             if workspace_client is None:
                 raise RuntimeError("reverify=True requires workspace_client to be provided")
-            yield from reverify_target(target, workspace_client=workspace_client, now_ms=now_ms)
+            yield from reverify_target(
+                target,
+                workspace_client=workspace_client,
+                now_ms=now_ms,
+                remediated_at_ms=_event_reference_time_ms(event),
+            )
             continue
 
         if not apply:
