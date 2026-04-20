@@ -71,7 +71,8 @@ skills/
 │   ├── iam-departures-aws/
 │   ├── remediate-okta-session-kill/
 │   ├── remediate-container-escape-k8s/
-│   └── remediate-k8s-rbac-revoke/
+│   ├── remediate-k8s-rbac-revoke/
+│   └── remediate-mcp-tool-quarantine/
 │
 ├── output/                        # append-only persistence sinks
 │   ├── sink-s3-jsonl/

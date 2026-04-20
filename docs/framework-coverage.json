@@ -1246,6 +1246,32 @@
       ]
     },
     {
+      "path": "skills/remediation/remediate-mcp-tool-quarantine",
+      "layer": "remediation",
+      "providers": [
+        "mcp"
+      ],
+      "asset_classes": [
+        "mcp-tools",
+        "quarantine-list",
+        "audit"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "mitre-atlas",
+        "owasp-mcp-top-10",
+        "nist-csf-2.0",
+        "soc2-tsc"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/output/sink-snowflake-jsonl",
       "layer": "output",
       "providers": [
