@@ -19,6 +19,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_SKIPPED_UNSUPPORTED_TYPE,
     STATUS_SUCCESS,
     STATUS_WOULD_VIOLATE_PROTECTED,
+    ResolvedServicePrincipal,
     Target,
     check_apply_gate,
     is_protected_target,
@@ -83,6 +84,8 @@ class _FakeAudit:
 @dataclass
 class _FakeGraph:
     sps: dict[str, dict] = field(default_factory=dict)  # object_id → {accountEnabled: bool}
+    applications: dict[str, dict] = field(default_factory=dict)  # object_id → {appId: str, displayName: str}
+    service_principals_by_app_id: dict[str, list[dict]] = field(default_factory=dict)
     keys: dict[str, list[dict]] = field(default_factory=dict)
     passwords: dict[str, list[dict]] = field(default_factory=dict)
     role_assignments: dict[str, list[dict]] = field(default_factory=dict)
@@ -91,6 +94,34 @@ class _FakeGraph:
     raise_on_get: bool = False
     raise_on_triage: bool = False
     disabled: list[str] = field(default_factory=list)
+
+    def resolve_service_principal(self, target):
+        if target.target_type == "Application":
+            app = self.applications.get(target.object_id)
+            if app is None:
+                return None
+            app_id = str(app.get("appId") or "")
+            matches = list(self.service_principals_by_app_id.get(app_id, []))
+            if not matches:
+                return None
+            if len(matches) > 1:
+                raise RuntimeError("application resolved to multiple service principals")
+            match = matches[0]
+            return ResolvedServicePrincipal(
+                object_id=str(match.get("id") or ""),
+                display_name=str(match.get("displayName") or target.display_name),
+                app_id=str(match.get("appId") or app_id),
+                source_target_type=target.target_type,
+                source_object_id=target.object_id,
+            )
+        sp = self.sps.get(target.object_id, {})
+        return ResolvedServicePrincipal(
+            object_id=target.object_id,
+            display_name=str(sp.get("displayName") or target.display_name),
+            app_id=str(sp.get("appId") or ""),
+            source_target_type=target.target_type,
+            source_object_id=target.object_id,
+        )
 
     def get_service_principal(self, object_id):
         if self.raise_on_get:
@@ -360,6 +391,32 @@ def test_run_apply_disable_succeeds_even_if_triage_fails():
     assert rec["triage"] is None
 
 
+def test_run_apply_application_target_resolves_backing_service_principal():
+    audit = _FakeAudit()
+    graph = _FakeGraph(
+        applications={"app-1": {"appId": "client-1", "displayName": "rogue-app"}},
+        service_principals_by_app_id={
+            "client-1": [{"id": "sp-1", "appId": "client-1", "displayName": "rogue-sp"}]
+        },
+        sps={"sp-1": {"accountEnabled": True, "displayName": "rogue-sp", "appId": "client-1"}},
+    )
+    records = list(
+        run(
+            [_finding(object_id="app-1", target_type="Application")],
+            graph_client=graph,
+            apply=True,
+            audit=audit,
+            incident_id="INC-1",
+            approver="alice@security",
+        )
+    )
+    rec = records[0]
+    assert rec["status"] == STATUS_SUCCESS
+    assert graph.disabled == ["sp-1"]
+    assert rec["resolved_service_principal"]["object_id"] == "sp-1"
+    assert audit.writes[0]["object_id"] == "sp-1"
+
+
 def test_run_apply_requires_audit_writer():
     import pytest
     with pytest.raises(ValueError, match="audit writer is required"):
@@ -409,6 +466,33 @@ def test_run_reverify_unreachable_never_silently_downgrades():
     records = list(run([_finding()], graph_client=graph, reverify=True))
     assert len(records) == 1
     assert records[0]["status"] == "unreachable"
+
+
+def test_run_reverify_uses_finding_time_as_remediation_reference():
+    graph = _FakeGraph(sps={"11111111-1111-1111-1111-111111111111": {"accountEnabled": False}})
+    event = _finding()
+    event["time"] = 1700000000789
+    records = list(run([event], graph_client=graph, reverify=True))
+    assert records[0]["reference"]["remediated_at_ms"] == 1700000000789
+
+
+def test_run_reverify_application_target_uses_backing_service_principal():
+    graph = _FakeGraph(
+        applications={"app-1": {"appId": "client-1", "displayName": "rogue-app"}},
+        service_principals_by_app_id={
+            "client-1": [{"id": "sp-1", "appId": "client-1", "displayName": "rogue-sp"}]
+        },
+        sps={"sp-1": {"accountEnabled": False, "displayName": "rogue-sp", "appId": "client-1"}},
+    )
+    records = list(
+        run(
+            [_finding(object_id="app-1", target_type="Application")],
+            graph_client=graph,
+            reverify=True,
+        )
+    )
+    assert len(records) == 1
+    assert records[0]["status"] == "verified"
 
 
 def test_run_reverify_skips_protected_target():

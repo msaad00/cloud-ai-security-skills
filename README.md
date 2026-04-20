@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 52 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 54 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,20 +16,20 @@
 
 ## What this repo gives you
 
-**52 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus seven guarded write paths spanning AWS IAM, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**54 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus eight guarded write paths spanning AWS IAM, AWS security-group revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
 | **Ingest** | 15 | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
 | **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
-| **Detect** | 11 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
+| **Detect** | 12 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
-| **Remediate** | 7 | guarded write paths (IAM departures, Okta session kill, Workspace session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
+| **Remediate** | 8 | guarded write paths (IAM departures, AWS SG revoke, Okta session kill, Workspace session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 52 shipped skills.**
+**Total: 54 shipped skills.**
 
 <details>
 <summary><b>Why different layers use different formats</b> — OCSF where interop matters, native where state, evidence, and audit matter more</summary>
@@ -52,15 +52,19 @@ Full discussion: [docs/ARCHITECTURE.md §3 Layer model + §6 Wire contract](docs
 
 ## Architecture
 
-External signals enter through two intake layers, pass through two analyze layers, and exit through two act layers, persisting through one output layer. Every node ships as a `SKILL.md + src/ + tests/` bundle that runs unchanged from CLI, CI, MCP, or a cloud runner.
+External signals enter through two intake layers, pass through two analyze layers, and exit through two act layers, persisting through one output layer. The README now splits the picture into two simpler visuals so the layer flow and runtime story stay readable on GitHub.
 
-![Canonical architecture — 7 skill layers (L1 Ingest 15+3 source, L2 Discover 4, L3 Detect 11, L4 Evaluate 7, L5 Remediate 4, L6 View 2, L7 Output 3 sinks) and 4 runtime surfaces (MCP clients via stdio, CLI pipes, CI GitHub Actions, cloud runners). The same shipped bundle is invoked from every surface.](docs/images/architecture.svg)
+![Clean architecture layers diagram — signals feed intake, analyze, act, and persist stages across the seven shipped skill layers.](docs/images/architecture-layers.svg)
+
+![Clean runtime surfaces diagram — MCP, CLI, CI, and cloud runners all invoke the same shared skill bundle.](docs/images/runtime-surfaces.svg)
 
 Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
+For UI-only audit evidence and screenshot-backed control capture, see the design note in [docs/COMPLIANCE_EVIDENCE_CAPTURE.md](docs/COMPLIANCE_EVIDENCE_CAPTURE.md). The repo direction there is export-first, screenshot-when-necessary.
+
 ## Agent and runtime integrations
 
-MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation — see the runtime band of the architecture diagram above.
+MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation — see the runtime surfaces diagram above.
 
 - **MCP** · [.mcp.json](.mcp.json) · [mcp-server/README.md](mcp-server/README.md) · [docs/MCP_AUDIT_CONTRACT.md](docs/MCP_AUDIT_CONTRACT.md)
 - **CLI / pipes** · stdin/stdout bundles compose into one-liners

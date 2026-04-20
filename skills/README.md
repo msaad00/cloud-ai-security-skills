@@ -50,6 +50,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-entra-credential-addition`](detection/detect-entra-credential-addition/) | successful Entra application or service-principal credential additions |
 | [`detect-entra-role-grant-escalation`](detection/detect-entra-role-grant-escalation/) | successful Entra app-role grants to service principals |
 | [`detect-google-workspace-suspicious-login`](detection/detect-google-workspace-suspicious-login/) | provider-marked suspicious Workspace login or repeated failures followed by success |
+| [`detect-aws-open-security-group`](detection/detect-aws-open-security-group/) | AWS Security Group ingress opened to 0.0.0.0/0 or ::/0 on risky admin / database / cache ports (T1190 Exploit Public-Facing Application) |
 | [`detect-prompt-injection-mcp-proxy`](detection/detect-prompt-injection-mcp-proxy/) | suspicious prompt-injection language in MCP tool descriptions |
 | [`detect-mcp-tool-drift`](detection/detect-mcp-tool-drift/) | T1195.001 |
 | [`detect-container-escape-k8s`](detection/detect-container-escape-k8s/) | T1611, T1610 |
@@ -105,6 +106,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 | [`remediate-mcp-tool-quarantine`](remediation/remediate-mcp-tool-quarantine/) | MCP tool quarantine — append the offending tool to a JSONL quarantine file the operator's MCP client filters its surface against, after detect-mcp-tool-drift (T1195.001) or detect-prompt-injection-mcp-proxy (ATLAS AML.T0051); protected-prefix (`mcp_`, `system_`, `internal_`) deny-list, declared-incident gate, dual audit |
 | [`remediate-entra-credential-revoke`](remediation/remediate-entra-credential-revoke/) | Entra service-principal containment — disable the SP (`accountEnabled=false`) and emit a triage payload listing current credentials + role assignments for operator selective revocation, after detect-entra-credential-addition (T1098.001) or detect-entra-role-grant-escalation (T1098.003); protected name-prefix + objectId deny-list, declared-incident gate, dual audit |
 | [`remediate-workspace-session-kill`](remediation/remediate-workspace-session-kill/) | Google Workspace containment — sign out the user (`Users.signOut`) + force password change (`Users.patch changePasswordAtNextLogin`) after detect-google-workspace-suspicious-login (T1110, T1078); dual-audit, deny-list (admin/break-glass/@google.com + extensible), declared-incident gate; reverify reads Admin SDK Reports for any login_success since remediation |
+| [`remediate-aws-sg-revoke`](remediation/remediate-aws-sg-revoke/) | AWS Security Group surgical revoke — `RevokeSecurityGroupIngress` for the specific cidr+port flagged by detect-aws-open-security-group (T1190); deny-list (`default*` SG names + `intentionally-open` tag + env-pinned sg ids), declared-incident gate, dual audit; reverify re-reads via `DescribeSecurityGroups` and emits OCSF Detection Finding on DRIFT |
 
 ## output/
 
