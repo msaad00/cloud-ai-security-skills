@@ -1,21 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" role="img" aria-labelledby="runtime-title runtime-desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="700" viewBox="0 0 1400 700" role="img" aria-labelledby="runtime-title runtime-desc">
   <title id="runtime-title">cloud-ai-security-skills runtime surfaces</title>
-  <desc id="runtime-desc">Runtime architecture diagram showing four invocation surfaces. MCP clients go through the repo MCP server. CLI, CI, and cloud runners call the same shared skill bundle directly. The shared bundle emits native JSONL, OCSF, SARIF, Mermaid, and audited actions. The diagram emphasizes that no surface reimplements the skills.</desc>
+  <desc id="runtime-desc">Runtime architecture for cloud-ai-security-skills. MCP clients reach the repo MCP server over stdio, while CLI, CI, and cloud runners invoke the same shared skill bundle directly. The bundle emits native records, OCSF, review formats, evidence, and audited action trails. The key message is that no surface reimplements the skills.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#081122"/>
-      <stop offset="100%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0f1a33"/>
     </linearGradient>
-    <radialGradient id="glow" cx="22%" cy="20%" r="70%">
+    <radialGradient id="glowA" cx="18%" cy="18%" r="60%">
       <stop offset="0%" stop-color="#c084fc" stop-opacity="0.18"/>
       <stop offset="100%" stop-color="#c084fc" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="glowB" cx="84%" cy="26%" r="50%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
     <pattern id="grid" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse">
-      <path d="M36 0H0V36" fill="none" stroke="#1f2a44" stroke-opacity="0.35" stroke-width="1"/>
+      <path d="M36 0H0V36" fill="none" stroke="#1f2a44" stroke-opacity="0.36" stroke-width="1"/>
     </pattern>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#020617" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#020617" flood-opacity="0.42"/>
     </filter>
     <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0 0L10 5L0 10z" fill="#c084fc"/>
@@ -25,74 +29,77 @@
     </marker>
   </defs>
 
-  <rect width="1400" height="620" fill="url(#bg)"/>
-  <rect width="1400" height="620" fill="url(#grid)"/>
-  <rect width="1400" height="620" fill="url(#glow)"/>
+  <rect width="1400" height="700" fill="url(#bg)"/>
+  <rect width="1400" height="700" fill="url(#grid)"/>
+  <rect width="1400" height="700" fill="url(#glowA)"/>
+  <rect width="1400" height="700" fill="url(#glowB)"/>
 
   <g font-family="Inter, Arial, sans-serif">
-    <text x="72" y="76" font-size="38" font-weight="800" fill="#f8fafc">Runtime surfaces: one bundle, four real invocation paths</text>
-    <text x="72" y="112" font-size="18" fill="#cbd5e1">MCP adds transport and audit control. CLI, CI, and cloud runners call the same shipped skills directly.</text>
+    <text x="72" y="82" font-size="42" font-weight="900" fill="#f8fafc">Runtime surfaces: one shared bundle, four real entry paths</text>
+    <text x="72" y="118" font-size="18" fill="#cbd5e1">MCP adds transport and audited tool control. CLI, CI, and cloud runners still invoke the exact same skill code.</text>
 
     <g filter="url(#shadow)">
-      <rect x="72" y="172" width="250" height="92" rx="24" fill="#2b1d59" stroke="#a78bfa" stroke-width="1.6"/>
-      <text x="104" y="212" font-size="22" font-weight="800" fill="#f5f3ff">MCP clients</text>
-      <text x="104" y="244" font-size="18" fill="#ddd6fe">Claude, Codex, Cursor, Windsurf, Zed</text>
+      <rect x="72" y="178" width="272" height="134" rx="28" fill="#2c1a57" stroke="#a78bfa"/>
+      <text x="104" y="228" font-size="24" font-weight="800" fill="#f5f3ff">MCP clients</text>
+      <text x="104" y="260" font-size="18" fill="#ddd6fe">Claude, Codex, Cursor, Windsurf,</text>
+      <text x="104" y="286" font-size="18" fill="#ddd6fe">Zed, Continue, and other IDE agents</text>
 
-      <rect x="72" y="294" width="250" height="92" rx="24" fill="#123b5f" stroke="#38bdf8" stroke-width="1.6"/>
-      <text x="104" y="334" font-size="22" font-weight="800" fill="#e0f2fe">CLI</text>
-      <text x="104" y="366" font-size="18" fill="#bae6fd">stdin/stdout pipes between skill bundles</text>
+      <rect x="72" y="350" width="272" height="92" rx="24" fill="#123b5f" stroke="#38bdf8"/>
+      <text x="104" y="390" font-size="24" font-weight="800" fill="#e0f2fe">CLI and CI</text>
+      <text x="104" y="420" font-size="18" fill="#bae6fd">stdin/stdout pipes and GitHub Actions</text>
 
-      <rect x="72" y="416" width="250" height="92" rx="24" fill="#134e4a" stroke="#2dd4bf" stroke-width="1.6"/>
-      <text x="104" y="456" font-size="22" font-weight="800" fill="#ccfbf1">CI</text>
-      <text x="104" y="488" font-size="18" fill="#99f6e4">GitHub Actions and SARIF publishing</text>
+      <rect x="72" y="480" width="272" height="92" rx="24" fill="#12443f" stroke="#2dd4bf"/>
+      <text x="104" y="520" font-size="24" font-weight="800" fill="#ccfbf1">Cloud runners</text>
+      <text x="104" y="550" font-size="18" fill="#99f6e4">S3 + SQS, GCS + PubSub, Blob + EventGrid</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="400" y="172" width="300" height="182" rx="30" fill="#4a114f" stroke="#e879f9" stroke-width="1.6"/>
-      <text x="436" y="220" font-size="24" font-weight="800" fill="#fae8ff">Repo MCP server</text>
-      <text x="436" y="264" font-size="18" fill="#f5d0fe">auto-discovers `SKILL.md`</text>
-      <text x="436" y="296" font-size="18" fill="#f5d0fe">audits tool calls</text>
-      <text x="436" y="328" font-size="18" fill="#f5d0fe">enforces allowlist and timeout policy</text>
+      <rect x="404" y="178" width="286" height="186" rx="30" fill="#4a114f" stroke="#e879f9"/>
+      <text x="438" y="230" font-size="26" font-weight="800" fill="#fae8ff">Repo MCP server</text>
+      <text x="438" y="272" font-size="18" fill="#f5d0fe">auto-discovers `SKILL.md`</text>
+      <text x="438" y="302" font-size="18" fill="#f5d0fe">audits tool calls and timeouts</text>
+      <text x="438" y="332" font-size="18" fill="#f5d0fe">applies allowlist and wrapper policy</text>
+
+      <rect x="404" y="418" width="286" height="154" rx="30" fill="#0f172a" stroke="#64748b"/>
+      <text x="438" y="468" font-size="24" font-weight="800" fill="#f8fafc">Surface contract</text>
+      <text x="438" y="500" font-size="18" fill="#cbd5e1">No surface reimplements the skills.</text>
+      <text x="438" y="528" font-size="18" fill="#cbd5e1">Transport changes, execution core stays the same.</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="780" y="150" width="360" height="380" rx="34" fill="#0b4a44" stroke="#2dd4bf" stroke-width="1.8"/>
-      <text x="824" y="212" font-size="28" font-weight="800" fill="#ecfeff">Shared skill bundle</text>
-      <text x="824" y="298" font-size="78" font-weight="900" fill="#ffffff">54</text>
-      <text x="918" y="298" font-size="42" font-weight="800" fill="#ffffff">skills</text>
-      <text x="824" y="344" font-size="22" fill="#99f6e4">`SKILL.md + src/ + tests/`</text>
-      <text x="824" y="404" font-size="19" fill="#ccfbf1">same execution core, audit behavior, and HITL gates</text>
-      <text x="824" y="434" font-size="19" fill="#ccfbf1">regardless of whether the caller is MCP, CLI, CI, or a runner</text>
+      <rect x="754" y="148" width="366" height="454" rx="34" fill="#0b4a44" stroke="#2dd4bf"/>
+      <text x="798" y="214" font-size="30" font-weight="900" fill="#ecfeff">Shared skill bundle</text>
+      <text x="798" y="304" font-size="86" font-weight="900" fill="#ffffff">54</text>
+      <text x="914" y="304" font-size="42" font-weight="800" fill="#ffffff">skills</text>
+      <text x="798" y="352" font-size="23" fill="#99f6e4">`SKILL.md + src/ + tests/`</text>
+
+      <rect x="798" y="396" width="278" height="146" rx="22" fill="#08302d" stroke="#2dd4bf"/>
+      <text x="822" y="434" font-size="16" font-weight="800" fill="#ccfbf1" letter-spacing="1.1">SHARED GUARANTEES</text>
+      <text x="822" y="468" font-size="18" fill="#e6fffb">same audit behavior</text>
+      <text x="822" y="496" font-size="18" fill="#e6fffb">same HITL gates</text>
+      <text x="822" y="524" font-size="18" fill="#e6fffb">same dry-run and schema contracts</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="1200" y="172" width="144" height="336" rx="28" fill="#4a2d09" stroke="#fbbf24" stroke-width="1.6"/>
-      <text x="1228" y="212" font-size="22" font-weight="800" fill="#fef3c7">Outputs</text>
-      <g font-size="20" fill="#fde68a">
-        <text x="1228" y="268">native JSONL</text>
-        <text x="1228" y="306">OCSF 1.8</text>
-        <text x="1228" y="344">SARIF</text>
-        <text x="1228" y="382">Mermaid</text>
-        <text x="1228" y="420">BOM / evidence</text>
-        <text x="1228" y="458">audited actions</text>
-      </g>
+      <rect x="1184" y="178" width="152" height="394" rx="28" fill="#3c2407" stroke="#f59e0b"/>
+      <text x="1216" y="226" font-size="24" font-weight="800" fill="#fef3c7">Outputs</text>
+      <text x="1216" y="278" font-size="18" fill="#fde68a">native JSONL</text>
+      <text x="1216" y="316" font-size="18" fill="#fde68a">OCSF 1.8</text>
+      <text x="1216" y="354" font-size="18" fill="#fde68a">SARIF</text>
+      <text x="1216" y="392" font-size="18" fill="#fde68a">Mermaid</text>
+      <text x="1216" y="430" font-size="18" fill="#fde68a">BOM / evidence</text>
+      <text x="1216" y="468" font-size="18" fill="#fde68a">audited actions</text>
     </g>
 
-    <g filter="url(#shadow)">
-      <rect x="400" y="402" width="300" height="106" rx="30" fill="#0f172a" stroke="#64748b" stroke-width="1.6"/>
-      <text x="436" y="444" font-size="22" font-weight="800" fill="#f8fafc">Cloud runners</text>
-      <text x="436" y="476" font-size="18" fill="#cbd5e1">AWS S3 + SQS, GCS + PubSub, Blob + EventGrid</text>
-    </g>
+    <path d="M344 246H386" stroke="#c084fc" stroke-width="4" fill="none" marker-end="url(#arrowPurple)"/>
+    <path d="M344 396H724" stroke="#38bdf8" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
+    <path d="M344 526H724" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
+    <path d="M690 270H724" stroke="#c084fc" stroke-width="4" fill="none" marker-end="url(#arrowPurple)"/>
+    <path d="M690 494H724" stroke="#94a3b8" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
+    <path d="M1120 376H1160" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
 
-    <path d="M322 218H382" stroke="#c084fc" stroke-width="4" fill="none" marker-end="url(#arrowPurple)"/>
-    <path d="M322 340H760" stroke="#38bdf8" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
-    <path d="M322 462H760" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
-    <path d="M700 262H760" stroke="#c084fc" stroke-width="4" fill="none" marker-end="url(#arrowPurple)"/>
-    <path d="M700 454H760" stroke="#94a3b8" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
-    <path d="M1140 340H1182" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
-
-    <text x="342" y="204" font-size="15" font-weight="700" fill="#c4b5fd">stdio</text>
-    <text x="520" y="330" font-size="15" font-weight="700" fill="#7dd3fc">invoke directly</text>
-    <text x="520" y="452" font-size="15" font-weight="700" fill="#99f6e4">event-driven invoke</text>
+    <text x="358" y="232" font-size="14" font-weight="800" fill="#c4b5fd">stdio</text>
+    <text x="520" y="382" font-size="14" font-weight="800" fill="#7dd3fc">direct invoke</text>
+    <text x="520" y="512" font-size="14" font-weight="800" fill="#99f6e4">event-driven invoke</text>
   </g>
 </svg>

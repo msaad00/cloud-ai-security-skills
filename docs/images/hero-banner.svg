@@ -1,24 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="500" viewBox="0 0 1400 500" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
   <title id="title">cloud-ai-security-skills — production-grade security skills for cloud and AI systems</title>
-  <desc id="desc">Hero banner for the cloud-ai-security-skills repository. Left panel shows the wordmark, tagline, and six capability pills for 54 shipped skill bundles, OCSF 1.8, 82 benchmark checks, MITRE ATT&amp;CK coverage, MCP-audited tool calls, and HITL dual-audited remediation. Right panel shows the current shipped layer counts: 15 ingest, 4 discover, 12 detect, 7 evaluate, 8 remediate, 2 view, 3 output, and 3 source adapters. A footer strip shows vendor coverage across AWS, GCP, Azure, Kubernetes, Okta, Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP plus access surfaces for CLI, CI, MCP, and runners.</desc>
+  <desc id="desc">README hero banner for cloud-ai-security-skills. The left side presents the repo identity, multi-format contract, and core shipped metrics. The right side summarizes the current layer counts and runtime contract. A bottom strip lists supported vendors and the shared execution surfaces.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#060b17"/>
-      <stop offset="100%" stop-color="#0a1325"/>
+      <stop offset="0%" stop-color="#06101f"/>
+      <stop offset="55%" stop-color="#0a1630"/>
+      <stop offset="100%" stop-color="#0c1a33"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="30%" r="55%">
-      <stop offset="0%" stop-color="#1e3a8a" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0"/>
+    <radialGradient id="glowA" cx="18%" cy="12%" r="58%">
+      <stop offset="0%" stop-color="#2563eb" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="86%" cy="22%" r="46%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="wordmark" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#93c5fd"/>
-      <stop offset="50%" stop-color="#a7f3d0"/>
-      <stop offset="100%" stop-color="#c4b5fd"/>
+      <stop offset="40%" stop-color="#a7f3d0"/>
+      <stop offset="78%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#fde68a"/>
     </linearGradient>
-    <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-opacity="0.25" stroke-width="1"/>
+    <pattern id="grid" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#1e2b45" stroke-opacity="0.36" stroke-width="1"/>
     </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#020617" flood-opacity="0.42"/>
+    </filter>
 
     <symbol id="aws" viewBox="0 0 24 24"><path fill="#f59e0b" d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.063.056.127.056.183 0 .08-.048.16-.152.24l-.503.335a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.239-.112a2.47 2.47 0 0 1-.287-.375 6.18 6.18 0 0 1-.248-.471c-.622.734-1.405 1.101-2.347 1.101-.67 0-1.205-.191-1.596-.574-.391-.384-.59-.894-.59-1.533 0-.678.239-1.23.726-1.644.487-.415 1.133-.623 1.955-.623.272 0 .551.024.846.064.296.04.6.104.918.176v-.583c0-.607-.127-1.03-.375-1.277-.255-.248-.686-.367-1.3-.367-.28 0-.568.031-.863.103-.295.072-.583.16-.862.272a2.287 2.287 0 0 1-.28.104.488.488 0 0 1-.127.023c-.112 0-.168-.08-.168-.247v-.391c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.167c.279-.144.614-.264 1.005-.36a4.84 4.84 0 0 1 1.246-.151c.95 0 1.644.216 2.091.647.439.43.662 1.085.662 1.963v2.586zm-3.24 1.214c.263 0 .534-.048.822-.144.287-.096.543-.271.758-.51.128-.152.224-.32.272-.512.047-.191.08-.423.08-.694v-.335a6.66 6.66 0 0 0-.735-.136 6.02 6.02 0 0 0-.75-.048c-.535 0-.926.104-1.19.32-.263.215-.39.518-.39.917 0 .375.095.655.295.846.191.2.47.296.838.296zM21.698 16.207c-2.626 1.94-6.442 2.969-9.722 2.969-4.598 0-8.74-1.7-11.87-4.526-.247-.223-.024-.527.272-.351 3.384 1.963 7.559 3.153 11.877 3.153 2.914 0 6.114-.607 9.06-1.852.439-.2.814.287.383.607zM22.792 14.961c-.336-.43-2.22-.207-3.074-.103-.255.032-.295-.192-.063-.36 1.5-1.053 3.967-.75 4.254-.399.287.36-.08 2.826-1.485 4.007-.215.184-.423.088-.327-.151.32-.79 1.03-2.57.695-2.994z"/></symbol>
     <symbol id="gcp" viewBox="0 0 24 24"><path fill="#60a5fa" d="M12.19 2.38a9.344 9.344 0 0 0-9.234 6.893c.053-.02-.055.013 0 0-3.875 2.551-3.922 8.11-.247 10.941l.006-.007-.007.03a6.717 6.717 0 0 0 4.077 1.356h5.173l.03.03h5.192c6.687.053 9.376-8.605 3.835-12.35a9.365 9.365 0 0 0-2.821-4.552l-.043.043.006-.05A9.344 9.344 0 0 0 12.19 2.38zm-.358 4.146c1.244-.04 2.518.368 3.486 1.15a5.186 5.186 0 0 1 1.862 4.078v.518c3.53-.07 3.53 5.262 0 5.193h-5.193l-.008.009v-.04H6.785a2.59 2.59 0 0 1-1.067-.23h.001a2.597 2.597 0 1 1 3.437-3.437l3.013-3.012A6.747 6.747 0 0 0 8.11 8.24c.018-.01.04-.026.054-.023a5.186 5.186 0 0 1 3.67-1.69z"/></symbol>
@@ -32,143 +41,135 @@
     <symbol id="clickhouse" viewBox="0 0 24 24"><path fill="#fbbf24" d="M21.333 10H24v4h-2.667ZM16 1.335h2.667v21.33H16Zm-5.333 0h2.666v21.33h-2.666ZM0 22.665V1.335h2.667v21.33zm5.333-21.33H8v21.33H5.333Z"/></symbol>
   </defs>
 
-  <rect width="1400" height="420" fill="url(#bg)"/>
-  <rect width="1400" height="420" fill="url(#grid)"/>
-  <rect width="1400" height="420" fill="url(#glow)"/>
+  <rect width="1400" height="560" fill="url(#bg)"/>
+  <rect width="1400" height="560" fill="url(#grid)"/>
+  <rect width="1400" height="560" fill="url(#glowA)"/>
+  <rect width="1400" height="560" fill="url(#glowB)"/>
 
   <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
-    <!-- Eyebrow -->
-    <g transform="translate(72,40)">
-      <rect x="0" y="0" width="206" height="28" rx="14" fill="#0b1628" stroke="#334155"/>
-      <circle cx="18" cy="14" r="3.5" fill="#22d3ee"/>
-      <text x="32" y="19" fill="#c7d2fe" font-size="11" font-weight="800" letter-spacing="1.6">OSS · APACHE 2.0 · OCSF 1.8</text>
+    <g transform="translate(64,40)">
+      <rect x="0" y="0" width="248" height="32" rx="16" fill="#0b1628" stroke="#334155"/>
+      <circle cx="18" cy="16" r="4" fill="#22d3ee"/>
+      <text x="36" y="21" fill="#c7d2fe" font-size="11" font-weight="800" letter-spacing="1.6">OSS · APACHE 2.0 · MULTI-FORMAT</text>
     </g>
 
-    <!-- Main panels -->
-    <rect x="56" y="84" width="772" height="248" rx="22" fill="#0b1628" stroke="#22314d"/>
-    <rect x="856" y="84" width="488" height="248" rx="22" fill="#0b1628" stroke="#22314d"/>
+    <g filter="url(#shadow)">
+      <rect x="64" y="92" width="760" height="332" rx="28" fill="#0b1628" stroke="#26344f"/>
+      <rect x="860" y="92" width="476" height="332" rx="28" fill="#0b1628" stroke="#26344f"/>
+      <rect x="64" y="448" width="1272" height="72" rx="24" fill="#0b1628" stroke="#26344f"/>
+    </g>
 
-    <!-- Left panel -->
-    <text x="88" y="142" font-size="58" font-weight="900" fill="url(#wordmark)" letter-spacing="-1.2">cloud-ai-security-skills</text>
-    <text x="90" y="176" fill="#e5eefb" font-size="18" font-weight="600">Production-grade security skills for cloud and AI systems.</text>
-    <text x="90" y="202" fill="#94a3b8" font-size="16">Same skill bundle contract across CLI, CI, MCP, and persistent runners.</text>
-    <text x="90" y="228" fill="#94a3b8" font-size="16">OCSF where interop matters. Native where state, evidence, and audit matter more.</text>
+    <text x="96" y="162" font-size="68" font-weight="900" fill="url(#wordmark)" letter-spacing="-1.8">cloud-ai-security-skills</text>
+    <text x="96" y="208" font-size="20" font-weight="700" fill="#e5eefb">Production-grade security skills for cloud and AI systems.</text>
+    <text x="96" y="240" font-size="18" fill="#a5b4c8">One bundle contract across CLI, CI, MCP, and persistent runners.</text>
+    <text x="96" y="268" font-size="18" fill="#a5b4c8">OCSF on ingest and detect. Native where state, evidence, and audit matter more.</text>
 
-    <g transform="translate(88,252)">
+    <g transform="translate(96,306)">
+      <rect x="0" y="0" width="182" height="64" rx="20" fill="#0f1d36" stroke="#3b82f6"/>
+      <text x="20" y="29" fill="#93c5fd" font-size="14" font-weight="800" letter-spacing="1.2">SHIPPED</text>
+      <text x="20" y="53" fill="#ffffff" font-size="30" font-weight="900">54 skills</text>
+
+      <rect x="198" y="0" width="214" height="64" rx="20" fill="#0e2433" stroke="#22d3ee"/>
+      <text x="218" y="29" fill="#67e8f9" font-size="14" font-weight="800" letter-spacing="1.2">WIRE CONTRACT</text>
+      <text x="218" y="53" fill="#ffffff" font-size="24" font-weight="900">native + OCSF</text>
+
+      <rect x="432" y="0" width="220" height="64" rx="20" fill="#102c29" stroke="#2dd4bf"/>
+      <text x="452" y="29" fill="#5eead4" font-size="14" font-weight="800" letter-spacing="1.2">COVERAGE</text>
+      <text x="452" y="53" fill="#ffffff" font-size="28" font-weight="900">82 benchmark checks</text>
+    </g>
+
+    <g transform="translate(96,386)">
+      <rect x="0" y="0" width="222" height="28" rx="14" fill="#2a0b1e" stroke="#ef4444"/>
+      <text x="18" y="19" fill="#fca5a5" font-size="12" font-weight="800" letter-spacing="1.2">MITRE ATT&amp;CK tagged detections</text>
+
+      <rect x="236" y="0" width="208" height="28" rx="14" fill="#1c1235" stroke="#a78bfa"/>
+      <text x="18" y="19" fill="#c4b5fd" font-size="12" font-weight="800" letter-spacing="1.2">MCP audited tool calls</text>
+
+      <rect x="458" y="0" width="210" height="28" rx="14" fill="#2a1708" stroke="#f59e0b"/>
+      <text x="18" y="19" fill="#fbbf24" font-size="12" font-weight="800" letter-spacing="1.2">HITL dual-audited writes</text>
+    </g>
+
+    <text x="892" y="136" font-size="12" font-weight="800" fill="#93c5fd" letter-spacing="1.8">CURRENT SHIPPED SURFACE</text>
+    <text x="892" y="172" font-size="34" font-weight="900" fill="#f8fafc">Seven layers plus edges</text>
+    <text x="892" y="202" font-size="16" fill="#94a3b8">Counts match the current repo and README routing model.</text>
+
+    <g transform="translate(892,228)">
       <g>
-        <rect x="0" y="0" width="162" height="36" rx="12" fill="#0f1d36" stroke="#3b82f6"/>
-        <text x="16" y="23" fill="#93c5fd" font-size="16" font-weight="900">54</text>
-        <text x="48" y="23" fill="#dbe4f0" font-size="13" font-weight="700">shipped skills</text>
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#0f1d36" stroke="#3b82f6"/>
+        <text x="18" y="29" fill="#dbeafe" font-size="17" font-weight="800">L1 Ingest</text>
+        <text x="188" y="29" text-anchor="end" fill="#93c5fd" font-size="17" font-weight="900">15</text>
       </g>
-      <g transform="translate(174,0)">
-        <rect x="0" y="0" width="134" height="36" rx="12" fill="#0f2235" stroke="#22d3ee"/>
-        <text x="16" y="23" fill="#67e8f9" font-size="14" font-weight="900">OCSF 1.8</text>
+      <g transform="translate(224,0)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#0f1d36" stroke="#3b82f6"/>
+        <text x="18" y="29" fill="#dbeafe" font-size="17" font-weight="800">L2 Discover</text>
+        <text x="188" y="29" text-anchor="end" fill="#93c5fd" font-size="17" font-weight="900">4</text>
       </g>
-      <g transform="translate(320,0)">
-        <rect x="0" y="0" width="186" height="36" rx="12" fill="#0f2a28" stroke="#2dd4bf"/>
-        <text x="16" y="23" fill="#5eead4" font-size="16" font-weight="900">82</text>
-        <text x="48" y="23" fill="#dbe4f0" font-size="13" font-weight="700">benchmark checks</text>
+      <g transform="translate(0,58)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#102c29" stroke="#2dd4bf"/>
+        <text x="18" y="29" fill="#d1fae5" font-size="17" font-weight="800">L3 Detect</text>
+        <text x="188" y="29" text-anchor="end" fill="#5eead4" font-size="17" font-weight="900">12</text>
       </g>
-    </g>
-    <g transform="translate(88,298)">
-      <g>
-        <rect x="0" y="0" width="204" height="36" rx="12" fill="#2a0b1e" stroke="#ef4444"/>
-        <text x="16" y="23" fill="#fca5a5" font-size="13" font-weight="900">MITRE ATT&amp;CK</text>
-        <text x="126" y="23" fill="#dbe4f0" font-size="13" font-weight="700">tagged</text>
+      <g transform="translate(224,58)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#102c29" stroke="#2dd4bf"/>
+        <text x="18" y="29" fill="#d1fae5" font-size="17" font-weight="800">L4 Evaluate</text>
+        <text x="188" y="29" text-anchor="end" fill="#5eead4" font-size="17" font-weight="900">7</text>
       </g>
-      <g transform="translate(216,0)">
-        <rect x="0" y="0" width="212" height="36" rx="12" fill="#1f142e" stroke="#a78bfa"/>
-        <text x="16" y="23" fill="#c4b5fd" font-size="13" font-weight="900">MCP</text>
-        <text x="56" y="23" fill="#dbe4f0" font-size="13" font-weight="700">audited tool calls</text>
+      <g transform="translate(0,116)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#2a1708" stroke="#f59e0b"/>
+        <text x="18" y="29" fill="#fef3c7" font-size="17" font-weight="800">L5 Remediate</text>
+        <text x="188" y="29" text-anchor="end" fill="#fbbf24" font-size="17" font-weight="900">8</text>
       </g>
-      <g transform="translate(440,0)">
-        <rect x="0" y="0" width="180" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
-        <text x="16" y="23" fill="#fbbf24" font-size="13" font-weight="900">HITL</text>
-        <text x="54" y="23" fill="#dbe4f0" font-size="13" font-weight="700">dual-audited writes</text>
+      <g transform="translate(224,116)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#2a1708" stroke="#f59e0b"/>
+        <text x="18" y="29" fill="#fef3c7" font-size="17" font-weight="800">L6 View</text>
+        <text x="188" y="29" text-anchor="end" fill="#fbbf24" font-size="17" font-weight="900">2</text>
       </g>
-    </g>
-
-    <!-- Right panel: shipped layer map -->
-    <text x="888" y="120" fill="#93c5fd" font-size="12" font-weight="800" letter-spacing="1.6">CURRENT SHIPPED SURFACE</text>
-    <text x="888" y="146" fill="#f8fafc" font-size="28" font-weight="900">Seven core layers plus edges</text>
-    <text x="888" y="168" fill="#94a3b8" font-size="14">Counts below match the current repo and README routing surface.</text>
-
-    <g transform="translate(888,190)">
-      <g>
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#0f1d36" stroke="#3b82f6"/>
-        <text x="14" y="23" fill="#dbeafe" font-size="13" font-weight="800">L1 Ingest</text>
-        <text x="182" y="23" text-anchor="end" fill="#93c5fd" font-size="13" font-weight="900">15</text>
+      <g transform="translate(0,174)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#161230" stroke="#a78bfa"/>
+        <text x="18" y="29" fill="#ede9fe" font-size="17" font-weight="800">L7 Output</text>
+        <text x="188" y="29" text-anchor="end" fill="#c4b5fd" font-size="17" font-weight="900">3</text>
       </g>
-      <g transform="translate(222,0)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#0f1d36" stroke="#3b82f6"/>
-        <text x="14" y="23" fill="#dbeafe" font-size="13" font-weight="800">L2 Discover</text>
-        <text x="182" y="23" text-anchor="end" fill="#93c5fd" font-size="13" font-weight="900">4</text>
-      </g>
-      <g transform="translate(0,48)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#0f2a28" stroke="#2dd4bf"/>
-        <text x="14" y="23" fill="#d1fae5" font-size="13" font-weight="800">L3 Detect</text>
-        <text x="182" y="23" text-anchor="end" fill="#5eead4" font-size="13" font-weight="900">12</text>
-      </g>
-      <g transform="translate(222,48)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#0f2a28" stroke="#2dd4bf"/>
-        <text x="14" y="23" fill="#d1fae5" font-size="13" font-weight="800">L4 Evaluate</text>
-        <text x="182" y="23" text-anchor="end" fill="#5eead4" font-size="13" font-weight="900">7</text>
-      </g>
-      <g transform="translate(0,96)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
-        <text x="14" y="23" fill="#fef3c7" font-size="13" font-weight="800">L5 Remediate</text>
-        <text x="182" y="23" text-anchor="end" fill="#fbbf24" font-size="13" font-weight="900">8</text>
-      </g>
-      <g transform="translate(222,96)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
-        <text x="14" y="23" fill="#fef3c7" font-size="13" font-weight="800">L6 View</text>
-        <text x="182" y="23" text-anchor="end" fill="#fbbf24" font-size="13" font-weight="900">2</text>
-      </g>
-      <g transform="translate(0,144)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#12112e" stroke="#a78bfa"/>
-        <text x="14" y="23" fill="#ede9fe" font-size="13" font-weight="800">L7 Output</text>
-        <text x="182" y="23" text-anchor="end" fill="#c4b5fd" font-size="13" font-weight="900">3</text>
-      </g>
-      <g transform="translate(222,144)">
-        <rect x="0" y="0" width="210" height="36" rx="12" fill="#12112e" stroke="#a78bfa"/>
-        <text x="14" y="23" fill="#ede9fe" font-size="13" font-weight="800">L0 Source adapters</text>
-        <text x="182" y="23" text-anchor="end" fill="#c4b5fd" font-size="13" font-weight="900">3</text>
+      <g transform="translate(224,174)">
+        <rect x="0" y="0" width="212" height="46" rx="16" fill="#161230" stroke="#a78bfa"/>
+        <text x="18" y="29" fill="#ede9fe" font-size="17" font-weight="800">Source adapters</text>
+        <text x="188" y="29" text-anchor="end" fill="#c4b5fd" font-size="17" font-weight="900">3</text>
       </g>
     </g>
 
-    <!-- Footer divider — pushed below the L7/L0 panel row (which ends at y=370) -->
-    <line x1="56" y1="408" x2="1344" y2="408" stroke="#1e293b" stroke-width="1"/>
+    <g transform="translate(892,470)">
+      <rect x="0" y="-26" width="444" height="56" rx="18" fill="#091120" stroke="#334155"/>
+      <text x="20" y="-2" font-size="14" font-weight="800" fill="#e2e8f0">Runtime contract</text>
+      <text x="20" y="18" font-size="14" fill="#94a3b8">Same skill bundle code across CLI, CI, MCP, and runner surfaces.</text>
+    </g>
 
-    <!-- Left: vendor strip -->
-    <text x="72" y="432" fill="#64748b" font-size="10" font-weight="800" letter-spacing="1.6">RUNS AGAINST</text>
-    <g transform="translate(72,442)">
-      <g><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#aws" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(44,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#gcp" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(88,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#azure" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(132,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#k8s" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(176,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#okta" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(220,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#entra" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(264,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#google" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(308,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#snowflake" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(352,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#databricks" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(396,0)"><rect x="0" y="0" width="36" height="36" rx="8" fill="#0b1628" stroke="#1f2937"/><use href="#clickhouse" x="8" y="8" width="20" height="20"/></g>
-      <g transform="translate(440,0)">
-        <rect x="0" y="0" width="60" height="36" rx="8" fill="#1b1235" stroke="#a78bfa"/>
-        <text x="30" y="23" text-anchor="middle" fill="#c4b5fd" font-size="12" font-weight="800">MCP</text>
+    <text x="96" y="474" font-size="11" font-weight="800" fill="#64748b" letter-spacing="1.8">RUNS AGAINST</text>
+    <g transform="translate(96,486)">
+      <g><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#aws" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(46,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#gcp" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(92,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#azure" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(138,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#k8s" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(184,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#okta" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(230,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#entra" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(276,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#google" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(322,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#snowflake" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(368,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#databricks" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(414,0)"><rect x="0" y="0" width="38" height="38" rx="10" fill="#091120" stroke="#334155"/><use href="#clickhouse" x="9" y="9" width="20" height="20"/></g>
+      <g transform="translate(470,0)">
+        <rect x="0" y="0" width="74" height="38" rx="10" fill="#151131" stroke="#a78bfa"/>
+        <text x="37" y="24" text-anchor="middle" fill="#ddd6fe" font-size="13" font-weight="800">MCP</text>
       </g>
     </g>
 
-    <!-- Right: access surfaces — y-aligned with RUNS AGAINST at new footer position -->
-    <text x="1328" y="432" text-anchor="end" fill="#64748b" font-size="10" font-weight="800" letter-spacing="1.6">ACCESS SURFACES</text>
-    <g transform="translate(1012,442)" font-size="12" font-weight="700" fill="#cbd5e1">
-      <rect x="0" y="0" width="72" height="36" rx="9" fill="#0b1628" stroke="#334155"/>
-      <text x="36" y="22" text-anchor="middle">CLI</text>
-      <rect x="80" y="0" width="72" height="36" rx="9" fill="#0b1628" stroke="#334155"/>
-      <text x="116" y="22" text-anchor="middle">CI</text>
-      <rect x="160" y="0" width="72" height="36" rx="9" fill="#0b1628" stroke="#334155"/>
-      <text x="196" y="22" text-anchor="middle">MCP</text>
-      <rect x="240" y="0" width="76" height="36" rx="9" fill="#0b1628" stroke="#334155"/>
-      <text x="278" y="22" text-anchor="middle">runners</text>
+    <text x="1082" y="474" text-anchor="end" font-size="11" font-weight="800" fill="#64748b" letter-spacing="1.8">ACCESS SURFACES</text>
+    <g transform="translate(1114,486)">
+      <rect x="-150" y="0" width="78" height="38" rx="10" fill="#091120" stroke="#334155"/>
+      <text x="-111" y="24" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="800">CLI</text>
+      <rect x="-62" y="0" width="78" height="38" rx="10" fill="#091120" stroke="#334155"/>
+      <text x="-23" y="24" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="800">CI</text>
+      <rect x="26" y="0" width="78" height="38" rx="10" fill="#091120" stroke="#334155"/>
+      <text x="65" y="24" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="800">MCP</text>
+      <rect x="114" y="0" width="96" height="38" rx="10" fill="#091120" stroke="#334155"/>
+      <text x="162" y="24" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="800">runners</text>
     </g>
   </g>
 </svg>
