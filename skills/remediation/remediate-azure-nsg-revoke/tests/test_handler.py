@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -15,7 +14,6 @@ from handler import (  # type: ignore[import-not-found]
     DEFAULT_INTENTIONALLY_OPEN_TAG,
     DEFAULT_PROTECTED_NSG_NAME_SUFFIXES,
     DEFAULT_PROTECTED_RULE_NAME_PREFIXES,
-    MODE_DELETE,
     MODE_PATCH,
     STATUS_FAILURE,
     STATUS_IN_PROGRESS,
@@ -31,7 +29,6 @@ from handler import (  # type: ignore[import-not-found]
     parse_targets,
     run,
 )
-
 
 SUB = "00000000-0000-0000-0000-000000000001"
 RG = "rg-prod"
