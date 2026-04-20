@@ -56,15 +56,14 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import hashlib
+import http.client
 import json
 import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Protocol
-from urllib import error as urllib_error
 from urllib import parse as urllib_parse
-from urllib import request as urllib_request
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -198,20 +197,33 @@ class MsGraphClient:
         body: dict[str, Any] | None = None,
         allow_not_found: bool = False,
     ) -> Any | None:
-        data = None
+        parsed = urllib_parse.urlsplit(url)
+        if parsed.scheme != "https" or parsed.netloc != "graph.microsoft.com":
+            raise RuntimeError(f"refusing non-Microsoft Graph URL `{url}`")
+        body_bytes = None
         headers = {"Authorization": f"Bearer {self._token()}"}
         if body is not None:
-            data = json.dumps(body, separators=(",", ":")).encode("utf-8")
+            body_bytes = json.dumps(body, separators=(",", ":")).encode("utf-8")
             headers["Content-Type"] = "application/json"
-        request = urllib_request.Request(url=url, data=data, method=method.upper(), headers=headers)
+        path = parsed.path or "/"
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        connection = http.client.HTTPSConnection(parsed.netloc)
         try:
-            with urllib_request.urlopen(request) as response:
-                payload = response.read()
-        except urllib_error.HTTPError as exc:
-            if exc.code == 404 and allow_not_found:
+            connection.request(method.upper(), path, body=body_bytes, headers=headers)
+            response = connection.getresponse()
+            payload = response.read()
+        except OSError as exc:
+            raise RuntimeError(f"Microsoft Graph connection failed: {exc}") from exc
+        finally:
+            connection.close()
+        if response.status >= 400:
+            if response.status == 404 and allow_not_found:
                 return None
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Microsoft Graph {exc.code}: {detail or exc.reason}") from exc
+            detail = payload.decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Microsoft Graph {response.status}: {detail or response.reason}"
+            )
         if not payload:
             return None
         return json.loads(payload)
