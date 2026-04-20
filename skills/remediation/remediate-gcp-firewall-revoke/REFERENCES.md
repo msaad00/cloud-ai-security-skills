@@ -1,0 +1,39 @@
+# References — remediate-gcp-firewall-revoke
+
+## GCP
+
+- VPC firewall rules overview — https://cloud.google.com/firewall/docs/firewalls
+- Firewall rule components (direction, sourceRanges, allowed, disabled) — https://cloud.google.com/firewall/docs/firewalls#firewall_rule_components
+- Compute Engine API: `firewalls.get` — https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/get
+- Compute Engine API: `firewalls.patch` — https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/patch
+- Compute Engine API: `firewalls.delete` — https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/delete
+- IAM permissions for Compute Engine firewalls (`compute.firewalls.get`, `compute.firewalls.patch`, `compute.firewalls.delete`) — https://cloud.google.com/compute/docs/access/iam
+- Predefined role `roles/compute.securityAdmin` — https://cloud.google.com/iam/docs/understanding-roles#compute-engine-roles
+
+## MITRE ATT&CK
+
+- T1190 — Exploit Public-Facing Application: https://attack.mitre.org/techniques/T1190/
+- M1037 — Filter Network Traffic: https://attack.mitre.org/mitigations/M1037/
+
+## OCSF 1.8
+
+- Detection Finding (class 2004): https://schema.ocsf.io/1.8.0/classes/detection_finding
+- Repo-pinned contract: [`skills/detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md)
+
+## Audit infrastructure (shared with the AWS pair)
+
+- DynamoDB PutItem — https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html
+- S3 server-side encryption with KMS — https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html
+- Audit table partition key is `rule_name`, sort key `action_at` (ISO-8601 UTC); rows carry `provider: "gcp"` and `project_id` for cross-cloud queries.
+
+## Compliance frameworks
+
+- NIST CSF 2.0 — `RS.MI` (Mitigation), `PR.AC-05` (Network integrity)
+- SOC 2 — CC6.6 (Logical and physical access controls)
+- CIS GCP Foundations 2.x — sections 3.6 / 3.7 (no firewall rule allows ingress from 0.0.0.0/0 on admin or database ports)
+
+## Related repo skills
+
+- [`detect-gcp-open-firewall`](../../detection/detect-gcp-open-firewall/) — paired source detector
+- [`remediate-aws-sg-revoke`](../remediate-aws-sg-revoke/) — AWS counterpart sharing the dual-audit pattern
+- [`cspm-gcp-cis-benchmark`](../../evaluation/cspm-gcp-cis-benchmark/) — periodic posture equivalent (read-only); the streaming detector + this remediator close the loop in near-real-time
