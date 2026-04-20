@@ -72,7 +72,8 @@ skills/
 │   ├── remediate-okta-session-kill/
 │   ├── remediate-container-escape-k8s/
 │   ├── remediate-k8s-rbac-revoke/
-│   └── remediate-mcp-tool-quarantine/
+│   ├── remediate-mcp-tool-quarantine/
+│   └── remediate-entra-credential-revoke/
 │
 ├── output/                        # append-only persistence sinks
 │   ├── sink-s3-jsonl/

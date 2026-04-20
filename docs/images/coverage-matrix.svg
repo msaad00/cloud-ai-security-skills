@@ -93,15 +93,15 @@
     <text x="48"   y="480" fill="#f1f5f9" font-size="15">detect-entra-credential-addition</text>
     <text x="430"  y="480" fill="#cbd5e1" font-size="14">T1098 · T1098.001</text>
     <rect x="760"  y="464" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="880"  y="464" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="1020" y="480" fill="#fef3c7" font-size="13">#238 · iam-departures-azure-entra</text>
+    <rect x="880"  y="464" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="480" fill="#dcfce7" font-size="13">→ remediate-entra-credential-revoke</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
     <text x="48"   y="518" fill="#f1f5f9" font-size="15">detect-entra-role-grant-escalation</text>
     <text x="430"  y="518" fill="#cbd5e1" font-size="14">T1098 · T1098.003</text>
     <rect x="760"  y="502" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
-    <rect x="880"  y="502" width="40" height="22" rx="4" fill="#b45309" stroke="#f59e0b"/>
-    <text x="1020" y="518" fill="#fef3c7" font-size="13">#238 · iam-departures-azure-entra</text>
+    <rect x="880"  y="502" width="40" height="22" rx="4" fill="#16a34a" stroke="#22c55e"/>
+    <text x="1020" y="518" fill="#dcfce7" font-size="13">→ remediate-entra-credential-revoke</text>
   </g>
   <g font-family="Inter, system-ui, sans-serif">
     <text x="48"   y="556" fill="#f1f5f9" font-size="15">detect-google-workspace-suspicious-login</text>
@@ -166,6 +166,6 @@
 
   <!-- Footer -->
   <g font-family="Inter, system-ui, sans-serif">
-    <text x="48" y="884" fill="#94a3b8" font-size="13">Closed-loop ratio: <tspan fill="#5eead4" font-weight="900">5 / 11</tspan> · roadmap covers <tspan fill="#fbbf24" font-weight="900">4 of 6 remaining gaps</tspan> via #238 #241 #242 · <tspan fill="#f87171" font-weight="900">2 detections need new remediation skills</tspan> · all writes HITL-gated, dry-run-default, dual-audited (#155)</text>
+    <text x="48" y="884" fill="#94a3b8" font-size="13">Closed-loop ratio: <tspan fill="#5eead4" font-weight="900">7 / 11</tspan> · roadmap covers <tspan fill="#fbbf24" font-weight="900">2 of 4 remaining gaps</tspan> via #241 #242 · <tspan fill="#f87171" font-weight="900">2 detections need new remediation skills</tspan> · all writes HITL-gated, dry-run-default, dual-audited (#155)</text>
   </g>
 </svg>

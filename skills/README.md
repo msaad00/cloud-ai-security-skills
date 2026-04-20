@@ -103,6 +103,7 @@ Active fix workflows with dry-run, audit, and guardrails.
 | [`remediate-container-escape-k8s`](remediation/remediate-container-escape-k8s/) | Kubernetes containment — apply or re-verify a deny-all NetworkPolicy after detect-container-escape-k8s; protected-namespace deny-list, declared-incident gate, dual audit |
 | [`remediate-k8s-rbac-revoke`](remediation/remediate-k8s-rbac-revoke/) | Kubernetes RBAC revocation — delete or re-verify the offending RoleBinding / ClusterRoleBinding after detect-privilege-escalation-k8s rule r3-rbac-self-grant; protected-namespace + system:* deny-list, declared-incident gate, dual audit |
 | [`remediate-mcp-tool-quarantine`](remediation/remediate-mcp-tool-quarantine/) | MCP tool quarantine — append the offending tool to a JSONL quarantine file the operator's MCP client filters its surface against, after detect-mcp-tool-drift (T1195.001) or detect-prompt-injection-mcp-proxy (ATLAS AML.T0051); protected-prefix (`mcp_`, `system_`, `internal_`) deny-list, declared-incident gate, dual audit |
+| [`remediate-entra-credential-revoke`](remediation/remediate-entra-credential-revoke/) | Entra service-principal containment — disable the SP (`accountEnabled=false`) and emit a triage payload listing current credentials + role assignments for operator selective revocation, after detect-entra-credential-addition (T1098.001) or detect-entra-role-grant-escalation (T1098.003); protected name-prefix + objectId deny-list, declared-incident gate, dual audit |
 
 ## output/
 

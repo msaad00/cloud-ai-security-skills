@@ -4,24 +4,24 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **50**
+- Total shipped skills in registry: **51**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
 | OCSF | 1.8.0 | **37** | — |
-| MITRE ATT&CK | v14 | **27** | 100% mapped coverage |
+| MITRE ATT&CK | v14 | **28** | 100% mapped coverage |
 | MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **1** | — |
 | CIS GCP Foundations | v3.0 | **1** | — |
-| CIS Azure Foundations | v2.1 | **1** | — |
+| CIS Azure Foundations | v2.1 | **2** | — |
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
 | CIS Controls | v8 | **2** | — |
-| NIST CSF | 2.0 | **13** | 100% mapped coverage |
+| NIST CSF | 2.0 | **14** | 100% mapped coverage |
 | NIST AI RMF | current | **4** | — |
-| SOC 2 TSC | current | **13** | 100% mapped coverage |
+| SOC 2 TSC | current | **14** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
 | OWASP LLM Top 10 | current | **2** | — |
@@ -85,7 +85,7 @@ Shipped skills mapped: **37**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **27**
+Shipped skills mapped: **28**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -111,6 +111,7 @@ Shipped skills mapped: **27**
 | [`ingest-security-hub-ocsf`](../skills/ingestion/ingest-security-hub-ocsf) | ingestion | aws | findings, security-posture |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
+| [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
@@ -161,11 +162,12 @@ Shipped skills mapped: **1**
 
 - Registry id: `cis-azure-v2.1`
 
-Shipped skills mapped: **1**
+Shipped skills mapped: **2**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`cspm-azure-cis-benchmark`](../skills/evaluation/cspm-azure-cis-benchmark) | evaluation | azure | identities, storage, logging, network |
+| [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
 
 ### CIS Kubernetes Benchmark (current)
 
@@ -206,7 +208,7 @@ Shipped skills mapped: **2**
 - Asset classes in scope: identities, storage, logging, network, clusters, runtime, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **13**
+Shipped skills mapped: **14**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -220,6 +222,7 @@ Shipped skills mapped: **13**
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
+| [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
@@ -244,7 +247,7 @@ Shipped skills mapped: **4**
 - Asset classes in scope: access, logging, change, evidence, inventory, ai-endpoints
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **13**
+Shipped skills mapped: **14**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -258,6 +261,7 @@ Shipped skills mapped: **13**
 | [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl) | output | snowflake | findings, evidence, audit-logs, lakehouse |
 | [`iam-departures-aws`](../skills/remediation/iam-departures-aws) | remediation | aws, snowflake, databricks, clickhouse | identities, access, audit, hr-events |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
+| [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
