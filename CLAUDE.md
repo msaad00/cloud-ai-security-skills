@@ -52,7 +52,8 @@ skills/
 │   ├── detect-credential-stuffing-okta/
 │   ├── detect-entra-credential-addition/
 │   ├── detect-entra-role-grant-escalation/
-│   └── detect-google-workspace-suspicious-login/
+│   ├── detect-google-workspace-suspicious-login/
+│   └── detect-aws-open-security-group/
 │
 ├── evaluation/                    # posture and benchmark checks
 │   ├── cspm-aws-cis-benchmark/
@@ -74,7 +75,8 @@ skills/
 │   ├── remediate-k8s-rbac-revoke/
 │   ├── remediate-mcp-tool-quarantine/
 │   ├── remediate-entra-credential-revoke/
-│   └── remediate-workspace-session-kill/
+│   ├── remediate-workspace-session-kill/
+│   └── remediate-aws-sg-revoke/
 │
 ├── output/                        # append-only persistence sinks
 │   ├── sink-s3-jsonl/

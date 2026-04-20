@@ -51,9 +51,9 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.jsonl \
 |---|---|---|
 | L1 Ingest | 15 shipped ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources as demand justifies |
 | L2 Discover | 4 shipped skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence sources |
-| L3 Detect | 11 shipped detectors tied to MITRE ATT&CK techniques (lateral movement, K8s container escape, K8s privesc + secret read, MCP tool drift, MCP prompt injection, Okta MFA fatigue, Okta credential stuffing, Entra credential addition, Entra role grant, Workspace suspicious login) | impossible travel, more AI-agent signals |
+| L3 Detect | 12 shipped detectors tied to MITRE ATT&CK techniques (lateral movement, K8s container escape, K8s privesc + secret read, MCP tool drift, MCP prompt injection, Okta MFA fatigue, Okta credential stuffing, Entra credential addition, Entra role grant, Workspace suspicious login, AWS open security-group) | impossible travel, more AI-agent signals |
 | L4 Evaluate | 7 shipped benchmarks (CIS AWS / GCP / Azure, K8s, Docker / container, GPU cluster, model serving) | native by default, OCSF Compliance Finding (`class_uid=2003`) shipped as opt-in output |
-| L5 Remediate | `iam-departures-aws`, `remediate-okta-session-kill`, `remediate-container-escape-k8s`, `remediate-k8s-rbac-revoke`, `remediate-mcp-tool-quarantine`, `remediate-entra-credential-revoke`, and `remediate-workspace-session-kill` with HITL, dual audit, dry-run | broader remediation families (see issues #155, #242, #307) |
+| L5 Remediate | `iam-departures-aws`, `remediate-aws-sg-revoke`, `remediate-okta-session-kill`, `remediate-container-escape-k8s`, `remediate-k8s-rbac-revoke`, `remediate-mcp-tool-quarantine`, `remediate-entra-credential-revoke`, and `remediate-workspace-session-kill` with HITL, dual audit, dry-run | broader remediation families (see issues #155, #242, #307) |
 | L6 View | `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow` | graph overlay, warehouse-ready converters |
 | L7 Output | 3 shipped sinks (`sink-s3-jsonl`, `sink-snowflake-jsonl`, `sink-clickhouse-jsonl`) | BigQuery, Security Lake |
 
@@ -70,7 +70,7 @@ skills/
 └── output/         ← L7 (sink-* skills: append-only persistence)
 ```
 
-The repo ships **52 skills** across these seven layers and the three `source-*` adapters (15 + 4 + 11 + 7 + 7 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
+The repo ships **54 skills** across these seven layers and the three `source-*` adapters (15 + 4 + 12 + 7 + 8 + 2 + 3, plus 3 `source-*` adapters accounted for under ingestion).
 
 `skills/detection-engineering/` holds the shared OCSF contract and frozen
 golden fixtures. Executable skills live only under the six layered
