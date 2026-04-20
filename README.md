@@ -109,7 +109,7 @@ Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
 ### Closed-loop coverage at a glance
 
-![Closed-loop coverage matrix — 3 of 11 detections shipped as closed loops; 5 of the remaining 8 gaps planned via tracking issues; 3 detections still need new remediation skills.](docs/images/coverage-matrix.svg)
+![Closed-loop coverage matrix — 13 of 14 detections shipped as closed loops; lateral-movement is detection-only by design (per-arm fan-out); CSPM auto-remediation tracked at #242 / #254.](docs/images/coverage-matrix.svg)
 
 Source of truth for detect↔remediate parity. Tracked at [#155](https://github.com/msaad00/cloud-ai-security-skills/issues/155); design + remaining per-layer SVGs at [#248](https://github.com/msaad00/cloud-ai-security-skills/issues/248).
 
