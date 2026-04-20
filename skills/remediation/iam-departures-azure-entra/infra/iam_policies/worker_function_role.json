@@ -1,0 +1,36 @@
+{
+  "_comment": "Microsoft Graph application + Azure RBAC + Cosmos / Blob audit permissions for the Worker Function's user-assigned managed identity. Authoritative deny list for protected principals lives in cross_subscription_role.json (mirrored in src/function_worker/handler.py protected_principals).",
+  "identity": "${WorkerFunctionMsiObjectId}",
+  "microsoftGraphApplicationPermissions": [
+    "User.ReadWrite.All",
+    "Group.ReadWrite.All",
+    "Directory.ReadWrite.All",
+    "RoleManagement.ReadWrite.Directory",
+    "Application.ReadWrite.All",
+    "User.ManageIdentities.All"
+  ],
+  "azureRoleAssignments": [
+    {
+      "roleDefinition": "Cosmos DB Built-in Data Contributor",
+      "scope": "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroup}/providers/Microsoft.DocumentDB/databaseAccounts/${CosmosAccount}/sqlDatabases/${CosmosDatabase}/containers/${CosmosContainer}",
+      "principalId": "${WorkerFunctionMsiObjectId}",
+      "_justification": "Audit row writes. Scoped to the single audit container."
+    },
+    {
+      "roleDefinition": "Storage Blob Data Contributor",
+      "scope": "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroup}/providers/Microsoft.Storage/storageAccounts/${AuditStorageAccount}/blobServices/default/containers/${AuditContainer}",
+      "principalId": "${WorkerFunctionMsiObjectId}",
+      "_justification": "Audit evidence object writes. Scoped to the single audit container."
+    },
+    {
+      "roleDefinition": "Key Vault Crypto User",
+      "scope": "/subscriptions/${SubscriptionId}/resourceGroups/${ResourceGroup}/providers/Microsoft.KeyVault/vaults/${KeyVaultName}/keys/${AuditCmkKeyName}",
+      "principalId": "${WorkerFunctionMsiObjectId}",
+      "_justification": "CMK wrap/unwrap for audit blob encryption. Scoped to the single key."
+    }
+  ],
+  "deniedActions": [
+    "Microsoft.Authorization/roleAssignments/write",
+    "Microsoft.Authorization/roleDefinitions/write"
+  ]
+}

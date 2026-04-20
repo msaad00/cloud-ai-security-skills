@@ -1,0 +1,92 @@
+{
+  "_comment": "Durable orchestrator definition for iam-departures-azure-entra. Equivalent to the AWS Step Function ASL: receive an EventGrid BlobCreated event, invoke the parser Function, then for each validated entry invoke the worker Function. Concurrency capped at 10 (same as the AWS Map state). Failures are caught and routed to the failure-alerts action group, but other entries in the batch still process — the worker is intentionally per-user-isolated.",
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "ParseManifest": {
+        "type": "Function",
+        "inputs": {
+          "function": {
+            "id": "${ParserFunctionResourceId}"
+          },
+          "body": {
+            "storage_account": "@triggerBody()?['data']?['url']?['storageAccount']",
+            "container": "@triggerBody()?['data']?['url']?['container']",
+            "blob_name": "@triggerBody()?['data']?['url']?['blob']"
+          }
+        },
+        "runAfter": {}
+      },
+      "CheckValidatedEntries": {
+        "type": "If",
+        "expression": {
+          "and": [
+            { "greater": [ "@length(body('ParseManifest')?['validated_entries'])", 0 ] }
+          ]
+        },
+        "actions": {
+          "RemediateUsers": {
+            "type": "Foreach",
+            "foreach": "@body('ParseManifest')?['validated_entries']",
+            "runtimeConfiguration": { "concurrency": { "repetitions": 10 } },
+            "actions": {
+              "RemediateSingleUser": {
+                "type": "Function",
+                "inputs": {
+                  "function": { "id": "${WorkerFunctionResourceId}" },
+                  "body": {
+                    "entry": "@items('RemediateUsers')",
+                    "apply": true,
+                    "hard_delete": false
+                  },
+                  "retryPolicy": {
+                    "type": "exponential", "count": 1, "interval": "PT10S",
+                    "minimumInterval": "PT5S", "maximumInterval": "PT30S"
+                  }
+                },
+                "runAfter": {}
+              },
+              "CaptureFailure": {
+                "type": "Compose",
+                "inputs": {
+                  "object_id": "@items('RemediateUsers')?['object_id']",
+                  "upn": "@items('RemediateUsers')?['upn']",
+                  "status": "error",
+                  "error": "@actions('RemediateSingleUser')?['error']?['message']"
+                },
+                "runAfter": { "RemediateSingleUser": [ "Failed", "TimedOut" ] }
+              }
+            }
+          }
+        },
+        "else": {
+          "actions": {
+            "NoActionNeeded": {
+              "type": "Compose",
+              "inputs": "All entries were filtered (rehires, already deleted, grace period)."
+            }
+          }
+        },
+        "runAfter": { "ParseManifest": [ "Succeeded" ] }
+      },
+      "Summary": {
+        "type": "Compose",
+        "inputs": {
+          "execution_id": "@workflow().run.name",
+          "started_at": "@workflow().run.startTime",
+          "completed_at": "@utcNow()",
+          "validation_summary": "@body('ParseManifest')?['validation_summary']"
+        },
+        "runAfter": { "CheckValidatedEntries": [ "Succeeded", "Skipped" ] }
+      }
+    },
+    "triggers": {
+      "When_EventGrid_event_arrives": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": { "schema": { "type": "object" } }
+      }
+    },
+    "outputs": {}
+  }
+}
