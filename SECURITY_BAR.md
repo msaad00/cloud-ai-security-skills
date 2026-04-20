@@ -71,6 +71,7 @@ is the row you can take to your auditor.
 | `model-serving-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `iam-departures-aws` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-container-escape-k8s` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
+| `remediate-entra-credential-revoke` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-k8s-rbac-revoke` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-mcp-tool-quarantine` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `remediate-okta-session-kill` | remediation | ⚠️ write via HITL | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
@@ -80,7 +81,7 @@ is the row you can take to your auditor.
 | `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 
-_50 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+_51 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
 <!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar
