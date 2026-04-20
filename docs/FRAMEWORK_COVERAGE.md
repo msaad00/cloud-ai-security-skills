@@ -4,24 +4,24 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **54**
+- Total shipped skills in registry: **56**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **38** | — |
-| MITRE ATT&CK | v14 | **31** | 100% mapped coverage |
+| OCSF | 1.8.0 | **39** | — |
+| MITRE ATT&CK | v14 | **33** | 100% mapped coverage |
 | MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **3** | — |
-| CIS GCP Foundations | v3.0 | **1** | — |
+| CIS GCP Foundations | v3.0 | **3** | — |
 | CIS Azure Foundations | v2.1 | **2** | — |
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
 | CIS Controls | v8 | **2** | — |
-| NIST CSF | 2.0 | **16** | 100% mapped coverage |
+| NIST CSF | 2.0 | **17** | 100% mapped coverage |
 | NIST AI RMF | current | **4** | — |
-| SOC 2 TSC | current | **16** | 100% mapped coverage |
+| SOC 2 TSC | current | **17** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
 | OWASP LLM Top 10 | current | **2** | — |
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **38**
+Shipped skills mapped: **39**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -45,6 +45,7 @@ Shipped skills mapped: **38**
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
+| [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | identities, applications, service-accounts, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
@@ -86,7 +87,7 @@ Shipped skills mapped: **38**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **31**
+Shipped skills mapped: **33**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -95,6 +96,7 @@ Shipped skills mapped: **31**
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
+| [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | identities, applications, service-accounts, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
@@ -115,6 +117,7 @@ Shipped skills mapped: **31**
 | [`remediate-aws-sg-revoke`](../skills/remediation/remediate-aws-sg-revoke) | remediation | aws | security-groups, ingress-rules, audit |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
 | [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
+| [`remediate-gcp-firewall-revoke`](../skills/remediation/remediate-gcp-firewall-revoke) | remediation | gcp | vpc-firewall-rules, ingress-rules, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
@@ -158,11 +161,13 @@ Shipped skills mapped: **3**
 
 - Registry id: `cis-gcp-v3`
 
-Shipped skills mapped: **1**
+Shipped skills mapped: **3**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`cspm-gcp-cis-benchmark`](../skills/evaluation/cspm-gcp-cis-benchmark) | evaluation | gcp | identities, storage, logging, network |
+| [`remediate-gcp-firewall-revoke`](../skills/remediation/remediate-gcp-firewall-revoke) | remediation | gcp | vpc-firewall-rules, ingress-rules, audit |
 
 ### CIS Azure Foundations (v2.1)
 
@@ -214,7 +219,7 @@ Shipped skills mapped: **2**
 - Asset classes in scope: identities, storage, logging, network, clusters, runtime, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **16**
+Shipped skills mapped: **17**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -230,6 +235,7 @@ Shipped skills mapped: **16**
 | [`remediate-aws-sg-revoke`](../skills/remediation/remediate-aws-sg-revoke) | remediation | aws | security-groups, ingress-rules, audit |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
 | [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
+| [`remediate-gcp-firewall-revoke`](../skills/remediation/remediate-gcp-firewall-revoke) | remediation | gcp | vpc-firewall-rules, ingress-rules, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
@@ -255,7 +261,7 @@ Shipped skills mapped: **4**
 - Asset classes in scope: access, logging, change, evidence, inventory, ai-endpoints
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **16**
+Shipped skills mapped: **17**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -271,6 +277,7 @@ Shipped skills mapped: **16**
 | [`remediate-aws-sg-revoke`](../skills/remediation/remediate-aws-sg-revoke) | remediation | aws | security-groups, ingress-rules, audit |
 | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s) | remediation | kubernetes | pods, workloads, networkpolicy, audit |
 | [`remediate-entra-credential-revoke`](../skills/remediation/remediate-entra-credential-revoke) | remediation | azure, entra | service-principals, applications, credentials, role-assignments, audit |
+| [`remediate-gcp-firewall-revoke`](../skills/remediation/remediate-gcp-firewall-revoke) | remediation | gcp | vpc-firewall-rules, ingress-rules, audit |
 | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke) | remediation | kubernetes | rolebindings, clusterrolebindings, rbac, audit |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 | [`remediate-okta-session-kill`](../skills/remediation/remediate-okta-session-kill) | remediation | okta | identities, sessions, oauth-tokens, audit |
