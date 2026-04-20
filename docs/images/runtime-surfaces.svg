@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420" role="img" aria-labelledby="runtime-title runtime-desc">
+  <title id="runtime-title">cloud-ai-security-skills runtime surfaces</title>
+  <desc id="runtime-desc">Clean runtime diagram showing four invocation surfaces converging on the same shared skill bundle: MCP clients through the repo MCP server, CLI pipes, CI workflows, and cloud runners. The shared bundle emits native JSONL, OCSF, SARIF, Mermaid, and audited actions.</desc>
+
+  <defs>
+    <linearGradient id="runtimeBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#081122"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <pattern id="runtimeGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1f2a44" stroke-opacity="0.35" stroke-width="1"/>
+    </pattern>
+    <marker id="runtimeArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#c084fc"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="420" fill="url(#runtimeBg)"/>
+  <rect width="1400" height="420" fill="url(#runtimeGrid)"/>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="64" y="64" font-size="32" font-weight="800" fill="#f8fafc">Runtime surfaces: one shared skill bundle, four clean entry points</text>
+    <text x="64" y="96" font-size="16" fill="#a5b4fc">No surface re-implements the skill. Transport changes; execution core stays the same.</text>
+
+    <rect x="64" y="146" width="230" height="92" rx="18" fill="#2b1d59" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="92" y="182" font-size="18" font-weight="800" fill="#ede9fe">MCP clients</text>
+    <text x="92" y="208" font-size="16" fill="#ddd6fe">Claude, Codex, Cursor, Windsurf, Zed</text>
+
+    <rect x="64" y="258" width="230" height="92" rx="18" fill="#123b5f" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="92" y="294" font-size="18" font-weight="800" fill="#e0f2fe">Direct surfaces</text>
+    <text x="92" y="320" font-size="16" fill="#bae6fd">CLI pipes, CI workflows, cloud runners</text>
+
+    <rect x="372" y="176" width="280" height="144" rx="20" fill="#4a114f" stroke="#e879f9" stroke-width="1.5"/>
+    <text x="402" y="218" font-size="18" font-weight="800" fill="#fae8ff">Repo MCP server</text>
+    <text x="402" y="246" font-size="16" fill="#f5d0fe">auto-discovers `SKILL.md`</text>
+    <text x="402" y="270" font-size="16" fill="#f5d0fe">audits tool calls</text>
+    <text x="402" y="294" font-size="16" fill="#f5d0fe">enforces per-skill timeout and allowlist</text>
+
+    <rect x="732" y="146" width="338" height="204" rx="22" fill="#0b4a44" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="762" y="194" font-size="22" font-weight="800" fill="#ecfeff">Shared skill bundle</text>
+    <text x="762" y="236" font-size="44" font-weight="800" fill="#f8fafc">54 skills</text>
+    <text x="762" y="270" font-size="18" fill="#99f6e4">`SKILL.md + src/ + tests/`</text>
+    <text x="762" y="308" font-size="16" fill="#ccfbf1">same audit, HITL, and execution logic on every surface</text>
+
+    <rect x="1146" y="146" width="190" height="204" rx="20" fill="#3f2a0b" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="1176" y="194" font-size="20" font-weight="800" fill="#fef3c7">Outputs</text>
+    <text x="1176" y="232" font-size="16" fill="#fde68a">native JSONL</text>
+    <text x="1176" y="256" font-size="16" fill="#fde68a">OCSF 1.8</text>
+    <text x="1176" y="280" font-size="16" fill="#fde68a">SARIF</text>
+    <text x="1176" y="304" font-size="16" fill="#fde68a">Mermaid</text>
+    <text x="1176" y="328" font-size="16" fill="#fde68a">audited actions</text>
+
+    <path d="M294 192H356" stroke="#c084fc" stroke-width="3" fill="none" marker-end="url(#runtimeArrow)"/>
+    <path d="M294 304H708" stroke="#38bdf8" stroke-width="3" fill="none" marker-end="url(#runtimeArrow)"/>
+    <path d="M652 248H708" stroke="#c084fc" stroke-width="3" fill="none" marker-end="url(#runtimeArrow)"/>
+    <path d="M1070 248H1128" stroke="#2dd4bf" stroke-width="3" fill="none" marker-end="url(#runtimeArrow)"/>
+
+    <text x="314" y="180" font-size="13" font-weight="700" fill="#c4b5fd">stdio</text>
+    <text x="494" y="292" font-size="13" font-weight="700" fill="#7dd3fc">invoke directly</text>
+  </g>
+</svg>

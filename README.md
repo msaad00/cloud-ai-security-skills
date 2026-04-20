@@ -52,15 +52,17 @@ Full discussion: [docs/ARCHITECTURE.md §3 Layer model + §6 Wire contract](docs
 
 ## Architecture
 
-External signals enter through two intake layers, pass through two analyze layers, and exit through two act layers, persisting through one output layer. Every node ships as a `SKILL.md + src/ + tests/` bundle that runs unchanged from CLI, CI, MCP, or a cloud runner.
+External signals enter through two intake layers, pass through two analyze layers, and exit through two act layers, persisting through one output layer. The README now splits the picture into two simpler visuals so the layer flow and runtime story stay readable on GitHub.
 
-![Canonical architecture — 7 skill layers (L1 Ingest 15+3 source, L2 Discover 4, L3 Detect 11, L4 Evaluate 7, L5 Remediate 4, L6 View 2, L7 Output 3 sinks) and 4 runtime surfaces (MCP clients via stdio, CLI pipes, CI GitHub Actions, cloud runners). The same shipped bundle is invoked from every surface.](docs/images/architecture.svg)
+![Clean architecture layers diagram — signals feed intake, analyze, act, and persist stages across the seven shipped skill layers.](docs/images/architecture-layers.svg)
+
+![Clean runtime surfaces diagram — MCP, CLI, CI, and cloud runners all invoke the same shared skill bundle.](docs/images/runtime-surfaces.svg)
 
 Full contract: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Agent and runtime integrations
 
-MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation — see the runtime band of the architecture diagram above.
+MCP clients go through the repo MCP server; CLI, CI, and cloud runners invoke the skill bundle directly. All four surfaces share the same implementation — see the runtime surfaces diagram above.
 
 - **MCP** · [.mcp.json](.mcp.json) · [mcp-server/README.md](mcp-server/README.md) · [docs/MCP_AUDIT_CONTRACT.md](docs/MCP_AUDIT_CONTRACT.md)
 - **CLI / pipes** · stdin/stdout bundles compose into one-liners
