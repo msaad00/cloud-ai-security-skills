@@ -22,6 +22,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_SKIPPED_PROTECTED,
     STATUS_SUCCESS,
     STATUS_WOULD_VIOLATE_PROTECTED,
+    AzureNetworkClient,
     Target,
     check_apply_gate,
     is_protected_rule,
@@ -498,8 +499,6 @@ def test_real_azure_client_lazy_imports_sdk_only_when_used():
     """The real AzureNetworkClient must not import azure-mgmt-network at module load.
     We simulate the SDK presence via patch.dict on sys.modules and verify a call
     threads through to the mocked SDK classes (no real Azure import needed)."""
-    from handler import AzureNetworkClient  # type: ignore[import-not-found]
-
     fake_credential_cls = MagicMock()
     fake_network_cls = MagicMock()
     azure_identity_mod = MagicMock(DefaultAzureCredential=fake_credential_cls)
@@ -528,8 +527,6 @@ def test_real_azure_client_lazy_imports_sdk_only_when_used():
 
 
 def test_real_azure_client_delete_uses_poller():
-    from handler import AzureNetworkClient  # type: ignore[import-not-found]
-
     fake_credential_cls = MagicMock()
     fake_network_cls = MagicMock()
     azure_identity_mod = MagicMock(DefaultAzureCredential=fake_credential_cls)
