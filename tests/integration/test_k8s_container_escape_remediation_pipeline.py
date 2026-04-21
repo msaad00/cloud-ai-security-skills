@@ -86,3 +86,38 @@ class TestK8sContainerEscapeRemediationPipeline:
         assert all(record["manifest"]["kind"] == "NetworkPolicy" for record in records)
         assert all(record["manifest"]["spec"]["ingress"] == [] for record in records)
         assert all(record["manifest"]["spec"]["egress"] == [] for record in records)
+
+    def test_followup_findings_produce_pod_kill_plans(self):
+        findings = _load_jsonl(GOLDEN_DIR / "k8s_container_escape_followup_findings.ocsf.jsonl")
+        records = list(
+            self.remediate.run(
+                findings,
+                kube_client=_FakeKube(),
+                action_mode=self.remediate.ACTION_POD_KILL,
+            )
+        )
+        assert len(records) == 2
+        assert {record["status"] for record in records} == {"planned"}
+        assert {record["action_mode"] for record in records} == {self.remediate.ACTION_POD_KILL}
+        assert {record["target"]["pod_name"] for record in records} == {"api-7d9b"}
+        assert all(record["dry_run"] is True for record in records)
+        assert all(
+            record["actions"][0]["endpoint"] == "DELETE /api/v1/namespaces/payments/pods/api-7d9b"
+            for record in records
+        )
+
+    def test_followup_findings_produce_node_drain_plans(self):
+        findings = _load_jsonl(GOLDEN_DIR / "k8s_container_escape_followup_findings.ocsf.jsonl")
+        records = list(
+            self.remediate.run(
+                findings,
+                kube_client=_FakeKube(),
+                action_mode=self.remediate.ACTION_NODE_DRAIN,
+            )
+        )
+        assert len(records) == 2
+        assert {record["status"] for record in records} == {"planned"}
+        assert {record["action_mode"] for record in records} == {self.remediate.ACTION_NODE_DRAIN}
+        assert {record["node_name"] for record in records} == {"node-a"}
+        assert all(record["dry_run"] is True for record in records)
+        assert all(record["actions"][0]["step"] == "cordon_and_drain_node" for record in records)
