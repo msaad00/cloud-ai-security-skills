@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 _SRC = Path(__file__).resolve().parent.parent / "src" / "discover.py"
 _SPEC = importlib.util.spec_from_file_location("discover_ai_bom", _SRC)
 assert _SPEC and _SPEC.loader
 _MODULE = importlib.util.module_from_spec(_SPEC)
+sys.modules["discover_ai_bom"] = _MODULE
 _SPEC.loader.exec_module(_MODULE)
 
 build_bom = _MODULE.build_bom
+build_policy_findings = _MODULE.build_policy_findings
 _normalize_assets = _MODULE._normalize_assets
 
 
@@ -45,6 +48,36 @@ def _normalized_doc() -> dict:
     }
 
 
+def _policy_doc() -> dict:
+    return {
+        "inventory_id": "ai-estate-prod-2026-04-21",
+        "collected_at": "2026-04-21T00:00:00Z",
+        "assets": [
+            {
+                "provider": "aws",
+                "service": "bedrock",
+                "kind": "model",
+                "id": "model:chat-prod",
+                "name": "chat-prod",
+                "version": "latest",
+                "registry": "registry.evil.example/redteam/chat-prod:latest",
+                "license": "research-only",
+            },
+            {
+                "provider": "gcp",
+                "service": "vertex-ai",
+                "kind": "model",
+                "id": "projects/p/locations/us/models/2",
+                "name": "fraud-v2",
+                "version": "2.1.0",
+                "registry": "ghcr.io/acme/fraud-v2:2.1.0",
+                "sigstore_verified": True,
+                "license": "Apache-2.0",
+            },
+        ],
+    }
+
+
 class TestNormalizedInventory:
     def test_builds_components_services_and_dependencies(self):
         bom = build_bom(_normalized_doc())
@@ -73,6 +106,45 @@ class TestNormalizedInventory:
             "assets": list(reversed(base["assets"])),
         }
         assert build_bom(base) == build_bom(reversed_doc)
+
+
+class TestPolicyFindings:
+    def test_native_policy_findings_cover_expected_rules(self):
+        findings = build_policy_findings(_policy_doc(), output_format="native")
+        assert {finding["check_id"] for finding in findings} == {"AI-BOM-1", "AI-BOM-2", "AI-BOM-3", "AI-BOM-4"}
+        assert all(finding["status"] == "FAIL" for finding in findings)
+
+    def test_policy_findings_can_render_as_ocsf_compliance_findings(self):
+        findings = build_policy_findings(_policy_doc(), output_format="ocsf")
+        assert len(findings) == 4
+        assert all(finding["class_uid"] == 2003 for finding in findings)
+        assert all(finding["metadata"]["product"]["feature"]["name"] == "discover-ai-bom" for finding in findings)
+        assert {finding["compliance"]["control"] for finding in findings} == {
+            "AI-BOM-1",
+            "AI-BOM-2",
+            "AI-BOM-3",
+            "AI-BOM-4",
+        }
+
+    def test_clean_inventory_has_no_policy_findings(self):
+        clean = {
+            "inventory_id": "ai-estate-clean",
+            "collected_at": "2026-04-21T00:00:00Z",
+            "assets": [
+                {
+                    "provider": "aws",
+                    "service": "bedrock",
+                    "kind": "model",
+                    "id": "model:fraud-v5",
+                    "name": "fraud-v5",
+                    "version": "5.0.1",
+                    "registry": "ghcr.io/acme/fraud-v5:5.0.1",
+                    "sigstore_verified": True,
+                    "license": "Apache-2.0",
+                }
+            ],
+        }
+        assert build_policy_findings(clean, output_format="native") == []
 
 
 class TestProviderSnapshots:

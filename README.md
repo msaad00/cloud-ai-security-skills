@@ -97,7 +97,7 @@ Least-privilege scoping across every client via the `CLOUD_SECURITY_MCP_ALLOWED_
 | a raw log file or stream | [`ingest-*`](skills/ingestion/) → [`detect-*`](skills/detection/) | OCSF Detection Finding |
 | live cloud API access | [`discover-*`](skills/discovery/) or [`evaluation/*`](skills/evaluation/) | graph / benchmark JSON |
 | logs already in your lake (CloudTrail in S3, Okta in Snowflake, Databricks tables) | [`source-*`](skills/ingestion/) → `detect-*` → [`sink-*`](skills/output/) | customer-owned persistence |
-| an AI estate to inventory | [`discover-ai-bom`](skills/discovery/discover-ai-bom/) | CycloneDX-aligned AI BOM |
+| an AI estate to inventory | [`discover-ai-bom`](skills/discovery/discover-ai-bom/) | CycloneDX-aligned AI BOM + optional AI policy findings |
 | audit evidence to produce | [`discover-control-evidence`](skills/discovery/discover-control-evidence/) | PCI / SOC 2 evidence JSON |
 | OCSF findings to publish | [`view/*`](skills/view/) | SARIF · Mermaid |
 | a departing employee to offboard | [`iam-departures-aws`](skills/remediation/iam-departures-aws/) | dry-run plan or audited action |

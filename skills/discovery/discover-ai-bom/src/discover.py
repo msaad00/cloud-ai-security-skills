@@ -8,14 +8,31 @@ import sys
 import uuid
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared.evaluation_ocsf import findings_to_ocsf  # noqa: E402
 
 SKILL_NAME = "discover-ai-bom"
 BOM_FORMAT = "CycloneDX"
 SPEC_VERSION = "1.7"
 SCHEMA_URL = "http://cyclonedx.org/schema/bom-1.7.schema.json"
 BOM_VERSION = 1
+POLICY_BENCHMARK_NAME = "AI BOM Policy Audit"
+POLICY_PROVIDER = "Multi"
+POLICY_FRAMEWORKS = [
+    "CycloneDX ML-BOM",
+    "NIST AI RMF",
+    "OWASP LLM Top 10",
+    "OWASP MCP Top 10",
+    "MITRE ATLAS",
+]
 SECRET_KEYWORDS = (
     "authorization",
     "client_secret",
@@ -56,6 +73,41 @@ KIND_ALIASES = {
     "training-jobs": "training-job",
     "training_pipelines": "training-job",
 }
+UNPINNED_VERSION_MARKERS = {"latest", "main", "master", "stable", "prod", "production", "unspecified"}
+TRUSTED_REGISTRY_HOST_SUFFIXES = (
+    "huggingface.co",
+    "hf.co",
+    "amazonaws.com",
+    "azurecr.io",
+    "gcr.io",
+    "pkg.dev",
+    "docker.io",
+    "ghcr.io",
+)
+INTERNAL_REGISTRY_HOST_SUFFIXES = (".internal", ".corp", ".local", ".lan")
+LICENSE_FLAG_MARKERS = (
+    "non-commercial",
+    "noncommercial",
+    "research-only",
+    "research only",
+    "commercial-restricted",
+    "personal use only",
+    "personal-use-only",
+)
+
+
+@dataclass(frozen=True)
+class PolicyFinding:
+    check_id: str
+    title: str
+    section: str
+    severity: str
+    status: str
+    detail: str
+    remediation: str
+    resources: list[str]
+    nist_ai_rmf: str = ""
+    mitre_atlas: str = ""
 
 
 def _warn(message: str) -> None:
@@ -477,6 +529,215 @@ def _bom_ref(asset: dict[str, Any]) -> str:
     return _asset_identity(asset)
 
 
+def _asset_display_name(asset: dict[str, Any]) -> str:
+    return _string(asset.get("name")) or _string(asset.get("id")) or _bom_ref(asset)
+
+
+def _policy_resource(asset: dict[str, Any]) -> list[str]:
+    return [_bom_ref(asset)]
+
+
+def _version_is_pinned(version: str | None) -> bool:
+    if version is None:
+        return False
+    normalized = version.strip().lower()
+    if not normalized or normalized in UNPINNED_VERSION_MARKERS:
+        return False
+    if normalized.startswith("sha256:"):
+        return True
+    if normalized.startswith("v") and any(ch.isdigit() for ch in normalized[1:]):
+        return True
+    return any(ch.isdigit() for ch in normalized)
+
+
+def _registry_candidates(asset: dict[str, Any]) -> list[str]:
+    candidates: list[str] = []
+    for key in ("registry", "image", "image_uri", "model_uri", "source_uri", "repository", "uri"):
+        value = _string(asset.get(key))
+        if value:
+            candidates.append(value)
+
+    for parent_key in ("properties", "labels", "tags"):
+        mapping = asset.get(parent_key)
+        if not isinstance(mapping, dict):
+            continue
+        for key, value in mapping.items():
+            if "registry" in key.lower() or key.lower() in {"image", "image_uri", "model_uri", "source_uri", "repository", "uri"}:
+                rendered = _string(value)
+                if rendered:
+                    candidates.append(rendered)
+    return candidates
+
+
+def _extract_registry_host(value: str) -> str | None:
+    if "://" in value:
+        parsed = urlparse(value)
+        return parsed.netloc.lower() or None
+
+    head = value.split("/", 1)[0].lower()
+    if "." in head or ":" in head:
+        return head
+    return None
+
+
+def _registry_is_trusted(host: str | None) -> bool:
+    if not host:
+        return True
+    if host.endswith(INTERNAL_REGISTRY_HOST_SUFFIXES):
+        return True
+    return host.endswith(TRUSTED_REGISTRY_HOST_SUFFIXES)
+
+
+def _has_provenance(asset: dict[str, Any]) -> bool:
+    keys = (
+        "provenance",
+        "provenance_uri",
+        "provenance_attestation",
+        "attestation",
+        "attestation_uri",
+        "sigstore_verified",
+        "slsa_level",
+    )
+    for key in keys:
+        value = asset.get(key)
+        if isinstance(value, bool) and value:
+            return True
+        if _string(value):
+            return True
+
+    for parent_key in ("properties", "labels", "tags"):
+        mapping = asset.get(parent_key)
+        if not isinstance(mapping, dict):
+            continue
+        for key, value in mapping.items():
+            lowered = key.lower()
+            if lowered in keys or "provenance" in lowered or "attestation" in lowered or "sigstore" in lowered:
+                if isinstance(value, bool) and value:
+                    return True
+                if _string(value):
+                    return True
+    return False
+
+
+def _license_values(asset: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    raw = asset.get("license")
+    if _string(raw):
+        values.append(_string(raw) or "")
+    licenses = asset.get("licenses")
+    if isinstance(licenses, list):
+        values.extend(_string(item) or "" for item in licenses if _string(item))
+    elif _string(licenses):
+        values.append(_string(licenses) or "")
+
+    for parent_key in ("properties", "labels", "tags"):
+        mapping = asset.get(parent_key)
+        if not isinstance(mapping, dict):
+            continue
+        for key, value in mapping.items():
+            if "license" in key.lower():
+                rendered = _string(value)
+                if rendered:
+                    values.append(rendered)
+    return values
+
+
+def build_policy_findings(document: dict[str, Any], *, output_format: str = "ocsf") -> list[dict[str, Any]]:
+    assets = _normalize_assets(document)
+    findings: list[PolicyFinding] = []
+
+    for asset in assets:
+        kind = asset["kind"]
+        display_name = _asset_display_name(asset)
+        resources = _policy_resource(asset)
+
+        if kind in {"model", "model-package"}:
+            version = _string(asset.get("version"))
+            if not _version_is_pinned(version):
+                findings.append(
+                    PolicyFinding(
+                        check_id="AI-BOM-1",
+                        title="Model version is not pinned",
+                        section="versioning",
+                        severity="MEDIUM",
+                        status="FAIL",
+                        detail=f"Asset `{display_name}` does not declare a stable version or digest pin.",
+                        remediation="Record an explicit model version or immutable digest before promoting the asset.",
+                        resources=resources,
+                        nist_ai_rmf="GOVERN, MANAGE",
+                    )
+                )
+
+            if not _has_provenance(asset):
+                findings.append(
+                    PolicyFinding(
+                        check_id="AI-BOM-3",
+                        title="Model provenance attestation is missing",
+                        section="provenance",
+                        severity="HIGH",
+                        status="FAIL",
+                        detail=f"Asset `{display_name}` does not declare provenance or attestation metadata.",
+                        remediation="Attach provenance evidence such as Sigstore verification, SLSA level, or an attestation URI.",
+                        resources=resources,
+                        nist_ai_rmf="GOVERN, MEASURE, MANAGE",
+                    )
+                )
+
+            flagged_licenses = [
+                value
+                for value in _license_values(asset)
+                if any(marker in value.lower() for marker in LICENSE_FLAG_MARKERS)
+            ]
+            if flagged_licenses:
+                findings.append(
+                    PolicyFinding(
+                        check_id="AI-BOM-4",
+                        title="Model license carries production restrictions",
+                        section="licensing",
+                        severity="HIGH",
+                        status="FAIL",
+                        detail=f"Asset `{display_name}` declares restricted license metadata: {', '.join(sorted(set(flagged_licenses)))}.",
+                        remediation="Use a production-approved license or document an approved exception before deployment.",
+                        resources=resources,
+                        nist_ai_rmf="GOVERN",
+                    )
+                )
+
+        registry_hosts = sorted(
+            {
+                host
+                for candidate in _registry_candidates(asset)
+                if (host := _extract_registry_host(candidate)) and not _registry_is_trusted(host)
+            }
+        )
+        if registry_hosts:
+            findings.append(
+                PolicyFinding(
+                    check_id="AI-BOM-2",
+                    title="Asset references an untrusted registry",
+                    section="supply-chain",
+                    severity="HIGH",
+                    status="FAIL",
+                    detail=f"Asset `{display_name}` references registry host(s) outside the trusted/internal allowlist: {', '.join(registry_hosts)}.",
+                    remediation="Promote the asset into an internal or approved verified registry before production use.",
+                    resources=resources,
+                    nist_ai_rmf="MAP, MANAGE",
+                )
+            )
+
+    if output_format == "native":
+        return [finding.__dict__.copy() for finding in findings]
+    if output_format != "ocsf":
+        raise ValueError(f"unsupported policy finding format: {output_format}")
+    return findings_to_ocsf(
+        findings,
+        skill_name=SKILL_NAME,
+        benchmark_name=POLICY_BENCHMARK_NAME,
+        provider=POLICY_PROVIDER,
+        frameworks=POLICY_FRAMEWORKS,
+    )
+
+
 def _to_component(asset: dict[str, Any]) -> dict[str, Any]:
     component_type = COMPONENT_TYPES.get(asset["kind"], "application")
     return _clean_dict(
@@ -581,18 +842,41 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("input", nargs="?", help="Path to the inventory JSON file. Reads stdin when omitted.")
     parser.add_argument("-o", "--output", help="Write BOM JSON to this path instead of stdout.")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print the BOM JSON.")
+    parser.add_argument(
+        "--emit-policy-findings",
+        action="store_true",
+        help="Emit AI BOM policy findings as JSONL instead of the BOM.",
+    )
+    parser.add_argument(
+        "--policy-findings-output",
+        help="Write AI BOM policy findings as JSONL to this path while still emitting the BOM.",
+    )
+    parser.add_argument(
+        "--policy-findings-format",
+        choices=("native", "ocsf"),
+        default="ocsf",
+        help="Render policy findings as repo-native dicts or OCSF 2003 Compliance Findings.",
+    )
     args = parser.parse_args(argv)
 
     try:
         document = _load_json(args.input)
         bom = build_bom(document)
+        policy_findings = build_policy_findings(document, output_format=args.policy_findings_format)
     except Exception as exc:  # pragma: no cover - CLI error path
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    payload = json.dumps(bom, indent=2 if args.pretty else None, sort_keys=args.pretty)
-    if args.pretty:
-        payload += "\n"
+    if args.policy_findings_output:
+        policy_payload = "".join(json.dumps(record, separators=(",", ":")) + "\n" for record in policy_findings)
+        Path(args.policy_findings_output).write_text(policy_payload)
+
+    if args.emit_policy_findings:
+        payload = "".join(json.dumps(record, separators=(",", ":")) + "\n" for record in policy_findings)
+    else:
+        payload = json.dumps(bom, indent=2 if args.pretty else None, sort_keys=args.pretty)
+        if args.pretty:
+            payload += "\n"
 
     if args.output:
         Path(args.output).write_text(payload)
