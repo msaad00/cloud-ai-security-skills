@@ -65,10 +65,10 @@ https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/
   https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 - **Falco default rules** — includes `Terminal shell in container`,
   `Write below root`, and `Container Drift Detected` style signals:
-  https://falco.org/docs/reference/rules/default-rules/
+  https://github.com/falcosecurity/rules
 - **Tracee event catalog** — runtime event names such as `container_drift` are
   documented in the official event reference:
-  https://aquasecurity.github.io/tracee/latest/docs/events/
+  https://github.com/aquasecurity/tracee/tree/main/docs/docs/events
 
 ## MITRE grounding behind the rules
 
