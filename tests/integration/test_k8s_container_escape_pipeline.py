@@ -66,3 +66,20 @@ class TestK8sContainerEscapePipelineEndToEnd:
         findings = list(self.detect.detect(self.ingest.ingest(raw_lines)))
         techniques = {finding["finding_info"]["attacks"][0]["technique"]["uid"] for finding in findings}
         assert techniques == {"T1610", "T1611"}
+
+    def test_followup_input_matches_frozen_followup_golden(self):
+        ocsf_events = _load_jsonl(GOLDEN_DIR / "k8s_container_escape_followup_input.jsonl")
+        findings = list(self.detect.detect(ocsf_events))
+        expected = _load_jsonl(GOLDEN_DIR / "k8s_container_escape_followup_findings.ocsf.jsonl")
+        assert len(findings) == len(expected) == 2
+        for produced, frozen in zip(findings, expected):
+            assert produced == frozen, (
+                f"K8s container-escape follow-up drift.\n"
+                f"  produced: {json.dumps(produced, sort_keys=True)}\n"
+                f"  frozen:   {json.dumps(frozen, sort_keys=True)}"
+            )
+
+    def test_followup_findings_add_exec_and_runtime_techniques(self):
+        findings = list(self.detect.detect(_load_jsonl(GOLDEN_DIR / "k8s_container_escape_followup_input.jsonl")))
+        techniques = {finding["finding_info"]["attacks"][0]["technique"]["uid"] for finding in findings}
+        assert techniques == {"T1611", "T1613"}
