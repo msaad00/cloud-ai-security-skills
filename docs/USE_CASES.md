@@ -27,7 +27,7 @@ flowchart LR
 | Inventory cloud or AI assets | `discover-environment` or `discover-ai-bom` | live cloud APIs, AI service inventories | resources, graphs, AI endpoints, registries, datasets | inventory graph or CycloneDX-aligned AI BOM |
 | Build audit evidence | `discover-control-evidence` or `discover-cloud-control-evidence` | discovery output and live inventory | controls, settings, evidence artifacts | evidence JSON or OCSF bridge |
 | Centralize remediation audit in your own lakehouse | `iam-departures-aws` plus a customer-owned sink pattern | IAM departures workflow audit rows | identities, approvals, actions, audit history | DynamoDB + S3 today, external sink pattern via Snowflake / Snowpipe or another lakehouse later |
-| Contain a suspicious Kubernetes workload safely | `detect-container-escape-k8s` + `remediate-container-escape-k8s` | Kubernetes audit findings + live cluster API | pods, workload selectors, quarantine policies, audit trail | dry-run quarantine plan, audited `NetworkPolicy` action, or re-verify record |
+| Contain a suspicious Kubernetes workload safely | `detect-container-escape-k8s` + `remediate-container-escape-k8s` | Kubernetes audit findings + live cluster API | pods, workload selectors, quarantine policies, audit trail, optional runtime breakout signals | dry-run quarantine plan, audited `NetworkPolicy` action, explicit pod-kill / node-drain follow-up, or re-verify record |
 | Export findings to downstream tools | `view/*` | OCSF findings | detections and evidence | SARIF, Mermaid attack flow |
 | Remediate offboarding safely | `iam-departures-aws` | HR departure feeds + cloud / data-platform APIs | users, IAM identities, warehouse identities | dry-run plan or audited remediation |
 

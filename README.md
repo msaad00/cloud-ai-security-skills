@@ -101,7 +101,7 @@ Least-privilege scoping across every client via the `CLOUD_SECURITY_MCP_ALLOWED_
 | audit evidence to produce | [`discover-control-evidence`](skills/discovery/discover-control-evidence/) | PCI / SOC 2 evidence JSON |
 | OCSF findings to publish | [`view/*`](skills/view/) | SARIF · Mermaid |
 | a departing employee to offboard | [`iam-departures-aws`](skills/remediation/iam-departures-aws/) | dry-run plan or audited action |
-| a suspicious Kubernetes workload to isolate | [`remediate-container-escape-k8s`](skills/remediation/remediate-container-escape-k8s/) | audited deny-all NetworkPolicy plan / action |
+| a suspicious Kubernetes workload to isolate | [`remediate-container-escape-k8s`](skills/remediation/remediate-container-escape-k8s/) | audited quarantine plan / action, with explicit pod-kill and dual-approved node-drain follow-ups |
 
 Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
