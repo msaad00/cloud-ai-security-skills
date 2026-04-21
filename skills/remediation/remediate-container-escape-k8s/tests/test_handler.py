@@ -9,9 +9,9 @@ from dataclasses import dataclass, field
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from handler import (  # type: ignore[import-not-found]
+    ACCEPTED_PRODUCERS,
     ACTION_NODE_DRAIN,
     ACTION_POD_KILL,
-    ACCEPTED_PRODUCERS,
     DEFAULT_DENY_NAMESPACES,
     STATUS_DRIFT,
     STATUS_IN_PROGRESS,
