@@ -486,17 +486,25 @@ def build_network_policy(namespace: str, policy_name: str, selector: dict[str, s
     }
 
 
+def _pod_node_name(kube_client: KubernetesClient, namespace: str, pod_name: str) -> str:
+    # Some shared/test clients still only implement the pre-node-drain surface.
+    getter = getattr(kube_client, "get_pod_node_name", None)
+    if not callable(getter):
+        return ""
+    return str(getter(namespace, pod_name) or "")
+
+
 def resolve_target(target: Target, kube_client: KubernetesClient) -> ResolvedTarget | None:
     selector: dict[str, str] | None
     effective_pod_name = target.pod_name
     node_name = ""
     if target.pod_name:
         selector = kube_client.get_pod_labels(target.namespace, target.pod_name)
-        node_name = kube_client.get_pod_node_name(target.namespace, target.pod_name) or ""
+        node_name = _pod_node_name(kube_client, target.namespace, target.pod_name)
     elif target.resource_type == "pods":
         selector = kube_client.get_pod_labels(target.namespace, target.resource_name)
         effective_pod_name = target.resource_name
-        node_name = kube_client.get_pod_node_name(target.namespace, target.resource_name) or ""
+        node_name = _pod_node_name(kube_client, target.namespace, target.resource_name)
     elif target.resource_type in SUPPORTED_WORKLOAD_TYPES:
         selector = kube_client.get_workload_selector(target.namespace, target.resource_type, target.resource_name)
     else:

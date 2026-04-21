@@ -146,6 +146,17 @@ class _FakeKube:
         return self.nodes.get(node_name)
 
 
+@dataclass
+class _LegacyPodOnlyKube:
+    pod_labels: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
+
+    def get_pod_labels(self, namespace: str, pod_name: str):
+        return self.pod_labels.get((namespace, pod_name))
+
+    def get_workload_selector(self, namespace: str, resource_type: str, resource_name: str):
+        return None
+
+
 class TestContract:
     def test_accepted_producer_is_container_escape_detector(self):
         assert ACCEPTED_PRODUCERS == frozenset({"detect-container-escape-k8s"})
@@ -243,6 +254,26 @@ class TestDryRunDefault:
         assert record["manifest"]["kind"] == "NetworkPolicy"
         assert record["manifest"]["spec"]["ingress"] == []
         assert record["manifest"]["spec"]["egress"] == []
+
+    def test_pod_target_dry_run_tolerates_legacy_kube_client_without_node_lookup(self):
+        kube = _LegacyPodOnlyKube(pod_labels={("payments", "api-7d9b"): {"app": "api", "pod-template-hash": "7d9b"}})
+        records = list(
+            run(
+                [
+                    _finding(
+                        target="pods/payments/api-7d9b/ephemeralcontainers",
+                        resource_type="pods",
+                        resource_name="api-7d9b",
+                        pod_name="api-7d9b",
+                    )
+                ],
+                kube_client=kube,
+            )
+        )
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_PLANNED
+        assert records[0]["selector"] == {"app": "api", "pod-template-hash": "7d9b"}
+        assert "node_name" not in records[0]
 
 
 class TestApplyGate:
