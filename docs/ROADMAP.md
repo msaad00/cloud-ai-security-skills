@@ -33,7 +33,7 @@ The next open work is depth, not first presence:
 
 - more AI-native detections across credential leak, model-weight egress, vector poisoning, indirect prompt injection, and tool-result injection
 - stronger closed loops for AI-specific remediation
-- AI BOM policy findings so inventory can feed CI and sink pipelines directly
+- deeper AI BOM policy coverage beyond the shipped baseline for version pinning, registry trust, provenance, and license flags
 - higher explicit MITRE ATLAS and OWASP LLM / MCP coverage in the registry
 
 ## Phase 1 — Measured coverage and auditability

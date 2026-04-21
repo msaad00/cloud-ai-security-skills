@@ -101,7 +101,7 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | `discover-environment` | graph overlay for AI/ML resources and adversarial ML techniques |
 | `model-serving-security` | explicit ATLAS coverage plus machine-readable NIST AI RMF section scope in the benchmark metadata |
 | `detect-prompt-injection-mcp-proxy` | AI-agent / MCP prompt-injection detection for malicious tool descriptions in `tools/list` responses |
-| `discover-ai-bom` | inventory artifact for future ATLAS / AI RMF evidence joins |
+| `discover-ai-bom` | inventory artifact plus optional AI BOM policy findings for ATLAS / AI RMF evidence and CI joins |
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
 | `discover-cloud-control-evidence` | cross-cloud evidence package with explicit NIST AI RMF evidence mode and ATT&CK / ATLAS / AI RMF inventory context |
 
@@ -133,7 +133,7 @@ uniform than classic cloud posture.
 
 | Skill | Frameworks called out today |
 |---|---|
-| `discover-ai-bom` | CycloneDX ML-BOM, NIST AI RMF, MITRE ATLAS, PCI, SOC 2 |
+| `discover-ai-bom` | CycloneDX ML-BOM, NIST AI RMF, MITRE ATLAS, PCI, SOC 2, optional OCSF 2003 policy findings |
 | `discover-control-evidence` | PCI DSS 4.0, SOC 2 TSC, CycloneDX ML-BOM, MITRE ATLAS |
 | `discover-cloud-control-evidence` | PCI DSS 4.0, SOC 2 TSC, NIST AI RMF, MITRE ATT&CK, MITRE ATLAS |
 | `model-serving-security` | MITRE ATLAS, NIST CSF, NIST AI RMF, OWASP LLM Top 10, SOC 2, provider-specific AI endpoint controls |

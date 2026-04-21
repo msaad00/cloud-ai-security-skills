@@ -100,7 +100,17 @@ The skill emits a **CycloneDX-aligned JSON BOM** with:
 - `dependencies[]` for explicit inventory relationships
 - sanitized properties only — secret-like keys are dropped
 
-The BOM is an inventory artifact, not a compliance verdict.
+By default the BOM remains an inventory artifact, not a compliance verdict.
+When `--emit-policy-findings` or `--policy-findings-output` is used, the skill
+also emits per-asset AI BOM policy violations for:
+
+- unpinned model versions
+- untrusted registries outside the trusted/internal allowlist
+- missing provenance / attestation metadata
+- restricted model licenses
+
+Policy findings render as OCSF Compliance Finding `2003` by default so CI,
+sinks, and agent wrappers can consume them directly.
 
 ## Usage
 
@@ -113,6 +123,12 @@ cat inventory.json | python src/discover.py > ai-bom.json
 
 # pretty output
 python src/discover.py inventory.json --pretty -o ai-bom.json
+
+# keep the BOM, but also write OCSF 2003 policy findings as JSONL
+python src/discover.py inventory.json --policy-findings-output ai-bom-policy.ocsf.jsonl
+
+# emit policy findings only
+python src/discover.py inventory.json --emit-policy-findings > ai-bom-policy.ocsf.jsonl
 ```
 
 ## Security guardrails
