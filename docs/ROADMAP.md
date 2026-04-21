@@ -20,6 +20,22 @@ The current north star is not "more skills" by itself. It is:
 - stronger test and validation coverage
 - cleaner interoperability for agents and security teams
 
+### AI-native status checkpoint
+
+The repo already ships a meaningful AI baseline:
+
+- MCP ingest + detection: `ingest-mcp-proxy-ocsf`, `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`
+- AI inventory and evidence: `discover-ai-bom`, `discover-control-evidence`, `discover-cloud-control-evidence`
+- AI posture: `model-serving-security`, `gpu-cluster-security`, `container-security`
+- MCP remediation: `remediate-mcp-tool-quarantine`
+
+The next open work is depth, not first presence:
+
+- more AI-native detections across credential leak, model-weight egress, vector poisoning, indirect prompt injection, and tool-result injection
+- stronger closed loops for AI-specific remediation
+- AI BOM policy findings so inventory can feed CI and sink pipelines directly
+- higher explicit MITRE ATLAS and OWASP LLM / MCP coverage in the registry
+
 ## Phase 1 — Measured coverage and auditability
 
 Goal: make framework claims measurable instead of implicit.
