@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-labelledby="title desc">
   <title id="title">IAM departures remediation · AWS flagship write path</title>
-  <desc id="desc">AWS-only IAM departures remediation flow. Plan reads HR sources, runs the reconciler, and writes an actionable S3 manifest. Orchestrate uses EventBridge and Step Functions to fan out one execution per user through parser and worker Lambdas. Write performs the ordered IAM teardown inside AWS only. Audit dual-writes to DynamoDB and KMS-encrypted S3, and the next run ingests audit state back for drift verification. A footer notes that Azure and GCP use their own native orchestration stacks rather than sharing one worker.</desc>
+  <desc id="desc">Simplified AWS IAM departures remediation flow for the iam-departures-aws skill. Plan scopes the actionable set from HR sources through the reconciler into an immutable S3 manifest. Orchestrate uses EventBridge, Step Functions, a parser Lambda, and a worker Lambda. Write stays inside AWS IAM with an org-bounded cross-account role and an ordered teardown represented as 11 worker functions spanning 13 IAM API operations. Audit writes to DynamoDB and KMS-encrypted S3, then the next run verifies closure or drift. Azure and GCP are shown only as native-stack variants, not as shared workers.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#07101f"/>
-      <stop offset="100%" stop-color="#0f1a33"/>
+      <stop offset="100%" stop-color="#101935"/>
     </linearGradient>
-    <radialGradient id="glowA" cx="20%" cy="14%" r="62%">
+    <radialGradient id="glowA" cx="18%" cy="12%" r="54%">
       <stop offset="0%" stop-color="#2563eb" stop-opacity="0.18"/>
       <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowB" cx="84%" cy="22%" r="46%">
+    <radialGradient id="glowB" cx="82%" cy="18%" r="42%">
       <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.12"/>
       <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
     </radialGradient>
@@ -19,7 +19,7 @@
       <path d="M36 0H0V36" fill="none" stroke="#1d2942" stroke-opacity="0.36" stroke-width="1"/>
     </pattern>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#020617" flood-opacity="0.42"/>
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#020617" flood-opacity="0.34"/>
     </filter>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0 0L10 5L0 10z" fill="#7dd3fc"/>
@@ -27,150 +27,155 @@
     <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0 0L10 5L0 10z" fill="#fbbf24"/>
     </marker>
-    <marker id="arrowPink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0 0L10 5L0 10z" fill="#f472b6"/>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#2dd4bf"/>
     </marker>
   </defs>
 
-  <rect width="1280" height="860" fill="url(#bg)"/>
-  <rect width="1280" height="860" fill="url(#grid)"/>
-  <rect width="1280" height="860" fill="url(#glowA)"/>
-  <rect width="1280" height="860" fill="url(#glowB)"/>
+  <rect width="1280" height="820" fill="url(#bg)"/>
+  <rect width="1280" height="820" fill="url(#grid)"/>
+  <rect width="1280" height="820" fill="url(#glowA)"/>
+  <rect width="1280" height="820" fill="url(#glowB)"/>
 
   <g font-family="Inter, Arial, sans-serif">
-    <g transform="translate(56,44)">
-      <rect x="0" y="0" width="186" height="32" rx="16" fill="#2a1708" stroke="#f59e0b"/>
-      <text x="24" y="21" fill="#fbbf24" font-size="11" font-weight="800" letter-spacing="1.5">AWS FLAGSHIP WRITE PATH</text>
+    <g transform="translate(56,42)">
+      <rect x="0" y="0" width="208" height="34" rx="17" fill="#2a1708" stroke="#f59e0b"/>
+      <text x="18" y="22" fill="#fbbf24" font-size="11" font-weight="800" letter-spacing="1.5">AWS FLAGSHIP WRITE PATH</text>
     </g>
 
-    <text x="56" y="118" font-size="40" font-weight="900" fill="#f8fafc">IAM departures remediation</text>
-    <text x="56" y="150" font-size="17" fill="#cbd5e1">Guarded, event-driven, dual-audited, and one cloud per worker. No cross-cloud blast radius in a single execution path.</text>
+    <text x="56" y="122" font-size="40" font-weight="900" fill="#f8fafc">IAM departures remediation</text>
+    <text x="56" y="154" font-size="17" fill="#cbd5e1">The shipped write skill, redrawn as one clean route: scope first, orchestrate per user, write inside AWS only, then dual-audit.</text>
 
-    <g transform="translate(56,188)" font-size="12" font-weight="800" letter-spacing="1.5">
+    <g transform="translate(56,182)">
+      <rect x="0" y="0" width="220" height="38" rx="19" fill="#0b1a2e" stroke="#60a5fa"/>
+      <text x="20" y="25" fill="#bfdbfe" font-size="13" font-weight="800">skill/remediation/iam-departures-aws</text>
+      <rect x="238" y="0" width="196" height="38" rx="19" fill="#102c29" stroke="#34d399"/>
+      <text x="258" y="25" fill="#d1fae5" font-size="13" font-weight="800">one cloud per worker</text>
+      <rect x="452" y="0" width="184" height="38" rx="19" fill="#161230" stroke="#a78bfa"/>
+      <text x="472" y="25" fill="#ddd6fe" font-size="13" font-weight="800">checkpoint-safe order</text>
+    </g>
+
+    <g transform="translate(56,252)" font-size="12" font-weight="800" letter-spacing="1.4">
       <text x="0" y="0" fill="#22d3ee">① PLAN</text>
-      <text x="292" y="0" fill="#60a5fa">② ORCHESTRATE</text>
-      <text x="584" y="0" fill="#fbbf24">③ WRITE</text>
-      <text x="920" y="0" fill="#2dd4bf">④ AUDIT</text>
+      <text x="300" y="0" fill="#60a5fa">② ORCHESTRATE</text>
+      <text x="620" y="0" fill="#fbbf24">③ WRITE</text>
+      <text x="974" y="0" fill="#2dd4bf">④ AUDIT</text>
     </g>
-    <g transform="translate(56,208)" font-size="11" fill="#64748b">
-      <text x="0" y="0">scope the actionable set</text>
-      <text x="292" y="0">re-check state before destructive action</text>
-      <text x="584" y="0">ordered AWS IAM teardown only</text>
-      <text x="920" y="0">dual store plus ingest-back verification</text>
+    <g transform="translate(56,272)" font-size="11" fill="#64748b">
+      <text x="0" y="0">decide scope before any destructive path exists</text>
+      <text x="300" y="0">native AWS orchestration, one execution per user</text>
+      <text x="620" y="0">worker assumes org-bounded role and follows ordered teardown</text>
+      <text x="974" y="0">write evidence twice and verify on the next run</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="56" y="232" width="240" height="378" rx="28" fill="#0b1a2e" stroke="#22d3ee"/>
-      <rect x="348" y="232" width="240" height="378" rx="28" fill="#0f1d36" stroke="#60a5fa"/>
-      <rect x="640" y="232" width="308" height="378" rx="28" fill="#2a1708" stroke="#fbbf24"/>
-      <rect x="1000" y="232" width="224" height="378" rx="28" fill="#0b3d3b" stroke="#2dd4bf"/>
+      <rect x="56" y="296" width="258" height="372" rx="28" fill="#0b1a2e" stroke="#22d3ee"/>
+      <rect x="356" y="296" width="278" height="372" rx="28" fill="#0f1d36" stroke="#60a5fa"/>
+      <rect x="676" y="296" width="320" height="372" rx="28" fill="#2a1708" stroke="#fbbf24"/>
+      <rect x="1038" y="296" width="186" height="372" rx="28" fill="#0b3d3b" stroke="#2dd4bf"/>
     </g>
 
-    <g transform="translate(80,268)">
-      <rect x="0" y="0" width="192" height="56" rx="16" fill="#0f2036" stroke="#334155"/>
-      <text x="18" y="24" fill="#e0f2fe" font-size="16" font-weight="800">HR sources</text>
-      <text x="18" y="44" fill="#94a3b8" font-size="12">Snowflake · Databricks · Workday-shape inputs</text>
+    <g transform="translate(80,330)">
+      <rect x="0" y="0" width="210" height="68" rx="18" fill="#102338" stroke="#334155"/>
+      <text x="18" y="28" fill="#e0f2fe" font-size="17" font-weight="800">HR sources</text>
+      <text x="18" y="50" fill="#94a3b8" font-size="12">Snowflake · Databricks · HR-shaped rows</text>
 
-      <path d="M96,64 L96,86" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M105,78 L105,102" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="98" width="192" height="72" rx="16" fill="#0f2036" stroke="#334155"/>
-      <text x="18" y="124" fill="#e0f2fe" font-size="16" font-weight="800">Reconciler</text>
-      <text x="18" y="146" fill="#94a3b8" font-size="12">rehire-aware</text>
-      <text x="18" y="162" fill="#94a3b8" font-size="12">grace window enforced</text>
+      <rect x="0" y="118" width="210" height="96" rx="18" fill="#102338" stroke="#334155"/>
+      <text x="18" y="148" fill="#e0f2fe" font-size="17" font-weight="800">Reconciler</text>
+      <text x="18" y="172" fill="#94a3b8" font-size="12">rehire-aware filter</text>
+      <text x="18" y="190" fill="#94a3b8" font-size="12">grace window enforced</text>
 
-      <path d="M96,178 L96,200" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M105,224 L105,248" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="212" width="192" height="72" rx="16" fill="#102c29" stroke="#34d399"/>
-      <text x="18" y="238" fill="#d1fae5" font-size="16" font-weight="800">S3 manifest</text>
-      <text x="18" y="260" fill="#94a3b8" font-size="12">actionable set only</text>
-      <text x="18" y="276" fill="#94a3b8" font-size="12">immutable handoff to orchestration</text>
+      <rect x="0" y="264" width="210" height="78" rx="18" fill="#102c29" stroke="#34d399"/>
+      <text x="18" y="294" fill="#d1fae5" font-size="17" font-weight="800">S3 manifest</text>
+      <text x="18" y="318" fill="#94a3b8" font-size="12">actionable users only</text>
+      <text x="18" y="336" fill="#94a3b8" font-size="12">immutable handoff into orchestration</text>
     </g>
 
-    <path d="M296 420H334" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-    <text x="315" y="406" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="800">PutObject</text>
+    <path d="M314 506H342" stroke="#7dd3fc" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+    <text x="328" y="490" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="800">S3 ObjectCreated</text>
 
-    <g transform="translate(372,268)">
-      <rect x="0" y="0" width="192" height="56" rx="16" fill="#152746" stroke="#60a5fa"/>
-      <text x="18" y="24" fill="#dbeafe" font-size="16" font-weight="800">EventBridge rule</text>
-      <text x="18" y="44" fill="#94a3b8" font-size="12">S3 ObjectCreated trigger</text>
+    <g transform="translate(380,330)">
+      <rect x="0" y="0" width="230" height="62" rx="18" fill="#152746" stroke="#60a5fa"/>
+      <text x="18" y="27" fill="#dbeafe" font-size="17" font-weight="800">EventBridge rule</text>
+      <text x="18" y="48" fill="#94a3b8" font-size="12">starts the state machine on manifest upload</text>
 
-      <path d="M96,64 L96,86" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M115,72 L115,96" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="98" width="192" height="72" rx="16" fill="#152746" stroke="#60a5fa"/>
-      <text x="18" y="124" fill="#dbeafe" font-size="16" font-weight="800">Step Functions</text>
-      <text x="18" y="146" fill="#94a3b8" font-size="12">Map state</text>
-      <text x="18" y="162" fill="#94a3b8" font-size="12">one execution per user</text>
+      <rect x="0" y="110" width="230" height="78" rx="18" fill="#152746" stroke="#60a5fa"/>
+      <text x="18" y="140" fill="#dbeafe" font-size="17" font-weight="800">Step Functions</text>
+      <text x="18" y="164" fill="#94a3b8" font-size="12">Map state</text>
+      <text x="18" y="182" fill="#94a3b8" font-size="12">one execution per user</text>
 
-      <path d="M96,178 L96,200" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M115,198 L115,222" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="212" width="192" height="56" rx="16" fill="#321d09" stroke="#fbbf24"/>
-      <text x="18" y="236" fill="#fef3c7" font-size="16" font-weight="800">Parser Lambda</text>
-      <text x="18" y="256" fill="#94a3b8" font-size="12">re-check manifest and live IAM state</text>
+      <rect x="0" y="236" width="230" height="62" rx="18" fill="#321d09" stroke="#fbbf24"/>
+      <text x="18" y="263" fill="#fef3c7" font-size="17" font-weight="800">Parser Lambda</text>
+      <text x="18" y="284" fill="#94a3b8" font-size="12">re-check manifest and live IAM state</text>
 
-      <path d="M96,276 L96,298" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M115,308 L115,332" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="310" width="192" height="56" rx="16" fill="#321d09" stroke="#fbbf24"/>
-      <text x="18" y="334" fill="#fef3c7" font-size="16" font-weight="800">Worker Lambda</text>
-      <text x="18" y="354" fill="#94a3b8" font-size="12">scoped cross-account execution</text>
+      <rect x="0" y="346" width="230" height="62" rx="18" fill="#321d09" stroke="#fbbf24"/>
+      <text x="18" y="373" fill="#fef3c7" font-size="17" font-weight="800">Worker Lambda</text>
+      <text x="18" y="394" fill="#94a3b8" font-size="12">checkpoint-safe write execution</text>
     </g>
 
-    <path d="M588 420H626" stroke="#fbbf24" stroke-width="4" fill="none" marker-end="url(#arrowAmber)"/>
-    <text x="607" y="406" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="800">AssumeRole</text>
+    <path d="M634 538H662" stroke="#fbbf24" stroke-width="4" fill="none" marker-end="url(#arrowAmber)"/>
+    <text x="648" y="522" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="800">AssumeRole</text>
 
-    <g transform="translate(664,268)">
-      <rect x="0" y="0" width="260" height="74" rx="16" fill="#321d09" stroke="#fbbf24"/>
-      <text x="18" y="26" fill="#fef3c7" font-size="16" font-weight="800">AWS IAM write scope</text>
-      <text x="18" y="48" fill="#94a3b8" font-size="12">Org-bounded cross-account role</text>
-      <text x="18" y="64" fill="#94a3b8" font-size="12">aws:PrincipalOrgID and per-user checkpoint flow</text>
+    <g transform="translate(700,330)">
+      <rect x="0" y="0" width="272" height="86" rx="18" fill="#321d09" stroke="#fbbf24"/>
+      <text x="18" y="28" fill="#fef3c7" font-size="17" font-weight="800">AWS IAM write scope</text>
+      <text x="18" y="52" fill="#94a3b8" font-size="12">org-bounded cross-account role</text>
+      <text x="18" y="70" fill="#94a3b8" font-size="12">`aws:PrincipalOrgID` guard + per-user checkpoint flow</text>
 
-      <rect x="0" y="98" width="260" height="244" rx="16" fill="#161230" stroke="#a78bfa"/>
-      <text x="18" y="126" fill="#ddd6fe" font-size="13" font-weight="800" letter-spacing="1.1">ORDERED TEARDOWN</text>
-      <text x="18" y="148" fill="#ede9fe" font-size="13">1. deactivate access keys</text>
-      <text x="18" y="168" fill="#ede9fe" font-size="13">2. delete login profile</text>
-      <text x="18" y="188" fill="#ede9fe" font-size="13">3. remove from groups</text>
-      <text x="18" y="208" fill="#ede9fe" font-size="13">4. detach managed policies</text>
-      <text x="18" y="228" fill="#ede9fe" font-size="13">5. delete inline policies</text>
-      <text x="18" y="248" fill="#ede9fe" font-size="13">6. delete MFA devices</text>
-      <text x="18" y="268" fill="#ede9fe" font-size="13">7. delete signing certificates</text>
-      <text x="18" y="288" fill="#ede9fe" font-size="13">8. delete SSH keys</text>
-      <text x="18" y="308" fill="#ede9fe" font-size="13">9. delete service credentials</text>
-      <text x="18" y="328" fill="#ede9fe" font-size="13">10. tag user for audit</text>
-      <text x="18" y="350" fill="#f3e8ff" font-size="13" font-weight="900">11. delete IAM user</text>
+      <rect x="0" y="110" width="272" height="222" rx="18" fill="#161230" stroke="#a78bfa"/>
+      <text x="18" y="138" fill="#ddd6fe" font-size="13" font-weight="800" letter-spacing="1.1">ORDERED TEARDOWN</text>
+      <text x="18" y="164" fill="#ede9fe" font-size="13">Access keys → inactive, then deleted</text>
+      <text x="18" y="186" fill="#ede9fe" font-size="13">Console login profile removed</text>
+      <text x="18" y="208" fill="#ede9fe" font-size="13">Group memberships removed</text>
+      <text x="18" y="230" fill="#ede9fe" font-size="13">Managed + inline policies detached or deleted</text>
+      <text x="18" y="252" fill="#ede9fe" font-size="13">MFA devices, signing certs, SSH keys cleared</text>
+      <text x="18" y="274" fill="#ede9fe" font-size="13">Service credentials removed</text>
+      <text x="18" y="296" fill="#ede9fe" font-size="13">User tagged for audit</text>
+      <text x="18" y="318" fill="#f3e8ff" font-size="13" font-weight="900">IAM user deleted last</text>
+
+      <rect x="18" y="346" width="236" height="52" rx="14" fill="#1f1b45" stroke="#c4b5fd"/>
+      <text x="36" y="368" fill="#ddd6fe" font-size="12" font-weight="800">code truth</text>
+      <text x="36" y="388" fill="#cbd5e1" font-size="12">11 worker functions · 13 IAM API operations</text>
     </g>
 
-    <path d="M948 420H986" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-    <text x="967" y="406" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="800">audit</text>
+    <path d="M996 538H1024" stroke="#2dd4bf" stroke-width="4" fill="none" marker-end="url(#arrowTeal)"/>
+    <text x="1010" y="522" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="800">audit</text>
 
-    <g transform="translate(1024,268)">
-      <rect x="0" y="0" width="176" height="74" rx="16" fill="#10342e" stroke="#2dd4bf"/>
-      <text x="18" y="26" fill="#ccfbf1" font-size="16" font-weight="800">DynamoDB audit</text>
-      <text x="18" y="48" fill="#94a3b8" font-size="12">fast lookup</text>
-      <text x="18" y="64" fill="#94a3b8" font-size="12">user + timestamp keyed rows</text>
+    <g transform="translate(1062,330)">
+      <rect x="0" y="0" width="138" height="74" rx="18" fill="#10342e" stroke="#2dd4bf"/>
+      <text x="18" y="28" fill="#ccfbf1" font-size="16" font-weight="800">DynamoDB</text>
+      <text x="18" y="50" fill="#94a3b8" font-size="12">fast lookup</text>
+      <text x="18" y="66" fill="#94a3b8" font-size="12">user + ts keyed</text>
 
-      <path d="M88,82 L88,104" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M69,84 L69,108" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="116" width="176" height="74" rx="16" fill="#10342e" stroke="#2dd4bf"/>
-      <text x="18" y="142" fill="#ccfbf1" font-size="16" font-weight="800">S3 + KMS evidence</text>
-      <text x="18" y="164" fill="#94a3b8" font-size="12">immutable JSON audit</text>
-      <text x="18" y="180" fill="#94a3b8" font-size="12">seven-year retention path</text>
+      <rect x="0" y="122" width="138" height="88" rx="18" fill="#10342e" stroke="#2dd4bf"/>
+      <text x="18" y="150" fill="#ccfbf1" font-size="16" font-weight="800">S3 + KMS</text>
+      <text x="18" y="174" fill="#94a3b8" font-size="12">immutable JSON</text>
+      <text x="18" y="192" fill="#94a3b8" font-size="12">long-retention evidence</text>
 
-      <path d="M88,198 L88,220" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+      <path d="M69,220 L69,244" stroke="#7dd3fc" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-      <rect x="0" y="232" width="176" height="74" rx="16" fill="#10342e" stroke="#2dd4bf"/>
-      <text x="18" y="258" fill="#ccfbf1" font-size="16" font-weight="800">Ingest back</text>
-      <text x="18" y="280" fill="#94a3b8" font-size="12">next reconciler run verifies</text>
-      <text x="18" y="296" fill="#94a3b8" font-size="12">closure or drift</text>
+      <rect x="0" y="258" width="138" height="84" rx="18" fill="#10342e" stroke="#2dd4bf"/>
+      <text x="18" y="286" fill="#ccfbf1" font-size="16" font-weight="800">Reverify</text>
+      <text x="18" y="310" fill="#94a3b8" font-size="12">next run checks</text>
+      <text x="18" y="328" fill="#94a3b8" font-size="12">closure or drift</text>
     </g>
 
-    <path d="M1112 574 C1112 666 646 720 196 720 C126 720 72 672 72 620 L72 430 L268 430"
-          fill="none" stroke="#f472b6" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowPink)"/>
-    <rect x="522" y="704" width="238" height="30" rx="15" fill="#161230" stroke="#f472b6"/>
-    <text x="641" y="723" text-anchor="middle" fill="#f9a8d4" font-size="12" font-weight="800">closed-loop drift verification</text>
-
-    <g transform="translate(56,770)">
-      <rect x="0" y="0" width="1168" height="48" rx="14" fill="#091120" stroke="#475569"/>
-      <text x="18" y="20" fill="#f1f5f9" font-size="12" font-weight="800" letter-spacing="0.4">One cloud per worker</text>
-      <text x="18" y="36" fill="#94a3b8" font-size="11">AWS is the shipped orchestration. Azure uses Event Grid + Functions / Durable Functions. GCP uses Eventarc + Workflows + Cloud Run Jobs. Equivalent primitives, native per cloud, no single worker spanning AWS, Azure, and GCP.</text>
+    <g transform="translate(56,702)">
+      <rect x="0" y="0" width="1168" height="72" rx="18" fill="#091120" stroke="#475569"/>
+      <text x="20" y="26" fill="#f1f5f9" font-size="13" font-weight="800">Native variations, not shared workers</text>
+      <text x="20" y="48" fill="#94a3b8" font-size="12">AWS orchestration above is what ships today. Azure uses Event Grid + Functions or Durable Functions. GCP uses Eventarc + Workflows + Cloud Run Jobs. The skill contract stays the same, but each cloud keeps its own worker and blast radius.</text>
     </g>
   </g>
 </svg>
