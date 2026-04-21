@@ -38,6 +38,9 @@ class _FakeKube:
     def get_pod_labels(self, namespace: str, pod_name: str):
         return self.pod_labels.get((namespace, pod_name))
 
+    def get_pod_node_name(self, namespace: str, pod_name: str):
+        return "node-a"
+
     def get_workload_selector(self, namespace: str, resource_type: str, resource_name: str):
         return self.workload_selectors.get((namespace, resource_type, resource_name))
 
@@ -46,6 +49,24 @@ class _FakeKube:
 
     def get_network_policy(self, namespace: str, name: str):
         return None
+
+    def get_pod(self, namespace: str, pod_name: str):
+        return None
+
+    def delete_pod(self, namespace: str, pod_name: str):
+        raise AssertionError("dry-run integration test must not mutate the cluster")
+
+    def list_pods_on_node(self, node_name: str):
+        return []
+
+    def cordon_node(self, node_name: str):
+        raise AssertionError("dry-run integration test must not mutate the cluster")
+
+    def evict_pod(self, namespace: str, pod_name: str):
+        raise AssertionError("dry-run integration test must not mutate the cluster")
+
+    def get_node(self, node_name: str):
+        return {"spec": {"unschedulable": False}}
 
 
 class TestK8sContainerEscapeRemediationPipeline:

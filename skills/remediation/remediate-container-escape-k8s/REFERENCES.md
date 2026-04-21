@@ -6,15 +6,21 @@
   - `networking.k8s.io/v1` `NetworkPolicy`
   - empty `ingress` + empty `egress` with `policyTypes: [Ingress, Egress]` is
     the deny-all quarantine shape used by this skill
+- **Node maintenance / drain** — Kubernetes documents cordon + drain as the
+  supported node-eviction pattern, with eviction rather than blind delete:
+  https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/
 - **Kubernetes Ephemeral Containers** — https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/
   - ephemeral containers are added through the `pods/ephemeralcontainers`
     subresource commonly used by `kubectl debug`
 - **Kubernetes Pod Security Standards** — https://kubernetes.io/docs/concepts/security/pod-security-standards/
   - `privileged`, host namespaces, and added Linux capabilities are explicitly
     higher-risk controls
+- **Kubernetes Pod lifecycle / deletion** — deleting a pod is destructive and
+  can drop in-memory evidence even when a controller later re-creates it:
+  https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
 - **Kubernetes Volumes: hostPath** — https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
   - warns that `hostPath` mounts expose privileged host resources and should be
-    avoided unless absolutely necessary
+  avoided unless absolutely necessary
 - **Kubernetes Volume Snapshots** — https://kubernetes.io/docs/concepts/storage/volume-snapshots/
   - CSI `VolumeSnapshot` objects are the portable snapshot primitive this
     forensic collector can optionally create for PVC-backed pod volumes
@@ -99,6 +105,8 @@ Minimal AWS IAM for audit writes:
 
 The skill's `--apply` path emits a native `remediation_action` record and
 dual-audits the mutation. The `--reverify` path reads the expected
-`NetworkPolicy` back and emits `remediation_verification` with `status:
-verified` or `status: drift`. This keeps the quarantine proof local to the
-operator-owned audit loop.
+`NetworkPolicy` back for the default quarantine path, checks pod absence for
+`--approve-pod-kill`, and checks node cordon + pod absence for
+`--approve-node-drain`. Each path emits `remediation_verification` with
+`status: verified` or `status: drift` and uses the shared drift-finding
+contract so destructive follow-up drift still lands in SIEM/SOAR.

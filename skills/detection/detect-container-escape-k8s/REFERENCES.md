@@ -10,7 +10,8 @@
 ## Input format
 
 OCSF 1.8 API Activity (class 6003) or the native enriched K8s audit shape
-produced by `ingest-k8s-audit-ocsf`.
+produced by `ingest-k8s-audit-ocsf`, plus optional Falco / Tracee runtime
+records on stdin for rule 5 fusion.
 
 The detector keys off:
 
@@ -18,6 +19,8 @@ The detector keys off:
 - `resources[0].type`, `resources[0].name`, `resources[0].namespace`, `resources[0].subresource`
 - `unmapped.k8s.request_object`
 - `unmapped.k8s.response_object`
+- Falco `rule`, `output`, `output_fields.container.id`, `output_fields.k8s.ns.name`, `output_fields.k8s.pod.name`
+- Tracee `eventName`, `description`, `container.id`, `kubernetes.namespace`, `kubernetes.podName`
 
 The K8s audit API documents:
 
@@ -41,6 +44,8 @@ https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/
 | R1 | `patch` introduces privileged / host namespace / risky capabilities | T1611 | Critical (5) |
 | R2 | `patch` introduces risky `hostPath` mounts (`/`, `/proc`, `/var/lib/docker`, `/var/lib/containerd`) | T1611 | Critical (5) |
 | R3 | `pods/ephemeralcontainers` mutation adds an ephemeral container to a running pod | T1610 | High (4) |
+| R4 | `pods/exec` actor differs from the recent deploy actor and is not a declared operator | T1613 | High (4) |
+| R5 | Falco / Tracee runtime breakout signals, fused on `container_id` when available | T1611 | High (4) or Critical (5) |
 
 ## Kubernetes references behind the rules
 
@@ -51,9 +56,19 @@ https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/
   are created using a special `ephemeralcontainers` API handler rather than by
   editing `pod.spec` directly:
   https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/
+- **Pod exec and attach are connect-style API requests** — Kubernetes audit
+  preserves the `pods/exec` subresource so API-activity correlation can
+  distinguish interactive container access from normal pod CRUD:
+  https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/
 - **hostPath warning** — Kubernetes documents that `hostPath` mounts present
   many security risks and should be avoided when possible:
   https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+- **Falco default rules** — includes `Terminal shell in container`,
+  `Write below root`, and `Container Drift Detected` style signals:
+  https://github.com/falcosecurity/rules
+- **Tracee event catalog** — runtime event names such as `container_drift` are
+  documented in the official event reference:
+  https://github.com/aquasecurity/tracee/tree/main/docs/docs/events
 
 ## MITRE grounding behind the rules
 
@@ -64,15 +79,17 @@ https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/
   vulnerable containers in Kubernetes to facilitate execution and then escape
   to host:
   https://attack.mitre.org/techniques/T1610/
+- **T1613 Container and Resource Discovery** covers adversary activity that
+  enumerates or inspects containers interactively after access is established:
+  https://attack.mitre.org/techniques/T1613/
 
-## Non-goals for this PR slice
+## Non-goals for this detector slice
 
-- Falco / Tracee event ingestion
-- `kubectl exec` versus known-operator correlation
 - remediation or evidence collection
+- replacing Falco / Tracee rather than consuming their events
+- persistent cross-batch state outside the current input window
 
-Those are intentional follow-on slices for issue `#274`, not gaps in this
-single detector PR.
+Those stay outside this detector's deterministic single-batch contract.
 
 ## See also
 
