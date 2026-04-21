@@ -99,6 +99,7 @@ OFFICIAL_REFERENCE_HOSTS = {
 ALLOWED_GITHUB_PREFIXES = (
     "NVIDIA/dcgm-exporter",
     "NVIDIA/nvidia-container-toolkit",
+    "aquasecurity/tracee",
     "cncf-tags/container-device-interface",
     "falcosecurity/rules",
     "msaad00/agent-bom",

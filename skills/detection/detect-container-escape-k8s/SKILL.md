@@ -4,12 +4,13 @@ description: >-
   Detect Kubernetes container-escape signals from normalized kube-apiserver
   audit events in native or OCSF mode. Fires on three high-signal behaviors:
   patches that introduce privileged / host-namespace / risky-capability
-  settings, patches that introduce dangerous hostPath mounts, and
-  ephemeral-container creation on running pods. Use when the user mentions
-  Kubernetes container escape, hostPath abuse, privileged pod patching, or
-  `kubectl debug` / ephemeral container activity. Do NOT use on raw audit
-  logs — pipe them through ingest-k8s-audit-ocsf first. Do NOT use for
-  Falco or Tracee runtime events in this PR; that fusion path is a follow-up.
+  settings, patches that introduce dangerous hostPath mounts, ephemeral-
+  container creation on running pods, unexpected `kubectl exec`, and optional
+  Falco / Tracee runtime signals fused on `container_id`. Use when the user
+  mentions Kubernetes container escape, hostPath abuse, privileged pod
+  patching, `kubectl debug`, suspicious `kubectl exec`, or Falco / Tracee
+  runtime breakout signals. Do NOT use on raw audit logs — pipe them through
+  ingest-k8s-audit-ocsf first for the audit stream.
 license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
@@ -29,8 +30,8 @@ concurrency_safety: stateless
 
 ## Attack patterns detected
 
-This PR ships the K8s-audit-first subset of issue `#274`: three single-event
-rules that do not depend on Falco, Tracee, or operator/deployer history.
+This skill now covers the original K8s-audit slice plus the follow-up
+unexpected-exec and runtime-fusion scope from issue `#298`.
 
 ### Rule 1: Risky spec patch (T1611)
 
@@ -78,6 +79,44 @@ flows.
 - **Severity:** High (4)
 - **Observables:** actor, pod, namespace, ephemeral container names
 
+### Rule 4: Unexpected `kubectl exec` correlation (T1613)
+
+Fires when a pod `exec` action targets a running workload but the exec actor is
+not:
+
+- the most recent deploy-or-patch actor for that pod inside the detector's
+  30-minute lookback window, or
+- a declared operator principal / group passed via
+  `--known-operator-principal` or `K8S_CONTAINER_ESCAPE_KNOWN_OPERATORS`
+
+If the detector does not have recent deploy history, it still fires when the
+exec principal is a service account rather than a declared operator.
+
+- **Trigger:** `create` or `connect` on `pods/exec`
+- **MITRE:** T1613 — Container and Resource Discovery
+- **Severity:** High (4)
+- **Observables:** actor, actor type, pod, namespace, recent deploy actor
+
+### Rule 5: Falco / Tracee runtime fusion (T1611)
+
+Consumes optional Falco or Tracee JSONL records in the same input stream. When
+runtime signals share a `container_id`, the detector fuses them into one
+finding and raises severity when multiple engines or signal families align.
+
+Supported signals:
+
+- `Terminal shell in container`
+- `Container Drift Detected` / `container_drift`
+- `Write below root`
+- `Sensitive file access below root`
+
+- **Trigger:** Falco or Tracee runtime records with one of the supported
+  signals; fusion happens automatically on `container_id`
+- **MITRE:** T1611 — Escape to Host
+- **Severity:** High (4) from one source; Critical (5) when multiple
+  sources/signals align
+- **Observables:** container ID, pod, namespace, runtime engines, fused signals
+
 ## Output contract
 
 Each match emits a full OCSF 1.8 Detection Finding (class `2004`) by default.
@@ -90,14 +129,13 @@ hashes so re-running on the same input is idempotent.
 - `tactic: { name, uid }`
 - `technique: { name, uid }`
 
-## What this PR does NOT detect
+## What this detector still does NOT do
 
-- Falco / Tracee runtime events
-- `kubectl exec` versus known-operator correlation
-- cross-run or cross-source fusion on `container_id`
 - automatic remediation or forensic collection
+- arbitrary runtime-event parsing beyond the documented Falco / Tracee signals
+- long-lived state outside the input batch window
 
-Those stay for later `#274` slices so this detector PR remains reviewable.
+Those remain separate concerns so the detector stays deterministic and batch-safe.
 
 ## Native output format
 
@@ -144,6 +182,11 @@ python ../ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
 
 # Standalone OCSF file
 python src/detect.py ../golden/k8s_container_escape_sample.ocsf.jsonl
+
+# Allow a break-glass operator principal to exec without firing rule 4
+python src/detect.py mixed-input.jsonl \
+  --known-operator-principal alice@example.com \
+  --known-operator-principal system:masters
 ```
 
 ## Tests
@@ -152,6 +195,11 @@ Golden fixture parity against
 [`../golden/k8s_container_escape_sample.ocsf.jsonl`](../golden/k8s_container_escape_sample.ocsf.jsonl)
 →
 [`../golden/k8s_container_escape_findings.ocsf.jsonl`](../golden/k8s_container_escape_findings.ocsf.jsonl).
+Follow-up golden parity covers mixed audit + runtime input at
+[`../golden/k8s_container_escape_followup_input.jsonl`](../golden/k8s_container_escape_followup_input.jsonl)
+→
+[`../golden/k8s_container_escape_followup_findings.ocsf.jsonl`](../golden/k8s_container_escape_followup_findings.ocsf.jsonl).
 Plus unit tests for risky-setting extraction, `hostPath` path filtering, JSON
-Patch handling, ephemeral container name extraction, native input, OCSF class
-pinning, and deterministic finding UIDs.
+Patch handling, ephemeral container name extraction, unexpected-exec
+correlation, runtime fusion, native input, OCSF class pinning, and
+deterministic finding UIDs.

@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,6 +52,11 @@ T1610_TACTIC_NAME = "Execution"
 T1610_TECH_UID = "T1610"
 T1610_TECH_NAME = "Deploy Container"
 
+T1613_TACTIC_UID = "TA0007"
+T1613_TACTIC_NAME = "Discovery"
+T1613_TECH_UID = "T1613"
+T1613_TECH_NAME = "Container and Resource Discovery"
+
 WORKLOAD_RESOURCES = {
     "pods",
     "deployments",
@@ -62,8 +68,24 @@ WORKLOAD_RESOURCES = {
     "cronjobs",
 }
 PATCH_VERBS = {"patch", "update"}
+EXEC_VERBS = {"create", "connect"}
 RISKY_CAPABILITIES = {"CAP_SYS_ADMIN", "CAP_SYS_PTRACE"}
 RISKY_HOSTPATH_PREFIXES = ("/proc", "/var/lib/docker", "/var/lib/containerd")
+DEFAULT_KNOWN_OPERATOR_PRINCIPALS = ("system:masters",)
+RECENT_DEPLOY_WINDOW_MS = 30 * 60 * 1000
+RUNTIME_FUSION_WINDOW_MS = 10 * 60 * 1000
+RUNTIME_SIGNAL_PATTERNS = (
+    ("container-drift", ("container drift detected", "container_drift")),
+    ("terminal-shell", ("terminal shell in container",)),
+    ("write-below-root", ("write below root",)),
+    ("sensitive-file-access", ("sensitive file access below root",)),
+)
+RUNTIME_SIGNAL_LABELS = {
+    "container-drift": "Container drift detected",
+    "terminal-shell": "Terminal shell in container",
+    "write-below-root": "Write below root",
+    "sensitive-file-access": "Sensitive file access below root",
+}
 
 
 def _safe_int(value: Any) -> int:
@@ -114,7 +136,135 @@ def _unmapped_k8s(event: dict[str, Any]) -> dict[str, Any]:
     return k8s if isinstance(k8s, dict) else {}
 
 
+def _event_source_skill(event: dict[str, Any]) -> str:
+    metadata = event.get("metadata") or {}
+    product = metadata.get("product") or {}
+    feature = product.get("feature") or {}
+    return str(event.get("source_skill") or feature.get("name") or "")
+
+
+def _path_value(obj: Any, path: str) -> Any:
+    current = obj
+    if isinstance(current, dict) and path in current:
+        return current[path]
+    parts = path.split(".")
+    for index, part in enumerate(parts):
+        if not isinstance(current, dict) or part not in current:
+            if isinstance(current, dict):
+                remainder = ".".join(parts[index:])
+                if remainder in current:
+                    return current[remainder]
+            return None
+        current = current[part]
+    return current
+
+
+def _first_text(event: dict[str, Any], *paths: str) -> str:
+    for path in paths:
+        value = _path_value(event, path)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def _normalize_container_id(value: str) -> str:
+    text = (value or "").strip()
+    for prefix in ("docker://", "containerd://", "cri-o://"):
+        if text.startswith(prefix):
+            return text.split("://", 1)[1]
+    return text
+
+
+def _runtime_signal(rule: str, description: str) -> str:
+    text = f"{rule} {description}".lower()
+    for signal, patterns in RUNTIME_SIGNAL_PATTERNS:
+        if any(pattern in text for pattern in patterns):
+            return signal
+    return ""
+
+
+def _normalize_runtime_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    source_text = " ".join(
+        part
+        for part in (
+            _first_text(event, "source"),
+            _first_text(event, "engine"),
+            _first_text(event, "vendor"),
+            _event_source_skill(event),
+        )
+        if part
+    ).lower()
+    if "falco" not in source_text and "tracee" not in source_text:
+        return None
+
+    runtime_engine = "falco" if "falco" in source_text else "tracee"
+    rule = _first_text(event, "rule", "ruleName", "eventName", "signatureName", "output")
+    description = _first_text(event, "output", "summary", "message", "description")
+    signal = _runtime_signal(rule, description)
+    if not signal:
+        return None
+
+    return {
+        "event_family": "runtime",
+        "source_format": str(event.get("schema_mode") or "runtime"),
+        "provider": "Kubernetes",
+        "time_ms": _safe_int(event.get("time_ms") or event.get("time") or event.get("ts") or event.get("timestamp")),
+        "actor_name": _first_text(
+            event,
+            "user.name",
+            "process.user",
+            "output_fields.user.name",
+            "actor.user.name",
+        ),
+        "actor_type": "",
+        "actor_groups": (),
+        "operation": "",
+        "resource_type": "pods",
+        "resource_name": _first_text(
+            event,
+            "kubernetes.podName",
+            "k8s.pod.name",
+            "output_fields.k8s.pod.name",
+            "pod",
+            "pod_name",
+        ),
+        "namespace": _first_text(
+            event,
+            "kubernetes.namespace",
+            "k8s.ns.name",
+            "output_fields.k8s.ns.name",
+            "namespace",
+        ),
+        "subresource": "",
+        "request_object": None,
+        "response_object": None,
+        "object_ref": None,
+        "source_skill": _event_source_skill(event),
+        "container_id": _normalize_container_id(
+            _first_text(
+                event,
+                "container.id",
+                "containerId",
+                "container_id",
+                "output_fields.container.id",
+                "kubernetes.container.id",
+            )
+        ),
+        "runtime_engine": runtime_engine,
+        "runtime_rule": rule or RUNTIME_SIGNAL_LABELS[signal],
+        "runtime_description": description,
+        "runtime_signal": signal,
+    }
+
+
 def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
+    runtime = _normalize_runtime_event(event)
+    if runtime is not None:
+        return runtime
+
     if "class_uid" in event:
         if event.get("class_uid") != 6003:
             return None
@@ -122,6 +272,7 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
         resource = _resource(event.get("resources"))
         unmapped = _unmapped_k8s(event)
         return {
+            "event_family": "k8s_audit",
             "source_format": "ocsf",
             "provider": str(((event.get("cloud") or {}).get("provider")) or "Kubernetes"),
             "time_ms": _safe_int(event.get("time")),
@@ -136,6 +287,12 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
             "request_object": unmapped.get("request_object"),
             "response_object": unmapped.get("response_object"),
             "object_ref": unmapped.get("object_ref"),
+            "source_skill": _event_source_skill(event),
+            "container_id": "",
+            "runtime_engine": "",
+            "runtime_rule": "",
+            "runtime_description": "",
+            "runtime_signal": "",
         }
 
     schema_mode = str(event.get("schema_mode") or "").strip().lower()
@@ -150,6 +307,7 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
     resource = _resource(event.get("resources"))
     unmapped = _unmapped_k8s(event)
     return {
+        "event_family": "k8s_audit",
         "source_format": schema_mode or "native",
         "provider": str(event.get("provider") or event.get("cloud_provider") or "Kubernetes"),
         "time_ms": _safe_int(event.get("time_ms") or event.get("time")),
@@ -164,6 +322,12 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
         "request_object": unmapped.get("request_object"),
         "response_object": unmapped.get("response_object"),
         "object_ref": unmapped.get("object_ref"),
+        "source_skill": _event_source_skill(event),
+        "container_id": "",
+        "runtime_engine": "",
+        "runtime_rule": "",
+        "runtime_description": "",
+        "runtime_signal": "",
     }
 
 
@@ -420,6 +584,43 @@ def _extract_ephemeral_container_names(payload: Any) -> list[str]:
     return sorted(set(names))
 
 
+def _known_operator_set(known_operator_principals: Iterable[str]) -> set[str]:
+    return {value.strip() for value in known_operator_principals if value and value.strip()}
+
+
+def _is_known_operator(event: dict[str, Any], known_operator_principals: set[str]) -> bool:
+    actor = event["actor_name"]
+    if actor and actor in known_operator_principals:
+        return True
+    return any(group in known_operator_principals for group in event["actor_groups"])
+
+
+def _recent_deploy_actor(events: list[dict[str, Any]], exec_event: dict[str, Any]) -> str:
+    pod_name = exec_event["resource_name"]
+    namespace = exec_event["namespace"]
+    latest_actor = ""
+    latest_time = -1
+    for event in events:
+        if event["event_family"] != "k8s_audit":
+            continue
+        if event["time_ms"] > exec_event["time_ms"]:
+            continue
+        if exec_event["time_ms"] - event["time_ms"] > RECENT_DEPLOY_WINDOW_MS:
+            continue
+        if event["namespace"] != namespace or event["resource_name"] != pod_name:
+            continue
+        if event["resource_type"] != "pods":
+            continue
+        if event["subresource"]:
+            continue
+        if event["operation"] not in {"create", "patch", "update"}:
+            continue
+        if event["actor_name"] and event["time_ms"] >= latest_time:
+            latest_actor = event["actor_name"]
+            latest_time = event["time_ms"]
+    return latest_actor
+
+
 def _target(resource_type: str, namespace: str, resource_name: str, subresource: str = "") -> str:
     parts = [resource_type]
     if namespace:
@@ -435,6 +636,8 @@ def rule1_risky_spec_patch(events: list[dict[str, Any]]) -> Iterable[dict[str, A
     normalized = _normalized_events(events)
     seen: set[str] = set()
     for event in normalized:
+        if event["event_family"] != "k8s_audit":
+            continue
         if event["operation"] != "patch":
             continue
         if event["resource_type"] not in WORKLOAD_RESOURCES:
@@ -488,6 +691,8 @@ def rule2_hostpath_injection(events: list[dict[str, Any]]) -> Iterable[dict[str,
     normalized = _normalized_events(events)
     seen: set[str] = set()
     for event in normalized:
+        if event["event_family"] != "k8s_audit":
+            continue
         if event["operation"] != "patch":
             continue
         if event["resource_type"] not in WORKLOAD_RESOURCES:
@@ -541,6 +746,8 @@ def rule3_ephemeral_container_creation(events: list[dict[str, Any]]) -> Iterable
     normalized = _normalized_events(events)
     seen: set[str] = set()
     for event in normalized:
+        if event["event_family"] != "k8s_audit":
+            continue
         if event["operation"] not in PATCH_VERBS:
             continue
         if event["resource_type"] != "pods":
@@ -594,12 +801,163 @@ def rule3_ephemeral_container_creation(events: list[dict[str, Any]]) -> Iterable
         )
 
 
-def detect(events: Iterable[dict[str, Any]], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+def rule4_unexpected_exec(
+    events: list[dict[str, Any]],
+    *,
+    known_operator_principals: Iterable[str] = DEFAULT_KNOWN_OPERATOR_PRINCIPALS,
+) -> Iterable[dict[str, Any]]:
+    normalized = _normalized_events(events)
+    known_operators = _known_operator_set(known_operator_principals)
+    seen: set[str] = set()
+    for event in normalized:
+        if event["event_family"] != "k8s_audit":
+            continue
+        if event["operation"] not in EXEC_VERBS:
+            continue
+        if event["resource_type"] != "pods" or (event["subresource"] or "").lower() != "exec":
+            continue
+
+        actor = event["actor_name"] or "unknown"
+        deploy_actor = _recent_deploy_actor(normalized, event)
+        operator_matched = _is_known_operator(event, known_operators)
+        is_service_account = event["actor_type"] == "ServiceAccount" or actor.startswith("system:serviceaccount:")
+        if deploy_actor and actor == deploy_actor:
+            continue
+        if operator_matched:
+            continue
+        if not deploy_actor and not is_service_account:
+            continue
+
+        pod_name = event["resource_name"] or "<unnamed>"
+        namespace = event["namespace"] or "<cluster>"
+        target = _target("pods", event["namespace"], event["resource_name"], "exec")
+        key = f"r4|{actor}|{target}|{deploy_actor or '<none>'}"
+        if key in seen:
+            continue
+        seen.add(key)
+
+        if deploy_actor:
+            desc = (
+                f"Actor '{actor}' executed `pods/exec` against pod '{pod_name}' in namespace '{namespace}', "
+                f"but the most recent deploy-or-patch actor for that pod within the last 30 minutes was "
+                f"'{deploy_actor}'. That mismatch is a strong container-discovery and hands-on-keyboard signal "
+                f"when the exec principal is not a declared operator. (MITRE T1613)"
+            )
+        else:
+            desc = (
+                f"Actor '{actor}' executed `pods/exec` against pod '{pod_name}' in namespace '{namespace}' "
+                f"without a matching recent deploy actor in the input window. Because the exec principal is a "
+                f"service account and not a declared operator, treat this as suspicious container discovery or "
+                f"interactive inspection. (MITRE T1613)"
+            )
+
+        yield _build_native_finding(
+            rule_id="r4-unexpected-exec",
+            title="Unexpected pod exec targeted a running workload",
+            desc=desc,
+            severity_id=SEVERITY_HIGH,
+            tactic_uid=T1613_TACTIC_UID,
+            tactic_name=T1613_TACTIC_NAME,
+            technique_uid=T1613_TECH_UID,
+            technique_name=T1613_TECH_NAME,
+            actor=actor,
+            target=target,
+            first_seen_time=event["time_ms"],
+            last_seen_time=event["time_ms"],
+            observables=[
+                {"name": "actor.name", "type": "Other", "value": actor},
+                {"name": "actor.type", "type": "Other", "value": event["actor_type"]},
+                {"name": "pod.name", "type": "Other", "value": event["resource_name"]},
+                {"name": "namespace", "type": "Other", "value": event["namespace"]},
+                {"name": "recent.deploy_actor", "type": "Other", "value": deploy_actor or "<none>"},
+                {"name": "rule", "type": "Other", "value": "r4-unexpected-exec"},
+            ],
+            evidence_count=1,
+        )
+
+
+def rule5_runtime_fusion(events: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
+    normalized = [event for event in _normalized_events(events) if event["event_family"] == "runtime"]
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for event in normalized:
+        key = event["container_id"] or f"{event['namespace']}|{event['resource_name']}|{event['runtime_signal']}"
+        buckets.setdefault(key, []).append(event)
+
+    for bucket_events in buckets.values():
+        bucket_events.sort(key=lambda item: item["time_ms"])
+        fused_group: list[dict[str, Any]] = []
+        for event in bucket_events:
+            if fused_group and event["time_ms"] - fused_group[-1]["time_ms"] > RUNTIME_FUSION_WINDOW_MS:
+                yield from _render_runtime_group(fused_group)
+                fused_group = [event]
+            else:
+                fused_group.append(event)
+        if fused_group:
+            yield from _render_runtime_group(fused_group)
+
+
+def _render_runtime_group(group: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
+    if not group:
+        return
+    sources = sorted({event["runtime_engine"] for event in group if event["runtime_engine"]})
+    signals = sorted({event["runtime_signal"] for event in group if event["runtime_signal"]})
+    labels = [RUNTIME_SIGNAL_LABELS.get(signal, signal) for signal in signals]
+    first = group[0]
+    actor = first["actor_name"] or "runtime"
+    container_id = first["container_id"] or "<unknown>"
+    pod_name = first["resource_name"] or "<unknown>"
+    namespace = first["namespace"] or "<cluster>"
+    title = "Fused runtime signals indicate container escape activity"
+    severity_id = SEVERITY_CRITICAL if len(sources) > 1 or len(signals) > 1 else SEVERITY_HIGH
+    source_text = ", ".join(sources) if sources else "runtime"
+    signal_text = ", ".join(labels)
+    target = _target("pods", first["namespace"], first["resource_name"])
+    desc = (
+        f"Runtime telemetry for container '{container_id}' on pod '{pod_name}' in namespace '{namespace}' "
+        f"reported suspicious signals from {source_text}: {signal_text}. These Falco/Tracee indicators map to "
+        f"post-compromise container breakout or host-interaction behavior and are fused on container ID when "
+        f"multiple engines or signals align. (MITRE T1611)"
+    )
+    yield _build_native_finding(
+        rule_id="r5-runtime-fusion",
+        title=title,
+        desc=desc,
+        severity_id=severity_id,
+        tactic_uid=T1611_TACTIC_UID,
+        tactic_name=T1611_TACTIC_NAME,
+        technique_uid=T1611_TECH_UID,
+        technique_name=T1611_TECH_NAME,
+        actor=actor,
+        target=target,
+        first_seen_time=group[0]["time_ms"],
+        last_seen_time=group[-1]["time_ms"],
+        observables=[
+            {"name": "container.id", "type": "Other", "value": container_id},
+            {"name": "pod.name", "type": "Other", "value": first["resource_name"]},
+            {"name": "namespace", "type": "Other", "value": first["namespace"]},
+            {"name": "runtime.sources", "type": "Other", "value": ", ".join(sources)},
+            {"name": "runtime.signals", "type": "Other", "value": signal_text},
+            {"name": "rule", "type": "Other", "value": "r5-runtime-fusion"},
+        ],
+        evidence_count=len(group),
+    )
+
+
+def detect(
+    events: Iterable[dict[str, Any]],
+    output_format: str = "ocsf",
+    *,
+    known_operator_principals: Iterable[str] = DEFAULT_KNOWN_OPERATOR_PRINCIPALS,
+) -> Iterable[dict[str, Any]]:
     events_list = list(events)
     native_findings: list[dict[str, Any]] = []
     native_findings.extend(rule1_risky_spec_patch(events_list))
     native_findings.extend(rule2_hostpath_injection(events_list))
     native_findings.extend(rule3_ephemeral_container_creation(events_list))
+    native_findings.extend(
+        rule4_unexpected_exec(events_list, known_operator_principals=known_operator_principals)
+    )
+    native_findings.extend(rule5_runtime_fusion(events_list))
     native_findings.sort(key=lambda finding: finding["time_ms"])
     for native_finding in native_findings:
         if output_format == "native":
@@ -648,6 +1006,12 @@ def main(argv: list[str] | None = None) -> int:
         default="ocsf",
         help="Render OCSF findings or the native enriched finding shape.",
     )
+    parser.add_argument(
+        "--known-operator-principal",
+        action="append",
+        default=[],
+        help="Actor or group name allowed to run benign exec activity. Repeat for multiple values.",
+    )
     args = parser.parse_args(argv)
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
@@ -655,7 +1019,15 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         events = list(load_jsonl(in_stream))
-        for finding in detect(events, output_format=args.output_format):
+        known_operators = list(DEFAULT_KNOWN_OPERATOR_PRINCIPALS)
+        env_known = [item.strip() for item in os.getenv("K8S_CONTAINER_ESCAPE_KNOWN_OPERATORS", "").split(",")]
+        known_operators.extend(item for item in env_known if item)
+        known_operators.extend(args.known_operator_principal)
+        for finding in detect(
+            events,
+            output_format=args.output_format,
+            known_operator_principals=known_operators,
+        ):
             out_stream.write(json.dumps(finding, separators=(",", ":")) + "\n")
     finally:
         if args.input:
