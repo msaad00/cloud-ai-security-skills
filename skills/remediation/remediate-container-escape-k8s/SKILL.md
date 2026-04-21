@@ -8,12 +8,14 @@ description: >-
   the Kubernetes API before emitting a native remediation plan or action
   record. Every action is dry-run by default, deny-listed for protected
   namespaces, gated behind an incident ID plus approver for --apply, and
-  dual-audited (DynamoDB + KMS-encrypted S3). Use when the user mentions
-  "quarantine a suspicious Kubernetes pod," "contain container escape in
-  Kubernetes," "apply deny-all NetworkPolicy after escape finding," or
-  "re-verify K8s quarantine policy," or "collect K8s container-escape
-  forensics." Do NOT use for node drain, pod deletion, or identity-session
-  containment — those belong to their own remediation skills.
+  dual-audited (DynamoDB + KMS-encrypted S3). The low-risk default remains
+  reversible quarantine; explicit destructive follow-ups are also supported
+  via `--approve-pod-kill` and `--approve-node-drain`, with the node-drain
+  path requiring a second approver. Use when the user mentions "quarantine a
+  suspicious Kubernetes pod," "contain container escape in Kubernetes,"
+  "apply deny-all NetworkPolicy after escape finding," "re-verify K8s
+  quarantine policy," "kill the compromised pod," "drain the affected node,"
+  or "collect K8s container-escape forensics."
 license: Apache-2.0
 capability: write-cloud
 approval_model: human_required
@@ -135,6 +137,13 @@ mode.
 The gate sits outside the agent loop. An alert or agent suggestion alone is not
 sufficient to mutate cluster state.
 
+Destructive follow-up paths tighten that bar further:
+
+- `--approve-pod-kill` still requires the incident + approver pair
+- `--approve-node-drain` requires the same pair **plus**
+  `K8S_CONTAINER_ESCAPE_SECOND_APPROVER`, and the second approver must differ
+  from the primary approver
+
 ### 5. Dual audit before and after the write
 
 For the quarantine step the skill writes:
@@ -148,15 +157,21 @@ The first audit write lands with `status: in_progress` BEFORE the Kubernetes
 write. A second audit row lands with `status: success` or `status: failure`
 after the API call returns.
 
-### 6. `--reverify` proves the quarantine is still in place
+### 6. `--reverify` proves the expected post-response state still holds
 
-`--reverify` is read-only. It fetches the expected `NetworkPolicy` by the
-deterministic policy name and checks that:
+`--reverify` is read-only and follows the same action mode you selected:
+
+- default quarantine path: fetches the expected `NetworkPolicy` by the
+  deterministic policy name and checks that:
 
 - the policy still exists
 - `podSelector.matchLabels` still matches the resolved selector
 - `policyTypes` still contains both `Ingress` and `Egress`
 - both `ingress` and `egress` are empty arrays
+
+- `--approve-pod-kill --reverify`: proves the target pod is still absent
+- `--approve-node-drain --reverify`: proves the node remains cordoned and the
+  target pod is still absent
 
 The emitted record is `remediation_verification` with `status: verified` or
 `status: drift`.
@@ -211,7 +226,7 @@ records replace `actions` with a single `endpoint` field and a
 # Dry-run (default) — resolves selector and prints the exact quarantine manifest
 cat finding.ocsf.jsonl | python src/handler.py
 
-# Apply — requires incident gate and audit destinations
+# Apply quarantine — requires incident gate and audit destinations
 export K8S_CONTAINER_ESCAPE_INCIDENT_ID=inc-2026-04-19-001
 export K8S_CONTAINER_ESCAPE_APPROVER=alice@example.com
 export K8S_REMEDIATION_AUDIT_DYNAMODB_TABLE=k8s-remediation-audit
@@ -222,6 +237,15 @@ cat finding.ocsf.jsonl | python src/handler.py --apply
 
 # Re-verify — read-only check that the quarantine policy still exists
 cat finding.ocsf.jsonl | python src/handler.py --reverify
+
+# Explicit destructive pod delete
+cat finding.ocsf.jsonl | python src/handler.py --approve-pod-kill
+cat finding.ocsf.jsonl | python src/handler.py --apply --approve-pod-kill
+
+# Explicit destructive node drain — requires a second approver
+export K8S_CONTAINER_ESCAPE_SECOND_APPROVER=bob@example.com
+cat finding.ocsf.jsonl | python src/handler.py --approve-node-drain
+cat finding.ocsf.jsonl | python src/handler.py --apply --approve-node-drain
 ```
 
 ## Forensic evidence mode
@@ -269,11 +293,12 @@ cat finding.ocsf.jsonl | python src/forensic_collector.py \
 
 ## Do NOT use
 
-- to drain a node or delete a pod
 - against protected namespaces like `kube-system` or `istio-system`
 - as a generic "pause traffic" control for planned maintenance
 - without setting `K8S_CONTAINER_ESCAPE_INCIDENT_ID` and
   `K8S_CONTAINER_ESCAPE_APPROVER` under `--apply`
+- without setting `K8S_CONTAINER_ESCAPE_SECOND_APPROVER` for
+  `--approve-node-drain --apply`
 
 ## Closed-loop verification
 
@@ -284,9 +309,9 @@ The remediation loop is:
 3. `remediate-container-escape-k8s --apply`
 4. `remediate-container-escape-k8s --reverify`
 
-If the next re-verify run shows the policy missing or drifted, the skill emits
-`status: drift`. This PR keeps verification local to the remediation skill; a
-future PR can surface that drift as a separate finding stream if needed.
+If the next re-verify run shows the expected quarantine, pod-delete, or
+node-drain state missing or drifted, the skill emits `status: drift` and the
+shared verifier contract produces the paired OCSF drift finding.
 
 ## Tests
 
@@ -294,8 +319,10 @@ future PR can surface that drift as a separate finding stream if needed.
 - protected-namespace deny-list in dry-run and apply modes
 - dry-run emits a plan with the resolved selector and deny-all manifest
 - `--apply` gate requires incident ID and approver
+- `--approve-node-drain` requires a distinct second approver
 - audit write lands before the Kubernetes mutating call
 - `--reverify` distinguishes verified from drifted policy state
+- destructive pod-kill and node-drain modes re-verify their own post-action state
 - end-to-end dry-run from the frozen container-escape findings golden
 - forensic collector builds deterministic bundles from `/proc` + runtime logs
 - forensic collector can plan or create `VolumeSnapshot` refs and upload a

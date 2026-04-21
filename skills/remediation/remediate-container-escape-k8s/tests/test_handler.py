@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from handler import (  # type: ignore[import-not-found]
+    ACTION_NODE_DRAIN,
+    ACTION_POD_KILL,
     ACCEPTED_PRODUCERS,
     DEFAULT_DENY_NAMESPACES,
     STATUS_DRIFT,
@@ -58,7 +60,19 @@ def _finding(
 class _FakeAudit:
     writes: list[dict] = field(default_factory=list)
 
-    def record(self, *, target, step, status, detail, incident_id, approver, policy_name):
+    def record(
+        self,
+        *,
+        target,
+        step,
+        status,
+        detail,
+        incident_id,
+        approver,
+        policy_name,
+        action_mode,
+        secondary_approver="",
+    ):
         entry = {
             "target": f"{target.namespace}/{target.resource_type}/{target.resource_name}",
             "step": step,
@@ -67,6 +81,8 @@ class _FakeAudit:
             "incident_id": incident_id,
             "approver": approver,
             "policy_name": policy_name,
+            "action_mode": action_mode,
+            "secondary_approver": secondary_approver,
         }
         self.writes.append(entry)
         return {
@@ -78,13 +94,20 @@ class _FakeAudit:
 @dataclass
 class _FakeKube:
     pod_labels: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
+    pod_nodes: dict[tuple[str, str], str] = field(default_factory=dict)
     workload_selectors: dict[tuple[str, str, str], dict[str, str]] = field(default_factory=dict)
     policies: dict[tuple[str, str], dict] = field(default_factory=dict)
+    pods: dict[tuple[str, str], dict] = field(default_factory=dict)
+    node_pods: dict[str, list[dict]] = field(default_factory=dict)
+    nodes: dict[str, dict] = field(default_factory=dict)
     order: list[str] = field(default_factory=list)
     audit: _FakeAudit | None = None
 
     def get_pod_labels(self, namespace: str, pod_name: str):
         return self.pod_labels.get((namespace, pod_name))
+
+    def get_pod_node_name(self, namespace: str, pod_name: str):
+        return self.pod_nodes.get((namespace, pod_name))
 
     def get_workload_selector(self, namespace: str, resource_type: str, resource_name: str):
         return self.workload_selectors.get((namespace, resource_type, resource_name))
@@ -99,6 +122,28 @@ class _FakeKube:
 
     def get_network_policy(self, namespace: str, name: str):
         return self.policies.get((namespace, name))
+
+    def get_pod(self, namespace: str, pod_name: str):
+        return self.pods.get((namespace, pod_name))
+
+    def delete_pod(self, namespace: str, pod_name: str):
+        self.order.append("kube:delete-pod")
+        self.pods.pop((namespace, pod_name), None)
+
+    def list_pods_on_node(self, node_name: str):
+        return list(self.node_pods.get(node_name, []))
+
+    def cordon_node(self, node_name: str):
+        self.order.append("kube:cordon-node")
+        node = self.nodes.setdefault(node_name, {"spec": {}})
+        node.setdefault("spec", {})["unschedulable"] = True
+
+    def evict_pod(self, namespace: str, pod_name: str):
+        self.order.append(f"kube:evict:{namespace}/{pod_name}")
+        self.pods.pop((namespace, pod_name), None)
+
+    def get_node(self, node_name: str):
+        return self.nodes.get(node_name)
 
 
 class TestContract:
@@ -218,6 +263,24 @@ class TestApplyGate:
         assert ok is True
         assert reason == ""
 
+    def test_node_drain_requires_second_distinct_approver(self, monkeypatch):
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_INCIDENT_ID", "inc-1")
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_APPROVER", "alice@example.com")
+        monkeypatch.delenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", raising=False)
+        ok, reason = check_apply_gate(action_mode=ACTION_NODE_DRAIN)
+        assert ok is False
+        assert "SECOND_APPROVER" in reason
+
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", "alice@example.com")
+        ok, reason = check_apply_gate(action_mode=ACTION_NODE_DRAIN)
+        assert ok is False
+        assert "must differ" in reason
+
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", "bob@example.com")
+        ok, reason = check_apply_gate(action_mode=ACTION_NODE_DRAIN)
+        assert ok is True
+        assert reason == ""
+
 
 class TestApplyAndReverify:
     def test_apply_writes_audit_before_network_policy(self):
@@ -244,6 +307,7 @@ class TestApplyAndReverify:
         assert record["approver"] == "alice@example.com"
         assert [item["status"] for item in audit.writes] == [STATUS_IN_PROGRESS, STATUS_SUCCESS]
         assert kube.order == ["kube:apply"]
+        assert all(item["action_mode"] == "quarantine" for item in audit.writes)
 
     def test_reverify_reports_verified_when_policy_matches(self):
         kube = _FakeKube(
@@ -304,3 +368,104 @@ class TestApplyAndReverify:
         records = list(run([_finding()], kube_client=kube, reverify=True))
         assert len(records) == 1
         assert records[0]["status"] == STATUS_VERIFIED
+
+    def test_pod_kill_apply_and_reverify(self):
+        audit = _FakeAudit()
+        kube = _FakeKube(
+            pod_labels={("payments", "api-7d9b"): {"app": "api"}},
+            pod_nodes={("payments", "api-7d9b"): "node-a"},
+            pods={("payments", "api-7d9b"): {"metadata": {"name": "api-7d9b", "namespace": "payments"}}},
+            audit=audit,
+        )
+        finding = _finding(
+            target="pods/payments/api-7d9b",
+            resource_type="pods",
+            resource_name="api-7d9b",
+            pod_name="api-7d9b",
+        )
+        records = list(
+            run(
+                [finding],
+                kube_client=kube,
+                apply=True,
+                action_mode=ACTION_POD_KILL,
+                audit=audit,
+                incident_id="inc-1",
+                approver="alice@example.com",
+            )
+        )
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_SUCCESS
+        assert records[0]["action_mode"] == ACTION_POD_KILL
+        assert kube.order == ["kube:delete-pod"]
+        assert audit.writes[-1]["action_mode"] == ACTION_POD_KILL
+
+        verify = list(run([finding], kube_client=kube, reverify=True, action_mode=ACTION_POD_KILL))
+        assert len(verify) == 1
+        assert verify[0]["status"] == STATUS_VERIFIED
+
+    def test_node_drain_requires_dual_approval_and_reverifies(self):
+        audit = _FakeAudit()
+        kube = _FakeKube(
+            pod_labels={("payments", "api-7d9b"): {"app": "api"}},
+            pod_nodes={("payments", "api-7d9b"): "node-a"},
+            pods={("payments", "api-7d9b"): {"metadata": {"name": "api-7d9b", "namespace": "payments"}}},
+            node_pods={
+                "node-a": [
+                    {"metadata": {"namespace": "payments", "name": "api-7d9b"}},
+                    {"metadata": {"namespace": "payments", "name": "sidecar-1"}},
+                ]
+            },
+            nodes={"node-a": {"spec": {"unschedulable": False}}},
+            audit=audit,
+        )
+        finding = _finding(
+            target="pods/payments/api-7d9b",
+            resource_type="pods",
+            resource_name="api-7d9b",
+            pod_name="api-7d9b",
+        )
+        records = list(
+            run(
+                [finding],
+                kube_client=kube,
+                apply=True,
+                action_mode=ACTION_NODE_DRAIN,
+                audit=audit,
+                incident_id="inc-1",
+                approver="alice@example.com",
+                secondary_approver="bob@example.com",
+            )
+        )
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_SUCCESS
+        assert records[0]["secondary_approver"] == "bob@example.com"
+        assert records[0]["action_mode"] == ACTION_NODE_DRAIN
+        assert audit.writes[-1]["action_mode"] == ACTION_NODE_DRAIN
+        assert audit.writes[-1]["secondary_approver"] == "bob@example.com"
+        assert kube.nodes["node-a"]["spec"]["unschedulable"] is True
+
+        verify = list(run([finding], kube_client=kube, reverify=True, action_mode=ACTION_NODE_DRAIN))
+        assert len(verify) == 1
+        assert verify[0]["status"] == STATUS_VERIFIED
+
+    def test_node_drain_dry_run_refuses_when_node_hosts_protected_namespace(self):
+        kube = _FakeKube(
+            pod_labels={("payments", "api-7d9b"): {"app": "api"}},
+            pod_nodes={("payments", "api-7d9b"): "node-a"},
+            node_pods={
+                "node-a": [
+                    {"metadata": {"namespace": "payments", "name": "api-7d9b"}},
+                    {"metadata": {"namespace": "kube-system", "name": "coredns"}},
+                ]
+            },
+        )
+        finding = _finding(
+            target="pods/payments/api-7d9b",
+            resource_type="pods",
+            resource_name="api-7d9b",
+            pod_name="api-7d9b",
+        )
+        records = list(run([finding], kube_client=kube, action_mode=ACTION_NODE_DRAIN))
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_WOULD_VIOLATE_DENY_LIST

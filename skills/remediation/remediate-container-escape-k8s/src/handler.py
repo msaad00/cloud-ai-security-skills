@@ -70,6 +70,8 @@ RECORD_ACTION = "remediation_action"
 RECORD_VERIFICATION = "remediation_verification"
 
 STEP_APPLY_QUARANTINE = "apply_quarantine_network_policy"
+STEP_KILL_POD = "kill_target_pod"
+STEP_DRAIN_NODE = "cordon_and_drain_node"
 
 STATUS_PLANNED = "planned"
 STATUS_IN_PROGRESS = "in_progress"
@@ -81,6 +83,11 @@ STATUS_SKIPPED_SOURCE = "skipped_wrong_source"
 STATUS_SKIPPED_DENY_LIST = "skipped_deny_list"
 STATUS_WOULD_VIOLATE_DENY_LIST = "would-violate-deny-list"
 STATUS_SKIPPED_UNSUPPORTED_TARGET = "skipped_unsupported_target"
+
+ACTION_QUARANTINE = "quarantine"
+ACTION_POD_KILL = "pod-kill"
+ACTION_NODE_DRAIN = "node-drain"
+DESTRUCTIVE_ACTIONS = frozenset({ACTION_POD_KILL, ACTION_NODE_DRAIN})
 
 
 @dataclasses.dataclass(frozen=True)
@@ -99,13 +106,22 @@ class ResolvedTarget:
     selector: dict[str, str]
     policy_name: str
     manifest: dict[str, Any]
+    effective_pod_name: str
+    node_name: str
 
 
 class KubernetesClient(Protocol):
     def get_pod_labels(self, namespace: str, pod_name: str) -> dict[str, str] | None: ...
+    def get_pod_node_name(self, namespace: str, pod_name: str) -> str | None: ...
     def get_workload_selector(self, namespace: str, resource_type: str, resource_name: str) -> dict[str, str] | None: ...
     def apply_network_policy(self, namespace: str, manifest: dict[str, Any]) -> None: ...
     def get_network_policy(self, namespace: str, name: str) -> dict[str, Any] | None: ...
+    def get_pod(self, namespace: str, pod_name: str) -> dict[str, Any] | None: ...
+    def delete_pod(self, namespace: str, pod_name: str) -> None: ...
+    def list_pods_on_node(self, node_name: str) -> list[dict[str, Any]]: ...
+    def cordon_node(self, node_name: str) -> None: ...
+    def evict_pod(self, namespace: str, pod_name: str) -> None: ...
+    def get_node(self, node_name: str) -> dict[str, Any] | None: ...
 
 
 class AuditWriter(Protocol):
@@ -119,6 +135,8 @@ class AuditWriter(Protocol):
         incident_id: str,
         approver: str,
         policy_name: str,
+        action_mode: str,
+        secondary_approver: str = "",
     ) -> dict[str, str]: ...
 
 
@@ -146,6 +164,12 @@ class KubernetesApiClient:
         pod = core.read_namespaced_pod(name=pod_name, namespace=namespace)
         labels = (getattr(pod.metadata, "labels", None) or {}) if getattr(pod, "metadata", None) else {}
         return dict(labels) if labels else None
+
+    def get_pod_node_name(self, namespace: str, pod_name: str) -> str | None:
+        core, _, _, _ = self._apis()
+        pod = core.read_namespaced_pod(name=pod_name, namespace=namespace)
+        spec = getattr(pod, "spec", None)
+        return str(getattr(spec, "node_name", None) or getattr(spec, "nodeName", None) or "") or None
 
     def get_workload_selector(self, namespace: str, resource_type: str, resource_name: str) -> dict[str, str] | None:
         _, apps, batch, _ = self._apis()
@@ -201,6 +225,48 @@ class KubernetesApiClient:
 
         return client.ApiClient().sanitize_for_serialization(policy)
 
+    def get_pod(self, namespace: str, pod_name: str) -> dict[str, Any] | None:
+        core, _, _, _ = self._apis()
+        try:
+            pod = core.read_namespaced_pod(name=pod_name, namespace=namespace)
+        except Exception:
+            return None
+        from kubernetes import client
+
+        return client.ApiClient().sanitize_for_serialization(pod)
+
+    def delete_pod(self, namespace: str, pod_name: str) -> None:
+        core, _, _, _ = self._apis()
+        core.delete_namespaced_pod(name=pod_name, namespace=namespace)
+
+    def list_pods_on_node(self, node_name: str) -> list[dict[str, Any]]:
+        core, _, _, _ = self._apis()
+        pods = core.list_pod_for_all_namespaces(field_selector=f"spec.nodeName={node_name}").items
+        from kubernetes import client
+
+        api_client = client.ApiClient()
+        return [api_client.sanitize_for_serialization(pod) for pod in pods]
+
+    def cordon_node(self, node_name: str) -> None:
+        core, _, _, _ = self._apis()
+        core.patch_node(name=node_name, body={"spec": {"unschedulable": True}})
+
+    def evict_pod(self, namespace: str, pod_name: str) -> None:
+        from kubernetes import client
+
+        eviction = client.V1Eviction(metadata=client.V1ObjectMeta(name=pod_name, namespace=namespace))
+        client.PolicyV1Api().create_namespaced_pod_eviction(name=pod_name, namespace=namespace, body=eviction)
+
+    def get_node(self, node_name: str) -> dict[str, Any] | None:
+        core, _, _, _ = self._apis()
+        try:
+            node = core.read_node(name=node_name)
+        except Exception:
+            return None
+        from kubernetes import client
+
+        return client.ApiClient().sanitize_for_serialization(node)
+
 
 @dataclasses.dataclass
 class DualAuditWriter:
@@ -218,6 +284,8 @@ class DualAuditWriter:
         incident_id: str,
         approver: str,
         policy_name: str,
+        action_mode: str,
+        secondary_approver: str = "",
     ) -> dict[str, str]:
         import boto3  # local import — tests inject a stub writer
 
@@ -248,8 +316,11 @@ class DualAuditWriter:
             "incident_id": incident_id,
             "approver": approver,
             "policy_name": policy_name,
+            "action_mode": action_mode,
             "action_at": action_at,
         }
+        if secondary_approver:
+            envelope["secondary_approver"] = secondary_approver
         body = json.dumps(envelope, separators=(",", ":"))
 
         boto3.client("s3").put_object(
@@ -260,25 +331,26 @@ class DualAuditWriter:
             SSEKMSKeyId=self.kms_key_arn,
             ContentType="application/json",
         )
-        boto3.client("dynamodb").put_item(
-            TableName=self.dynamodb_table,
-            Item={
-                "target_uid": {"S": f"{target.namespace}/{target.resource_type}/{target.resource_name}"},
-                "action_at": {"S": action_at},
-                "row_uid": {"S": row_uid},
-                "step": {"S": step},
-                "status": {"S": status},
-                "incident_id": {"S": incident_id},
-                "approver": {"S": approver},
-                "namespace": {"S": target.namespace},
-                "resource_type": {"S": target.resource_type},
-                "resource_name": {"S": target.resource_name},
-                "policy_name": {"S": policy_name},
-                "producer_skill": {"S": target.producer_skill},
-                "finding_uid": {"S": target.finding_uid},
-                "s3_evidence_uri": {"S": evidence_uri},
-            },
-        )
+        item = {
+            "target_uid": {"S": f"{target.namespace}/{target.resource_type}/{target.resource_name}"},
+            "action_at": {"S": action_at},
+            "row_uid": {"S": row_uid},
+            "step": {"S": step},
+            "status": {"S": status},
+            "incident_id": {"S": incident_id},
+            "approver": {"S": approver},
+            "namespace": {"S": target.namespace},
+            "resource_type": {"S": target.resource_type},
+            "resource_name": {"S": target.resource_name},
+            "policy_name": {"S": policy_name},
+            "action_mode": {"S": action_mode},
+            "producer_skill": {"S": target.producer_skill},
+            "finding_uid": {"S": target.finding_uid},
+            "s3_evidence_uri": {"S": evidence_uri},
+        }
+        if secondary_approver:
+            item["secondary_approver"] = {"S": secondary_approver}
+        boto3.client("dynamodb").put_item(TableName=self.dynamodb_table, Item=item)
         return {"row_uid": row_uid, "s3_evidence_uri": evidence_uri}
 
 
@@ -416,10 +488,15 @@ def build_network_policy(namespace: str, policy_name: str, selector: dict[str, s
 
 def resolve_target(target: Target, kube_client: KubernetesClient) -> ResolvedTarget | None:
     selector: dict[str, str] | None
+    effective_pod_name = target.pod_name
+    node_name = ""
     if target.pod_name:
         selector = kube_client.get_pod_labels(target.namespace, target.pod_name)
+        node_name = kube_client.get_pod_node_name(target.namespace, target.pod_name) or ""
     elif target.resource_type == "pods":
         selector = kube_client.get_pod_labels(target.namespace, target.resource_name)
+        effective_pod_name = target.resource_name
+        node_name = kube_client.get_pod_node_name(target.namespace, target.resource_name) or ""
     elif target.resource_type in SUPPORTED_WORKLOAD_TYPES:
         selector = kube_client.get_workload_selector(target.namespace, target.resource_type, target.resource_name)
     else:
@@ -434,16 +511,24 @@ def resolve_target(target: Target, kube_client: KubernetesClient) -> ResolvedTar
         selector=selector,
         policy_name=policy_name,
         manifest=build_network_policy(target.namespace, policy_name, selector),
+        effective_pod_name=effective_pod_name,
+        node_name=node_name,
     )
 
 
-def check_apply_gate() -> tuple[bool, str]:
+def check_apply_gate(*, action_mode: str = ACTION_QUARANTINE) -> tuple[bool, str]:
     incident_id = os.getenv("K8S_CONTAINER_ESCAPE_INCIDENT_ID", "").strip()
     approver = os.getenv("K8S_CONTAINER_ESCAPE_APPROVER", "").strip()
     if not incident_id:
         return False, "K8S_CONTAINER_ESCAPE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "K8S_CONTAINER_ESCAPE_APPROVER is required for --apply"
+    if action_mode == ACTION_NODE_DRAIN:
+        second = os.getenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", "").strip()
+        if not second:
+            return False, "K8S_CONTAINER_ESCAPE_SECOND_APPROVER is required for --approve-node-drain"
+        if second == approver:
+            return False, "K8S_CONTAINER_ESCAPE_SECOND_APPROVER must differ from K8S_CONTAINER_ESCAPE_APPROVER"
     return True, ""
 
 
@@ -451,12 +536,51 @@ def _policy_endpoint(namespace: str, name: str) -> str:
     return f"UPSERT /apis/networking.k8s.io/v1/namespaces/{namespace}/networkpolicies/{name}"
 
 
+def _pod_delete_endpoint(namespace: str, pod_name: str) -> str:
+    return f"DELETE /api/v1/namespaces/{namespace}/pods/{pod_name}"
+
+
+def _node_drain_endpoint(node_name: str) -> str:
+    return f"PATCH /api/v1/nodes/{node_name} unschedulable=true + EVICT pods on node"
+
+
 def _verification_endpoint(namespace: str, name: str) -> str:
     return f"GET /apis/networking.k8s.io/v1/namespaces/{namespace}/networkpolicies/{name}"
 
 
-def _plan_record(resolved: ResolvedTarget, *, status: str, detail: str | None, dry_run: bool) -> dict[str, Any]:
-    return {
+def _action_step(action_mode: str) -> str:
+    if action_mode == ACTION_POD_KILL:
+        return STEP_KILL_POD
+    if action_mode == ACTION_NODE_DRAIN:
+        return STEP_DRAIN_NODE
+    return STEP_APPLY_QUARANTINE
+
+
+def _action_endpoint(resolved: ResolvedTarget, action_mode: str) -> str:
+    if action_mode == ACTION_POD_KILL:
+        return _pod_delete_endpoint(resolved.target.namespace, resolved.effective_pod_name)
+    if action_mode == ACTION_NODE_DRAIN:
+        return _node_drain_endpoint(resolved.node_name)
+    return _policy_endpoint(resolved.target.namespace, resolved.policy_name)
+
+
+def _planned_detail(action_mode: str) -> str:
+    if action_mode == ACTION_POD_KILL:
+        return "dry-run: would delete the targeted pod after explicit HITL approval"
+    if action_mode == ACTION_NODE_DRAIN:
+        return "dry-run: would cordon the node and evict non-protected pods after dual approval"
+    return "dry-run: would apply quarantine NetworkPolicy"
+
+
+def _plan_record(
+    resolved: ResolvedTarget,
+    *,
+    status: str,
+    detail: str | None,
+    dry_run: bool,
+    action_mode: str = ACTION_QUARANTINE,
+) -> dict[str, Any]:
+    record = {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
         "record_type": RECORD_PLAN if dry_run else RECORD_ACTION,
@@ -468,13 +592,13 @@ def _plan_record(resolved: ResolvedTarget, *, status: str, detail: str | None, d
             "resource_name": resolved.target.resource_name,
             "pod_name": resolved.target.pod_name,
         },
+        "action_mode": action_mode,
         "policy_name": resolved.policy_name,
         "selector": resolved.selector,
-        "manifest": resolved.manifest,
         "actions": [
             {
-                "step": STEP_APPLY_QUARANTINE,
-                "endpoint": _policy_endpoint(resolved.target.namespace, resolved.policy_name),
+                "step": _action_step(action_mode),
+                "endpoint": _action_endpoint(resolved, action_mode),
                 "status": status,
                 "detail": detail,
             }
@@ -484,6 +608,13 @@ def _plan_record(resolved: ResolvedTarget, *, status: str, detail: str | None, d
         "time_ms": int(datetime.now(timezone.utc).timestamp() * 1000),
         "finding_uid": resolved.target.finding_uid,
     }
+    if action_mode == ACTION_QUARANTINE:
+        record["manifest"] = resolved.manifest
+    if resolved.effective_pod_name:
+        record["effective_pod_name"] = resolved.effective_pod_name
+    if resolved.node_name:
+        record["node_name"] = resolved.node_name
+    return record
 
 
 def _skip_record(target: Target, *, status: str, detail: str, dry_run: bool) -> dict[str, Any]:
@@ -613,6 +744,7 @@ def apply_quarantine(
     audit: AuditWriter,
     incident_id: str,
     approver: str,
+    secondary_approver: str = "",
 ) -> dict[str, Any]:
     first_audit = audit.record(
         target=resolved.target,
@@ -622,6 +754,8 @@ def apply_quarantine(
         incident_id=incident_id,
         approver=approver,
         policy_name=resolved.policy_name,
+        action_mode=ACTION_QUARANTINE,
+        secondary_approver=secondary_approver,
     )
     try:
         kube_client.apply_network_policy(resolved.target.namespace, resolved.manifest)
@@ -634,8 +768,16 @@ def apply_quarantine(
             incident_id=incident_id,
             approver=approver,
             policy_name=resolved.policy_name,
+            action_mode=ACTION_QUARANTINE,
+            secondary_approver=secondary_approver,
         )
-        record = _plan_record(resolved, status=STATUS_FAILURE, detail=str(exc), dry_run=False)
+        record = _plan_record(
+            resolved,
+            status=STATUS_FAILURE,
+            detail=str(exc),
+            dry_run=False,
+            action_mode=ACTION_QUARANTINE,
+        )
         record["audit"] = first_audit
         return record
 
@@ -647,11 +789,194 @@ def apply_quarantine(
         incident_id=incident_id,
         approver=approver,
         policy_name=resolved.policy_name,
+        action_mode=ACTION_QUARANTINE,
+        secondary_approver=secondary_approver,
     )
-    record = _plan_record(resolved, status=STATUS_SUCCESS, detail="quarantine NetworkPolicy applied", dry_run=False)
+    record = _plan_record(
+        resolved,
+        status=STATUS_SUCCESS,
+        detail="quarantine NetworkPolicy applied",
+        dry_run=False,
+        action_mode=ACTION_QUARANTINE,
+    )
     record["audit"] = second_audit
     record["incident_id"] = incident_id
     record["approver"] = approver
+    if secondary_approver:
+        record["secondary_approver"] = secondary_approver
+    return record
+
+
+def _node_pods_violate_deny_list(
+    node_pods: Iterable[dict[str, Any]],
+    deny_namespaces: Iterable[str],
+) -> tuple[bool, str]:
+    for pod in node_pods:
+        metadata = pod.get("metadata") or {}
+        namespace = str(metadata.get("namespace") or "")
+        name = str(metadata.get("name") or "")
+        denied, matched = is_protected_namespace(namespace, deny_namespaces)
+        if denied:
+            return True, f"node drain would touch protected pod `{namespace}/{name}` matched `{matched}`"
+    return False, ""
+
+
+def apply_pod_kill(
+    resolved: ResolvedTarget,
+    *,
+    kube_client: KubernetesClient,
+    audit: AuditWriter,
+    incident_id: str,
+    approver: str,
+) -> dict[str, Any]:
+    first_audit = audit.record(
+        target=resolved.target,
+        step=STEP_KILL_POD,
+        status=STATUS_IN_PROGRESS,
+        detail=f"about to delete pod `{resolved.effective_pod_name}`",
+        incident_id=incident_id,
+        approver=approver,
+        policy_name=resolved.policy_name,
+        action_mode=ACTION_POD_KILL,
+    )
+    try:
+        kube_client.delete_pod(resolved.target.namespace, resolved.effective_pod_name)
+    except Exception as exc:
+        audit.record(
+            target=resolved.target,
+            step=STEP_KILL_POD,
+            status=STATUS_FAILURE,
+            detail=str(exc),
+            incident_id=incident_id,
+            approver=approver,
+            policy_name=resolved.policy_name,
+            action_mode=ACTION_POD_KILL,
+        )
+        record = _plan_record(
+            resolved,
+            status=STATUS_FAILURE,
+            detail=str(exc),
+            dry_run=False,
+            action_mode=ACTION_POD_KILL,
+        )
+        record["audit"] = first_audit
+        return record
+
+    second_audit = audit.record(
+        target=resolved.target,
+        step=STEP_KILL_POD,
+        status=STATUS_SUCCESS,
+        detail=f"deleted pod `{resolved.effective_pod_name}`",
+        incident_id=incident_id,
+        approver=approver,
+        policy_name=resolved.policy_name,
+        action_mode=ACTION_POD_KILL,
+    )
+    record = _plan_record(
+        resolved,
+        status=STATUS_SUCCESS,
+        detail=f"deleted pod `{resolved.effective_pod_name}`",
+        dry_run=False,
+        action_mode=ACTION_POD_KILL,
+    )
+    record["audit"] = second_audit
+    record["incident_id"] = incident_id
+    record["approver"] = approver
+    return record
+
+
+def apply_node_drain(
+    resolved: ResolvedTarget,
+    *,
+    kube_client: KubernetesClient,
+    audit: AuditWriter,
+    incident_id: str,
+    approver: str,
+    secondary_approver: str,
+    deny_namespaces: Iterable[str],
+) -> dict[str, Any]:
+    node_pods = kube_client.list_pods_on_node(resolved.node_name)
+    violates, detail = _node_pods_violate_deny_list(node_pods, deny_namespaces)
+    if violates:
+        record = _plan_record(
+            resolved,
+            status=STATUS_SKIPPED_DENY_LIST,
+            detail=detail,
+            dry_run=False,
+            action_mode=ACTION_NODE_DRAIN,
+        )
+        record["incident_id"] = incident_id
+        record["approver"] = approver
+        record["secondary_approver"] = secondary_approver
+        return record
+
+    first_audit = audit.record(
+        target=resolved.target,
+        step=STEP_DRAIN_NODE,
+        status=STATUS_IN_PROGRESS,
+        detail=f"about to cordon node `{resolved.node_name}` and evict pods",
+        incident_id=incident_id,
+        approver=approver,
+        policy_name=resolved.policy_name,
+        action_mode=ACTION_NODE_DRAIN,
+        secondary_approver=secondary_approver,
+    )
+    try:
+        kube_client.cordon_node(resolved.node_name)
+        drained_pods: list[str] = []
+        for pod in node_pods:
+            metadata = pod.get("metadata") or {}
+            namespace = str(metadata.get("namespace") or "")
+            name = str(metadata.get("name") or "")
+            if not namespace or not name:
+                continue
+            kube_client.evict_pod(namespace, name)
+            drained_pods.append(f"{namespace}/{name}")
+    except Exception as exc:
+        audit.record(
+            target=resolved.target,
+            step=STEP_DRAIN_NODE,
+            status=STATUS_FAILURE,
+            detail=str(exc),
+            incident_id=incident_id,
+            approver=approver,
+            policy_name=resolved.policy_name,
+            action_mode=ACTION_NODE_DRAIN,
+            secondary_approver=secondary_approver,
+        )
+        record = _plan_record(
+            resolved,
+            status=STATUS_FAILURE,
+            detail=str(exc),
+            dry_run=False,
+            action_mode=ACTION_NODE_DRAIN,
+        )
+        record["audit"] = first_audit
+        return record
+
+    second_audit = audit.record(
+        target=resolved.target,
+        step=STEP_DRAIN_NODE,
+        status=STATUS_SUCCESS,
+        detail=f"cordoned node `{resolved.node_name}` and evicted {len(drained_pods)} pod(s)",
+        incident_id=incident_id,
+        approver=approver,
+        policy_name=resolved.policy_name,
+        action_mode=ACTION_NODE_DRAIN,
+        secondary_approver=secondary_approver,
+    )
+    record = _plan_record(
+        resolved,
+        status=STATUS_SUCCESS,
+        detail=f"cordoned node `{resolved.node_name}` and evicted {len(drained_pods)} pod(s)",
+        dry_run=False,
+        action_mode=ACTION_NODE_DRAIN,
+    )
+    record["audit"] = second_audit
+    record["incident_id"] = incident_id
+    record["approver"] = approver
+    record["secondary_approver"] = secondary_approver
+    record["drained_pods"] = drained_pods
     return record
 
 
@@ -711,6 +1036,49 @@ def reverify_quarantine(
     )
 
 
+def reverify_pod_kill(resolved: ResolvedTarget, *, kube_client: KubernetesClient) -> list[dict[str, Any]]:
+    pod = kube_client.get_pod(resolved.target.namespace, resolved.effective_pod_name)
+    expected = f"pod `{resolved.effective_pod_name}` absent after approved kill"
+    if pod is not None:
+        return _build_verification_outputs(
+            resolved,
+            status=STATUS_DRIFT,
+            detail="target pod still present after approved kill",
+            expected_state=expected,
+            actual_state="pod still exists in cluster",
+        )
+    return _build_verification_outputs(
+        resolved,
+        status=STATUS_VERIFIED,
+        detail="target pod remains absent after approved kill",
+        expected_state=expected,
+        actual_state="pod no longer present",
+    )
+
+
+def reverify_node_drain(resolved: ResolvedTarget, *, kube_client: KubernetesClient) -> list[dict[str, Any]]:
+    node = kube_client.get_node(resolved.node_name)
+    pod = kube_client.get_pod(resolved.target.namespace, resolved.effective_pod_name)
+    node_unschedulable = bool(((node or {}).get("spec") or {}).get("unschedulable")) if node else False
+    expected = f"node `{resolved.node_name}` cordoned and pod `{resolved.effective_pod_name}` absent"
+    if not node_unschedulable or pod is not None:
+        actual = f"node_unschedulable={node_unschedulable} pod_present={pod is not None}"
+        return _build_verification_outputs(
+            resolved,
+            status=STATUS_DRIFT,
+            detail="node drain no longer holds expected cordon/absence state",
+            expected_state=expected,
+            actual_state=actual,
+        )
+    return _build_verification_outputs(
+        resolved,
+        status=STATUS_VERIFIED,
+        detail="node remains cordoned and target pod is absent",
+        expected_state=expected,
+        actual_state="node unschedulable and target pod absent",
+    )
+
+
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
     for lineno, line in enumerate(stream, start=1):
         line = line.strip()
@@ -745,10 +1113,12 @@ def run(
     kube_client: KubernetesClient,
     apply: bool = False,
     reverify: bool = False,
+    action_mode: str = ACTION_QUARANTINE,
     audit: AuditWriter | None = None,
     deny_namespaces: Iterable[str] = DEFAULT_DENY_NAMESPACES,
     incident_id: str = "",
     approver: str = "",
+    secondary_approver: str = "",
 ) -> Iterator[dict[str, Any]]:
     for target, _ in parse_targets(events):
         if target is None:
@@ -776,23 +1146,87 @@ def run(
             )
             continue
 
+        if action_mode in DESTRUCTIVE_ACTIONS and not resolved.effective_pod_name:
+            dry_run = not apply and not reverify
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_UNSUPPORTED_TARGET,
+                detail="destructive response requires an explicit pod target (`pod.name`) from the detector",
+                dry_run=dry_run,
+            )
+            continue
+
+        if action_mode == ACTION_NODE_DRAIN:
+            if not resolved.node_name:
+                dry_run = not apply and not reverify
+                yield _skip_record(
+                    target,
+                    status=STATUS_SKIPPED_UNSUPPORTED_TARGET,
+                    detail="could not resolve node name for drain planning",
+                    dry_run=dry_run,
+                )
+                continue
+            node_pods = kube_client.list_pods_on_node(resolved.node_name)
+            violates, detail = _node_pods_violate_deny_list(node_pods, deny_namespaces)
+            if violates:
+                status = STATUS_SKIPPED_DENY_LIST if apply else STATUS_WOULD_VIOLATE_DENY_LIST
+                yield _plan_record(
+                    resolved,
+                    status=status,
+                    detail=detail,
+                    dry_run=not apply and not reverify,
+                    action_mode=action_mode,
+                )
+                continue
+
         if reverify:
-            yield from reverify_quarantine(resolved, kube_client=kube_client)
+            if action_mode == ACTION_POD_KILL:
+                yield from reverify_pod_kill(resolved, kube_client=kube_client)
+            elif action_mode == ACTION_NODE_DRAIN:
+                yield from reverify_node_drain(resolved, kube_client=kube_client)
+            else:
+                yield from reverify_quarantine(resolved, kube_client=kube_client)
             continue
 
         if not apply:
-            yield _plan_record(resolved, status=STATUS_PLANNED, detail="dry-run: would apply quarantine NetworkPolicy", dry_run=True)
+            yield _plan_record(
+                resolved,
+                status=STATUS_PLANNED,
+                detail=_planned_detail(action_mode),
+                dry_run=True,
+                action_mode=action_mode,
+            )
             continue
 
         if audit is None:
             raise ValueError("audit writer is required under --apply")
-        yield apply_quarantine(
-            resolved,
-            kube_client=kube_client,
-            audit=audit,
-            incident_id=incident_id,
-            approver=approver,
-        )
+        if action_mode == ACTION_POD_KILL:
+            yield apply_pod_kill(
+                resolved,
+                kube_client=kube_client,
+                audit=audit,
+                incident_id=incident_id,
+                approver=approver,
+            )
+        elif action_mode == ACTION_NODE_DRAIN:
+            yield apply_node_drain(
+                resolved,
+                kube_client=kube_client,
+                audit=audit,
+                incident_id=incident_id,
+                approver=approver,
+                secondary_approver=secondary_approver,
+                deny_namespaces=deny_namespaces,
+            )
+        else:
+            yield apply_quarantine(
+                resolved,
+                kube_client=kube_client,
+                audit=audit,
+                incident_id=incident_id,
+                approver=approver,
+                secondary_approver=secondary_approver,
+            )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -803,11 +1237,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", "-o", help="JSONL output. Defaults to stdout.")
     parser.add_argument("--apply", action="store_true", help="Apply the quarantine NetworkPolicy after approval gates pass.")
     parser.add_argument("--reverify", action="store_true", help="Read-only verification: confirm the quarantine NetworkPolicy is still present.")
+    parser.add_argument("--approve-pod-kill", action="store_true", help="Plan or apply the explicit destructive pod-delete path.")
+    parser.add_argument("--approve-node-drain", action="store_true", help="Plan or apply the explicit destructive node-drain path.")
     args = parser.parse_args(argv)
 
     if args.apply and args.reverify:
         print("--apply and --reverify are mutually exclusive", file=sys.stderr)
         return 2
+    if args.approve_pod_kill and args.approve_node_drain:
+        print("--approve-pod-kill and --approve-node-drain are mutually exclusive", file=sys.stderr)
+        return 2
+
+    action_mode = ACTION_QUARANTINE
+    if args.approve_pod_kill:
+        action_mode = ACTION_POD_KILL
+    elif args.approve_node_drain:
+        action_mode = ACTION_NODE_DRAIN
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
@@ -817,13 +1262,15 @@ def main(argv: list[str] | None = None) -> int:
         audit: AuditWriter | None = None
         incident_id = ""
         approver = ""
+        secondary_approver = ""
         if args.apply:
-            ok, reason = check_apply_gate()
+            ok, reason = check_apply_gate(action_mode=action_mode)
             if not ok:
                 print(reason, file=sys.stderr)
                 return 2
             incident_id = os.getenv("K8S_CONTAINER_ESCAPE_INCIDENT_ID", "").strip()
             approver = os.getenv("K8S_CONTAINER_ESCAPE_APPROVER", "").strip()
+            secondary_approver = os.getenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", "").strip()
             audit = DualAuditWriter(
                 dynamodb_table=os.environ["K8S_REMEDIATION_AUDIT_DYNAMODB_TABLE"],
                 s3_bucket=os.environ["K8S_REMEDIATION_AUDIT_BUCKET"],
@@ -835,9 +1282,11 @@ def main(argv: list[str] | None = None) -> int:
             kube_client=kube_client,
             apply=args.apply,
             reverify=args.reverify,
+            action_mode=action_mode,
             audit=audit,
             incident_id=incident_id,
             approver=approver,
+            secondary_approver=secondary_approver,
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:
