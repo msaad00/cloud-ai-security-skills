@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
   <title id="title">IAM departures remediation · AWS flagship workflow</title>
-  <desc id="desc">A simplified, code-faithful workflow for the shipped AWS IAM departures skill. Departure records from Snowflake or Databricks feed a reconciler that applies rehire, grace-period, and change-diff logic before writing an actionable manifest to S3. S3 ObjectCreated triggers EventBridge, which starts a Step Function map. The Step Function invokes a parser Lambda that re-checks the manifest and current IAM state, then a worker Lambda that assumes a scoped cross-account role guarded by aws:PrincipalOrgID. The worker performs the IAM cleanup sequence, while every write is dual-audited to DynamoDB and KMS-encrypted S3. Ingest-back feeds the next reconciler run, creating a closed-loop drift check. Separate execution roles and one-cloud-per-worker boundaries are called out explicitly.</desc>
+  <desc id="desc">Zone-based AWS IAM departures workflow. The AWS Corporate zone contains Snowflake and Databricks departure sources, the reconciler Lambda that applies rehire and grace-period filters, an S3 manifest, and the EventBridge rule that starts the pipeline. The VPC zone contains the parser Lambda that re-checks IAM state and the worker Lambda that executes cleanup. The worker assumes a scoped cross-account role guarded by aws:PrincipalOrgID to touch Target Accounts, where it revokes credentials, strips permissions, and quarantines or deletes the user. Every worker action is dual-audited to DynamoDB and KMS-encrypted S3, and ingest-back feeds the next reconciler run for a closed-loop drift check. Azure Entra and GCP IAM use separate native pipelines.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -8,8 +8,8 @@
       <stop offset="100%" stop-color="#0d1b31"/>
     </linearGradient>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="100%" stop-color="#111c33"/>
+      <stop offset="0%" stop-color="#111c33"/>
+      <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
     <linearGradient id="headline" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#dbeafe"/>
@@ -20,10 +20,10 @@
       <path d="M36 0H0V36" fill="none" stroke="#1e293b" stroke-opacity="0.35" stroke-width="1"/>
     </pattern>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#020617" flood-opacity="0.35"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#020617" flood-opacity="0.35"/>
     </filter>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
     </marker>
     <marker id="arrowWarm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0 0 L10 5 L0 10 z" fill="#f59e0b"/>
@@ -38,148 +38,189 @@
     <symbol id="dynamo" viewBox="0 0 24 24"><path fill="#60a5fa" d="M16.606 20.705v-2.371c-1.263 1.082-3.884 1.795-7.066 1.795-3.184 0-5.805-.714-7.068-1.797v2.369c0 1.168 2.903 2.47 7.068 2.47 4.16 0 7.06-1.3 7.066-2.466zm.001-6.765l.817-.005v.005c0 .517-.258.998-.75 1.441.601.54.75 1.071.75 1.449a1661.7 1661.7 0 0 0 0 3.87c0 1.881-3.389 3.3-7.884 3.3-4.471 0-7.846-1.404-7.88-3.27a583.119 583.119 0 0 1-.003-3.909c.001-.375.15-.9.745-1.437-.592-.538-.743-1.062-.746-1.435v-3.892c.002-.377.153-.903.747-1.438-.593-.54-.744-1.062-.747-1.435 0-1.357-.002-2.735.002-3.897C1.674 1.412 5.056 0 9.54 0c2.159 0 4.233.356 5.689.974l-.315.766c-1.36-.58-3.319-.91-5.374-.91-4.165 0-7.067 1.3-7.067 2.47 0 1.168 2.902 2.47 7.067 2.47.115 0 .222 0 .334-.005l.033.828c-.122.006-.245.006-.367.006-3.184 0-5.805-.714-7.068-1.798v2.38c.005.45.45.843.821 1.093 1.116.736 3.114 1.239 5.34 1.342l-.037.829c-2.254-.105-4.23-.59-5.5-1.332-.318.245-.623.573-.623.952 0 1.168 2.902 2.47 7.067 2.47.411 0 .812-.014 1.203-.042l.06.826c-.41.03-.833.045-1.263.045-3.184 0-5.805-.713-7.068-1.797v2.368c.005.462.449.855.821 1.104 1.275.842 3.67 1.366 6.247 1.366h.182v.83H9.54c-2.62 0-4.99-.507-6.444-1.359-.317.245-.623.574-.623.954 0 1.168 2.902 2.47 7.067 2.47 4.159 0 7.058-1.298 7.066-2.465v-.007c0-.377-.303-.705-.62-.948a5.732 5.732 0 0 1-.662.336l-.316-.764c.3-.128.56-.266.776-.412.376-.254.823-.651.823-1.1zm4.377-6.915h-2.717a.406.406 0 0 1-.332-.173.42.42 0 0 1-.055-.375l1.204-3.597h-5.403l-2.583 4.974h2.623c.128 0 .248.06.325.164a.418.418 0 0 1 .069.36l-2.249 8.365zm1.249-.128l-10.89 11.608a.408.408 0 0 1-.498.075.418.418 0 0 1-.192-.471l2.534-9.426h-2.766a.407.407 0 0 1-.349-.2.418.418 0 0 1-.012-.407l3.014-5.804a.408.408 0 0 1 .36-.222h6.22c.132 0 .256.065.332.174a.422.422 0 0 1 .055.374l-1.204 3.598h3.1c.164 0 .31.099.375.251a.422.422 0 0 1-.08.45zM3.085 20.723a8.107 8.107 0 0 0 1.72.72l.233-.794a7.32 7.32 0 0 1-1.546-.645zm1.72-5.984l.233-.795a7.262 7.262 0 0 1-1.546-.646l-.407.72a8.051 8.051 0 0 0 1.72.72zm-1.72-7.427l.407-.719c.418.244.939.462 1.546.646l-.232.794a8.046 8.046 0 0 1-1.72-.72Z"/></symbol>
     <symbol id="snowflake" viewBox="0 0 24 24"><path fill="#7dd3fc" d="M7.602 12.4c.038-.151.076-.304.076-.456 0-.114-.038-.228-.038-.342-.114-.343-.304-.647-.646-.838l-4.87-2.777c-.685-.38-1.56-.152-1.94.533-.381.685-.153 1.56.532 1.94l2.701 1.56-2.701 1.56c-.685.38-.913 1.256-.533 1.94.38.685 1.256.914 1.94.533l4.832-2.777c.343-.267.571-.533.647-.876zm1.332 2.626c-.266-.038-.57.038-.837.19l-4.832 2.777c-.685.38-.913 1.256-.532 1.94.38.686 1.255.914 1.94.533l2.701-1.56v3.12c0 .8.647 1.408 1.446 1.408.799 0 1.407-.647 1.407-1.408v-5.592c0-.761-.57-1.37-1.293-1.408zm4.946-6.088c.266.038.57-.038.837-.19l4.832-2.777c.685-.38.913-1.256.532-1.94-.38-.686-1.255-.914-1.94-.533l-2.701 1.56V1.975c0-.799-.647-1.408-1.446-1.408-.799 0-1.446.609-1.446 1.408V7.53c0 .76.609 1.37 1.332 1.407zM3.265 5.97l4.832 2.777c.266.152.533.19.837.19.723-.038 1.331-.684 1.331-1.407V1.975c0-.799-.646-1.408-1.407-1.408-.799 0-1.446.647-1.446 1.408v3.12l-2.701-1.56c-.685-.38-1.56-.152-1.94.533-.419.646-.19 1.521.494 1.902zm18.22 8.184l-2.701 1.56 2.7 1.56c.686.38.914 1.256.533 1.94-.38.685-1.255.913-1.94.533l-4.832-2.778a1.644 1.644 0 01-.647-.798c-.037-.153-.076-.305-.076-.457 0-.114.039-.228.039-.342.114-.343.342-.647.646-.837l4.832-2.778c.685-.38 1.56-.152 1.94.533.457.609.19 1.484-.494 1.864z"/></symbol>
     <symbol id="databricks" viewBox="0 0 24 24"><path fill="#f97316" d="M.95 14.184L12 20.403l9.919-5.55v2.21L12 22.662l-10.484-5.96-.565.308v.77L12 24l11.05-6.218v-4.317l-.515-.309L12 19.118l-9.867-5.653v-2.21L12 16.805l11.05-6.218V6.32l-.515-.308L12 11.974 2.647 6.681 12 1.388l7.76 4.368.668-.411v-.566L12 0 .95 6.27v.72L12 13.207l9.919-5.55v2.26L12 15.52 1.516 9.56l-.565.308Z"/></symbol>
+    <symbol id="eventbridge" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3.4" fill="#f472b6"/>
+      <circle cx="3.6" cy="12" r="1.8" fill="#f472b6"/>
+      <circle cx="20.4" cy="12" r="1.8" fill="#f472b6"/>
+      <circle cx="12" cy="3.6" r="1.8" fill="#f472b6"/>
+      <circle cx="12" cy="20.4" r="1.8" fill="#f472b6"/>
+      <line x1="5.4" y1="12" x2="8.6" y2="12" stroke="#f472b6" stroke-width="1.6"/>
+      <line x1="15.4" y1="12" x2="18.6" y2="12" stroke="#f472b6" stroke-width="1.6"/>
+      <line x1="12" y1="5.4" x2="12" y2="8.6" stroke="#f472b6" stroke-width="1.6"/>
+      <line x1="12" y1="15.4" x2="12" y2="18.6" stroke="#f472b6" stroke-width="1.6"/>
+    </symbol>
   </defs>
 
   <rect width="1280" height="720" fill="url(#bg)"/>
   <rect width="1280" height="720" fill="url(#grid)"/>
 
   <g font-family="Segoe UI, ui-sans-serif, Arial, sans-serif">
-    <g transform="translate(54,46)">
-      <rect x="0" y="0" width="196" height="34" rx="17" fill="#221306" stroke="#f59e0b"/>
-      <use href="#aws" x="12" y="8" width="18" height="18"/>
-      <text x="38" y="22" fill="#fbbf24" font-size="12" font-weight="800" letter-spacing="1.4">AWS FLAGSHIP WORKFLOW</text>
+    <g transform="translate(46,42)">
+      <rect x="0" y="0" width="214" height="32" rx="16" fill="#221306" stroke="#f59e0b"/>
+      <use href="#aws" x="12" y="7" width="18" height="18"/>
+      <text x="38" y="21" fill="#fbbf24" font-size="12" font-weight="800" letter-spacing="1.4">AWS FLAGSHIP WORKFLOW</text>
     </g>
-    <text x="54" y="122" fill="url(#headline)" font-size="38" font-weight="900" letter-spacing="-0.8">IAM departures remediation</text>
-    <text x="54" y="152" fill="#94a3b8" font-size="15">Clear workflow, matched to the shipped skill code: scope first, orchestrate in AWS, write with guardrails, audit every action.</text>
+    <text x="46" y="116" fill="url(#headline)" font-size="34" font-weight="900" letter-spacing="-0.6">IAM departures remediation</text>
+    <text x="46" y="142" fill="#94a3b8" font-size="14">Snowflake or Databricks in. Guarded AWS workflow. Scoped cross-account write. Dual-audited. Closed loop.</text>
 
-    <g font-size="12" font-weight="800" letter-spacing="1.1">
-      <text x="60" y="194" fill="#67e8f9">1. PLAN</text>
-      <text x="294" y="194" fill="#93c5fd">2. FILTER</text>
-      <text x="528" y="194" fill="#34d399">3. TRIGGER</text>
-      <text x="762" y="194" fill="#fbbf24">4. ORCHESTRATE</text>
-      <text x="1032" y="194" fill="#fdba74">5. WRITE</text>
+    <g stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="8 6" fill="none">
+      <rect x="46" y="176" width="620" height="286" rx="16"/>
     </g>
+    <text x="64" y="200" fill="#fbbf24" font-size="13" font-weight="800" letter-spacing="1">AWS · CORPORATE</text>
 
-    <path d="M214,286 L286,286" fill="none" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M448,286 L520,286" fill="none" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M682,286 L754,286" fill="none" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
-    <path d="M976,286 L1024,286" fill="none" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrowWarm)"/>
+    <g stroke="#34d399" stroke-width="1.6" stroke-dasharray="8 6" fill="none">
+      <rect x="692" y="176" width="340" height="286" rx="16"/>
+    </g>
+    <text x="710" y="200" fill="#6ee7b7" font-size="13" font-weight="800" letter-spacing="1">VPC</text>
+
+    <g stroke="#f87171" stroke-width="1.6" stroke-dasharray="8 6" fill="none">
+      <rect x="1058" y="176" width="182" height="286" rx="16"/>
+    </g>
+    <text x="1076" y="200" fill="#fca5a5" font-size="13" font-weight="800" letter-spacing="1">TARGET ACCOUNTS</text>
 
     <g filter="url(#shadow)">
-      <rect x="50" y="214" width="164" height="144" rx="18" fill="url(#panel)" stroke="#22d3ee" stroke-width="1.6"/>
-      <text x="72" y="246" fill="#e2e8f0" font-size="20" font-weight="800">Departure feed</text>
-      <text x="72" y="270" fill="#94a3b8" font-size="13">source systems</text>
-      <use href="#snowflake" x="72" y="292" width="30" height="30"/>
-      <text x="112" y="313" fill="#dbeafe" font-size="13" font-weight="700">Snowflake</text>
-      <use href="#databricks" x="72" y="326" width="30" height="30"/>
-      <text x="112" y="347" fill="#dbeafe" font-size="13" font-weight="700">Databricks</text>
-    </g>
-
-    <g filter="url(#shadow)">
-      <rect x="284" y="214" width="164" height="144" rx="18" fill="url(#panel)" stroke="#60a5fa" stroke-width="1.6"/>
-      <text x="306" y="246" fill="#e2e8f0" font-size="20" font-weight="800">Reconciler</text>
-      <text x="306" y="270" fill="#94a3b8" font-size="13">scope before write</text>
-      <rect x="306" y="290" width="118" height="24" rx="12" fill="#10233d" stroke="#3b82f6"/>
-      <text x="365" y="306" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">rehire filter</text>
-      <rect x="306" y="320" width="118" height="24" rx="12" fill="#10233d" stroke="#3b82f6"/>
-      <text x="365" y="336" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">grace window</text>
-      <rect x="306" y="350" width="118" height="24" rx="12" fill="#10233d" stroke="#3b82f6"/>
-      <text x="365" y="366" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">change diff</text>
+      <rect x="70" y="224" width="138" height="92" rx="14" fill="url(#panel)" stroke="#7dd3fc" stroke-width="1.4"/>
+      <use href="#snowflake" x="82" y="240" width="26" height="26"/>
+      <text x="116" y="260" fill="#e0f2fe" font-size="14" font-weight="800">Snowflake</text>
+      <text x="82" y="286" fill="#94a3b8" font-size="11">IAM + departed</text>
+      <text x="82" y="302" fill="#94a3b8" font-size="11">employee rows</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="518" y="214" width="164" height="144" rx="18" fill="url(#panel)" stroke="#34d399" stroke-width="1.6"/>
-      <use href="#s3" x="538" y="232" width="30" height="30"/>
-      <text x="578" y="246" fill="#e2e8f0" font-size="20" font-weight="800">S3 manifest</text>
-      <text x="578" y="270" fill="#94a3b8" font-size="13">actionable rows only</text>
-      <rect x="538" y="294" width="124" height="26" rx="13" fill="#0c2c23" stroke="#34d399"/>
-      <text x="600" y="311" text-anchor="middle" fill="#bbf7d0" font-size="11" font-weight="700">KMS encrypted</text>
-      <rect x="538" y="330" width="124" height="26" rx="13" fill="#10233d" stroke="#60a5fa"/>
-      <text x="600" y="347" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">ObjectCreated -&gt; EB</text>
+      <rect x="70" y="326" width="138" height="66" rx="14" fill="url(#panel)" stroke="#fb923c" stroke-width="1.4"/>
+      <use href="#databricks" x="82" y="340" width="24" height="24"/>
+      <text x="114" y="359" fill="#ffedd5" font-size="14" font-weight="800">Databricks</text>
+      <text x="82" y="381" fill="#94a3b8" font-size="11">same contract</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="752" y="184" width="244" height="196" rx="22" fill="url(#panel)" stroke="#fbbf24" stroke-width="1.8"/>
-      <text x="776" y="218" fill="#fef3c7" font-size="22" font-weight="800">AWS orchestration</text>
-      <text x="776" y="242" fill="#94a3b8" font-size="13">separate roles, one user per map item</text>
+      <rect x="246" y="236" width="170" height="168" rx="14" fill="url(#panel)" stroke="#60a5fa" stroke-width="1.6"/>
+      <use href="#lambda" x="262" y="252" width="22" height="22"/>
+      <text x="294" y="269" fill="#dbeafe" font-size="15" font-weight="800">Reconciler</text>
+      <text x="262" y="294" fill="#94a3b8" font-size="11">scope before write</text>
 
-      <rect x="776" y="264" width="196" height="32" rx="10" fill="#15233d" stroke="#60a5fa"/>
-      <text x="794" y="285" fill="#dbeafe" font-size="13" font-weight="800">EventBridge -&gt; Step Function Map</text>
-
-      <rect x="776" y="310" width="92" height="54" rx="12" fill="#241607" stroke="#fbbf24"/>
-      <use href="#lambda" x="788" y="324" width="20" height="20"/>
-      <text x="818" y="335" fill="#fef3c7" font-size="13" font-weight="800">Parser</text>
-      <text x="818" y="351" fill="#94a3b8" font-size="11">re-check IAM state</text>
-
-      <rect x="880" y="310" width="92" height="54" rx="12" fill="#241607" stroke="#fbbf24"/>
-      <use href="#lambda" x="892" y="324" width="20" height="20"/>
-      <text x="922" y="335" fill="#fef3c7" font-size="13" font-weight="800">Worker</text>
-      <text x="922" y="351" fill="#94a3b8" font-size="11">per-user cleanup</text>
-
-      <rect x="776" y="318" width="196" height="1.5" fill="#000000" opacity="0"/>
-      <text x="776" y="398" fill="#fcd34d" font-size="12" font-weight="700">Execution roles split across EventBridge, SFN, parser, worker</text>
+      <rect x="262" y="304" width="140" height="22" rx="11" fill="#10233d" stroke="#3b82f6"/>
+      <text x="332" y="319" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">rehire filter</text>
+      <rect x="262" y="332" width="140" height="22" rx="11" fill="#10233d" stroke="#3b82f6"/>
+      <text x="332" y="347" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">grace window</text>
+      <rect x="262" y="360" width="140" height="22" rx="11" fill="#10233d" stroke="#3b82f6"/>
+      <text x="332" y="375" text-anchor="middle" fill="#bfdbfe" font-size="11" font-weight="700">change diff</text>
     </g>
 
     <g filter="url(#shadow)">
-      <rect x="1020" y="184" width="210" height="252" rx="22" fill="#1d1409" stroke="#fdba74" stroke-width="1.8"/>
-      <use href="#aws" x="1042" y="204" width="28" height="28"/>
-      <text x="1080" y="222" fill="#fff7ed" font-size="22" font-weight="800">AWS IAM write</text>
-      <text x="1080" y="246" fill="#cbd5e1" font-size="13">scoped cross-account cleanup</text>
+      <rect x="450" y="258" width="90" height="124" rx="14" fill="url(#panel)" stroke="#34d399" stroke-width="1.4"/>
+      <use href="#s3" x="482" y="274" width="26" height="26"/>
+      <text x="495" y="322" text-anchor="middle" fill="#d1fae5" font-size="13" font-weight="800">S3</text>
+      <text x="495" y="338" text-anchor="middle" fill="#94a3b8" font-size="11">manifest</text>
+      <text x="495" y="355" text-anchor="middle" fill="#94a3b8" font-size="11">KMS</text>
+      <text x="495" y="372" text-anchor="middle" fill="#94a3b8" font-size="11">encrypted</text>
+    </g>
 
-      <rect x="1042" y="266" width="164" height="26" rx="13" fill="#3a2410" stroke="#f59e0b"/>
-      <text x="1124" y="283" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="700">AssumeRole + aws:PrincipalOrgID</text>
-      <rect x="1042" y="300" width="164" height="26" rx="13" fill="#3a2410" stroke="#f59e0b"/>
-      <text x="1124" y="317" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="700">deny root / break-glass / emergency</text>
+    <g filter="url(#shadow)">
+      <rect x="574" y="258" width="78" height="124" rx="14" fill="url(#panel)" stroke="#f472b6" stroke-width="1.4"/>
+      <use href="#eventbridge" x="595" y="272" width="34" height="34"/>
+      <text x="613" y="332" text-anchor="middle" fill="#fbcfe8" font-size="13" font-weight="800">Event</text>
+      <text x="613" y="348" text-anchor="middle" fill="#fbcfe8" font-size="13" font-weight="800">Bridge</text>
+      <text x="613" y="370" text-anchor="middle" fill="#94a3b8" font-size="11">rule</text>
+    </g>
 
-      <rect x="1042" y="338" width="164" height="76" rx="14" fill="#131125" stroke="#a78bfa"/>
-      <text x="1058" y="360" fill="#ddd6fe" font-size="12" font-weight="800">Deletion order</text>
-      <text x="1058" y="380" fill="#e9d5ff" font-size="11">keys -&gt; console -&gt; groups</text>
-      <text x="1058" y="396" fill="#e9d5ff" font-size="11">policies -&gt; MFA -&gt; certs</text>
-      <text x="1058" y="412" fill="#e9d5ff" font-size="11">SSH -&gt; service creds -&gt; tag -&gt; delete</text>
-      <rect x="1042" y="420" width="164" height="10" rx="5" fill="#f59e0b" opacity="0.18"/>
-      <text x="1124" y="430" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="800">11 worker steps / 13 IAM API ops</text>
+    <g filter="url(#shadow)">
+      <rect x="712" y="236" width="136" height="168" rx="14" fill="url(#panel)" stroke="#fbbf24" stroke-width="1.6"/>
+      <use href="#lambda" x="728" y="252" width="22" height="22"/>
+      <text x="758" y="269" fill="#fef3c7" font-size="15" font-weight="800">Parser</text>
+      <text x="728" y="296" fill="#94a3b8" font-size="11">Lambda</text>
+      <text x="728" y="318" fill="#cbd5e1" font-size="11">re-checks manifest</text>
+      <text x="728" y="334" fill="#cbd5e1" font-size="11">+ live IAM state</text>
+      <rect x="728" y="350" width="104" height="22" rx="11" fill="#241607" stroke="#f59e0b"/>
+      <text x="780" y="365" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="700">parser role</text>
+      <text x="728" y="389" fill="#94a3b8" font-size="10">reads S3 manifest</text>
+    </g>
+
+    <g filter="url(#shadow)">
+      <rect x="876" y="236" width="136" height="168" rx="14" fill="url(#panel)" stroke="#fbbf24" stroke-width="1.6"/>
+      <use href="#lambda" x="892" y="252" width="22" height="22"/>
+      <text x="922" y="269" fill="#fef3c7" font-size="15" font-weight="800">Worker</text>
+      <text x="892" y="296" fill="#94a3b8" font-size="11">Lambda</text>
+      <text x="892" y="318" fill="#cbd5e1" font-size="11">per-user cleanup</text>
+      <text x="892" y="334" fill="#cbd5e1" font-size="11">dry-run first</text>
+      <rect x="892" y="350" width="104" height="22" rx="11" fill="#241607" stroke="#f59e0b"/>
+      <text x="944" y="365" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="700">worker role</text>
+      <text x="892" y="389" fill="#94a3b8" font-size="10">AssumeRole + OrgID</text>
+    </g>
+
+    <g>
+      <rect x="1076" y="224" width="148" height="224" rx="14" fill="url(#panel)" stroke="#f87171" stroke-width="1.4"/>
+      <use href="#aws" x="1090" y="240" width="22" height="22"/>
+      <text x="1120" y="257" fill="#fecaca" font-size="14" font-weight="800">Cross-account</text>
+      <text x="1094" y="282" fill="#94a3b8" font-size="11">scoped IAM writes</text>
+
+      <text x="1094" y="312" fill="#fee2e2" font-size="12" font-weight="800">1. Revoke credentials</text>
+      <text x="1094" y="334" fill="#fee2e2" font-size="12" font-weight="800">2. Strip permissions</text>
+      <text x="1094" y="356" fill="#fee2e2" font-size="12" font-weight="800">3. Quarantine + delete</text>
+
+      <rect x="1094" y="378" width="112" height="22" rx="11" fill="#2a1414" stroke="#f87171"/>
+      <text x="1150" y="393" text-anchor="middle" fill="#fecaca" font-size="11" font-weight="700">deny: root / BG</text>
+      <rect x="1094" y="408" width="112" height="22" rx="11" fill="#2a1414" stroke="#f87171"/>
+      <text x="1150" y="423" text-anchor="middle" fill="#fecaca" font-size="11" font-weight="700">11 steps · 13 APIs</text>
+    </g>
+
+    <path d="M208,352 C224,352 230,280 246,280" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M208,270 L246,270" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M416,320 L450,320" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M540,320 L574,320" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M652,320 L712,320" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M848,320 L876,320" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M1012,320 L1076,320" fill="none" stroke="#f59e0b" stroke-width="2.6" marker-end="url(#arrowWarm)"/>
+
+    <g filter="url(#shadow)">
+      <rect x="46" y="492" width="986" height="138" rx="18" fill="#0f1b33" stroke="#2dd4bf" stroke-width="1.6"/>
+      <text x="68" y="524" fill="#ccfbf1" font-size="20" font-weight="800">Dual audit · closed loop</text>
+      <text x="68" y="546" fill="#94a3b8" font-size="13">Every worker action writes to both stores. Ingest-back feeds the next reconciler run.</text>
+
+      <rect x="68" y="560" width="230" height="50" rx="12" fill="#0b1b2e" stroke="#60a5fa"/>
+      <use href="#dynamo" x="84" y="572" width="24" height="24"/>
+      <text x="118" y="587" fill="#dbeafe" font-size="13" font-weight="800">DynamoDB audit</text>
+      <text x="118" y="603" fill="#94a3b8" font-size="11">(user, ts) lookup trail</text>
+
+      <rect x="318" y="560" width="230" height="50" rx="12" fill="#0c2c23" stroke="#34d399"/>
+      <use href="#s3" x="334" y="572" width="24" height="24"/>
+      <text x="368" y="587" fill="#d1fae5" font-size="13" font-weight="800">S3 evidence · KMS</text>
+      <text x="368" y="603" fill="#94a3b8" font-size="11">immutable retention</text>
+
+      <rect x="568" y="560" width="222" height="50" rx="12" fill="#10233d" stroke="#2dd4bf"/>
+      <text x="679" y="587" text-anchor="middle" fill="#ccfbf1" font-size="13" font-weight="800">ingest-back</text>
+      <text x="679" y="603" text-anchor="middle" fill="#94a3b8" font-size="11">next run verifies closure</text>
+
+      <rect x="810" y="560" width="202" height="50" rx="12" fill="#2a1414" stroke="#f87171"/>
+      <text x="911" y="587" text-anchor="middle" fill="#fecaca" font-size="13" font-weight="800">Failure lane</text>
+      <text x="911" y="603" text-anchor="middle" fill="#fca5a5" font-size="11">DLQ + SNS on SFN failure</text>
+    </g>
+
+    <path d="M679,560 C679,470 520,454 332,454 L332,404" fill="none" stroke="#ec4899" stroke-width="2.2" stroke-dasharray="6 5" marker-end="url(#arrowLoop)"/>
+    <text x="498" y="448" fill="#f9a8d4" font-size="12" font-weight="800">closed-loop drift check</text>
+
+    <g>
+      <rect x="1058" y="492" width="182" height="138" rx="18" fill="#101827" stroke="#334155"/>
+      <text x="1076" y="520" fill="#e2e8f0" font-size="13" font-weight="800">One cloud per worker</text>
+      <text x="1076" y="540" fill="#94a3b8" font-size="11">AWS-only on purpose.</text>
+      <text x="1076" y="557" fill="#94a3b8" font-size="11">Azure Entra + GCP IAM</text>
+      <text x="1076" y="574" fill="#94a3b8" font-size="11">use separate native</text>
+      <text x="1076" y="591" fill="#94a3b8" font-size="11">pipelines. No worker</text>
+      <text x="1076" y="608" fill="#94a3b8" font-size="11">crosses cloud boundaries.</text>
     </g>
 
     <g font-size="11" font-weight="700" fill="#94a3b8">
-      <text x="250" y="278">filter safe set</text>
-      <text x="485" y="278">publish manifest</text>
-      <text x="720" y="278">start workflow</text>
-      <text x="992" y="278">perform guarded write</text>
+      <text x="224" y="264">sources</text>
+      <text x="420" y="312">publish</text>
+      <text x="543" y="312">trigger</text>
+      <text x="664" y="312">start</text>
+      <text x="854" y="312">invoke</text>
+      <text x="1018" y="312">guarded write</text>
     </g>
 
-    <g filter="url(#shadow)">
-      <rect x="286" y="470" width="676" height="150" rx="24" fill="#0f1b33" stroke="#2dd4bf" stroke-width="1.8"/>
-      <text x="316" y="508" fill="#ccfbf1" font-size="24" font-weight="800">Dual audit and closed loop</text>
-      <text x="316" y="534" fill="#94a3b8" font-size="14">Every worker action lands in both stores, then flows back into the next reconciliation cycle.</text>
-
-      <rect x="316" y="554" width="206" height="42" rx="14" fill="#0b1b2e" stroke="#60a5fa"/>
-      <use href="#dynamo" x="332" y="564" width="22" height="22"/>
-      <text x="364" y="580" fill="#dbeafe" font-size="14" font-weight="800">DynamoDB audit</text>
-      <text x="364" y="596" fill="#94a3b8" font-size="11">(user, ts) lookup trail</text>
-
-      <rect x="542" y="554" width="206" height="42" rx="14" fill="#0c2c23" stroke="#34d399"/>
-      <use href="#s3" x="558" y="564" width="22" height="22"/>
-      <text x="590" y="580" fill="#d1fae5" font-size="14" font-weight="800">S3 evidence + KMS</text>
-      <text x="590" y="596" fill="#94a3b8" font-size="11">immutable retention</text>
-
-      <rect x="768" y="554" width="164" height="42" rx="14" fill="#10233d" stroke="#2dd4bf"/>
-      <text x="850" y="580" text-anchor="middle" fill="#ccfbf1" font-size="14" font-weight="800">ingest-back</text>
-      <text x="850" y="596" text-anchor="middle" fill="#94a3b8" font-size="11">next run verifies closure</text>
-    </g>
-
-    <path d="M850,470 C850,420 520,406 366,406 L366,358" fill="none" stroke="#ec4899" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrowLoop)"/>
-    <text x="634" y="428" fill="#f9a8d4" font-size="12" font-weight="800">closed-loop drift check</text>
-
-    <g>
-      <rect x="1010" y="470" width="220" height="62" rx="18" fill="#2a1414" stroke="#f87171" stroke-width="1.4"/>
-      <text x="1032" y="496" fill="#fecaca" font-size="15" font-weight="800">Failure lane</text>
-      <text x="1032" y="516" fill="#fca5a5" font-size="12">DLQ + SNS on Step Function failure / timeout</text>
-    </g>
-
-    <g>
-      <rect x="50" y="646" width="1180" height="40" rx="14" fill="#101827" stroke="#334155"/>
-      <text x="74" y="671" fill="#e2e8f0" font-size="13" font-weight="800">One cloud per worker</text>
-      <text x="236" y="671" fill="#94a3b8" font-size="12">This diagram is AWS-only on purpose. Azure Entra and GCP IAM use separate native pipelines; no single worker crosses cloud boundaries.</text>
+    <g font-size="11" fill="#64748b">
+      <text x="46" y="674">Separate IAM roles: EventBridge → Step Function → parser → worker → cross-account target.</text>
+      <text x="46" y="692">Dry-run first. Human-required approval. Deny-list for root, break-glass, emergency users.</text>
     </g>
   </g>
 </svg>
