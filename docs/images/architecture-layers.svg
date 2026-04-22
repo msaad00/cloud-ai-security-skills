@@ -102,7 +102,7 @@
     <g filter="url(#shadow)">
       <rect x="962" y="228" width="260" height="180" rx="28" fill="#4a2d09" stroke="#fbbf24" stroke-width="1.6"/>
       <text x="994" y="270" font-size="18" font-weight="800" fill="#fde68a">L5 Remediate</text>
-      <text x="994" y="332" font-size="56" font-weight="900" fill="#ffffff">10</text>
+      <text x="994" y="332" font-size="56" font-weight="900" fill="#ffffff">12</text>
       <text x="994" y="364" font-size="15" fill="#fde68a">HITL · dry-run-first</text>
       <text x="994" y="386" font-size="15" fill="#fde68a">dual-audited write paths</text>
 

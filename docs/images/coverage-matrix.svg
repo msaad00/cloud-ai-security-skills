@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1016" viewBox="0 0 1200 1016" role="img" aria-labelledby="cm-title cm-desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1016" viewBox="0 0 1400 1016" role="img" aria-labelledby="cm-title cm-desc">
   <title id="cm-title">cloud-ai-security-skills — detection and posture coverage matrix with MITRE ATT&amp;CK mapping</title>
   <desc id="cm-desc">Coverage matrix visualizing the gap between shipped detection and posture skills and their paired remediation, with the MITRE ATT&amp;CK technique IDs (or MITRE ATLAS for AI threats) that each detection emits in OCSF finding_info.attacks. Rows list every detection (14) plus every CSPM benchmark family (4 native CIS scopes). Columns are: skill name, MITRE technique IDs, detector or check shipped status, paired remediation status, and the tracking issue or notes. Green cells mean a closed loop is shipped; amber cells mean a remediation skill is on the roadmap; red cells mean no remediation exists or is planned. Thirteen of fourteen detection rows are closed loops today; lateral-movement is intentionally detection-only because the response is per-arm fan-out via existing remediation skills. The matrix is the single source of truth for closed-loop coverage and updates whenever a remediation skill ships.</desc>
 
@@ -12,8 +12,8 @@
     </pattern>
   </defs>
 
-  <rect width="1200" height="1016" fill="url(#bg2)"/>
-  <rect width="1200" height="1016" fill="url(#grid2)"/>
+  <rect width="1400" height="1016" fill="url(#bg2)"/>
+  <rect width="1400" height="1016" fill="url(#grid2)"/>
 
   <!-- Title block -->
   <text x="48" y="62" fill="#f1f5f9" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="900">Closed-loop coverage matrix</text>
@@ -48,7 +48,7 @@
     <text x="900"  y="200" text-anchor="middle">Remediation</text>
     <text x="1020" y="200">Status / issue</text>
   </g>
-  <line x1="48" y1="212" x2="1152" y2="212" stroke="#334155" stroke-width="1.5"/>
+  <line x1="48" y1="212" x2="1352" y2="212" stroke="#334155" stroke-width="1.5"/>
 
   <!-- DETECTION SECTION -->
   <text x="48" y="244" fill="#5eead4" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="900">DETECTION (14)</text>

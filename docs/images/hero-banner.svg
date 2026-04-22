@@ -45,8 +45,8 @@
     </g>
 
     <!-- Main panels -->
-    <rect x="56" y="84" width="772" height="248" rx="22" fill="#0b1628" stroke="#22314d"/>
-    <rect x="856" y="84" width="488" height="248" rx="22" fill="#0b1628" stroke="#22314d"/>
+    <rect x="56" y="84" width="772" height="300" rx="22" fill="#0b1628" stroke="#22314d"/>
+    <rect x="856" y="84" width="488" height="300" rx="22" fill="#0b1628" stroke="#22314d"/>
 
     <!-- Left panel -->
     <text x="88" y="142" font-size="58" font-weight="900" fill="url(#wordmark)" letter-spacing="-1.2">cloud-ai-security-skills</text>
@@ -57,7 +57,7 @@
     <g transform="translate(88,252)">
       <g>
         <rect x="0" y="0" width="162" height="36" rx="12" fill="#0f1d36" stroke="#3b82f6"/>
-        <text x="16" y="23" fill="#93c5fd" font-size="16" font-weight="900">54</text>
+        <text x="16" y="23" fill="#93c5fd" font-size="16" font-weight="900">60</text>
         <text x="48" y="23" fill="#dbe4f0" font-size="13" font-weight="700">shipped skills</text>
       </g>
       <g transform="translate(174,0)">
@@ -107,7 +107,7 @@
       <g transform="translate(0,48)">
         <rect x="0" y="0" width="210" height="36" rx="12" fill="#0f2a28" stroke="#2dd4bf"/>
         <text x="14" y="23" fill="#d1fae5" font-size="13" font-weight="800">L3 Detect</text>
-        <text x="182" y="23" text-anchor="end" fill="#5eead4" font-size="13" font-weight="900">12</text>
+        <text x="182" y="23" text-anchor="end" fill="#5eead4" font-size="13" font-weight="900">14</text>
       </g>
       <g transform="translate(222,48)">
         <rect x="0" y="0" width="210" height="36" rx="12" fill="#0f2a28" stroke="#2dd4bf"/>
@@ -117,7 +117,7 @@
       <g transform="translate(0,96)">
         <rect x="0" y="0" width="210" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
         <text x="14" y="23" fill="#fef3c7" font-size="13" font-weight="800">L5 Remediate</text>
-        <text x="182" y="23" text-anchor="end" fill="#fbbf24" font-size="13" font-weight="900">8</text>
+        <text x="182" y="23" text-anchor="end" fill="#fbbf24" font-size="13" font-weight="900">12</text>
       </g>
       <g transform="translate(222,96)">
         <rect x="0" y="0" width="210" height="36" rx="12" fill="#2a1708" stroke="#f59e0b"/>
