@@ -143,26 +143,22 @@
       <text x="106" y="420" fill="#94a3b8" font-size="10">OLAP table</text>
     </g>
 
-    <g font-size="10" fill="#64748b">
-      <text x="62" y="444">TerminationSource enum:</text>
-      <text x="62" y="460">SNOWFLAKE · DATABRICKS</text>
-      <text x="62" y="474">CLICKHOUSE · WORKDAY</text>
-    </g>
-
     <g filter="url(#shadow)">
-      <rect x="322" y="244" width="162" height="104" rx="14" fill="url(#panel)" stroke="#34d399" stroke-width="1.4"/>
+      <rect x="322" y="244" width="162" height="114" rx="14" fill="url(#panel)" stroke="#34d399" stroke-width="1.4"/>
       <use href="#s3" x="338" y="260" width="26" height="26"/>
-      <text x="372" y="278" fill="#d1fae5" font-size="14" font-weight="800">S3 manifest</text>
-      <text x="338" y="306" fill="#94a3b8" font-size="11">normalized rows</text>
-      <text x="338" y="322" fill="#94a3b8" font-size="11">KMS encrypted</text>
-      <text x="338" y="338" fill="#94a3b8" font-size="11">ObjectCreated event</text>
+      <text x="372" y="278" fill="#d1fae5" font-size="14" font-weight="800">S3 bucket</text>
+      <text x="338" y="302" fill="#94a3b8" font-size="10">same bucket · two prefixes</text>
+      <rect x="338" y="310" width="136" height="18" rx="9" fill="#0c2c23" stroke="#34d399"/>
+      <text x="406" y="323" text-anchor="middle" fill="#bbf7d0" font-size="10" font-weight="700">departures/ · manifest</text>
+      <rect x="338" y="332" width="136" height="18" rx="9" fill="#0c2c23" stroke="#2dd4bf"/>
+      <text x="406" y="345" text-anchor="middle" fill="#99f6e4" font-size="10" font-weight="700">departures/audit/ · logs</text>
 
-      <rect x="322" y="360" width="162" height="108" rx="14" fill="url(#panel)" stroke="#f472b6" stroke-width="1.4"/>
-      <use href="#eventbridge" x="338" y="374" width="28" height="28"/>
-      <text x="374" y="394" fill="#fbcfe8" font-size="14" font-weight="800">EventBridge</text>
-      <text x="338" y="420" fill="#94a3b8" font-size="11">rule on S3</text>
-      <text x="338" y="436" fill="#94a3b8" font-size="11">ObjectCreated</text>
-      <text x="338" y="452" fill="#94a3b8" font-size="11">starts Step Function</text>
+      <rect x="322" y="370" width="162" height="98" rx="14" fill="url(#panel)" stroke="#f472b6" stroke-width="1.4"/>
+      <use href="#eventbridge" x="338" y="382" width="26" height="26"/>
+      <text x="372" y="401" fill="#fbcfe8" font-size="14" font-weight="800">EventBridge</text>
+      <text x="338" y="424" fill="#94a3b8" font-size="11">rule on S3</text>
+      <text x="338" y="440" fill="#94a3b8" font-size="11">ObjectCreated</text>
+      <text x="338" y="456" fill="#94a3b8" font-size="11">starts Step Function</text>
     </g>
 
     <g filter="url(#shadow)">
@@ -226,9 +222,9 @@
     <path d="M274,355 L322,312" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
     <path d="M274,403 L322,328" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
 
-    <path d="M403,348 L403,360" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M403,358 L403,370" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
 
-    <path d="M484,414 C504,414 510,272 530,272" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
+    <path d="M484,419 C504,419 510,272 530,272" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
 
     <path d="M593,304 L593,322" fill="none" stroke="#ec4899" stroke-width="2.2" marker-end="url(#arrowLoop)"/>
     <path d="M724,396 L742,396" fill="none" stroke="#94a3b8" stroke-width="2.2" marker-end="url(#arrow)"/>
@@ -241,38 +237,36 @@
     <text x="470" y="532" fill="#64748b" font-size="11">worker writes every action · next reconciler run closes the loop</text>
 
     <g filter="url(#shadow)">
-      <rect x="64" y="548" width="272" height="116" rx="14" fill="url(#panel)" stroke="#34d399" stroke-width="1.4"/>
-      <use href="#s3" x="80" y="564" width="26" height="26"/>
-      <text x="114" y="582" fill="#d1fae5" font-size="14" font-weight="800">S3 evidence</text>
-      <text x="80" y="610" fill="#94a3b8" font-size="11">KMS encrypted · immutable</text>
-      <text x="80" y="626" fill="#94a3b8" font-size="11">default sink for every action</text>
-      <text x="80" y="648" fill="#34d399" font-size="10" font-weight="800">sink-s3-jsonl</text>
+      <rect x="70" y="548" width="360" height="116" rx="14" fill="url(#panel)" stroke="#60a5fa" stroke-width="1.4"/>
+      <use href="#dynamo" x="88" y="566" width="26" height="26"/>
+      <text x="122" y="584" fill="#dbeafe" font-size="14" font-weight="800">DynamoDB audit</text>
+      <text x="88" y="606" fill="#94a3b8" font-size="11">written by worker directly</text>
+      <text x="88" y="624" fill="#94a3b8" font-size="11">(account, user) key</text>
+      <text x="88" y="642" fill="#94a3b8" font-size="11">live state-of-remediation</text>
 
-      <rect x="352" y="548" width="272" height="116" rx="14" fill="url(#panel)" stroke="#60a5fa" stroke-width="1.4"/>
-      <use href="#dynamo" x="368" y="564" width="26" height="26"/>
-      <text x="402" y="582" fill="#dbeafe" font-size="14" font-weight="800">DynamoDB audit</text>
-      <text x="368" y="610" fill="#94a3b8" font-size="11">(user, ts) key · fast lookup</text>
-      <text x="368" y="626" fill="#94a3b8" font-size="11">live state-of-remediation</text>
-      <text x="368" y="648" fill="#60a5fa" font-size="10" font-weight="800">native DynamoDB write</text>
+      <rect x="450" y="548" width="360" height="116" rx="14" fill="url(#panel)" stroke="#7dd3fc" stroke-width="1.4"/>
+      <use href="#snowflake" x="468" y="566" width="26" height="26"/>
+      <text x="502" y="584" fill="#e0f2fe" font-size="14" font-weight="800">Snowflake</text>
+      <text x="468" y="606" fill="#94a3b8" font-size="11">Snowpipe on departures/audit/</text>
+      <text x="468" y="624" fill="#94a3b8" font-size="11">next reconciler sees closed users</text>
+      <text x="468" y="642" fill="#7dd3fc" font-size="10" font-style="italic">auto-ingest from S3</text>
 
-      <rect x="640" y="548" width="272" height="116" rx="14" fill="url(#panel)" stroke="#7dd3fc" stroke-width="1.4"/>
-      <use href="#snowflake" x="656" y="564" width="26" height="26"/>
-      <text x="690" y="582" fill="#e0f2fe" font-size="14" font-weight="800">Snowflake re-ingest</text>
-      <text x="656" y="610" fill="#94a3b8" font-size="11">close loop in warehouse</text>
-      <text x="656" y="626" fill="#94a3b8" font-size="11">next reconciler sees actions</text>
-      <text x="656" y="648" fill="#7dd3fc" font-size="10" font-weight="800">sink-snowflake-jsonl</text>
-
-      <rect x="928" y="548" width="272" height="116" rx="14" fill="url(#panel)" stroke="#fb923c" stroke-width="1.4"/>
-      <use href="#databricks" x="944" y="564" width="26" height="26"/>
-      <text x="978" y="582" fill="#ffedd5" font-size="14" font-weight="800">Databricks re-ingest</text>
-      <text x="944" y="610" fill="#94a3b8" font-size="11">lakehouse close-loop</text>
-      <text x="944" y="626" fill="#94a3b8" font-size="11">ClickHouse sink also shipped</text>
-      <text x="944" y="648" fill="#fb923c" font-size="10" font-weight="800">sink-clickhouse-jsonl</text>
+      <rect x="830" y="548" width="360" height="116" rx="14" fill="url(#panel)" stroke="#fb923c" stroke-width="1.4"/>
+      <use href="#databricks" x="848" y="566" width="26" height="26"/>
+      <text x="882" y="584" fill="#ffedd5" font-size="14" font-weight="800">Databricks</text>
+      <text x="848" y="606" fill="#94a3b8" font-size="11">Auto Loader on departures/audit/</text>
+      <text x="848" y="624" fill="#94a3b8" font-size="11">same close-loop via lakehouse</text>
+      <text x="848" y="642" fill="#fb923c" font-size="10" font-style="italic">ClickHouse uses the same pattern</text>
     </g>
 
-    <path d="M834,470 L834,548" fill="none" stroke="#2dd4bf" stroke-width="2.2" marker-end="url(#arrowSink)"/>
-    <path d="M200,548 L200,500 L24,500 L24,216 L46,216" fill="none" stroke="#ec4899" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowLoop)"/>
-    <text x="208" y="498" fill="#f9a8d4" font-size="10" font-weight="800">closed-loop drift check</text>
+    <path d="M790,470 C790,508 500,520 250,548" fill="none" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="520" y="516" fill="#93c5fd" font-size="10" font-weight="800">write audit</text>
+
+    <path d="M834,470 C834,500 620,502 486,340" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowSink)"/>
+    <text x="636" y="498" fill="#5eead4" font-size="10" font-weight="800">audit → same bucket · audit/ prefix</text>
+
+    <path d="M630,548 L630,528 L24,528 L24,216 L46,216" fill="none" stroke="#ec4899" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowLoop)"/>
+    <text x="56" y="522" fill="#f9a8d4" font-size="10" font-weight="800">closed-loop drift · warehouse → next reconciler</text>
 
     <g font-size="11" fill="#64748b">
       <text x="46" y="710">AWS-only flagship. Azure Entra and GCP IAM use separate native pipelines. No worker crosses cloud boundaries.</text>
