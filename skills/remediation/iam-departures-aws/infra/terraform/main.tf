@@ -573,6 +573,10 @@ resource "aws_lambda_function" "parser" {
   timeout       = 300
   memory_size   = 256
 
+  # Parser runs once per manifest; 1 reserved slot isolates it from the
+  # Worker Map fan-out and other functions in the account.
+  reserved_concurrent_executions = 1
+
   dead_letter_config {
     target_arn = aws_sqs_queue.pipeline_failures.arn
   }
@@ -601,6 +605,11 @@ resource "aws_lambda_function" "worker" {
   role          = aws_iam_role.worker.arn
   timeout       = 900
   memory_size   = 256
+
+  # Matches step_function.asl.json MaxConcurrency (10). Reserving exactly
+  # the Map fan-out cap gives predictable throughput and prevents the
+  # worker from draining the account's burst pool.
+  reserved_concurrent_executions = 10
 
   dead_letter_config {
     target_arn = aws_sqs_queue.pipeline_failures.arn

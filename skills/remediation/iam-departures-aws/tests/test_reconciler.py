@@ -8,6 +8,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -270,3 +271,90 @@ class TestSnowflakeLogging:
 
         mock_get_logger.assert_called_once_with("snowflake.connector")
         connector_logger.setLevel.assert_called_once_with(sources.logging.WARNING)
+
+
+class TestWithRetry:
+    """Transient failures in HR source reads should not drop a reconciler run."""
+
+    def test_returns_first_successful_call(self):
+        from reconciler import sources
+
+        fn = MagicMock(return_value="ok")
+        assert sources._with_retry(fn, "test") == "ok"
+        assert fn.call_count == 1
+
+    def test_retries_then_succeeds(self):
+        from reconciler import sources
+
+        calls = {"n": 0}
+
+        def flaky():
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise RuntimeError("transient")
+            return "ok"
+
+        with patch.object(sources.time, "sleep"):
+            assert sources._with_retry(flaky, "flaky.read") == "ok"
+        assert calls["n"] == 3
+
+    def test_raises_after_exhausting_attempts(self):
+        from reconciler import sources
+
+        fn = MagicMock(side_effect=RuntimeError("down"))
+        with patch.object(sources.time, "sleep"), pytest.raises(RuntimeError, match="down"):
+            sources._with_retry(fn, "dead.read")
+        assert fn.call_count == sources.SOURCE_FETCH_ATTEMPTS
+
+
+class TestWorkdayRedaction:
+    """Workday token errors must never leak response bodies or credentials."""
+
+    def test_http_error_does_not_include_response_body(self):
+        from reconciler import sources
+
+        with patch.dict(os.environ, {
+            "WORKDAY_API_URL": "https://example.com/report",
+            "WORKDAY_CLIENT_ID": "cid",
+            "WORKDAY_CLIENT_SECRET": "topsecret-password-9999",
+            "WORKDAY_TOKEN_URL": "https://example.com/token",
+        }):
+            source = sources.WorkdayAPISource()
+
+        # Simulate a 401 with a "leaky" body that echoes the credential.
+        leaky_response = MagicMock(spec=httpx.Response)
+        leaky_response.status_code = 401
+        leaky_response.text = "invalid_client: topsecret-password-9999"
+
+        with patch("httpx.post", return_value=leaky_response):
+            with pytest.raises(RuntimeError) as excinfo:
+                source._get_token()
+
+        msg = str(excinfo.value)
+        assert "401" in msg
+        assert "topsecret-password-9999" not in msg
+        assert "invalid_client" not in msg
+
+    def test_network_error_hides_exception_detail(self):
+        from reconciler import sources
+
+        with patch.dict(os.environ, {
+            "WORKDAY_API_URL": "https://example.com/report",
+            "WORKDAY_CLIENT_ID": "cid",
+            "WORKDAY_CLIENT_SECRET": "secret",
+            "WORKDAY_TOKEN_URL": "https://example.com/token",
+        }):
+            source = sources.WorkdayAPISource()
+
+        class _FakeConnectError(httpx.HTTPError):
+            pass
+
+        leaky = _FakeConnectError("DNS lookup failed for secret-tenant.workday.com")
+        with patch("httpx.post", side_effect=leaky):
+            with pytest.raises(RuntimeError) as excinfo:
+                source._get_token()
+
+        msg = str(excinfo.value)
+        assert "unreachable" in msg
+        assert "secret-tenant" not in msg
+        assert "DNS lookup" not in msg

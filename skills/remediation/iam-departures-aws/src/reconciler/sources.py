@@ -21,13 +21,53 @@ import hashlib
 import logging
 import os
 import re
+import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
+
+SOURCE_FETCH_ATTEMPTS = int(os.environ.get("HR_SOURCE_FETCH_ATTEMPTS", "3"))
+SOURCE_FETCH_BASE_DELAY = float(os.environ.get("HR_SOURCE_FETCH_BASE_DELAY", "1.5"))
+
+
+def _with_retry(fn: Callable[[], _T], what: str) -> _T:
+    """Retry a transient-failure-prone read-only callable with exponential backoff.
+
+    Used for HR source `fetch_departures` bodies so that a single transient
+    network/availability hiccup does not drop a whole reconciler run. The
+    callable must be idempotent — we only use it for reads against
+    Snowflake / Databricks / ClickHouse / Workday.
+
+    Delay doubles per attempt starting from ``SOURCE_FETCH_BASE_DELAY``.
+    Default is 3 attempts over roughly 4.5 seconds. Override via env vars
+    ``HR_SOURCE_FETCH_ATTEMPTS`` and ``HR_SOURCE_FETCH_BASE_DELAY``.
+    """
+    attempts = max(1, SOURCE_FETCH_ATTEMPTS)
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except Exception as exc:
+            if attempt == attempts:
+                raise
+            delay = SOURCE_FETCH_BASE_DELAY * (2 ** (attempt - 1))
+            logger.warning(
+                "%s failed on attempt %d/%d (%s); retrying in %.1fs",
+                what,
+                attempt,
+                attempts,
+                type(exc).__name__,
+                delay,
+            )
+            time.sleep(delay)
+    # Unreachable: the final attempt either returns or raises above.
+    raise RuntimeError(f"{what}: retry loop exhausted without result")
 SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -228,6 +268,9 @@ class SnowflakeSource(HRSource):
         )
 
     def fetch_departures(self) -> list[DepartureRecord]:
+        return _with_retry(self._fetch_departures_once, "Snowflake.fetch_departures")
+
+    def _fetch_departures_once(self) -> list[DepartureRecord]:
         query = self.QUERY.format(
             hr_database=self.hr_database,
             hr_schema=self.hr_schema,
@@ -330,6 +373,9 @@ class DatabricksSource(HRSource):
         )
 
     def fetch_departures(self) -> list[DepartureRecord]:
+        return _with_retry(self._fetch_departures_once, "Databricks.fetch_departures")
+
+    def _fetch_departures_once(self) -> list[DepartureRecord]:
         query = self.QUERY.format(
             hr_catalog=self.hr_catalog,
             hr_schema=self.hr_schema,
@@ -429,6 +475,9 @@ class ClickHouseSource(HRSource):
         )
 
     def fetch_departures(self) -> list[DepartureRecord]:
+        return _with_retry(self._fetch_departures_once, "ClickHouse.fetch_departures")
+
+    def _fetch_departures_once(self) -> list[DepartureRecord]:
         query = self.QUERY.format(
             hr_database=self.hr_database,
             iam_database=self.iam_database,
@@ -490,18 +539,38 @@ class WorkdayAPISource(HRSource):
         self.token_url = os.environ.get("WORKDAY_TOKEN_URL", "")
 
     def _get_token(self) -> str:
+        """Fetch an OAuth access token.
+
+        On failure, raises a sanitized ``RuntimeError`` carrying only the
+        HTTP status (or ``network-error`` when no response was received).
+        The raw ``httpx.Response`` body is never logged or re-raised — it
+        can contain tenant metadata or echoed credentials and downstream
+        log sinks would not have the context to redact it.
+        """
         import httpx
 
-        resp = httpx.post(
-            self.token_url,
-            data={"grant_type": "client_credentials"},
-            auth=(self.client_id, self.client_secret),
-            timeout=30,
-        )
-        resp.raise_for_status()
+        try:
+            resp = httpx.post(
+                self.token_url,
+                data={"grant_type": "client_credentials"},
+                auth=(self.client_id, self.client_secret),
+                timeout=30,
+            )
+        except httpx.HTTPError as exc:
+            raise RuntimeError(
+                f"Workday token endpoint unreachable ({type(exc).__name__})"
+            ) from None
+        if resp.status_code >= 400:
+            # Do NOT include response text — potentially sensitive.
+            raise RuntimeError(
+                f"Workday token endpoint returned HTTP {resp.status_code}"
+            )
         return resp.json()["access_token"]
 
     def fetch_departures(self) -> list[DepartureRecord]:
+        return _with_retry(self._fetch_departures_once, "Workday.fetch_departures")
+
+    def _fetch_departures_once(self) -> list[DepartureRecord]:
         import httpx
 
         token = self._get_token()
@@ -537,8 +606,10 @@ class WorkdayAPISource(HRSource):
         try:
             self._get_token()
             return True
-        except Exception:
-            logger.exception("Workday API health check failed")
+        except Exception as exc:
+            # _get_token raises sanitized RuntimeError; other exceptions are
+            # type-only logged so auth responses never reach log sinks.
+            logger.warning("Workday API health check failed: %s", type(exc).__name__)
             return False
 
 

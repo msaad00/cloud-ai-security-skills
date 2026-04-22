@@ -471,6 +471,9 @@ Resources:
       Role: !GetAtt ParserExecutionRole.Arn
       Timeout: 300
       MemorySize: 256
+      # Parser runs once per manifest; 1 reserved slot isolates it from
+      # the Worker Map fan-out and any other functions in the account.
+      ReservedConcurrentExecutions: 1
       DeadLetterConfig:
         TargetArn: !GetAtt PipelineFailureDlq.Arn
       Environment:
@@ -496,6 +499,10 @@ Resources:
       Role: !GetAtt WorkerExecutionRole.Arn
       Timeout: 900
       MemorySize: 256
+      # Matches step_function.asl.json MaxConcurrency (10). Reserving
+      # exactly the Map fan-out cap gives predictable throughput and
+      # prevents the worker from consuming the account's burst pool.
+      ReservedConcurrentExecutions: 10
       DeadLetterConfig:
         TargetArn: !GetAtt PipelineFailureDlq.Arn
       Environment:
