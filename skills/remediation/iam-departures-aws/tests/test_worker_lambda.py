@@ -11,6 +11,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lambda_worker.handler import (
+    AuditWriteError,
     _build_audit_record,
     _checkpoint_pk,
     _deactivate_access_keys,
@@ -19,6 +20,7 @@ from lambda_worker.handler import (
     _delete_mfa_devices,
     _detach_managed_policies,
     _remove_from_groups,
+    _write_audit,
     handler,
 )
 
@@ -321,3 +323,91 @@ class TestSnowflakeIdentifierSafety:
 
         with pytest.raises(ValueError, match="Invalid Snowflake identifier"):
             _quote_identifier("bad\nuser")
+
+
+class TestAuditWriteFailure:
+    """Audit writes must not be silently swallowed after a successful IAM delete."""
+
+    def _audit_record(self) -> dict:
+        return {
+            "account_id": "123456789012",
+            "iam_username": "jane",
+            "audit_timestamp": "2026-04-21T00:00:00+00:00",
+            "email": "jane@co.com",
+            "actions_taken": [],
+        }
+
+    @patch("lambda_worker.handler.boto3")
+    def test_write_audit_raises_when_all_stores_fail(self, mock_boto3):
+        mock_boto3.resource.return_value.Table.return_value.put_item.side_effect = RuntimeError("ddb down")
+        mock_boto3.client.return_value.put_object.side_effect = RuntimeError("s3 down")
+
+        with patch("lambda_worker.handler.AUDIT_TABLE", "t"), patch(
+            "lambda_worker.handler.AUDIT_BUCKET", "b"
+        ):
+            with pytest.raises(AuditWriteError) as excinfo:
+                _write_audit(self._audit_record())
+
+        msg = str(excinfo.value)
+        assert "dynamodb=" in msg and "s3=" in msg
+        assert "jane" in msg and "123456789012" in msg
+
+    @patch("lambda_worker.handler.boto3")
+    def test_write_audit_tolerates_one_store_failure(self, mock_boto3):
+        """Dual-write redundancy: one store succeeding is still acceptable."""
+        mock_boto3.resource.return_value.Table.return_value.put_item.side_effect = RuntimeError("ddb down")
+        mock_boto3.client.return_value.put_object.return_value = {}
+
+        with patch("lambda_worker.handler.AUDIT_TABLE", "t"), patch(
+            "lambda_worker.handler.AUDIT_BUCKET", "b"
+        ):
+            # Should not raise — S3 succeeded, so we have durable record.
+            _write_audit(self._audit_record())
+
+    @patch("lambda_worker.handler._save_checkpoint")
+    @patch("lambda_worker.handler._load_checkpoint", return_value={
+        "status": "new", "actions_taken": [], "completed_steps": [], "updated_at": "",
+    })
+    @patch("lambda_worker.handler._remediation_steps", return_value=[])
+    @patch("lambda_worker.handler._get_iam_client")
+    @patch("lambda_worker.handler._write_audit", side_effect=AuditWriteError("all stores failed"))
+    def test_handler_returns_audit_failed_status_when_audit_raises(
+        self,
+        _mock_audit,
+        _mock_iam,
+        _mock_steps,
+        _mock_load,
+        _mock_save,
+    ):
+        """After IAM deletion, an AuditWriteError must surface in the response
+        as a distinct status — not be hidden behind a generic 'error' status
+        (which would imply IAM was NOT changed) or silently ignored."""
+        result = handler(_make_event(), None)
+
+        assert result["status"] == "remediated_audit_failed"
+        assert "audit_error" in result
+        assert "all stores failed" in result["audit_error"]
+
+    @patch("lambda_worker.handler._save_checkpoint")
+    @patch("lambda_worker.handler._load_checkpoint", return_value={
+        "status": "new", "actions_taken": [], "completed_steps": [], "updated_at": "",
+    })
+    @patch("lambda_worker.handler._remediation_steps", return_value=[])
+    @patch("lambda_worker.handler.boto3")
+    @patch("lambda_worker.handler._get_iam_client")
+    def test_get_iam_client_embeds_request_id_in_session_name(
+        self,
+        mock_get_iam,
+        _mock_boto3,
+        _mock_steps,
+        _mock_load,
+        _mock_save,
+    ):
+        """STS RoleSessionName must include the Lambda request id for audit correlation."""
+        ctx = MagicMock()
+        ctx.aws_request_id = "abcd1234-ef56-7890-abcd-1234567890ab"
+        handler(_make_event(), ctx)
+        # The handler calls _get_iam_client(account_id, request_id=...)
+        mock_get_iam.assert_called_once()
+        _args, kwargs = mock_get_iam.call_args
+        assert kwargs.get("request_id") == "abcd1234-ef56-7890-abcd-1234567890ab"

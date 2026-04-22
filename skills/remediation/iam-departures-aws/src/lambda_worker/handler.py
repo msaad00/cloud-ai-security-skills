@@ -62,6 +62,17 @@ ACCOUNT_ID_RE = re.compile(r"^\d{12}$")
 CHECKPOINT_SK = "CURRENT"
 
 
+class AuditWriteError(RuntimeError):
+    """All configured audit stores failed.
+
+    Raised by ``_write_audit`` when every configured audit sink (DynamoDB
+    and/or S3) fails. The worker treats this as distinct from a remediation
+    failure: the IAM mutation already landed, but there is no durable
+    record of it. The Step Function must route these to DLQ/alerting so
+    operators manually reconcile.
+    """
+
+
 def handler(event: dict, context: Any) -> dict:
     """Step Function Map task: remediate a single IAM user.
 
@@ -154,7 +165,7 @@ def handler(event: dict, context: Any) -> dict:
         }
 
     try:
-        iam = _get_iam_client(account_id)
+        iam = _get_iam_client(account_id, request_id=getattr(context, "aws_request_id", None))
 
         for step_name, step_fn in _remediation_steps():
             if step_name in completed_step_set:
@@ -171,25 +182,45 @@ def handler(event: dict, context: Any) -> dict:
 
         logger.info("Successfully deleted IAM user: %s", iam_username)
 
-        # Step 12: Write audit record
+        # Step 12: Write audit record.
+        # The IAM mutation has already landed. If every audit store fails,
+        # return a distinct status so Step Function routes this invocation
+        # to DLQ/alerts for manual reconciliation — do NOT hide the gap by
+        # returning "remediated".
         audit_record = _build_audit_record(entry, actions_taken, "remediated", context=context)
-        _write_audit(audit_record)
+        try:
+            _write_audit(audit_record)
+            final_status = "remediated"
+            audit_error: str | None = None
+        except AuditWriteError as audit_exc:
+            logger.error(
+                "IAM user %s in %s deleted but all audit stores failed: %s",
+                iam_username,
+                account_id,
+                audit_exc,
+            )
+            final_status = "remediated_audit_failed"
+            audit_error = str(audit_exc)
+
         _save_checkpoint(
             entry,
             actions_taken,
             completed_steps,
-            status="remediated",
+            status=final_status,
             audit_timestamp=audit_record["audit_timestamp"],
         )
 
-        return {
+        response: dict[str, Any] = {
             "email": email,
             "iam_username": iam_username,
             "account_id": account_id,
-            "status": "remediated",
+            "status": final_status,
             "actions_taken": actions_taken,
             "remediated_at": _now(),
         }
+        if audit_error is not None:
+            response["audit_error"] = audit_error
+        return response
 
     except Exception as exc:
         logger.exception("Remediation failed for %s in %s", iam_username, account_id)
@@ -518,8 +549,13 @@ def _write_audit(record: dict) -> None:
     (Snowflake/Databricks/ClickHouse) via a separate ETL process to
     update the remediation_status column and close the loop.
     """
+    stores_configured = 0
+    stores_written = 0
+    failures: list[str] = []
+
     # DynamoDB audit
     if AUDIT_TABLE:
+        stores_configured += 1
         try:
             dynamodb = boto3.resource("dynamodb")
             table = dynamodb.Table(AUDIT_TABLE)
@@ -531,11 +567,14 @@ def _write_audit(record: dict) -> None:
                     "actions_taken": json.dumps(record.get("actions_taken", [])),
                 }
             )
-        except Exception:
+            stores_written += 1
+        except Exception as exc:
             logger.exception("Failed to write DynamoDB audit record")
+            failures.append(f"dynamodb={type(exc).__name__}")
 
     # S3 audit (append to daily log)
     if AUDIT_BUCKET:
+        stores_configured += 1
         try:
             s3 = boto3.client("s3")
             date_str = record["audit_timestamp"][:10]
@@ -547,8 +586,17 @@ def _write_audit(record: dict) -> None:
                 ContentType="application/json",
                 ServerSideEncryption="aws:kms",
             )
-        except Exception:
+            stores_written += 1
+        except Exception as exc:
             logger.exception("Failed to write S3 audit record")
+            failures.append(f"s3={type(exc).__name__}")
+
+    if stores_configured > 0 and stores_written == 0:
+        raise AuditWriteError(
+            f"all {stores_configured} audit stores failed for "
+            f"account={record.get('account_id')} user={record.get('iam_username')}: "
+            f"{', '.join(failures)}"
+        )
 
 
 def _load_checkpoint(entry: dict[str, Any]) -> dict[str, Any]:
@@ -632,17 +680,29 @@ def _save_checkpoint(
 # ── Helpers ─────────────────────────────────────────────────────────
 
 
-def _get_iam_client(account_id: str) -> Any:
-    """Assume cross-account role for IAM operations."""
+def _get_iam_client(account_id: str, request_id: str | None = None) -> Any:
+    """Assume cross-account role for IAM operations.
+
+    The session name embeds the Lambda invocation's aws_request_id when
+    available, so CloudTrail AssumeRole events, DynamoDB audit rows, and
+    S3 audit objects can be cross-referenced during incident response.
+    Session names are capped at 64 chars by IAM.
+    """
     if not ACCOUNT_ID_RE.fullmatch(account_id):
         raise ValueError("Invalid AWS account ID")
 
     sts = boto3.client("sts")
     role_arn = f"arn:aws:iam::{account_id}:role/{CROSS_ACCOUNT_ROLE}"
 
+    session_name = "iam-departures-worker"
+    if request_id:
+        # Keep the first 8 chars of the UUID-style request id; ample for
+        # correlation and stays well under the 64-char IAM limit.
+        session_name = f"iam-departures-worker-{request_id[:8]}"
+
     credentials = sts.assume_role(
         RoleArn=role_arn,
-        RoleSessionName="iam-departures-worker",
+        RoleSessionName=session_name,
         DurationSeconds=3600,  # 1 hour for full remediation
     )["Credentials"]
 

@@ -9,6 +9,32 @@ metadata inside their own docs.
 
 The format is loosely based on Keep a Changelog.
 
+## [Unreleased]
+
+### Fixed
+
+- **Worker Lambda audit writes no longer silently swallowed** —
+  `skills/remediation/iam-departures-aws/src/lambda_worker/handler.py`
+  previously caught every exception in the DynamoDB and S3 audit writes
+  with `except Exception: logger.exception(...)` and still returned
+  `status=remediated`. If both stores failed (KMS disabled, bucket
+  rotation mid-flight, DynamoDB throttle), the IAM user was deleted
+  with no durable audit record and the Step Function reported success.
+  Introduces `AuditWriteError`, tracked per-store write outcomes, and a
+  new `remediated_audit_failed` worker response status so Step Function
+  DLQ / alerting fires on audit gaps instead of masking them. Dual-write
+  redundancy is preserved: a single-store failure no longer raises as
+  long as the other store succeeded.
+
+### Added
+
+- **Correlation of worker actions with CloudTrail** — STS
+  `AssumeRole` in the IAM departures worker Lambda now embeds the
+  first 8 characters of the Lambda `aws_request_id` in the
+  `RoleSessionName`, so CloudTrail `AssumeRole` events, DynamoDB audit
+  rows, and S3 audit objects can be cross-referenced during incident
+  response.
+
 ## [0.6.0] — 2026-04-18 — Closed-loop hardening
 
 First release that claims both **SIEM-ready producer** AND **closed-loop
