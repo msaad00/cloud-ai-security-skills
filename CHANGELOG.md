@@ -11,6 +11,32 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Added
+
+- **Correlation of worker actions with CloudTrail** — STS
+  `AssumeRole` in the IAM departures worker Lambda now embeds the
+  first 8 characters of the Lambda `aws_request_id` in the
+  `RoleSessionName`, so CloudTrail `AssumeRole` events, DynamoDB audit
+  rows, and S3 audit objects can be cross-referenced during incident
+  response.
+- **Retries on transient HR-source failures** —
+  `skills/remediation/iam-departures-aws/src/reconciler/sources.py`
+  `fetch_departures` in all four sources (Snowflake, Databricks,
+  ClickHouse, Workday) now wraps its query in a shared `_with_retry`
+  helper: 3 attempts by default, exponential backoff starting at
+  1.5 s. Tunable via the `HR_SOURCE_FETCH_ATTEMPTS` and
+  `HR_SOURCE_FETCH_BASE_DELAY` env vars. Previously a single transient
+  connection or query hiccup would drop a whole reconciler run,
+  extending the departure-remediation window by up to a full scheduler
+  interval.
+- **Lambda reserved concurrency on Parser and Worker** — both the
+  CloudFormation template and the Terraform module now declare
+  `ReservedConcurrentExecutions` on the two IAM-departures Lambdas.
+  Parser=1 (single-shot per manifest), Worker=10 to match the
+  `step_function.asl.json` Map `MaxConcurrency`. Prevents the Map
+  fan-out from starving other functions in the account, and prevents
+  unrelated burst traffic from starving the remediation pipeline.
+
 ### Fixed
 
 - **Worker Lambda audit writes no longer silently swallowed** —
@@ -25,15 +51,16 @@ The format is loosely based on Keep a Changelog.
   DLQ / alerting fires on audit gaps instead of masking them. Dual-write
   redundancy is preserved: a single-store failure no longer raises as
   long as the other store succeeded.
-
-### Added
-
-- **Correlation of worker actions with CloudTrail** — STS
-  `AssumeRole` in the IAM departures worker Lambda now embeds the
-  first 8 characters of the Lambda `aws_request_id` in the
-  `RoleSessionName`, so CloudTrail `AssumeRole` events, DynamoDB audit
-  rows, and S3 audit objects can be cross-referenced during incident
-  response.
+- **Workday OAuth error handling cannot leak response bodies** —
+  `WorkdayAPISource._get_token` previously called
+  `resp.raise_for_status()`, which surfaces an `httpx.HTTPStatusError`
+  whose repr may include tenant URLs. On failure the `health_check`
+  caller logged via `logger.exception`, which writes the traceback and
+  the exception's repr. Replaced with an explicit check: network
+  errors raise `RuntimeError(f"... unreachable ({ExcType})")` and HTTP
+  errors raise `RuntimeError(f"... returned HTTP {status_code}")`.
+  Response bodies and inner exception messages are never re-raised or
+  logged. `health_check` now logs only the exception type name.
 
 ## [0.6.0] — 2026-04-18 — Closed-loop hardening
 
