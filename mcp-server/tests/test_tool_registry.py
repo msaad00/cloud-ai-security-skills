@@ -116,6 +116,18 @@ class TestToolDefinition:
         assert remediation.approver_roles == ("security_lead", "cis_officer")
         assert remediation.min_approvers == 1
 
+    def test_tool_input_schema_exposes_wrapper_context_fields(self):
+        skill = tool_map(REPO_ROOT)["ingest-cloudtrail-ocsf"]
+        schema = tool_definition(skill)["inputSchema"]
+        assert "_caller_context" in schema["properties"]
+        assert "_approval_context" in schema["properties"]
+
+    def test_mcp_tool_quarantine_requires_two_approvers_in_metadata(self):
+        remediation = next(
+            skill for skill in discover_skills(REPO_ROOT) if skill.name == "remediate-mcp-tool-quarantine"
+        )
+        assert remediation.min_approvers == 2
+
     def test_source_snowflake_query_exposes_raw_output(self):
         skill = tool_map(REPO_ROOT)["source-snowflake-query"]
         tool = tool_definition(skill)

@@ -23,6 +23,13 @@ WILDCARD_PATTERNS = (
 
 POLICY_SUFFIXES = (".json", ".tf", ".yaml", ".yml")
 
+# Policy floors from docs/HITL_POLICY.md that are stricter than the generic
+# "write-capable skills need human approval" bar. Keep the set explicit so CI
+# fails when a shipped skill drifts from the published policy matrix.
+POLICY_MIN_APPROVERS: dict[str, int] = {
+    "remediate-mcp-tool-quarantine": 2,
+}
+
 
 def validate_read_only_no_subprocess(skill: object) -> list[str]:
     errors: list[str] = []
@@ -415,6 +422,33 @@ def validate_remediation_hitl_env_vars(skill: object) -> list[str]:
     return errors
 
 
+def validate_policy_min_approvers(skill: object) -> list[str]:
+    errors: list[str] = []
+    skill_name = getattr(skill, "name", "")
+    required = POLICY_MIN_APPROVERS.get(skill_name)
+    if required is None:
+        return errors
+
+    frontmatter = getattr(skill, "frontmatter", {})
+    raw_value = str(frontmatter.get("min_approvers", "")).strip()
+    rel = getattr(skill, "skill_dir").relative_to(ROOT)
+    if not raw_value:
+        errors.append(
+            f"{rel}: min_approvers must be set to {required} to match docs/HITL_POLICY.md"
+        )
+        return errors
+    try:
+        actual = int(raw_value)
+    except ValueError:
+        errors.append(f"{rel}: min_approvers must be an integer to match docs/HITL_POLICY.md")
+        return errors
+    if actual < required:
+        errors.append(
+            f"{rel}: min_approvers={actual} is below the policy floor {required} from docs/HITL_POLICY.md"
+        )
+    return errors
+
+
 def main() -> int:
     errors: list[str] = []
     for skill in discover_skill_contracts():
@@ -423,6 +457,7 @@ def main() -> int:
         errors.extend(validate_write_skill_dry_run(skill))
         errors.extend(validate_write_skill_source_guards(skill))
         errors.extend(validate_remediation_hitl_env_vars(skill))
+        errors.extend(validate_policy_min_approvers(skill))
     errors.extend(validate_wildcards())
     errors.extend(validate_assume_role_boundaries())
 
