@@ -48,7 +48,7 @@ Strongest current ATT&CK coverage:
 
 | Skill | Coverage |
 |---|---|
-| `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots anchored in IAM Credentials and key-creation events, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots; GCP workload-identity federation abuse remains a tracked follow-up gap |
+| `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots anchored in IAM Credentials and key-creation events, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots; AWS IAM-user/access-key pivots and GCP workload-identity federation abuse remain tracked follow-up gaps |
 | `detect-okta-mfa-fatigue` | T1621 for repeated Okta Verify push challenge + deny bursts |
 | `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-entra-role-grant-escalation` | T1098.003 for successful Entra app-role assignments that grant additional application permissions to service principals |
@@ -67,6 +67,7 @@ Notes:
 - ATT&CK mappings belong inside `finding_info.attacks[]` for OCSF 1.8 outputs, not as loose side metadata.
 - Current cross-cloud identity depth is strongest in `detect-lateral-movement`; the Azure slice now distinguishes Azure Activity control-plane pivots from Entra / Graph application-service-principal credential pivots.
 - The GCP slice in `detect-lateral-movement` is currently pinned to service-account and IAM Credentials anchors; workload-identity federation abuse is tracked separately so the docs do not overstate provider depth.
+- The AWS slice in `detect-lateral-movement` is currently role-session-centric; IAM users, access keys, and temporary-credential pivots are tracked separately so the docs do not overstate provider depth.
 
 ## OCSF identity normalization
 
