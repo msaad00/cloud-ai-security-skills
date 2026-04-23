@@ -24,6 +24,21 @@ Audit behavior:
 - every call also gets a wrapper-generated `correlation_id` that is recorded in
   the MCP audit event and forwarded into the skill as `SKILL_CORRELATION_ID`
   so structured `stderr` can be joined back to the audited tool invocation
+- the wrapper accepts optional `_caller_context` and `_approval_context`
+  objects so a trusted client wrapper can propagate identity, ticket, and
+  approver metadata into both MCP audit logs and the spawned skill process
+
+Approval behavior:
+
+- write-capable tools still require `--dry-run`; the wrapper refuses bare
+  apply-style invocations
+- if a skill declares `approver_roles`, the caller must provide
+  `_approval_context`
+- if a skill declares `min_approvers > 1`, `_approval_context` must carry that
+  many distinct approvers via `approver_ids` or `approver_emails`
+- the wrapper forwards those values into the subprocess as
+  `SKILL_APPROVER_ID`, `SKILL_APPROVER_EMAIL`, `SKILL_APPROVER_IDS`,
+  `SKILL_APPROVER_EMAILS`, and `SKILL_APPROVAL_TICKET`
 
 Timeout behavior:
 
