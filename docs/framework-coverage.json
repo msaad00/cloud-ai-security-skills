@@ -613,9 +613,10 @@
       "asset_classes": [
         "evidence",
         "inventory",
-        "network",
+        "network-segmentation",
         "logging",
         "encryption",
+        "key-management",
         "ai-endpoints"
       ],
       "frameworks": [

@@ -35,6 +35,7 @@ PUBLIC_CIDRS = {"0.0.0.0/0", "::/0", "*", "internet", "any"}
 AI_SERVICES = {"ai-foundry", "azure-ml", "bedrock", "sagemaker", "vertex-ai"}
 AI_ENDPOINT_KINDS = {"deployment", "endpoint", "inference-endpoint"}
 AI_GOVERNANCE_KINDS = {"ai-guardrail", "dataset", "guardrail", "model", "model-package", "training-job", "vector-index", "vector-store"}
+SEGMENTATION_KINDS = {"network-policy", "firewall-rule"}
 AI_RMF_CONTROL_FOCUS = {
     "ai-rmf.govern.ai-service-governance": "GOVERN",
     "ai-rmf.map.ai-system-inventory": "MAP",
@@ -713,10 +714,23 @@ def _summaries(normalized: dict[str, Any]) -> dict[str, Any]:
     encrypted_assets = [asset for asset in assets if _bool(asset.get("encrypted"))]
     logging_assets = [asset for asset in assets if _bool(asset.get("logged"))]
     key_assets = [asset for asset in assets if asset["kind"] in {"key", "key-vault"}]
+    segmentation_assets = [asset for asset in assets if asset["kind"] in SEGMENTATION_KINDS]
     ai_assets = [asset for asset in assets if asset["service"] in AI_SERVICES]
     ai_endpoint_assets = [asset for asset in ai_assets if asset["kind"] in AI_ENDPOINT_KINDS]
     ai_public_assets = [asset for asset in ai_endpoint_assets if _bool(asset.get("public"))]
     ai_governance_assets = [asset for asset in ai_assets if asset["kind"] in AI_GOVERNANCE_KINDS]
+    provider_surface_counts: dict[str, dict[str, int]] = {}
+
+    for provider in normalized["providers"]:
+        provider_assets = [asset for asset in assets if asset["provider"] == provider]
+        provider_surface_counts[provider] = {
+            "asset_count": len(provider_assets),
+            "public_exposure_assets": sum(1 for asset in provider_assets if _bool(asset.get("public"))),
+            "logging_assets": sum(1 for asset in provider_assets if _bool(asset.get("logged"))),
+            "encrypted_assets": sum(1 for asset in provider_assets if _bool(asset.get("encrypted"))),
+            "key_management_assets": sum(1 for asset in provider_assets if asset["kind"] in {"key", "key-vault"}),
+            "segmentation_assets": sum(1 for asset in provider_assets if asset["kind"] in SEGMENTATION_KINDS),
+        }
 
     return {
         "providers": normalized["providers"],
@@ -729,11 +743,13 @@ def _summaries(normalized: dict[str, Any]) -> dict[str, Any]:
             "encrypted_assets": len(encrypted_assets),
             "logging_assets": len(logging_assets),
             "key_assets": len(key_assets),
+            "segmentation_assets": len(segmentation_assets),
             "ai_assets": len(ai_assets),
             "ai_endpoint_assets": len(ai_endpoint_assets),
             "ai_public_assets": len(ai_public_assets),
             "ai_governance_assets": len(ai_governance_assets),
         },
+        "provider_control_surface_counts": provider_surface_counts,
     }
 
 

@@ -154,7 +154,7 @@ Good examples:
 - `ATT&CK gap: AWS IAM user and access-key identity pivots`
 - `ATT&CK gap: GCP service accounts, service-account keys, and workload-identity federation abuse detections`
 - `ATLAS gap: AI endpoint and model registry evaluation coverage`
-- `PCI gap: logging and segmentation evidence for cross-cloud discovery`
+- `PCI and SOC 2 gap: remaining cross-cloud evidence depth beyond provider-native logging, segmentation, encryption, and key-management inventory`
 - `NIST AI RMF gap: provider-native AI control evidence expansion`
 
 Avoid vague issues like:
