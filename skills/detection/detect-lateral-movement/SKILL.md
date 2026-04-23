@@ -86,8 +86,24 @@ event family.
   is **not** a complete Entra administrative drift detector.
 - AWS IAM user access-key creation and policy-document drift are roadmap work,
   not current detector anchors.
-- GCP workload-identity federation abuse beyond the current IAM Credentials
-  events remains a roadmap item.
+- GCP service-account pivots are currently anchored to IAM Credentials and
+  service-account key events. Workload-identity federation abuse beyond those
+  signals remains a separate roadmap item.
+
+### GCP roadmap slice
+
+The next explicit GCP ATT&CK expansion for this detector is:
+
+- repeated IAM Credentials impersonation patterns beyond the current single
+  anchor join
+- service-account key proliferation sequences where key creation or reuse
+  widens identity reach
+- workload-identity federation abuse once the authoritative signal quality is
+  strong enough to keep the detector measurable
+
+That split keeps the shipped detector honest about what it already covers in
+GCP today: service-account and IAM Credentials pivots, not generic
+workload-identity abuse.
 
 ### Window semantics
 

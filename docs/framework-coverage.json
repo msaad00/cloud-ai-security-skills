@@ -646,6 +646,8 @@
         "identities",
         "applications",
         "service-accounts",
+        "service-account-keys",
+        "iam-credentials",
         "service-principals",
         "managed-identities",
         "federated-credentials",
