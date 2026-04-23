@@ -127,6 +127,12 @@ min_approvers: 1
 `network_egress` is orthogonal to HITL — it lists the exact domains a skill
 is allowed to reach. Scope it to the minimum set the skill actually uses.
 
+`approver_roles` and `min_approvers` define the policy floor. Runtime wrappers
+or surrounding approval systems may enforce approver identity and role
+membership separately from the local CLI gate, so a skill should not claim
+in-code approver-role validation unless its shipped handler or wrapper
+actually performs that check.
+
 ## Related
 
 - [`SECURITY_BAR.md`](../SECURITY_BAR.md) — the full eleven-principle contract
