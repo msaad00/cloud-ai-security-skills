@@ -107,9 +107,12 @@ AZURE_ENTRA_EXACT_OPERATIONS = {
 FRAMEWORKS = ("OCSF 1.8.0", "MITRE ATT&CK v14")
 PROVIDERS = ("aws", "azure", "gcp", "multi")
 ASSET_CLASSES = (
-    "identities",
+    "iam-roles",
+    "role-sessions",
     "applications",
     "service-accounts",
+    "service-account-keys",
+    "iam-credentials",
     "service-principals",
     "managed-identities",
     "federated-credentials",

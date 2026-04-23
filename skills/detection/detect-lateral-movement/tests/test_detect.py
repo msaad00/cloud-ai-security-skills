@@ -560,8 +560,12 @@ class TestCrossCloudAnchors:
         metadata = coverage_metadata()
         assert "MITRE ATT&CK v14" in metadata["frameworks"]
         assert "azure" in metadata["providers"]
+        assert "iam-roles" in metadata["asset_classes"]
+        assert "role-sessions" in metadata["asset_classes"]
         assert "managed-identities" in metadata["asset_classes"]
         assert "applications" in metadata["asset_classes"]
+        assert "service-account-keys" in metadata["asset_classes"]
+        assert "iam-credentials" in metadata["asset_classes"]
         assert "service-principals" in metadata["attack_coverage"]["azure"]["principal_types"]
         assert "entra-graph" in metadata["attack_coverage"]["azure"]["operation_families"]
         assert "POST /applications/{id}/addPassword" in metadata["attack_coverage"]["azure"]["operation_families"]["entra-graph"]
