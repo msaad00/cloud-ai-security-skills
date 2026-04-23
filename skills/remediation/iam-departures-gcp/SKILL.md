@@ -198,7 +198,7 @@ Configure one HR data source via environment variables. Inject from Secret Manag
 | Snowflake | `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD` |
 | Workday API | `WORKDAY_API_URL`, `WORKDAY_CLIENT_ID`, `WORKDAY_CLIENT_SECRET` |
 
-Prefer workload identity / federated credentials where the source platform supports them. The reconciler module is shared with `iam-departures-aws`; per-source code lives in that skill's `src/reconciler/`.
+Prefer workload identity / federated credentials where the source platform supports them. The shared planner now lives in [`../../discovery/iam-departures-reconciler/`](../../discovery/iam-departures-reconciler/).
 
 ## Run
 

@@ -1,10 +1,10 @@
 ---
 name: iam-departures-aws
 description: >-
-  Auto-remediate AWS IAM users belonging to departed employees. Reconciles
-  HR termination data (Workday, Snowflake, Databricks, ClickHouse) against
-  AWS IAM inside an AWS Organization, exports manifests to S3, and triggers
-  a Step Function that deletes IAM users and dependencies in a safe order.
+  Auto-remediate AWS IAM users belonging to departed employees. Consumes the
+  manifest emitted by iam-departures-reconciler, persists it to S3, and
+  triggers a Step Function that deletes IAM users and dependencies in a safe
+  order inside an AWS Organization.
   Every action is grace-period-gated (7 days default), rehire-aware,
   deny-listed for root / break-glass / emergency users, and dual-audited
   (S3+KMS, DynamoDB, warehouse ingest-back). See `references/pipeline.md`
@@ -135,8 +135,8 @@ The pipeline handles 8 rehire scenarios. Key rules:
 4. **Within grace period** → SKIP (HR correction window, default 7 days)
 5. **Terminated again after rehire** → REMEDIATE
 
-See `src/reconciler/sources.py:DepartureRecord.should_remediate()` for the
-complete decision tree.
+See [`../../discovery/iam-departures-reconciler/src/reconciler/sources.py`](../../discovery/iam-departures-reconciler/src/reconciler/sources.py)
+for `DepartureRecord.should_remediate()` and the complete decision tree.
 
 The parser Lambda is intentionally a second safety gate, not the first place
 rehire decisions are made.
@@ -230,10 +230,10 @@ skills/remediation/iam-departures-aws/
 ├── reference.md                # Detailed architecture + framework mappings
 ├── examples.md                 # Deployment walkthroughs
 ├── src/
-│   ├── reconciler/
-│   │   ├── sources.py          # Multi-source HR ingestion
-│   │   ├── change_detect.py    # SHA-256 row-level diff
-│   │   └── export.py           # S3 manifest export (KMS)
+│   ├── ../discovery/iam-departures-reconciler/
+│   │   ├── src/reconciler/     # Shared planner modules
+│   │   ├── src/discover.py     # Read-only manifest builder
+│   │   └── tests/              # Reconciler regression suite
 │   ├── lambda_parser/
 │   │   └── handler.py          # Lambda 1: validate + filter
 │   └── lambda_worker/
@@ -250,7 +250,7 @@ skills/remediation/iam-departures-aws/
 │   ├── eventbridge_rule.json   # S3 trigger
 │   ├── snowflake_integration.sql
 │   └── iam_policies/           # Individual policy documents
-└── tests/                      # 59 unit tests
+└── tests/                      # AWS parser/worker regression tests
 ```
 
 ## Deployment Options

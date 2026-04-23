@@ -41,8 +41,9 @@ export SNOWFLAKE_PASSWORD="<from-secrets-manager>"
 export AWS_ACCOUNT_ID=111111111111
 export IAM_REMEDIATION_BUCKET=my-security-remediation-bucket
 
-# Run reconciler
-python -m reconciler.sources --source snowflake
+# Build the canonical manifest with the shared reconciler skill
+python skills/discovery/iam-departures-reconciler/src/discover.py \
+  --source snowflake --pretty > sample-manifest.json
 ```
 
 ## Example: Run Reconciler with Snowflake Storage Integration
@@ -52,19 +53,21 @@ python -m reconciler.sources --source snowflake
 export SNOWFLAKE_ACCOUNT=myorg-myaccount
 export SNOWFLAKE_STORAGE_INTEGRATION=iam_departures_integration
 
-# Snowflake unloads data to S3, reconciler reads from there
-python -m reconciler.sources --source snowflake --use-storage-integration
+# Snowflake unloads data to S3, the reconciler skill emits the same manifest
+# body the AWS parser expects, and your runner persists it to the trigger bucket
+python skills/discovery/iam-departures-reconciler/src/discover.py \
+  --source snowflake --pretty > sample-manifest.json
 ```
 
 ## Example: Test Locally with Mock Data
 
 ```bash
-# Run the test suite
+# Run the AWS + shared reconciler test suites
 cd skills/remediation/iam-departures-aws
 python -m pytest tests/ -v
 
 # Test specific rehire scenarios
-python -m pytest tests/test_reconciler.py -k "test_rehire" -v
+python -m pytest ../../discovery/iam-departures-reconciler/tests/test_reconciler.py -k "test_rehire" -v
 
 # Test Lambda parser with a sample manifest
 python -m pytest tests/test_parser_lambda.py -v
