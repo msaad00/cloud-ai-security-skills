@@ -137,6 +137,41 @@ class TestBuildEvidence:
         assert counts["ai_endpoint_assets"] >= 1
         assert counts["ai_governance_assets"] >= 1
 
+    def test_inventory_summary_includes_provider_surface_depth(self):
+        evidence = build_evidence(_multi_cloud_snapshot())
+        provider_counts = evidence["inventory_summary"]["provider_control_surface_counts"]
+
+        assert provider_counts["aws"]["encrypted_assets"] >= 1
+        assert provider_counts["gcp"]["logging_assets"] >= 1
+        assert provider_counts["azure"]["logging_assets"] >= 1
+
+    def test_inventory_summary_tracks_segmentation_assets_by_provider(self):
+        evidence = build_evidence(
+            {
+                "aws": {
+                    "ec2": {"security_groups": [{"GroupId": "sg-1", "GroupName": "app", "ingress": [{"cidr": "10.0.0.0/8"}]}]}
+                },
+                "gcp": {"compute": {"firewalls": [{"name": "internal-only", "sourceRanges": ["10.0.0.0/8"]}]}},
+                "azure": {
+                    "network": {
+                        "nsgs": [
+                            {
+                                "id": "nsg-1",
+                                "name": "internal-only",
+                                "securityRules": [{"access": "Allow", "direction": "Inbound", "sourceAddressPrefix": "10.0.0.0/8"}],
+                            }
+                        ]
+                    }
+                },
+            },
+            ["pci"],
+        )
+        provider_counts = evidence["inventory_summary"]["provider_control_surface_counts"]
+
+        assert provider_counts["aws"]["segmentation_assets"] == 1
+        assert provider_counts["gcp"]["segmentation_assets"] == 1
+        assert provider_counts["azure"]["segmentation_assets"] == 1
+
     def test_deterministic_output(self):
         assert build_evidence(_multi_cloud_snapshot()) == build_evidence(_multi_cloud_snapshot())
 

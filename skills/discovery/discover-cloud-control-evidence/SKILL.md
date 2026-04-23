@@ -7,10 +7,10 @@ description: >-
   NIST AI RMF 1.0 reviews without claiming attestation. Use when the user mentions
   PCI evidence, SOC 2 evidence, cloud inventory evidence, audit evidence, or
   wants a reviewable JSON package showing identity surface, externally exposed
-  assets, encryption coverage, logging coverage, and key-management coverage
-  across cloud environments. Do NOT use as a benchmark evaluator, compliance
-  certification tool, or remediation planner. Do NOT use on raw logs or OCSF
-  findings.
+  assets, segmentation surfaces, encryption coverage, logging coverage, and
+  key-management coverage across cloud environments. Do NOT use as a benchmark
+  evaluator, compliance certification tool, or remediation planner. Do NOT use
+  on raw logs or OCSF findings.
 license: Apache-2.0
 approval_model: none
 execution_modes: jit, ci, mcp, persistent
@@ -48,7 +48,7 @@ compliance.
 
 - You need machine-readable PCI DSS 4.0 or SOC 2 evidence from cloud inventory
 - You want to summarize raw AWS, GCP, or Azure inventory into review-ready evidence
-- You need stable JSON that highlights identities, public exposure, encryption, logging, and key-management coverage
+- You need stable JSON that highlights identities, public exposure, segmentation, encryption, logging, and key-management coverage
 - You want an evidence package that can be diffed over time or attached to tickets and audit reviews
 
 ## Do NOT use
@@ -78,7 +78,7 @@ The skill emits one deterministic JSON document:
 
 - `artifact_type: technical-control-evidence`
 - `frameworks[]` with the requested evidence families
-- `inventory_summary` with providers, services, asset counts, and control-surface counts
+- `inventory_summary` with providers, services, asset counts, aggregate control-surface counts, and per-provider coverage depth for logging, segmentation, encryption, and key-management
 - `controls[]` with `evidence-ready` / `partial` / `missing` status per control domain
 - `framework_mappings` per control when the selected framework carries explicit mappings such as NIST AI RMF
 - `gaps[]` only when the source artifact cannot support a given evidence domain

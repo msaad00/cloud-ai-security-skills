@@ -54,7 +54,7 @@ Shipped skills mapped: **40**
 | [`detect-privilege-escalation-k8s`](../skills/detection/detect-privilege-escalation-k8s) | detection | kubernetes | clusters, containers, identities, secrets |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-sensitive-secret-read-k8s`](../skills/detection/detect-sensitive-secret-read-k8s) | detection | kubernetes | clusters, secrets, identities |
-| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
+| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
 | [`ingest-azure-activity-ocsf`](../skills/ingestion/ingest-azure-activity-ocsf) | ingestion | azure | api, audit-logs |
@@ -105,7 +105,7 @@ Shipped skills mapped: **37**
 | [`detect-okta-mfa-fatigue`](../skills/detection/detect-okta-mfa-fatigue) | detection | okta | identities, authentication, mfa, sessions |
 | [`detect-privilege-escalation-k8s`](../skills/detection/detect-privilege-escalation-k8s) | detection | kubernetes | clusters, containers, identities, secrets |
 | [`detect-sensitive-secret-read-k8s`](../skills/detection/detect-sensitive-secret-read-k8s) | detection | kubernetes | clusters, secrets, identities |
-| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
+| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
 | [`ingest-azure-defender-for-cloud-ocsf`](../skills/ingestion/ingest-azure-defender-for-cloud-ocsf) | ingestion | azure | findings, security-posture |
@@ -143,7 +143,7 @@ Shipped skills mapped: **8**
 |---|---|---|---|
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`discover-ai-bom`](../skills/discovery/discover-ai-bom) | discovery | aws, azure, gcp, multi | inventory, ai-endpoints, models, datasets, vector-stores, gpu-fleets |
-| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
+| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
@@ -262,7 +262,7 @@ Shipped skills mapped: **4**
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`discover-ai-bom`](../skills/discovery/discover-ai-bom) | discovery | aws, azure, gcp, multi | inventory, ai-endpoints, models, datasets, vector-stores, gpu-fleets |
-| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
+| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 
@@ -278,7 +278,7 @@ Shipped skills mapped: **20**
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`discover-ai-bom`](../skills/discovery/discover-ai-bom) | discovery | aws, azure, gcp, multi | inventory, ai-endpoints, models, datasets, vector-stores, gpu-fleets |
-| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
+| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
@@ -310,7 +310,7 @@ Shipped skills mapped: **4**
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`discover-ai-bom`](../skills/discovery/discover-ai-bom) | discovery | aws, azure, gcp, multi | inventory, ai-endpoints, models, datasets, vector-stores, gpu-fleets |
-| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
+| [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 
