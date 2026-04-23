@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
   <title id="title">IAM departures remediation · AWS flagship workflow</title>
-  <desc id="desc">Configurable-source, configurable-sink AWS IAM departures workflow. Any one source — Snowflake, Workday, Databricks, ClickHouse, or S3 — normalizes each departure into a five-field record: timestamp, email, username, iam, account. The record lands as an S3 manifest in the AWS Corporate account. S3 ObjectCreated triggers EventBridge, which starts a Step Function inside the VPC. The parser Lambda fetches the record and resolves the target IAM principal and account. The worker Lambda assumes a scoped cross-account role guarded by aws:PrincipalOrgID and performs the revoke, strip, quarantine, and delete sequence against the target accounts. Every worker action is reported back to one or more configurable audit and state sinks: S3 evidence, DynamoDB audit, or re-ingest into Snowflake or Databricks. The next reconciler run closes the loop. Azure Entra and GCP IAM use separate native pipelines.</desc>
+  <desc id="desc">AWS IAM departures flagship workflow. Snowflake, Workday, Databricks, or ClickHouse feed the shared read-only reconciler, which normalizes each departure into the canonical record and writes an S3 manifest after rehire, grace-period, and diff checks. S3 ObjectCreated triggers EventBridge, which starts a Step Function inside the VPC. The parser Lambda fetches the record and resolves the target IAM principal and account. The worker Lambda assumes a scoped cross-account role guarded by aws:PrincipalOrgID and performs the revoke, strip, quarantine, and delete sequence against the target accounts. Worker actions audit to DynamoDB and S3-backed warehouse sinks so the next reconciler run can verify closure. Azure Entra and GCP IAM use separate native pipelines.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -196,7 +196,7 @@
       <text x="834" y="455" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="700">AssumeRole + OrgID</text>
     </g>
 
-    <text x="530" y="478" fill="#64748b" font-size="10" font-weight="700">separate IAM roles: parser ≠ worker ≠ cross-account target</text>
+    <text x="720" y="494" text-anchor="middle" fill="#64748b" font-size="9" font-weight="700">separate IAM roles: parser ≠ worker ≠ cross-account target</text>
 
     <g>
       <rect x="968" y="240" width="250" height="230" rx="14" fill="url(#panel)" stroke="#f87171" stroke-width="1.4"/>
@@ -234,7 +234,7 @@
       <rect x="46" y="510" width="1188" height="170" rx="16"/>
     </g>
     <text x="62" y="532" fill="#5eead4" font-size="12" font-weight="800" letter-spacing="1.2">REPORT BACK · configurable sinks · one or many</text>
-    <text x="470" y="532" fill="#64748b" font-size="11">worker writes every action · next reconciler run closes the loop</text>
+    <text x="62" y="696" fill="#64748b" font-size="11">worker writes every action; the next reconciler run verifies closure from audit/state sinks</text>
 
     <g filter="url(#shadow)">
       <rect x="70" y="548" width="360" height="116" rx="14" fill="url(#panel)" stroke="#60a5fa" stroke-width="1.4"/>
@@ -258,8 +258,6 @@
       <text x="848" y="624" fill="#94a3b8" font-size="11">same close-loop via lakehouse</text>
       <text x="848" y="642" fill="#fb923c" font-size="10" font-style="italic">ClickHouse uses the same pattern</text>
     </g>
-
-    <path d="M810,470 C810,492 486,492 486,358" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowSink)"/>
 
     <path d="M250,548 C250,510 150,510 24,510 L24,214 L46,214" fill="none" stroke="#ec4899" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowLoop)"/>
 

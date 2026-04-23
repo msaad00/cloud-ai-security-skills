@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.6.0-0ea5e9"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.7.0-0ea5e9"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue.svg"></a>
   <a href="https://schema.ocsf.io/1.8.0"><img alt="OCSF 1.8" src="https://img.shields.io/badge/OCSF-1.8-22d3ee"></a>
@@ -16,7 +16,7 @@
 
 ## What this repo gives you
 
-**61 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus ten guarded write paths spanning AWS/GCP/Azure IAM departures, AWS/GCP/Azure network revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**61 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus twelve guarded write paths spanning AWS/GCP/Azure IAM departures, AWS/GCP/Azure network revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
@@ -109,7 +109,7 @@ Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
 ### Closed-loop coverage at a glance
 
-![Closed-loop coverage matrix — 3 of 11 detections shipped as closed loops; 5 of the remaining 8 gaps planned via tracking issues; 3 detections still need new remediation skills.](docs/images/coverage-matrix.svg)
+![Closed-loop coverage matrix — 13 of 14 shipped detections are closed loops today; lateral movement is intentionally detection-only, and CSPM auto-remediation for AWS, GCP, and Azure is tracked separately.](docs/images/coverage-matrix.svg)
 
 Source of truth for detect↔remediate parity. Tracked at [#155](https://github.com/msaad00/cloud-ai-security-skills/issues/155); design + remaining per-layer SVGs at [#248](https://github.com/msaad00/cloud-ai-security-skills/issues/248).
 
@@ -204,7 +204,7 @@ Native wire format is the same content in a repo-owned envelope — see [docs/NA
 
 The flagship shipped write path. Guarded, event-driven, dual-audited — and **one cloud per worker**, never cross-cloud.
 
-![Simplified AWS-only IAM departures workflow. Snowflake or Databricks feed the reconciler, which applies rehire, grace-period, and diff logic before writing an S3 manifest. S3 ObjectCreated triggers EventBridge and a Step Function map, which runs parser and worker Lambdas with separate roles. The worker assumes a scoped cross-account role guarded by aws:PrincipalOrgID, executes the IAM cleanup sequence, and dual-audits each action to DynamoDB and KMS-encrypted S3. Ingest-back closes the loop into the next reconciler run, and the footer makes clear that other clouds use separate native pipelines.](docs/images/iam-departures-aws.svg)
+![Simplified AWS-only IAM departures workflow. Snowflake, Workday, Databricks, or ClickHouse feed the shared reconciler, which applies rehire, grace-period, and diff logic before writing an S3 manifest. S3 ObjectCreated triggers EventBridge and a Step Function map, which runs parser and worker Lambdas with separate roles. The worker assumes a scoped cross-account role guarded by aws:PrincipalOrgID, executes the IAM cleanup sequence, and dual-audits each action to DynamoDB and KMS-encrypted S3. Audit sinks feed the next reconciler run, and the footer makes clear that other clouds use separate native pipelines.](docs/images/iam-departures-aws.svg)
 
 - **scope first** — rehire and grace-window logic run in the reconciler before the manifest is written
 - **separate principals** — EventBridge, Step Function, parser Lambda, worker Lambda each have their own execution role

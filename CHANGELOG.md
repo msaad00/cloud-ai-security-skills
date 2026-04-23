@@ -11,6 +11,11 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-04-23 — Release alignment and coverage hardening
+
+Skills count: **61** (15 ingest, 5 discover, 14 detect, 7 evaluate, 12 remediate,
+2 view, 3 output, 3 sources).
+
 ### Added
 
 - **Correlation of worker actions with CloudTrail** — STS
@@ -36,6 +41,16 @@ The format is loosely based on Keep a Changelog.
   `step_function.asl.json` Map `MaxConcurrency`. Prevents the Map
   fan-out from starving other functions in the account, and prevents
   unrelated burst traffic from starving the remediation pipeline.
+- **Standalone IAM departures planner skill** —
+  [`skills/discovery/iam-departures-reconciler`](skills/discovery/iam-departures-reconciler/)
+  now owns the shared read-only manifest-planning boundary. Rehire,
+  grace-window, hash, and canonical-manifest logic are no longer mixed
+  into the AWS write-path bundle.
+- **Provider-scoped control evidence depth** —
+  [`discover-cloud-control-evidence`](skills/discovery/discover-cloud-control-evidence/)
+  now carries clearer provider-native evidence depth for logging,
+  segmentation, encryption, and key-management surfaces instead of
+  flattening them into one cross-cloud coverage story.
 
 ### Fixed
 
@@ -61,6 +76,32 @@ The format is loosely based on Keep a Changelog.
   errors raise `RuntimeError(f"... returned HTTP {status_code}")`.
   Response bodies and inner exception messages are never re-raised or
   logged. `health_check` now logs only the exception type name.
+- **`detect-lateral-movement` runtime metadata now matches the
+  documented provider scope** — the machine-readable coverage metadata
+  no longer advertises generic identity coverage where the shipped
+  detector is explicitly scoped to AWS role sessions, GCP IAM
+  Credentials and service-account keys, and Azure control-plane / Entra
+  pivots.
+- **`discover-environment` provider tests no longer fail lightweight CI
+  lanes on missing `moto`** — AWS-specific provider coverage now skips
+  cleanly when `moto` is absent instead of failing import-time
+  collection in jobs that intentionally install only the cloud SDK set.
+
+### Changed
+
+- **ATT&CK provider-scope language is now explicit in the docs** — the
+  AWS slice of `detect-lateral-movement` is pinned to shipped
+  role-session anchors, and the GCP slice is pinned to service-account
+  and IAM Credentials anchors, so roadmap depth is tracked without
+  overstating current provider coverage.
+- **Coverage depth across shipped evaluation and discovery skills is
+  materially higher** — new test suites now cover the runner, CLI, and
+  error branches for the AWS, GCP, and Azure CIS benchmark skills plus
+  the provider-specific discovery paths in `discover-environment`.
+- **README release state and shipped-surface visuals are aligned to
+  current `main`** — the repo badge, release metadata, skill counts,
+  coverage captions, and the core SVG diagrams now agree on the current
+  61-skill surface and render without footer text collisions.
 
 ## [0.6.0] — 2026-04-18 — Closed-loop hardening
 
