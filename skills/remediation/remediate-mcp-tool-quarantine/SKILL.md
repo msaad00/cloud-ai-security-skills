@@ -30,7 +30,7 @@ concurrency_safety: operator_coordinated
 network_egress: s3.amazonaws.com, dynamodb.amazonaws.com
 caller_roles: security_engineer, incident_responder, platform_engineer
 approver_roles: security_lead, incident_commander, platform_owner
-min_approvers: 1
+min_approvers: 2
 compatibility: >-
   Requires Python 3.11+. Dry-run and re-verify need only filesystem read
   access to the quarantine file. Apply additionally requires write access

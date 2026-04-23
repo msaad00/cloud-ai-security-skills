@@ -39,7 +39,8 @@ skills/
 │   ├── discover-environment/
 │   ├── discover-ai-bom/
 │   ├── discover-control-evidence/
-│   └── discover-cloud-control-evidence/
+│   ├── discover-cloud-control-evidence/
+│   └── iam-departures-reconciler/
 │
 ├── detection/                     # OCSF → Detection Finding 2004 + MITRE
 │   ├── detect-mcp-tool-drift/
@@ -53,7 +54,9 @@ skills/
 │   ├── detect-entra-credential-addition/
 │   ├── detect-entra-role-grant-escalation/
 │   ├── detect-google-workspace-suspicious-login/
-│   └── detect-aws-open-security-group/
+│   ├── detect-aws-open-security-group/
+│   ├── detect-azure-open-nsg/
+│   └── detect-gcp-open-firewall/
 │
 ├── evaluation/                    # posture and benchmark checks
 │   ├── cspm-aws-cis-benchmark/
@@ -70,13 +73,17 @@ skills/
 │
 ├── remediation/                   # active fix workflows, gated and audited
 │   ├── iam-departures-aws/
+│   ├── iam-departures-azure-entra/
+│   ├── iam-departures-gcp/
 │   ├── remediate-okta-session-kill/
 │   ├── remediate-container-escape-k8s/
 │   ├── remediate-k8s-rbac-revoke/
 │   ├── remediate-mcp-tool-quarantine/
 │   ├── remediate-entra-credential-revoke/
 │   ├── remediate-workspace-session-kill/
-│   └── remediate-aws-sg-revoke/
+│   ├── remediate-aws-sg-revoke/
+│   ├── remediate-azure-nsg-revoke/
+│   └── remediate-gcp-firewall-revoke/
 │
 ├── output/                        # append-only persistence sinks
 │   ├── sink-s3-jsonl/
@@ -88,7 +95,12 @@ skills/
     └── golden/
 ```
 
-Every skill in every category is a closed loop: **detect → act → audit → re-verify**.
+Current shipped counts: 61 total skills — 15 ingest, 5 discover, 14 detect,
+7 evaluate, 12 remediate, 2 view, 3 output, 3 source.
+
+Not every detection has a paired remediation. The source of truth for detect →
+act parity is [`README.md`](README.md#closed-loop-coverage-at-a-glance) and
+[`docs/FRAMEWORK_COVERAGE.md`](docs/FRAMEWORK_COVERAGE.md), not this file.
 
 ## Which file to trust for what
 
@@ -101,10 +113,10 @@ Every skill in every category is a closed loop: **detect → act → audit → r
 | `skills/<layer>/<skill>/REFERENCES.md` | official APIs, schemas, and framework sources |
 
 The full layered architecture (Sources → Ingestion → Discovery / Enrich → Detection / Evaluation → View → Remediation) is documented in [`ARCHITECTURE.md`](ARCHITECTURE.md). The eleven-principle security contract is in [`SECURITY_BAR.md`](SECURITY_BAR.md). Per-skill official references and IAM policies live in each skill's `REFERENCES.md`.
-The CSPM skills are detection-only and re-verify the same `control_id` on the next run.
-The remediation skills (IAM departures, Okta session kill, K8s quarantine) write back to a dual audit
-trail (DynamoDB + S3) and ingest results into the source warehouse so the next
-reconciler run *cross-checks* the previous remediation actually landed.
+The CSPM skills are read-only posture checks. The remediation skills write native
+action + audit records, and many of them re-verify their own post-action state.
+AWS IAM departures additionally ingest audit back into the source warehouse so
+the next reconciler run cross-checks closure.
 
 **OCSF 1.8 is the SIEM interop wire format, not the universal internal format.** It's the default for **ingest** and **detect** (that's where downstream SIEM/SOAR integration pays off). **Discover** emits native / CycloneDX / bridge (inventory and AI BOM don't map cleanly to OCSF). **Remediate** emits native (state changes + audit records, not findings). **Evaluate** is native today with OCSF Compliance Finding 2003 planned as opt-in. Pick the format that fits the layer's semantic; the `--output-format` flag is the runtime switch where both are supported. Full table: [`docs/ARCHITECTURE.md#31-ocsf-applicability-by-layer`](docs/ARCHITECTURE.md).
 
@@ -124,20 +136,23 @@ to attempt them.
   `roles/viewer`, `iam.securityReviewer`, and Azure `Reader`. They have **zero**
   write permissions to any cloud account. Never wrap them in code that mutates
   state — that would be outside the skill contract.
-- **`iam-departures-aws` reconciler** is read-only against HR sources
-  and only *writes a manifest* to S3. The Step Function is the only thing that
-  touches IAM.
+- **`iam-departures-reconciler`** is the read-only planner for IAM departures.
+  It fetches HR / warehouse inputs, applies rehire + grace + diff logic, and
+  emits the canonical manifest body. Cloud-specific write paths consume that
+  manifest separately.
 
 ### 2. Human-in-the-loop (HITL) for destructive actions
 
-The IAM departures pipeline is the only destructive workflow. HITL is enforced
-at three layers:
+There are now 12 destructive or write-capable remediation workflows, not just
+IAM departures. The source of truth for approval level, approver count, and
+where the gate sits is [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md) plus each
+skill's frontmatter (`approval_model`, `approver_roles`, `min_approvers`).
 
-| Layer | Mechanism | Override |
-|-------|-----------|----------|
-| **Grace period** | 7-day default window before remediation runs (configurable per env) | HR can revert termination during the grace period and the manifest will reflect it |
-| **Deny policies** | Explicit IAM `Deny` on `root`, `break-glass-*`, `emergency-*` and all `:role/*` ARNs in `WorkerExecutionRole` | None — these can never be remediated by this pipeline |
-| **Rehire filter** | Parser Lambda checks 8 rehire scenarios before generating the work item | None — handled in code (`should_remediate()`) |
+Patterns to remember:
+
+- IAM departures skills are grace-period gated, rehire-aware, and protected-principal denied
+- account-takeover containment skills are time-sensitive but still require a declared incident window
+- Kubernetes node drain and MCP tool quarantine have stricter approval semantics than baseline single-approver containment
 
 ### 3. Dry-run is supported everywhere
 
@@ -158,11 +173,15 @@ closed.
 
 ### 5. Audit guarantees (closed loop)
 
-Every destructive action is dual-written:
-1. DynamoDB row keyed by `(iam_username, remediated_at)` for fast lookup.
-2. S3 evidence object under `departures/audit/` with KMS encryption.
-3. Ingest-back to the source HR warehouse so the *next* reconciler run can
-   prove the user is closed across all systems.
+Most shipped remediation skills dual-audit to a DynamoDB-style fast lookup
+store plus KMS-encrypted object storage evidence. Per-cloud IAM departures use
+provider-native equivalents where needed:
+
+1. AWS IAM departures: DynamoDB + KMS-encrypted S3 + warehouse ingest-back
+2. GCP IAM departures: Firestore + CMEK-encrypted GCS
+3. Azure Entra departures: Cosmos DB + CMK-encrypted Blob Storage
+4. Network / IdP / K8s / MCP remediation skills generally use DynamoDB + S3 in
+   the reference implementations
 
 If an agent invokes a remediation step and there is no corresponding audit row
 within the SLA window, treat that as a failure. The next run should detect drift.
@@ -184,7 +203,9 @@ finding list and no error, that's a real "all clear" — not a hidden failure.
 - CSPM results stay local. No HTTP egress beyond the cloud SDKs.
 - Reconciler reads HR data, hashes rows with SHA-256, exports a manifest.
   Nothing leaves the security OU account.
-- Lambda functions run in a VPC with no public NAT for non-AWS-API calls.
+- The flagship AWS departures Lambdas run in a VPC with no public NAT for
+  non-AWS-API calls. Other cloud-native skills document their own egress in
+  `network_egress` frontmatter.
 
 ### 8. What an agent should NEVER do with these skills
 
