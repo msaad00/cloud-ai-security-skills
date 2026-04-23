@@ -7,6 +7,10 @@ This server does not replace the existing skills model. It auto-discovers
 entrypoint, and exposes those skills as MCP tools for Claude Code, Codex,
 Cursor, Windsurf, Cortex Code CLI, and other MCP clients.
 
+Supported entrypoints today are fixed repo-owned Python surfaces:
+`src/ingest.py`, `src/detect.py`, `src/convert.py`, `src/checks.py`,
+`src/discover.py`, `src/handler.py`, and `src/sink.py`.
+
 Design rules:
 
 - no arbitrary shell execution
@@ -14,6 +18,16 @@ Design rules:
 - no hidden runtime install path
 - fixed local repo-owned entrypoints only
 - direct CLI usage of skills stays unchanged
+
+Remediation parity:
+
+- standalone remediation skills with a single `src/handler.py` entrypoint are
+  exposed over MCP
+- those tools stay dry-run/re-verify only at the wrapper boundary; the MCP
+  wrapper rejects `--apply`
+- multi-handler orchestration workflows such as `iam-departures-*` are still
+  not exposed as one MCP tool because they do not have a single repo-owned
+  top-level entrypoint
 
 Audit behavior:
 

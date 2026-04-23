@@ -36,13 +36,16 @@ class _FakeSkill:
         read_only: bool = True,
         approver_roles: tuple[str, ...] = (),
         mcp_timeout_seconds: int | None = None,
+        category: str = "detection",
+        entrypoint_name: str | None = None,
     ) -> None:
         self.name = "fake-skill"
-        self.category = "detection"
+        self.category = category
         self.capability = "read-only" if read_only else "write-remediation"
         self.read_only = read_only
         self.approver_roles = approver_roles
         self.mcp_timeout_seconds = mcp_timeout_seconds
+        self.entrypoint = None if entrypoint_name is None else Path(entrypoint_name)
 
 
 def test_call_tool_injects_caller_and_approval_context(monkeypatch):
@@ -125,6 +128,34 @@ def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
     assert audit_events[0]["error_type"] == "ValueError"
     assert audit_events[0]["args_hash"] == MODULE._stable_hash(["--dry-run"])
     assert audit_events[0]["approval_context_provided"] is False
+
+
+def test_safe_write_invocation_allows_handler_remediation_without_apply():
+    skill = _FakeSkill(
+        read_only=False,
+        category="remediation",
+        entrypoint_name="handler.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is True
+
+
+def test_safe_write_invocation_rejects_apply_for_handler_remediation():
+    skill = _FakeSkill(
+        read_only=False,
+        category="remediation",
+        entrypoint_name="handler.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, ["--apply"]) is False
+
+
+def test_safe_write_invocation_still_requires_dry_run_for_non_handler_writes():
+    skill = _FakeSkill(
+        read_only=False,
+        category="sinks",
+        entrypoint_name="sink.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is False
+    assert MODULE._is_safe_write_invocation(skill, ["--dry-run"]) is True
 
 
 def test_resolve_timeout_prefers_env_override():

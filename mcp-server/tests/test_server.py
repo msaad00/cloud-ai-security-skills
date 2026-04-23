@@ -65,7 +65,64 @@ class TestMcpServer:
             assert "detect-entra-role-grant-escalation" in names
             assert "detect-google-workspace-suspicious-login" in names
             assert "model-serving-security" in names
+            assert "remediate-mcp-tool-quarantine" in names
             assert "iam-departures-aws" not in names
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
+
+    def test_can_call_handler_based_remediation_in_dry_run_mode(self):
+        proc = _start_server()
+        try:
+            _initialize(proc)
+            finding = json.dumps(
+                {
+                    "class_uid": 2004,
+                    "metadata": {
+                        "uid": "find-1",
+                        "product": {"feature": {"name": "detect-mcp-tool-drift"}},
+                    },
+                    "finding_info": {"uid": "find-1"},
+                    "observables": [
+                        {"name": "session.uid", "type": "Other", "value": "sess-1"},
+                        {"name": "tool.name", "type": "Other", "value": "rogue-search"},
+                        {
+                            "name": "tool.after_fingerprint",
+                            "type": "Fingerprint",
+                            "value": "sha256:abcd",
+                        },
+                    ],
+                }
+            )
+            _send_message(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 7,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "remediate-mcp-tool-quarantine",
+                        "arguments": {
+                            "input": finding,
+                            "_approval_context": {
+                                "approver_id": "ap-1",
+                                "approver_email": "lead@example.com",
+                                "ticket_id": "SEC-1",
+                            },
+                        },
+                    },
+                },
+            )
+            response = _read_message(proc)
+            assert response["result"]["isError"] is False
+            output_lines = [
+                json.loads(line)
+                for line in response["result"]["structuredContent"]["stdout"].splitlines()
+                if line.strip()
+            ]
+            assert output_lines[0]["source_skill"] == "remediate-mcp-tool-quarantine"
+            assert output_lines[0]["status"] == "planned"
+            assert output_lines[0]["dry_run"] is True
         finally:
             proc.terminate()
             proc.wait(timeout=5)
