@@ -63,6 +63,42 @@ Caveats:
 - `sink-snowflake-jsonl --apply` depends on warehouse and network latency and is
   not represented by the local dry-run figures below
 
+## Automated Conformance Coverage
+
+The repo now regression-tests a small representative set of skills for
+byte-identical stdout across three automated runtime surfaces:
+
+- direct CLI entrypoint
+- CI-style fixed subprocess invocation
+- MCP `tools/call` through the local wrapper
+
+The conformance suite lives in
+[`tests/conformance/test_multi_mode_identity.py`](../tests/conformance/test_multi_mode_identity.py)
+and currently pins:
+
+- `ingest-cloudtrail-ocsf`
+- `detect-lateral-movement`
+- `cspm-aws-cis-benchmark` (moto-backed AWS fixture)
+
+This is intentionally a representative check, not a claim that every shipped
+skill has its own per-mode snapshot yet.
+
+## Manual Serverless Verification
+
+Serverless is excluded from the automated conformance suite because the repo
+ships templates and wrapper code for persistent/serverless paths, not one local
+emulator that reproduces AWS Lambda, Azure Functions, and GCP Cloud Run/Jobs
+semantics identically in CI.
+
+Manual verification path when a runner or serverless wrapper changes:
+
+1. Pick the same fixture used in CLI/MCP conformance for the target skill.
+2. Run the skill locally from the direct entrypoint and save stdout to a file.
+3. Run the deployed or emulated serverless wrapper with the same input payload.
+4. Compare the raw stdout bytes or a `sha256sum` of the stdout payload.
+5. Treat any byte drift as a regression unless the skill contract changed in a
+   reviewed PR with updated fixtures and docs.
+
 ## Representative Measurements
 
 ### ingest-cloudtrail-ocsf
