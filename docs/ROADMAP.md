@@ -152,7 +152,7 @@ Good examples:
 
 - `ATT&CK gap: Azure Entra and service principal credential detections`
 - `ATT&CK gap: AWS IAM user and access-key identity pivots`
-- `ATT&CK gap: GCP service-account and workload-identity abuse detections`
+- `ATT&CK gap: GCP service accounts, service-account keys, and workload-identity federation abuse detections`
 - `ATLAS gap: AI endpoint and model registry evaluation coverage`
 - `PCI gap: logging and segmentation evidence for cross-cloud discovery`
 - `NIST AI RMF gap: provider-native AI control evidence expansion`
