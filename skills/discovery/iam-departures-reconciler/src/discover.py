@@ -7,9 +7,13 @@ import json
 import sys
 from pathlib import Path
 
-from reconciler.change_detect import ChangeDetector
-from reconciler.export import ManifestBuilder
-from reconciler.sources import get_source
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from reconciler.change_detect import ChangeDetector  # noqa: E402
+from reconciler.export import ManifestBuilder  # noqa: E402
+from reconciler.sources import get_source  # noqa: E402
 
 
 class _HashOnlyS3:
