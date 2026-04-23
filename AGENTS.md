@@ -24,25 +24,22 @@ Claude-specific, and `SKILL.md` stays the per-skill source of truth.
 
 Skills are organised into layered categories. See [`skills/README.md`](skills/README.md) for the full catalog.
 
-**`ingestion/`** (raw source → OCSF or native)
-- `ingest-cloudtrail-ocsf`, `ingest-vpc-flow-logs-ocsf`, `ingest-vpc-flow-logs-gcp-ocsf`, `ingest-nsg-flow-logs-azure-ocsf`, `ingest-guardduty-ocsf`, `ingest-security-hub-ocsf`, `ingest-gcp-scc-ocsf`, `ingest-azure-defender-for-cloud-ocsf`, `ingest-gcp-audit-ocsf`, `ingest-azure-activity-ocsf`, `ingest-k8s-audit-ocsf`, `ingest-mcp-proxy-ocsf`, `ingest-okta-system-log-ocsf`, `ingest-entra-directory-audit-ocsf`, `ingest-google-workspace-login-ocsf`
+Current shipped surface on `main`:
 
-**`discovery/`** (point-in-time inventory / graph / BOM)
-- `discover-environment`, `discover-ai-bom`, `discover-control-evidence`, `discover-cloud-control-evidence`
+- **`ingestion/`**: 15 ingest skills plus 3 source adapters
+- **`discovery/`**: 5 read-only skills including `iam-departures-reconciler`
+- **`detection/`**: 14 deterministic ATT&CK-tagged detectors
+- **`evaluation/`**: 7 posture / benchmark families
+- **`view/`**: 2 render/export skills
+- **`remediation/`**: 12 HITL-gated write skills across AWS, GCP, Azure, Kubernetes, Okta, Workspace, Entra, and MCP
+- **`output/`**: 3 append-only sinks
 
-**`detection/`** (OCSF → OCSF Detection Finding 2004 + MITRE)
-- `detect-mcp-tool-drift`, `detect-container-escape-k8s`, `detect-privilege-escalation-k8s`, `detect-sensitive-secret-read-k8s`, `detect-lateral-movement`, `detect-okta-mfa-fatigue`, `detect-entra-credential-addition`, `detect-entra-role-grant-escalation`, `detect-google-workspace-suspicious-login`
+Notable current skills that older agent memory often misses:
 
-**`evaluation/`** (read-only posture / benchmark checks)
-- `cspm-aws-cis-benchmark`, `cspm-gcp-cis-benchmark`, `cspm-azure-cis-benchmark`, `k8s-security-benchmark`, `container-security`, `model-serving-security`, `gpu-cluster-security`
-
-**`view/`** (OCSF export / rendering)
-- `convert-ocsf-to-sarif`, `convert-ocsf-to-mermaid-attack-flow`
-
-**`remediation/`** (active fix workflows, HITL-gated, dual-audited)
-- `iam-departures-aws`
-- `remediate-okta-session-kill`
-- `remediate-container-escape-k8s`
+- `iam-departures-reconciler` under `discovery/` is the standalone read-only manifest planner
+- network closed loops now include `remediate-aws-sg-revoke`, `remediate-azure-nsg-revoke`, and `remediate-gcp-firewall-revoke`
+- identity / SaaS containment now includes `remediate-entra-credential-revoke`, `remediate-workspace-session-kill`, and `iam-departures-azure-entra` / `iam-departures-gcp`
+- MCP / AI-native coverage includes both `detect-prompt-injection-mcp-proxy` and `remediate-mcp-tool-quarantine`
 
 Compose via stdin/stdout pipes. The shared wire contract is pinned in
 [`skills/detection-engineering/OCSF_CONTRACT.md`](skills/detection-engineering/OCSF_CONTRACT.md).
@@ -80,6 +77,8 @@ These rules are enforced in code, IAM, and infra. They are not optional:
 7. **No new IAM grants.** Do not edit `iam_policies/` or any role policy to broaden permissions. Each role is least-privilege by design.
 8. **No telemetry.** Nothing in this repo phones home. Do not add SDK clients to external services unless the user explicitly asks for them, and even then keep the egress inside the customer's VPC.
 
+When in doubt, trust per-skill frontmatter and [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md) over any shorthand examples in this file.
+
 ## Execution and approval model
 
 | Mode | Driver | Typical use | What does not change |
@@ -101,6 +100,7 @@ Approval rules:
 - **write-capable skills** must expose dry-run and blast-radius language
 - **destructive actions** require human approval and an audit trail
 - **incoming findings are untrusted input** until validated against the skill contract
+- `min_approvers` and `approver_roles` in `SKILL.md` are the machine-readable source of truth for wrapper policy
 
 ## What an agent actually calls
 
@@ -151,7 +151,7 @@ Shipped:
 Not yet:
 - Hosted HTTP/SSE transport for remote MCP deployments
 - Tight per-skill input schemas derived from each CLI instead of the current conservative `input` + `args` wrapper
-- A direct MCP wrapper for the serverless remediation workflow
+- Full automatic parity between every possible local entrypoint shape and the MCP wrapper; check `mcp-server/README.md` for current wrapper behavior
 
 ## Secure coding expectations
 
@@ -172,9 +172,9 @@ Not yet:
 
 ## Failure handling
 
-- Lambda async failure → SQS DLQ (`iam-departures-dlq`).
-- Step Function `FAILED` / `TIMED_OUT` / `ABORTED` → SNS `iam-departures-alerts` topic.
-- Re-drive a stuck execution by re-emitting an `Object Created` event for the manifest. The pipeline is idempotent.
+- AWS IAM departures: Lambda async failure → SQS DLQ (`iam-departures-dlq`).
+- AWS IAM departures: Step Function `FAILED` / `TIMED_OUT` / `ABORTED` → SNS `iam-departures-alerts` topic.
+- Event-driven runners and per-cloud remediation skills have their own provider-native failure surfaces; check each skill's `SKILL.md` / `RUNBOOK.md` before proposing recovery.
 
 If you see a remediation step that succeeded but no audit row, treat it as a failure and surface the discrepancy to the user.
 
@@ -183,7 +183,7 @@ If you see a remediation step that succeeded but no audit row, treat it as a fai
 - Use this `AGENTS.md` as the repo-level instruction file.
 - Use [`CLAUDE.md`](CLAUDE.md) as Claude's project memory.
 - Use each `SKILL.md` as the task-specific contract for the nearest skill directory.
-- Treat the benchmark scripts as read-only assessment tools and the IAM departures automation as a controlled remediation workflow.
+- Treat benchmark and discovery scripts as read-only assessment tools, and treat remediation skills as controlled HITL-gated workflows whose exact guardrails live in each skill bundle.
 
 Claude-specific best practices:
 - keep skills explicit, bounded, and composable

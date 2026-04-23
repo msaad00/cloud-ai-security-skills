@@ -105,8 +105,8 @@ class TestMcpServer:
                         "arguments": {
                             "input": finding,
                             "_approval_context": {
-                                "approver_id": "ap-1",
-                                "approver_email": "lead@example.com",
+                                "approver_ids": ["ap-1", "ap-2"],
+                                "approver_emails": ["lead@example.com", "commander@example.com"],
                                 "ticket_id": "SEC-1",
                             },
                         },

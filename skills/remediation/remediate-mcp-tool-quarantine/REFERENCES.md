@@ -32,7 +32,7 @@
 
 - [`_shared/remediation_verifier.py`](../../_shared/remediation_verifier.py) — `build_verification_record()` + `build_drift_finding()` integration (per workflow convention, integrated from day one — see PR #305)
 - [`SECURITY_BAR.md`](../../../SECURITY_BAR.md) — 11-principle contract; this skill satisfies all destructive-write principles
-- [`docs/HITL_POLICY.md`](../../../docs/HITL_POLICY.md) — `human_required` approval model with `min_approvers: 1`
+- [`docs/HITL_POLICY.md`](../../../docs/HITL_POLICY.md) — `human_required` approval model with `min_approvers: 2`
 - [`scripts/validate_safe_skill_bar.py`](../../../scripts/validate_safe_skill_bar.py) — enforces dry-run default, deny-list presence
 
 ## Compliance frameworks

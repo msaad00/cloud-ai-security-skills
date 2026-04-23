@@ -200,6 +200,34 @@ def tool_input_schema(skill: SkillSpec) -> dict[str, object]:
             "items": {"type": "string"},
             "description": "Explicit CLI arguments forwarded to the fixed skill entrypoint.",
         },
+        "_caller_context": {
+            "type": "object",
+            "description": "Optional wrapper-supplied caller identity context for audit propagation.",
+            "properties": {
+                "user_id": {"type": "string"},
+                "email": {"type": "string"},
+                "session_id": {"type": "string"},
+                "roles": {"type": "array", "items": {"type": "string"}},
+            },
+            "additionalProperties": True,
+        },
+        "_approval_context": {
+            "type": "object",
+            "description": (
+                "Optional wrapper-supplied approval context for HITL-gated tools. "
+                "For multi-approver actions, populate `approver_ids` or `approver_emails` "
+                "with one entry per distinct approver."
+            ),
+            "properties": {
+                "approver_id": {"type": "string"},
+                "approver_email": {"type": "string"},
+                "ticket_id": {"type": "string"},
+                "approval_timestamp": {"type": "string"},
+                "approver_ids": {"type": "array", "items": {"type": "string"}},
+                "approver_emails": {"type": "array", "items": {"type": "string"}},
+            },
+            "additionalProperties": True,
+        },
     }
     if skill.output_formats:
         properties["output_format"] = {

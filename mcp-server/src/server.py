@@ -180,6 +180,20 @@ def _is_safe_write_invocation(skill: SkillSpec, args: list[str]) -> bool:
     return "--dry-run" in args
 
 
+def _approval_count(approval_context: dict[str, Any] | None) -> int:
+    if not approval_context:
+        return 0
+    approver_ids = approval_context.get("approver_ids")
+    if isinstance(approver_ids, list):
+        return len([item for item in approver_ids if item])
+    approver_emails = approval_context.get("approver_emails")
+    if isinstance(approver_emails, list):
+        return len([item for item in approver_emails if item])
+    if approval_context.get("approver_id") or approval_context.get("approver_email"):
+        return 1
+    return 0
+
+
 def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     tools = _filtered_tool_map()
     if name not in tools:
@@ -208,6 +222,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
         "input_length": len(stdin_text),
         "caller_context_provided": caller_context is not None,
         "approval_context_provided": approval_context is not None,
+        "approval_count": _approval_count(approval_context),
         "caller_id": caller_context.get("user_id", "") if caller_context else "",
         "caller_session_id": caller_context.get("session_id", "") if caller_context else "",
         "approval_ticket": approval_context.get("ticket_id", "") if approval_context else "",
@@ -222,6 +237,10 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
             )
         if not skill.read_only and skill.approver_roles and approval_context is None:
             raise ValueError("write-capable tools with approver_roles require `_approval_context`")
+        if not skill.read_only and (skill.min_approvers or 0) > _approval_count(approval_context):
+            raise ValueError(
+                f"tool `{skill.name}` requires at least {skill.min_approvers} approver(s) in `_approval_context`"
+            )
 
         env = os.environ.copy()
         env.setdefault("PYTHONUNBUFFERED", "1")
@@ -240,6 +259,10 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
                 env["SKILL_APPROVER_ID"] = approval_context["approver_id"]
             if "approver_email" in approval_context:
                 env["SKILL_APPROVER_EMAIL"] = approval_context["approver_email"]
+            if "approver_ids" in approval_context:
+                env["SKILL_APPROVER_IDS"] = ",".join(approval_context["approver_ids"])
+            if "approver_emails" in approval_context:
+                env["SKILL_APPROVER_EMAILS"] = ",".join(approval_context["approver_emails"])
             if "ticket_id" in approval_context:
                 env["SKILL_APPROVAL_TICKET"] = approval_context["ticket_id"]
             if "approval_timestamp" in approval_context:
