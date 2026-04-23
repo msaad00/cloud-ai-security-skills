@@ -84,11 +84,25 @@ event family.
 - Azure Entra / Microsoft Graph coverage here is limited to high-signal
   application and service-principal credential changes plus app-role grants. It
   is **not** a complete Entra administrative drift detector.
-- AWS IAM user access-key creation and policy-document drift are roadmap work,
-  not current detector anchors.
+- AWS IAM user and access-key identity pivots are roadmap work, not current
+  detector anchors. Today the AWS slice is explicitly limited to role-session
+  pivots observed through STS.
 - GCP service-account pivots are currently anchored to IAM Credentials and
   service-account key events. Workload-identity federation abuse beyond those
   signals remains a separate roadmap item.
+
+### AWS roadmap slice
+
+The next explicit AWS ATT&CK expansion for this detector is:
+
+- IAM user access-key creation and proliferation sequences
+- temporary-credential pivots such as `GetFederationToken` when the surrounding
+  signal is strong enough to support `T1078.004`
+- policy-change anchors that materially widen identity reach, such as
+  trust-policy or role-policy drift associated with a subsequent east-west move
+
+That work is intentionally tracked as a separate gap so the current detector
+does not over-claim AWS identity coverage beyond role-session pivots.
 
 ### GCP roadmap slice
 

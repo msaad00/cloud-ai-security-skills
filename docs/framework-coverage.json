@@ -671,7 +671,8 @@
         "multi"
       ],
       "asset_classes": [
-        "identities",
+        "iam-roles",
+        "role-sessions",
         "applications",
         "service-accounts",
         "service-account-keys",
