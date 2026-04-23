@@ -1,8 +1,7 @@
-"""Change detection — row-level hash diff for S3 export gating.
+"""Change detection — row-level hash diff for manifest planning.
 
-Only exports the remediation manifest to S3 when the underlying data
-has actually changed. Prevents unnecessary Step Function executions
-and duplicate remediations.
+Compares the current normalized departure set to a previously stored content
+hash so runners can decide whether to persist and fan out a new manifest.
 
 Algorithm:
     1. Sort all DepartureRecords deterministically (email + account_id)
@@ -25,11 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChangeDetector:
-    """Detect changes in the departures table via content hashing.
-
-    Stores the last-known hash in S3 at:
-        s3://{bucket}/departures/.last_hash
-    """
+    """Detect changes in the departures table via content hashing."""
 
     HASH_KEY = "departures/.last_hash"
 
@@ -75,17 +70,6 @@ class ChangeDetector:
         except Exception:
             logger.exception("Failed to read previous hash from S3")
             return None
-
-    def store_hash(self, hash_value: str) -> None:
-        """Write the current hash to S3."""
-        self.s3.put_object(
-            Bucket=self.bucket,
-            Key=self.HASH_KEY,
-            Body=hash_value.encode("utf-8"),
-            ContentType="text/plain",
-            ServerSideEncryption="aws:kms",
-        )
-        logger.info("Stored new hash: %s", hash_value[:12])
 
     def has_changed(self, records: list[DepartureRecord]) -> tuple[bool, str]:
         """Check if the record set has changed since last export.

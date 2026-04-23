@@ -20,7 +20,7 @@ The format is loosely based on Keep a Changelog.
   rows, and S3 audit objects can be cross-referenced during incident
   response.
 - **Retries on transient HR-source failures** —
-  `skills/remediation/iam-departures-aws/src/reconciler/sources.py`
+  `skills/discovery/iam-departures-reconciler/src/reconciler/sources.py`
   `fetch_departures` in all four sources (Snowflake, Databricks,
   ClickHouse, Workday) now wraps its query in a shared `_with_retry`
   helper: 3 attempts by default, exponential backoff starting at

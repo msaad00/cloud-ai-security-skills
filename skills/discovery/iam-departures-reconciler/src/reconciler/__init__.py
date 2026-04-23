@@ -11,7 +11,7 @@ MITRE ATT&CK coverage:
 """
 
 from reconciler.change_detect import ChangeDetector
-from reconciler.export import S3Exporter
+from reconciler.export import ManifestBuilder
 from reconciler.sources import (
     ClickHouseSource,
     DatabricksSource,
@@ -27,5 +27,5 @@ __all__ = [
     "ClickHouseSource",
     "WorkdayAPISource",
     "ChangeDetector",
-    "S3Exporter",
+    "ManifestBuilder",
 ]

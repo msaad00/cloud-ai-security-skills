@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 60 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 61 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,12 +16,12 @@
 
 ## What this repo gives you
 
-**60 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus ten guarded write paths spanning AWS/GCP/Azure IAM departures, AWS/GCP/Azure network revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**61 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus ten guarded write paths spanning AWS/GCP/Azure IAM departures, AWS/GCP/Azure network revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
 | **Ingest** | 15 | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
-| **Discover** | 4 | inventory, graph, AI BOM, evidence | native / bridge JSON |
+| **Discover** | 5 | inventory, graph, AI BOM, evidence, IAM departure manifest planning | native / bridge JSON |
 | **Detect** | 14 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
 | **Remediate** | 12 | guarded write paths (IAM departures AWS + GCP + Azure Entra, AWS/GCP/Azure network revoke, Okta session kill, Workspace session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
@@ -29,7 +29,7 @@
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 60 shipped skills.**
+**Total: 61 shipped skills.**
 
 <details>
 <summary><b>Why different layers use different formats</b> — OCSF where interop matters, native where state, evidence, and audit matter more</summary>
@@ -218,6 +218,7 @@ Only the AWS orchestration ships today (under [`infra/`](skills/remediation/iam-
 
 | Role | AWS · shipped | GCP · pattern | Azure · pattern |
 |---|---|---|---|
+| Manifest planner | [`iam-departures-reconciler`](skills/discovery/iam-departures-reconciler/) shared read-only skill; emits the canonical manifest body | same shared skill | same shared skill |
 | Event trigger | **EventBridge** rule (S3 `ObjectCreated`) | **Eventarc** trigger (GCS finalize) | **Event Grid** (Blob `Created`) |
 | Orchestration | **Step Functions** (Map state, DLQ, retries) | **Cloud Workflows** (parallel, retries) | **Logic Apps** or **Durable Functions** |
 | Worker compute | **Lambda** (parser + worker) | **Cloud Run Jobs** or **Cloud Functions** | **Azure Functions** or **Container Apps Jobs** |
@@ -273,7 +274,7 @@ Per-skill framework mapping: [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPING
 | Area | Shipped today | Planned |
 |---|---|---|
 | **Ingest** | 15 ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources |
-| **Discover** | 4 skills (AI BOM, cloud control evidence, control evidence, environment graph) | wider SaaS and infra evidence |
+| **Discover** | 5 skills (AI BOM, cloud control evidence, control evidence, environment graph, IAM departures reconciler) | wider SaaS and infra evidence |
 | **Detect** | 11 detectors tied to MITRE ATT&CK (inc. credential stuffing, Okta MFA fatigue, K8s container escape + priv-esc, MCP tool drift, prompt injection) | impossible travel, more MCP patterns |
 | **Evaluate** | 7 benchmarks (82 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, model serving — native + OCSF 2003 opt-in | 50 % per-platform CIS coverage (#254), `--auto-remediate` flag |
 | **Remediate** | `iam-departures-aws`, `remediate-okta-session-kill`, `remediate-container-escape-k8s` — HITL-gated, dry-run default, dual audit | broader remediation families as detection matures |
