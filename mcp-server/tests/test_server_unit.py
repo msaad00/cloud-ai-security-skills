@@ -35,6 +35,7 @@ class _FakeSkill:
         self,
         read_only: bool = True,
         approver_roles: tuple[str, ...] = (),
+        min_approvers: int | None = None,
         mcp_timeout_seconds: int | None = None,
     ) -> None:
         self.name = "fake-skill"
@@ -42,6 +43,7 @@ class _FakeSkill:
         self.capability = "read-only" if read_only else "write-remediation"
         self.read_only = read_only
         self.approver_roles = approver_roles
+        self.min_approvers = min_approvers
         self.mcp_timeout_seconds = mcp_timeout_seconds
 
 
@@ -125,6 +127,84 @@ def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
     assert audit_events[0]["error_type"] == "ValueError"
     assert audit_events[0]["args_hash"] == MODULE._stable_hash(["--dry-run"])
     assert audit_events[0]["approval_context_provided"] is False
+
+
+def test_call_tool_requires_minimum_approver_count(monkeypatch):
+    audit_events: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        MODULE,
+        "tool_map",
+        lambda: {
+            "fake-skill": _FakeSkill(
+                read_only=False,
+                approver_roles=("security_lead", "incident_commander"),
+                min_approvers=2,
+            )
+        },
+    )
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    try:
+        MODULE._call_tool(
+            "fake-skill",
+            {
+                "args": ["--dry-run"],
+                "_approval_context": {
+                    "approver_id": "a-456",
+                    "ticket_id": "SEC-123",
+                },
+            },
+        )
+    except ValueError as exc:
+        assert "requires at least 2 approver" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+    assert audit_events[0]["approval_context_provided"] is True
+    assert audit_events[0]["approval_count"] == 1
+
+
+def test_call_tool_accepts_multi_approver_context(monkeypatch):
+    captured: dict[str, object] = {}
+    audit_events: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        MODULE,
+        "tool_map",
+        lambda: {
+            "fake-skill": _FakeSkill(
+                read_only=False,
+                approver_roles=("security_lead", "incident_commander"),
+                min_approvers=2,
+            )
+        },
+    )
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    def _fake_run(*args, **kwargs):
+        captured["env"] = kwargs["env"]
+        return _FakeCompleted()
+
+    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+
+    result = MODULE._call_tool(
+        "fake-skill",
+        {
+            "args": ["--dry-run"],
+            "_approval_context": {
+                "approver_ids": ["a-456", "b-789"],
+                "approver_emails": ["a@example.com", "b@example.com"],
+                "ticket_id": "SEC-123",
+            },
+        },
+    )
+
+    env = captured["env"]
+    assert env["SKILL_APPROVER_IDS"] == "a-456,b-789"
+    assert env["SKILL_APPROVER_EMAILS"] == "a@example.com,b@example.com"
+    assert result["isError"] is False
+    assert audit_events[0]["approval_count"] == 2
 
 
 def test_resolve_timeout_prefers_env_override():
