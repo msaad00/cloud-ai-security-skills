@@ -43,7 +43,7 @@ Cross-cloud note:
 │  └────────────────────────────────┼──────────────────────────────────────┘ │
 │                                   ▼                                        │
 │  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │  Reconciler  (src/reconciler/)                                     │    │
+│  │  Reconciler skill (`skills/discovery/iam-departures-reconciler`)   │    │
 │  │                                                                    │    │
 │  │  sources.py ─→ DepartureRecord[]                                   │    │
 │  │      │              │                                              │    │
@@ -565,7 +565,7 @@ full setup script.
 | 7 | Termination reversed within grace period | Within `IAM_GRACE_PERIOD_DAYS` | **SKIP** |
 | 8 | Rehired but no IAM usage data | `iam_last_used_at = NULL`, old IAM | **REMEDIATE** (conservative) |
 
-Decision tree in `src/reconciler/sources.py:DepartureRecord.should_remediate()`.
+Decision tree in `skills/discovery/iam-departures-reconciler/src/reconciler/sources.py:DepartureRecord.should_remediate()`.
 
 ---
 
@@ -579,7 +579,7 @@ Export fires ONLY when hash differs from previous run. This prevents:
 - Duplicate remediations (safety)
 - EventBridge event storms (operational hygiene)
 
-Implementation: `src/reconciler/change_detect.py`
+Implementation: `skills/discovery/iam-departures-reconciler/src/reconciler/change_detect.py`
 
 ---
 

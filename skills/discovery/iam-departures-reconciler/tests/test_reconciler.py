@@ -14,7 +14,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from reconciler.change_detect import ChangeDetector
-from reconciler.export import S3Exporter
+from reconciler.export import ManifestBuilder
 from reconciler.sources import (
     DepartureRecord,
     RemediationStatus,
@@ -187,18 +187,15 @@ class TestChangeDetector:
         assert h1 == h2
 
 
-class TestS3Exporter:
-    def test_export_manifest(self):
-        s3 = MagicMock()
-        exporter = S3Exporter(s3, "my-bucket")
-        key = exporter.export_manifest([_make_record()], "snowflake", "abc123")
-        assert key.startswith("departures/")
-        assert key.endswith(".json")
+class TestManifestBuilder:
+    def test_build_manifest(self):
+        manifest = ManifestBuilder().build_manifest([_make_record()], "snowflake", "abc123")
+        assert manifest["source"] == "snowflake"
+        assert manifest["hash"] == "abc123"
+        assert manifest["actionable_count"] == 1
 
     def test_skip_reasons_categorized(self):
-        s3 = MagicMock()
-        exporter = S3Exporter(s3, "my-bucket")
-        exporter.export_manifest(
+        manifest = ManifestBuilder().build_manifest(
             [
                 _make_record(iam_deleted=True),
                 _make_record(status=RemediationStatus.REMEDIATED),
@@ -206,8 +203,7 @@ class TestS3Exporter:
             "snowflake",
             "h",
         )
-        body = json.loads(s3.put_object.call_args[1]["Body"].decode())
-        assert body["skip_reasons"]["iam_already_deleted"] == 1
+        assert manifest["skip_reasons"]["iam_already_deleted"] == 1
 
 
 class TestSourceFactory:

@@ -634,6 +634,33 @@
       ]
     },
     {
+      "path": "skills/discovery/iam-departures-reconciler",
+      "layer": "discovery",
+      "providers": [
+        "multi",
+        "snowflake",
+        "databricks",
+        "clickhouse",
+        "workday"
+      ],
+      "asset_classes": [
+        "identities",
+        "hr-events",
+        "manifests",
+        "warehouse-joins"
+      ],
+      "frameworks": [
+        "mitre-attack-v14"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-lateral-movement",
       "layer": "detection",
       "providers": [

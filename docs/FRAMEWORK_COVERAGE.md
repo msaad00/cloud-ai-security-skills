@@ -4,14 +4,14 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **60**
+- Total shipped skills in registry: **61**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
 | OCSF | 1.8.0 | **40** | — |
-| MITRE ATT&CK | v14 | **37** | 100% mapped coverage |
+| MITRE ATT&CK | v14 | **38** | 100% mapped coverage |
 | MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **3** | — |
 | CIS GCP Foundations | v3.0 | **4** | — |
@@ -88,7 +88,7 @@ Shipped skills mapped: **40**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **37**
+Shipped skills mapped: **38**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -107,6 +107,7 @@ Shipped skills mapped: **37**
 | [`detect-sensitive-secret-read-k8s`](../skills/detection/detect-sensitive-secret-read-k8s) | detection | kubernetes | clusters, secrets, identities |
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network, logging, encryption, ai-endpoints |
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
+| [`iam-departures-reconciler`](../skills/discovery/iam-departures-reconciler) | discovery | multi, snowflake, databricks, clickhouse, workday | identities, hr-events, manifests, warehouse-joins |
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
 | [`ingest-azure-defender-for-cloud-ocsf`](../skills/ingestion/ingest-azure-defender-for-cloud-ocsf) | ingestion | azure | findings, security-posture |
 | [`ingest-cloudtrail-ocsf`](../skills/ingestion/ingest-cloudtrail-ocsf) | ingestion | aws | iam, api, audit-logs |

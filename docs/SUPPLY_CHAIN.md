@@ -50,7 +50,7 @@ The one deliberate non-vendor runtime exception today is:
 
 - `httpx`
   - used only by the direct Workday RaaS API source in
-    [`skills/remediation/iam-departures-aws/src/reconciler/sources.py`](../skills/remediation/iam-departures-aws/src/reconciler/sources.py)
+    [`skills/discovery/iam-departures-reconciler/src/reconciler/sources.py`](../skills/discovery/iam-departures-reconciler/src/reconciler/sources.py)
   - kept because Workday does not provide a first-party Python SDK for this
     path, and `httpx` gives clearer timeout, auth, and transport handling than
     a stdlib `urllib.request` implementation
