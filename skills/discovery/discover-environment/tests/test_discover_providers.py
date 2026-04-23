@@ -21,7 +21,9 @@ from unittest.mock import MagicMock
 
 import boto3
 import pytest
-from moto import mock_aws
+
+moto = pytest.importorskip("moto")
+mock_aws = moto.mock_aws
 
 _SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC_DIR) not in sys.path:
