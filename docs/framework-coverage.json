@@ -722,6 +722,30 @@
       ]
     },
     {
+      "path": "skills/detection/detect-agent-credential-leak-mcp",
+      "layer": "detection",
+      "providers": [
+        "mcp",
+        "multi"
+      ],
+      "asset_classes": [
+        "agent-tools",
+        "tool-results",
+        "credentials"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "owasp-mcp-top-10",
+        "owasp-llm-top-10"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-aws-open-security-group",
       "layer": "detection",
       "providers": [
@@ -731,6 +755,30 @@
         "security-groups",
         "ingress-rules",
         "cloudtrail"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "ocsf-1.8",
+        "cis-aws-v3"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
+      "path": "skills/detection/detect-cloudtrail-disabled",
+      "layer": "detection",
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "cloudtrail",
+        "audit-trails",
+        "logging"
       ],
       "frameworks": [
         "mitre-attack-v14",
