@@ -179,6 +179,14 @@ def _approval_count(approval_context: dict[str, Any] | None) -> int:
 
 
 def _is_safe_write_invocation(skill: SkillSpec, args: list[str]) -> bool:
+    """Return True when the requested invocation is dry-run/read-only at the
+    wrapper boundary.
+
+    Remediation `handler.py` and evaluation `checks.py` entrypoints can be
+    dry-run by default and only write when `--apply` is present, so allow those
+    tools to run as long as `--apply` is absent. Other write-capable categories
+    keep the stricter explicit `--dry-run` requirement.
+    """
     if skill.read_only:
         return True
     if skill.category == "remediation" and skill.entrypoint and skill.entrypoint.name == "handler.py":

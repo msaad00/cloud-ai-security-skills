@@ -132,6 +132,34 @@ def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
     assert audit_events[0]["approval_context_provided"] is False
 
 
+def test_safe_write_invocation_allows_handler_remediation_without_apply():
+    skill = _FakeSkill(
+        read_only=False,
+        category="remediation",
+        entrypoint_name="handler.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is True
+
+
+def test_safe_write_invocation_rejects_apply_for_handler_remediation():
+    skill = _FakeSkill(
+        read_only=False,
+        category="remediation",
+        entrypoint_name="handler.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, ["--apply"]) is False
+
+
+def test_safe_write_invocation_still_requires_dry_run_for_non_handler_writes():
+    skill = _FakeSkill(
+        read_only=False,
+        category="sinks",
+        entrypoint_name="sink.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is False
+    assert MODULE._is_safe_write_invocation(skill, ["--dry-run"]) is True
+
+
 def test_call_tool_requires_minimum_approver_count(monkeypatch):
     audit_events: list[dict[str, object]] = []
 
@@ -208,15 +236,6 @@ def test_call_tool_accepts_multi_approver_context(monkeypatch):
     assert env["SKILL_APPROVER_EMAILS"] == "a@example.com,b@example.com"
     assert result["isError"] is False
     assert audit_events[0]["approval_count"] == 2
-
-
-def test_safe_write_invocation_allows_handler_remediation_without_apply():
-    skill = _FakeSkill(
-        read_only=False,
-        category="remediation",
-        entrypoint_name="handler.py",
-    )
-    assert MODULE._is_safe_write_invocation(skill, []) is True
 
 
 def test_safe_write_invocation_allows_checks_evaluation_without_apply():
