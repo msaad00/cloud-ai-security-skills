@@ -20,7 +20,7 @@ from individual `SKILL.md` files.
 | Framework | Status | Where it appears |
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
-| **MITRE ATT&CK v14** | strong and broader | 41 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS / GCP / Azure logging-impairment trio |
+| **MITRE ATT&CK v14** | strong and broader | 42 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key creation slice and the AWS / GCP / Azure logging-impairment trio |
 | **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection detection |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
@@ -48,7 +48,8 @@ Strongest current ATT&CK coverage:
 
 | Skill | Coverage |
 |---|---|
-| `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots anchored in IAM Credentials and key-creation events, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots; AWS IAM-user/access-key pivots and GCP workload-identity federation abuse remain tracked follow-up gaps |
+| `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots anchored in IAM Credentials and key-creation events, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots; AWS IAM-user login-profile and temporary-credential pivots plus GCP workload-identity federation abuse remain tracked follow-up gaps |
+| `detect-aws-access-key-creation` | T1098.001 for successful AWS IAM `CreateAccessKey` operations that add credential material to an IAM user |
 | `detect-okta-mfa-fatigue` | T1621 for repeated Okta Verify push challenge + deny bursts |
 | `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-entra-role-grant-escalation` | T1098.003 for successful Entra app-role assignments that grant additional application permissions to service principals |
@@ -73,7 +74,10 @@ Notes:
   weakening, and policy-drift depth remain separate follow-on work.
 - Current cross-cloud identity depth is strongest in `detect-lateral-movement`; the Azure slice now distinguishes Azure Activity control-plane pivots from Entra / Graph application-service-principal credential pivots.
 - The GCP slice in `detect-lateral-movement` is currently pinned to service-account and IAM Credentials anchors; workload-identity federation abuse is tracked separately so the docs do not overstate provider depth.
-- The AWS slice in `detect-lateral-movement` is currently role-session-centric; IAM users, access keys, and temporary-credential pivots are tracked separately so the docs do not overstate provider depth.
+- The AWS role-session slice stays in `detect-lateral-movement`, while
+  `detect-aws-access-key-creation` now covers the first IAM-user persistence
+  path. Login-profile and temporary-credential pivots remain tracked separately
+  so the docs do not overstate provider depth.
 
 ## OCSF identity normalization
 

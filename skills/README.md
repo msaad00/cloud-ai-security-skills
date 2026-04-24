@@ -50,6 +50,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-entra-credential-addition`](detection/detect-entra-credential-addition/) | successful Entra application or service-principal credential additions |
 | [`detect-entra-role-grant-escalation`](detection/detect-entra-role-grant-escalation/) | successful Entra app-role grants to service principals |
 | [`detect-google-workspace-suspicious-login`](detection/detect-google-workspace-suspicious-login/) | provider-marked suspicious Workspace login or repeated failures followed by success |
+| [`detect-aws-access-key-creation`](detection/detect-aws-access-key-creation/) | successful AWS IAM `CreateAccessKey` operations against IAM users (T1098.001 Additional Cloud Credentials) |
 | [`detect-aws-open-security-group`](detection/detect-aws-open-security-group/) | AWS Security Group ingress opened to 0.0.0.0/0 or ::/0 on risky admin / database / cache ports (T1190 Exploit Public-Facing Application) |
 | [`detect-azure-open-nsg`](detection/detect-azure-open-nsg/) | Azure NSG inbound rule opened to `*` / `Internet` / `0.0.0.0/0` / `::/0` on risky admin / database / cache ports (T1190 Exploit Public-Facing Application) |
 | [`detect-gcp-open-firewall`](detection/detect-gcp-open-firewall/) | GCP VPC firewall rule opened to 0.0.0.0/0 or ::/0 on risky admin / database / cache ports via `compute.firewalls.insert` or `compute.firewalls.patch` (T1190 Exploit Public-Facing Application) |
