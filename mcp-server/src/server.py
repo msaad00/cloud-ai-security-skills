@@ -164,6 +164,22 @@ def _validate_context(raw_context: Any, field_name: str) -> dict[str, Any] | Non
     return validated
 
 
+def _is_safe_write_invocation(skill: SkillSpec, args: list[str]) -> bool:
+    """Return True when the requested invocation is dry-run/read-only at the
+    wrapper boundary.
+
+    Remediation `handler.py` entrypoints are dry-run by default and only write
+    when `--apply` is present, so allow handler-based remediation tools to run
+    as long as `--apply` is absent. Other write-capable categories keep the
+    stricter explicit `--dry-run` requirement.
+    """
+    if skill.read_only:
+        return True
+    if skill.category == "remediation" and skill.entrypoint and skill.entrypoint.name == "handler.py":
+        return "--apply" not in args
+    return "--dry-run" in args
+
+
 def _approval_count(approval_context: dict[str, Any] | None) -> int:
     if not approval_context:
         return 0
@@ -214,8 +230,11 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     }
 
     try:
-        if not skill.read_only and "--dry-run" not in args:
-            raise ValueError("write-capable tools must be called with `--dry-run`")
+        if not _is_safe_write_invocation(skill, args):
+            raise ValueError(
+                "write-capable tools must stay in dry-run/read-only mode under MCP "
+                "(`--dry-run`, or no `--apply` for handler-based remediation tools)"
+            )
         if not skill.read_only and skill.approver_roles and approval_context is None:
             raise ValueError("write-capable tools with approver_roles require `_approval_context`")
         if not skill.read_only and (skill.min_approvers or 0) > _approval_count(approval_context):

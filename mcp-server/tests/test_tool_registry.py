@@ -55,6 +55,12 @@ class TestDiscovery:
         assert skills["iam-departures-aws"].supported is False
         assert skills["iam-departures-aws"].capability == "write-remediation"
 
+    def test_supports_standalone_handler_based_remediation_skill(self):
+        skills = {skill.name: skill for skill in discover_skills(REPO_ROOT)}
+        assert skills["remediate-mcp-tool-quarantine"].supported is True
+        assert skills["remediate-mcp-tool-quarantine"].entrypoint is not None
+        assert skills["remediate-mcp-tool-quarantine"].entrypoint.name == "handler.py"
+
     def test_supported_tools_include_ingest_detect_and_evaluate(self):
         tools = tool_map(REPO_ROOT)
         assert "source-s3-select" in tools
@@ -76,6 +82,8 @@ class TestDiscovery:
         assert "discover-ai-bom" in tools
         assert "discover-control-evidence" in tools
         assert "discover-cloud-control-evidence" in tools
+        assert "remediate-mcp-tool-quarantine" in tools
+        assert "iam-departures-aws" not in tools
 
 
 class TestToolDefinition:
