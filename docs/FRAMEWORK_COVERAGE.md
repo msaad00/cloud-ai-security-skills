@@ -4,15 +4,15 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.8.0`
 - Registry updated: `2026-04-24`
-- Total shipped skills in registry: **70**
+- Total shipped skills in registry: **71**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **49** | — |
+| OCSF | 1.8.0 | **50** | — |
 | MITRE ATT&CK | v14 | **45** | 100% mapped coverage |
-| MITRE ATLAS | current | **9** | 100% mapped coverage |
+| MITRE ATLAS | current | **10** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **6** | — |
@@ -24,8 +24,8 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | SOC 2 TSC | current | **20** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
-| OWASP LLM Top 10 | current | **4** | — |
-| OWASP MCP Top 10 | current | **5** | — |
+| OWASP LLM Top 10 | current | **5** | — |
+| OWASP MCP Top 10 | current | **6** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
 Shipped skills mapped counts the number of skills in the registry that declare this framework under `frameworks`. It does not claim per-control depth; see each skill's `SKILL.md` and `REFERENCES.md` for the concrete controls, techniques, or benchmarks covered.
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **49**
+Shipped skills mapped: **50**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -63,6 +63,7 @@ Shipped skills mapped: **49**
 | [`detect-s3-cross-account-copy`](../skills/detection/detect-s3-cross-account-copy) | detection | aws | storage, buckets, objects, identities, cloudtrail |
 | [`detect-sensitive-secret-read-k8s`](../skills/detection/detect-sensitive-secret-read-k8s) | detection | kubernetes | clusters, secrets, identities |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
+| [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
@@ -154,12 +155,13 @@ Shipped skills mapped: **45**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **9**
+Shipped skills mapped: **10**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
+| [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
 | [`discover-ai-bom`](../skills/discovery/discover-ai-bom) | discovery | aws, azure, gcp, multi | inventory, ai-endpoints, models, datasets, vector-stores, gpu-fleets |
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
@@ -351,26 +353,28 @@ Shipped skills mapped: **3**
 
 - Registry id: `owasp-llm-top-10`
 
-Shipped skills mapped: **4**
+Shipped skills mapped: **5**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
+| [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 
 ### OWASP MCP Top 10 (current)
 
 - Registry id: `owasp-mcp-top-10`
 
-Shipped skills mapped: **5**
+Shipped skills mapped: **6**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
+| [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
 | [`ingest-mcp-proxy-ocsf`](../skills/ingestion/ingest-mcp-proxy-ocsf) | ingestion | mcp, multi | agent-tools, application-activity |
 | [`remediate-mcp-tool-quarantine`](../skills/remediation/remediate-mcp-tool-quarantine) | remediation | mcp | mcp-tools, quarantine-list, audit |
 

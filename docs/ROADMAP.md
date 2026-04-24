@@ -32,7 +32,8 @@ The current north star is not "more skills" by itself. It is:
   Azure, Kubernetes, container, GPU, and model-serving surfaces; AWS also has
   the first guarded `--auto-remediate` slice.
 - **AI-native baseline:** MCP prompt injection, tool drift, credential leak
-  detection, explicit system-prompt extraction detection, and MCP tool quarantine are all shipped. The next open work is
+  detection, explicit system-prompt extraction detection, explicit
+  tool-output exfiltration-instruction detection, and MCP tool quarantine are all shipped. The next open work is
   broader AI-native detection depth and stronger closed loops, not first
   presence.
 
