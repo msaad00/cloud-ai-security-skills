@@ -207,12 +207,20 @@ def test_regular_target_passes_protected_check():
 def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.delenv("ENTRA_REVOKE_INCIDENT_ID", raising=False)
     monkeypatch.delenv("ENTRA_REVOKE_APPROVER", raising=False)
+    monkeypatch.delenv("AZURE_TENANT_ID", raising=False)
+    monkeypatch.delenv("ENTRA_REVOKE_ALLOWED_TENANT_IDS", raising=False)
     ok, reason = check_apply_gate()
     assert ok is False and "INCIDENT_ID" in reason
     monkeypatch.setenv("ENTRA_REVOKE_INCIDENT_ID", "INC-1")
     ok, reason = check_apply_gate()
     assert ok is False and "APPROVER" in reason
     monkeypatch.setenv("ENTRA_REVOKE_APPROVER", "alice")
+    ok, reason = check_apply_gate()
+    assert ok is False and "AZURE_TENANT_ID" in reason
+    monkeypatch.setenv("AZURE_TENANT_ID", "tenant-a")
+    ok, reason = check_apply_gate()
+    assert ok is False and "ALLOWED_TENANT_IDS" in reason
+    monkeypatch.setenv("ENTRA_REVOKE_ALLOWED_TENANT_IDS", "tenant-a")
     ok, _ = check_apply_gate()
     assert ok is True
 
@@ -297,6 +305,8 @@ def test_run_skips_protected_object_id_in_apply():
             object_ids=("bootstrap-sp-id",),
             incident_id="INC-1",
             approver="alice",
+            tenant_id="tenant-a",
+            allowed_tenant_ids=("tenant-a",),
         )
     )
     assert records[0]["status"] == STATUS_SKIPPED_PROTECTED
@@ -324,6 +334,8 @@ def test_run_apply_disables_and_emits_triage_with_dual_audit():
             audit=audit,
             incident_id="INC-1",
             approver="alice@security",
+            tenant_id="tenant-a",
+            allowed_tenant_ids=("tenant-a",),
         )
     )
     rec = records[0]
@@ -358,6 +370,8 @@ def test_run_apply_writes_failure_audit_when_disable_throws():
             audit=audit,
             incident_id="INC-1",
             approver="alice",
+            tenant_id="tenant-a",
+            allowed_tenant_ids=("tenant-a",),
         )
     )
     rec = records[0]
@@ -380,6 +394,8 @@ def test_run_apply_disable_succeeds_even_if_triage_fails():
             audit=audit,
             incident_id="INC-1",
             approver="alice",
+            tenant_id="tenant-a",
+            allowed_tenant_ids=("tenant-a",),
         )
     )
     rec = records[0]
@@ -408,6 +424,8 @@ def test_run_apply_application_target_resolves_backing_service_principal():
             audit=audit,
             incident_id="INC-1",
             approver="alice@security",
+            tenant_id="tenant-a",
+            allowed_tenant_ids=("tenant-a",),
         )
     )
     rec = records[0]
@@ -420,7 +438,34 @@ def test_run_apply_application_target_resolves_backing_service_principal():
 def test_run_apply_requires_audit_writer():
     import pytest
     with pytest.raises(ValueError, match="audit writer is required"):
-        list(run([_finding()], graph_client=_FakeGraph(), apply=True, audit=None))
+        list(
+            run(
+                [_finding()],
+                graph_client=_FakeGraph(),
+                apply=True,
+                audit=None,
+                tenant_id="tenant-a",
+                allowed_tenant_ids=("tenant-a",),
+            )
+        )
+
+
+def test_run_apply_rejects_wrong_tenant_boundary():
+    import pytest
+
+    with pytest.raises(ValueError, match="ALLOWED_TENANT_IDS"):
+        list(
+            run(
+                [_finding()],
+                graph_client=_FakeGraph(),
+                apply=True,
+                audit=_FakeAudit(),
+                incident_id="INC-1",
+                approver="alice",
+                tenant_id="tenant-a",
+                allowed_tenant_ids=("tenant-b",),
+            )
+        )
 
 
 # ----------------- run: re-verify -----------------

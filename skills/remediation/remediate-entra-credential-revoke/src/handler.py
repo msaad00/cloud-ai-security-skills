@@ -539,11 +539,24 @@ def is_protected_target(target: Target, *, name_prefixes: Iterable[str], object_
 def check_apply_gate() -> tuple[bool, str]:
     incident_id = os.getenv("ENTRA_REVOKE_INCIDENT_ID", "").strip()
     approver = os.getenv("ENTRA_REVOKE_APPROVER", "").strip()
+    tenant_id = os.getenv("AZURE_TENANT_ID", "").strip()
     if not incident_id:
         return False, "ENTRA_REVOKE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "ENTRA_REVOKE_APPROVER is required for --apply"
+    if not tenant_id:
+        return False, "AZURE_TENANT_ID is required for --apply"
+    allowed_tenants = load_allowed_tenant_ids()
+    if not allowed_tenants:
+        return False, "ENTRA_REVOKE_ALLOWED_TENANT_IDS is required for --apply"
+    if tenant_id not in allowed_tenants:
+        return False, f"AZURE_TENANT_ID `{tenant_id}` is not listed in ENTRA_REVOKE_ALLOWED_TENANT_IDS"
     return True, ""
+
+
+def load_allowed_tenant_ids() -> tuple[str, ...]:
+    raw = os.getenv("ENTRA_REVOKE_ALLOWED_TENANT_IDS", "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
 
 
 def _disable_endpoint(resolved: ResolvedServicePrincipal) -> str:
@@ -910,9 +923,20 @@ def run(
     object_ids: Iterable[str] = (),
     incident_id: str = "",
     approver: str = "",
+    tenant_id: str = "",
+    allowed_tenant_ids: Iterable[str] = (),
 ) -> Iterator[dict[str, Any]]:
     name_prefixes = tuple(name_prefixes)
     object_ids = tuple(object_ids)
+    allowed_tenant_ids = tuple(allowed_tenant_ids)
+
+    if apply:
+        if not tenant_id:
+            raise ValueError("tenant_id is required under --apply")
+        if tenant_id not in allowed_tenant_ids:
+            raise ValueError(
+                f"tenant_id `{tenant_id}` is not listed in ENTRA_REVOKE_ALLOWED_TENANT_IDS"
+            )
 
     for target, event in parse_targets(events):
         if target is None:
@@ -1038,6 +1062,8 @@ def main(argv: list[str] | None = None) -> int:
             object_ids=load_protected_object_ids(),
             incident_id=incident_id,
             approver=approver,
+            tenant_id=os.environ.get("AZURE_TENANT_ID", "").strip(),
+            allowed_tenant_ids=load_allowed_tenant_ids(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:
