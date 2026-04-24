@@ -83,6 +83,7 @@ STATUS_SKIPPED_SOURCE = "skipped_wrong_source"
 STATUS_SKIPPED_DENY_LIST = "skipped_deny_list"
 STATUS_WOULD_VIOLATE_DENY_LIST = "would-violate-deny-list"
 STATUS_SKIPPED_UNSUPPORTED_TARGET = "skipped_unsupported_target"
+STATUS_SKIPPED_CLUSTER_BOUNDARY = "skipped_cluster_boundary"
 
 ACTION_QUARANTINE = "quarantine"
 ACTION_POD_KILL = "pod-kill"
@@ -445,6 +446,11 @@ def load_deny_namespaces() -> tuple[str, ...]:
     return DEFAULT_DENY_NAMESPACES
 
 
+def load_allowed_clusters() -> tuple[str, ...]:
+    raw = os.getenv("K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS", "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
+
+
 def is_protected_namespace(namespace: str, patterns: Iterable[str]) -> tuple[bool, str]:
     value = (namespace or "").strip().lower()
     for pattern in patterns:
@@ -527,10 +533,21 @@ def resolve_target(target: Target, kube_client: KubernetesClient) -> ResolvedTar
 def check_apply_gate(*, action_mode: str = ACTION_QUARANTINE) -> tuple[bool, str]:
     incident_id = os.getenv("K8S_CONTAINER_ESCAPE_INCIDENT_ID", "").strip()
     approver = os.getenv("K8S_CONTAINER_ESCAPE_APPROVER", "").strip()
+    cluster_name = os.getenv("K8S_CLUSTER_NAME", "").strip()
+    allowed_clusters = load_allowed_clusters()
     if not incident_id:
         return False, "K8S_CONTAINER_ESCAPE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "K8S_CONTAINER_ESCAPE_APPROVER is required for --apply"
+    if not cluster_name:
+        return False, "K8S_CLUSTER_NAME is required for --apply"
+    if not allowed_clusters:
+        return False, "K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS is required for --apply"
+    if cluster_name not in allowed_clusters:
+        return False, (
+            f"K8S_CLUSTER_NAME `{cluster_name}` is not listed in "
+            "K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS"
+        )
     if action_mode == ACTION_NODE_DRAIN:
         second = os.getenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", "").strip()
         if not second:
@@ -1127,7 +1144,10 @@ def run(
     incident_id: str = "",
     approver: str = "",
     secondary_approver: str = "",
+    cluster_name: str = "",
+    allowed_clusters: Iterable[str] = (),
 ) -> Iterator[dict[str, Any]]:
+    allowed_clusters = tuple(allowed_clusters)
     for target, _ in parse_targets(events):
         if target is None:
             continue
@@ -1140,6 +1160,27 @@ def run(
                 status=status,
                 detail=f"namespace `{target.namespace}` matched protected pattern `{matched}`",
                 dry_run=not apply and not reverify,
+            )
+            continue
+
+        if apply and not cluster_name:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_CLUSTER_BOUNDARY,
+                detail="K8S_CLUSTER_NAME is required for --apply",
+                dry_run=False,
+            )
+            continue
+
+        if apply and cluster_name not in allowed_clusters:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_CLUSTER_BOUNDARY,
+                detail=(
+                    f"cluster `{cluster_name}` is not listed in "
+                    "K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS"
+                ),
+                dry_run=False,
             )
             continue
 
@@ -1295,6 +1336,8 @@ def main(argv: list[str] | None = None) -> int:
             incident_id=incident_id,
             approver=approver,
             secondary_approver=secondary_approver,
+            cluster_name=os.getenv("K8S_CLUSTER_NAME", "").strip(),
+            allowed_clusters=load_allowed_clusters(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:
