@@ -1,8 +1,7 @@
 """
 CIS GCP Foundations Benchmark v3.0 — Automated Assessment
 
-20 CIS controls + 5 Vertex AI controls across IAM, Storage, Logging,
-Networking, and AI/ML services.
+10 CIS controls across IAM, Storage, Logging, and Networking.
 Read-only: requires roles/viewer + roles/iam.securityReviewer.
 
 Frameworks:
@@ -219,8 +218,110 @@ def check_2_1_uniform_access(storage_client, project_id: str) -> Finding:
 
 
 # ---------------------------------------------------------------------------
+# Section 3 — Logging
+# ---------------------------------------------------------------------------
+
+
+def _iter_audit_configs(policy) -> list:
+    configs = getattr(policy, "audit_configs", None)
+    if configs is None and isinstance(policy, dict):
+        configs = policy.get("audit_configs")
+    return list(configs or [])
+
+
+def _iter_audit_log_configs(config) -> list:
+    audit_log_configs = getattr(config, "audit_log_configs", None)
+    if audit_log_configs is None and isinstance(config, dict):
+        audit_log_configs = config.get("audit_log_configs")
+    return list(audit_log_configs or [])
+
+
+def check_3_1_audit_logging_all_services(crm_client, project_id: str) -> Finding:
+    """CIS 3.1 — Audit logging enabled for all services."""
+    try:
+        policy = crm_client.get_iam_policy(request={"resource": f"projects/{project_id}"})
+        required = {"ADMIN_READ", "DATA_READ", "DATA_WRITE"}
+        configured: set[str] = set()
+        exemptions: list[str] = []
+
+        for config in _iter_audit_configs(policy):
+            service = getattr(config, "service", None)
+            if service is None and isinstance(config, dict):
+                service = config.get("service")
+            if service != "allServices":
+                continue
+            for log_config in _iter_audit_log_configs(config):
+                log_type = getattr(log_config, "log_type", None)
+                if log_type is None and isinstance(log_config, dict):
+                    log_type = log_config.get("log_type")
+                if log_type:
+                    configured.add(str(log_type))
+                exempted_members = getattr(log_config, "exempted_members", None)
+                if exempted_members is None and isinstance(log_config, dict):
+                    exempted_members = log_config.get("exempted_members")
+                for member in exempted_members or []:
+                    exemptions.append(f"{log_type}:{member}")
+
+        missing = sorted(required - configured)
+        details: list[str] = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if exemptions:
+            details.append(f"{len(exemptions)} exempted member(s)")
+
+        return Finding(
+            control_id="3.1",
+            title="Audit logging for all services",
+            section="logging",
+            severity="HIGH",
+            status="FAIL" if details else "PASS",
+            detail="; ".join(details) if details else "Admin Read, Data Read, and Data Write enabled for allServices",
+            nist_csf="DE.AE-3",
+            resources=missing + exemptions,
+        )
+    except Exception as e:
+        return Finding(
+            control_id="3.1",
+            title="Audit logging for all services",
+            section="logging",
+            severity="HIGH",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="DE.AE-3",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Section 4 — Networking
 # ---------------------------------------------------------------------------
+
+
+def check_4_1_default_network_deleted(network_client, project_id: str) -> Finding:
+    """CIS 4.1 — Default network should be deleted."""
+    try:
+        request = {"project": project_id}
+        networks = list(network_client.list(request=request))
+        default_networks = [network.name for network in networks if getattr(network, "name", "") == "default"]
+        return Finding(
+            control_id="4.1",
+            title="Default network deleted",
+            section="networking",
+            severity="HIGH",
+            status="FAIL" if default_networks else "PASS",
+            detail="Default VPC network still exists" if default_networks else "Default VPC network not present",
+            nist_csf="PR.AC-5",
+            resources=default_networks,
+        )
+    except Exception as e:
+        return Finding(
+            control_id="4.1",
+            title="Default network deleted",
+            section="networking",
+            severity="HIGH",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="PR.AC-5",
+        )
 
 
 def check_4_2_no_unrestricted_ssh_rdp(compute_client, project_id: str) -> Finding:
@@ -295,6 +396,37 @@ def check_4_3_vpc_flow_logs(compute_client, project_id: str) -> Finding:
         )
 
 
+def check_4_4_private_google_access(compute_client, project_id: str) -> Finding:
+    """CIS 4.4 — Private Google Access enabled on all subnets."""
+    try:
+        request = {"project": project_id}
+        subnets = []
+        for region_subnets in compute_client.aggregated_list(request=request):
+            for subnet in region_subnets.subnetworks or []:
+                subnets.append(subnet)
+        missing_pga = [s.name for s in subnets if not getattr(s, "private_ip_google_access", False)]
+        return Finding(
+            control_id="4.4",
+            title="Private Google Access on all subnets",
+            section="networking",
+            severity="MEDIUM",
+            status="FAIL" if missing_pga else "PASS",
+            detail=f"{len(missing_pga)} subnets without Private Google Access" if missing_pga else "All subnets enable Private Google Access",
+            nist_csf="PR.AC-5",
+            resources=missing_pga,
+        )
+    except Exception as e:
+        return Finding(
+            control_id="4.4",
+            title="Private Google Access on all subnets",
+            section="networking",
+            severity="MEDIUM",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="PR.AC-5",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
@@ -309,6 +441,7 @@ def run_assessment(project_id: str, section: str | None = None) -> list[Finding]
     try:
         from google.cloud import iam_admin_v1, resourcemanager_v3, storage
         from google.cloud.compute_v1.services.firewalls import FirewallsClient
+        from google.cloud.compute_v1.services.networks import NetworksClient
         from google.cloud.compute_v1.services.subnetworks import SubnetworksClient
     except ImportError:
         print(
@@ -320,6 +453,7 @@ def run_assessment(project_id: str, section: str | None = None) -> list[Finding]
     iam = iam_admin_v1.IAMClient()
     gcs = storage.Client(project=project_id)
     fw = FirewallsClient()
+    nw = NetworksClient()
     sn = SubnetworksClient()
 
     findings: list[Finding] = []
@@ -334,9 +468,14 @@ def run_assessment(project_id: str, section: str | None = None) -> list[Finding]
             lambda: check_2_1_uniform_access(gcs, project_id),
             lambda: check_2_3_no_public_buckets(gcs, project_id),
         ],
+        "logging": [
+            lambda: check_3_1_audit_logging_all_services(crm, project_id),
+        ],
         "networking": [
+            lambda: check_4_1_default_network_deleted(nw, project_id),
             lambda: check_4_2_no_unrestricted_ssh_rdp(fw, project_id),
             lambda: check_4_3_vpc_flow_logs(sn, project_id),
+            lambda: check_4_4_private_google_access(sn, project_id),
         ],
     }
 
@@ -376,7 +515,7 @@ def print_summary(findings: list[Finding]) -> None:
 def main():
     parser = argparse.ArgumentParser(description="CIS GCP Foundations Benchmark v3.0 Assessment")
     parser.add_argument("--project", required=True, help="GCP project ID")
-    parser.add_argument("--section", choices=["iam", "storage", "networking"], help="Run specific section")
+    parser.add_argument("--section", choices=["iam", "storage", "logging", "networking"], help="Run specific section")
     parser.add_argument("--output", choices=["console", "json"], default="console")
     parser.add_argument("--output-format", choices=list(OUTPUT_FORMATS), default="native")
     args = parser.parse_args()

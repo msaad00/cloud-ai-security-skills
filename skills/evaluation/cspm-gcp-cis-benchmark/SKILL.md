@@ -2,11 +2,12 @@
 name: cspm-gcp-cis-benchmark
 description: >-
   Assess GCP projects against a curated subset of CIS GCP Foundations Benchmark v3.0
-  controls. Automates 7 high-impact read-only checks across IAM, Cloud Storage, and
-  VPC networking. Use when the user mentions GCP CIS benchmark, GCP security posture,
-  service account key audit, or public bucket detection. Do NOT use for AWS or Azure;
+  controls. Automates 10 high-impact read-only checks across IAM, Cloud Storage,
+  logging, and VPC networking. Use when the user mentions GCP CIS benchmark, GCP
+  security posture, service account key audit, audit logging coverage, or public
+  bucket detection. Do NOT use for AWS or Azure;
   do NOT use to remediate findings (assessment-only, zero write permissions); do NOT
-  claim full CIS GCP coverage — only 7 controls are implemented, see the Roadmap
+  claim full CIS GCP coverage — only 10 controls are implemented, see the Roadmap
   section in this file for the gap.
 license: Apache-2.0
 approval_model: none
@@ -35,7 +36,7 @@ metadata:
 
 Automated assessment of GCP projects against a curated subset of CIS GCP
 Foundations Benchmark v3.0. The full benchmark has 80+ controls; this skill
-implements **7 high-impact checks** that cover the most common findings on
+implements **10 high-impact checks** that cover the most common findings on
 real GCP projects. Each check is mapped to NIST CSF 2.0.
 
 > **Honest scope:** the table below lists *only* what `src/checks.py` actually
@@ -47,9 +48,9 @@ real GCP projects. Each check is mapped to NIST CSF 2.0.
 
 - GCP project security posture assessment
 - Pre-audit for SOC 2, ISO 27001, FedRAMP
-- Vertex AI deployment security review
 - New project baseline validation
 - Service account key hygiene audit
+- Audit logging coverage review
 
 ## Architecture
 
@@ -60,15 +61,16 @@ flowchart LR
     subgraph GCP["GCP Project — read-only"]
         IAM["IAM & Service Accounts<br/>3 checks"]
         GCS["Cloud Storage<br/>2 checks"]
-        NET["VPC / Firewall<br/>2 checks"]
+        LOG["Audit Logging<br/>1 check"]
+        NET["VPC / Firewall<br/>4 checks"]
     end
 
-    CHK["checks.py<br/>7 CIS v3.0 controls<br/>roles/viewer + iam.securityReviewer"]
+    CHK["checks.py<br/>10 CIS v3.0 controls<br/>roles/viewer + iam.securityReviewer"]
     OUT["Findings<br/>JSON · Console"]
     FIX["Remediation<br/>IaC PR · console fix<br/>or exception with TTL"]
     VERIFY["Re-scan<br/>control_id == pass"]
 
-    IAM & GCS & NET --> CHK --> OUT --> FIX --> VERIFY
+    IAM & GCS & LOG & NET --> CHK --> OUT --> FIX --> VERIFY
     VERIFY -. drift detected .-> CHK
 
     style GCP fill:#1e293b,stroke:#475569,color:#e2e8f0
@@ -83,10 +85,10 @@ flowchart LR
 - **Read-only**: Requires `roles/viewer` + `roles/iam.securityReviewer`. Zero write permissions.
 - **No credentials stored**: GCP credentials from ADC (Application Default Credentials) only.
 - **No data exfiltration**: Results stay local. No calls beyond GCP SDK.
-- **Vertex AI safe**: Checks endpoint auth, VPC-SC, CMEK — does not access model data or training data.
+- **Least privilege**: reads project IAM policy, bucket posture, VPC networks, and subnet attributes only.
 - **Idempotent**: Run as often as needed with no side effects.
 
-## Implemented Controls (7)
+## Implemented Controls (10)
 
 Each row maps to one function in `src/checks.py`. If it's not in this table, it's not implemented.
 
@@ -105,12 +107,20 @@ Each row maps to one function in `src/checks.py`. If it's not in this table, it'
 | 2.1 | Uniform bucket-level access (no legacy ACL) | `check_2_1_uniform_access` | HIGH | PR.AC-3 |
 | 2.3 | No public buckets (allUsers/allAuthenticatedUsers) | `check_2_3_no_public_buckets` | CRITICAL | PR.AC-3 |
 
-### Section 4 — Networking (2 checks)
+### Section 3 — Logging (1 check)
 
 | # | CIS Control | Function | Severity | NIST CSF 2.0 |
 |---|------------|----------|----------|--------------|
+| 3.1 | Audit logging on `allServices` for Admin Read, Data Read, and Data Write with no exemptions | `check_3_1_audit_logging_all_services` | HIGH | DE.AE-3 |
+
+### Section 4 — Networking (4 checks)
+
+| # | CIS Control | Function | Severity | NIST CSF 2.0 |
+|---|------------|----------|----------|--------------|
+| 4.1 | Default VPC deleted | `check_4_1_default_network_deleted` | HIGH | PR.AC-5 |
 | 4.2 | No unrestricted SSH/RDP (0.0.0.0/0 on 22/3389) | `check_4_2_no_unrestricted_ssh_rdp` | HIGH | PR.AC-5 |
 | 4.3 | VPC flow logs on all subnets | `check_4_3_vpc_flow_logs` | MEDIUM | DE.CM-1 |
+| 4.4 | Private Google Access on all subnets | `check_4_4_private_google_access` | MEDIUM | PR.AC-5 |
 
 ## Roadmap — Documented but Not Yet Automated
 
@@ -124,9 +134,7 @@ These controls are part of the CIS GCP Foundations v3.0 benchmark but are *not* 
 | 1.7 | SA impersonation scoped | IAM Recommender or policy walker |
 | 2.2 | Bucket retention policy on compliance buckets | Requires labeling convention |
 | 2.4 | CMEK encryption on sensitive data | KMS + Storage join |
-| 3.1–3.4 | Logging coverage and alert policies | `google-cloud-logging` + `google-cloud-monitoring` |
-| 4.1 | Default VPC deleted | Compute API VPC enumeration |
-| 4.4 | Private Google Access | Subnet attribute |
+| 3.2–3.4 | Logging metrics and alert policies | `google-cloud-logging` + `google-cloud-monitoring` |
 | 4.5 | SSL policies enforce TLS 1.2+ | Compute API SSL policies |
 
 ## Usage
@@ -137,7 +145,8 @@ python src/checks.py --project my-project-id
 
 # Run specific section
 python src/checks.py --project my-project-id --section iam
-python src/checks.py --project my-project-id --section vertex-ai
+python src/checks.py --project my-project-id --section logging
+python src/checks.py --project my-project-id --section networking
 
 # Output JSON
 python src/checks.py --project my-project-id --output json --output-format ocsf > cis-gcp-results.json
@@ -154,11 +163,12 @@ python src/checks.py --project my-project-id --output json --output-format ocsf 
 ```
 
 ```
-  FINDING: Vertex AI endpoint publicly accessible (V.5)
-  ─────────────────────────────────────────────────────
-  FIX:     gcloud ai endpoints update ENDPOINT_ID --region=REGION --clear-traffic-split
-           # Then configure VPC-SC perimeter for Vertex AI
-  VERIFY:  gcloud ai endpoints describe ENDPOINT_ID --format=json | jq '.network'
+  FINDING: Audit logging coverage missing on allServices (3.1)
+  ───────────────────────────────────────────────────────────
+  FIX:     gcloud projects get-iam-policy PROJECT_ID --format=json > policy.json
+           # add allServices auditConfigs for ADMIN_READ, DATA_READ, DATA_WRITE
+           gcloud projects set-iam-policy PROJECT_ID policy.json
+  VERIFY:  python src/checks.py --project PROJECT_ID --section logging
 ```
 
 ## Posture Metrics
@@ -168,6 +178,7 @@ python src/checks.py --project my-project-id --output json --output-format ocsf 
 | CIS Pass Rate | > 90% |
 | Service Accounts with User Keys | 0 |
 | Public Buckets | 0 |
+| Default VPC Present | 0 |
 | Subnets without Flow Logs | 0 |
-| Vertex AI Endpoints without VPC-SC | 0 |
+| Subnets without Private Google Access | 0 |
 | Audit Logging Coverage | 100% of services |

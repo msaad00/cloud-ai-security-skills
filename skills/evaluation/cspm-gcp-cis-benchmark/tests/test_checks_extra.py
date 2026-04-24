@@ -3,7 +3,10 @@
 Exercises uncovered paths:
     - check_1_4_sa_key_rotation (old vs fresh keys)
     - check_2_1_uniform_access (legacy ACL vs UBLA)
+    - check_3_1_audit_logging_all_services (coverage + exemptions)
+    - check_4_1_default_network_deleted (default VPC present/absent)
     - check_4_3_vpc_flow_logs (subnet w/ and w/o logs)
+    - check_4_4_private_google_access (subnet w/ and w/o PGA)
     - error branches for every check
     - run_assessment + section filter via patched SDK modules
     - print_summary + main CLI (console and JSON outputs)
@@ -152,8 +155,108 @@ def test_2_3_error_branch():
 
 
 # ---------------------------------------------------------------------------
+# Logging checks
+# ---------------------------------------------------------------------------
+
+
+def _audit_log_config(log_type: str, exempted_members: list[str] | None = None):
+    config = MagicMock()
+    config.log_type = log_type
+    config.exempted_members = exempted_members or []
+    return config
+
+
+def _audit_config(service: str, *log_configs):
+    config = MagicMock()
+    config.service = service
+    config.audit_log_configs = list(log_configs)
+    return config
+
+
+def test_3_1_audit_logging_all_services_passes():
+    crm = MagicMock()
+    policy = MagicMock()
+    policy.audit_configs = [
+        _audit_config(
+            "allServices",
+            _audit_log_config("ADMIN_READ"),
+            _audit_log_config("DATA_READ"),
+            _audit_log_config("DATA_WRITE"),
+        )
+    ]
+    crm.get_iam_policy.return_value = policy
+    f = _CHECKS.check_3_1_audit_logging_all_services(crm, "p")
+    assert f.status == "PASS"
+
+
+def test_3_1_audit_logging_missing_type_fails():
+    crm = MagicMock()
+    policy = MagicMock()
+    policy.audit_configs = [
+        _audit_config(
+            "allServices",
+            _audit_log_config("ADMIN_READ"),
+            _audit_log_config("DATA_WRITE"),
+        )
+    ]
+    crm.get_iam_policy.return_value = policy
+    f = _CHECKS.check_3_1_audit_logging_all_services(crm, "p")
+    assert f.status == "FAIL"
+    assert "DATA_READ" in f.resources
+
+
+def test_3_1_audit_logging_exemptions_fail():
+    crm = MagicMock()
+    policy = MagicMock()
+    policy.audit_configs = [
+        _audit_config(
+            "allServices",
+            _audit_log_config("ADMIN_READ"),
+            _audit_log_config("DATA_READ", ["user:alice@example.com"]),
+            _audit_log_config("DATA_WRITE"),
+        )
+    ]
+    crm.get_iam_policy.return_value = policy
+    f = _CHECKS.check_3_1_audit_logging_all_services(crm, "p")
+    assert f.status == "FAIL"
+    assert any("alice@example.com" in r for r in f.resources)
+
+
+def test_3_1_error_branch():
+    crm = MagicMock()
+    crm.get_iam_policy.side_effect = RuntimeError("x")
+    assert _CHECKS.check_3_1_audit_logging_all_services(crm, "p").status == "ERROR"
+
+
+# ---------------------------------------------------------------------------
 # Networking checks
 # ---------------------------------------------------------------------------
+
+
+def test_4_1_default_network_detected():
+    networks = MagicMock()
+    default = MagicMock()
+    default.name = "default"
+    custom = MagicMock()
+    custom.name = "custom"
+    networks.list.return_value = [default, custom]
+    f = _CHECKS.check_4_1_default_network_deleted(networks, "p")
+    assert f.status == "FAIL"
+    assert f.resources == ["default"]
+
+
+def test_4_1_no_default_network_passes():
+    networks = MagicMock()
+    custom = MagicMock()
+    custom.name = "custom"
+    networks.list.return_value = [custom]
+    assert _CHECKS.check_4_1_default_network_deleted(networks, "p").status == "PASS"
+
+
+def test_4_1_error_branch():
+    networks = MagicMock()
+    networks.list.side_effect = RuntimeError("x")
+    assert _CHECKS.check_4_1_default_network_deleted(networks, "p").status == "ERROR"
 
 
 def test_4_2_rule_disabled_is_ignored():
@@ -229,6 +332,42 @@ def test_4_3_error_branch():
     assert _CHECKS.check_4_3_vpc_flow_logs(compute, "p").status == "ERROR"
 
 
+def test_4_4_private_google_access_mixed_subnets():
+    compute = MagicMock()
+    good = MagicMock()
+    good.name = "good"
+    good.private_ip_google_access = True
+
+    bad = MagicMock()
+    bad.name = "bad"
+    bad.private_ip_google_access = False
+
+    region_bundle = MagicMock()
+    region_bundle.subnetworks = [good, bad]
+    compute.aggregated_list.return_value = [region_bundle]
+
+    f = _CHECKS.check_4_4_private_google_access(compute, "p")
+    assert f.status == "FAIL"
+    assert f.resources == ["bad"]
+
+
+def test_4_4_private_google_access_all_enabled():
+    compute = MagicMock()
+    good = MagicMock()
+    good.name = "good"
+    good.private_ip_google_access = True
+    region_bundle = MagicMock()
+    region_bundle.subnetworks = [good]
+    compute.aggregated_list.return_value = [region_bundle]
+    assert _CHECKS.check_4_4_private_google_access(compute, "p").status == "PASS"
+
+
+def test_4_4_error_branch():
+    compute = MagicMock()
+    compute.aggregated_list.side_effect = RuntimeError("x")
+    assert _CHECKS.check_4_4_private_google_access(compute, "p").status == "ERROR"
+
+
 # ---------------------------------------------------------------------------
 # Runner, CLI, summary
 # ---------------------------------------------------------------------------
@@ -252,6 +391,8 @@ def _install_fake_google_modules(monkeypatch):
     services = types.ModuleType("google.cloud.compute_v1.services")
     firewalls_mod = types.ModuleType("google.cloud.compute_v1.services.firewalls")
     firewalls_mod.FirewallsClient = MagicMock()
+    networks_mod = types.ModuleType("google.cloud.compute_v1.services.networks")
+    networks_mod.NetworksClient = MagicMock()
     subnetworks_mod = types.ModuleType("google.cloud.compute_v1.services.subnetworks")
     subnetworks_mod.SubnetworksClient = MagicMock()
 
@@ -263,6 +404,7 @@ def _install_fake_google_modules(monkeypatch):
     monkeypatch.setitem(sys.modules, "google.cloud.compute_v1", compute_v1)
     monkeypatch.setitem(sys.modules, "google.cloud.compute_v1.services", services)
     monkeypatch.setitem(sys.modules, "google.cloud.compute_v1.services.firewalls", firewalls_mod)
+    monkeypatch.setitem(sys.modules, "google.cloud.compute_v1.services.networks", networks_mod)
     monkeypatch.setitem(
         sys.modules, "google.cloud.compute_v1.services.subnetworks", subnetworks_mod
     )
@@ -271,7 +413,7 @@ def _install_fake_google_modules(monkeypatch):
 def test_run_assessment_full_and_section_filter(monkeypatch):
     _install_fake_google_modules(monkeypatch)
     findings = _CHECKS.run_assessment(project_id="p")
-    assert {f.section for f in findings} == {"iam", "storage", "networking"}
+    assert {f.section for f in findings} == {"iam", "storage", "logging", "networking"}
     # Section filter
     filtered = _CHECKS.run_assessment(project_id="p", section="iam")
     assert {f.section for f in filtered} == {"iam"}
