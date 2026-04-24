@@ -61,6 +61,7 @@ Strongest current ATT&CK coverage:
 | `detect-gcp-audit-logs-disabled` | T1562.001 for successful GCP Cloud Logging `DeleteSink` and `DeleteLog` operations |
 | `detect-azure-activity-logs-disabled` | T1562.001 for successful Azure `Microsoft.Insights/diagnosticSettings/delete` operations |
 | `detect-prompt-injection-mcp-proxy` | MITRE ATLAS AML.T0051 for explicit prompt-injection and instruction-smuggling language in MCP tool descriptions |
+| `detect-system-prompt-extraction` | MITRE ATLAS AML.T0004 / AML.T0041 for explicit system-prompt and hidden-instruction leakage markers in MCP tool-call responses |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
 | `detect-sensitive-secret-read-k8s` | T1552, T1552.007 |
