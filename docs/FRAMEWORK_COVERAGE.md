@@ -4,15 +4,15 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.8.0`
 - Registry updated: `2026-04-24`
-- Total shipped skills in registry: **72**
+- Total shipped skills in registry: **73**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **51** | — |
-| MITRE ATT&CK | v14 | **45** | 100% mapped coverage |
-| MITRE ATLAS | current | **11** | 100% mapped coverage |
+| OCSF | 1.8.0 | **52** | — |
+| MITRE ATT&CK | v14 | **46** | 100% mapped coverage |
+| MITRE ATLAS | current | **12** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **6** | — |
@@ -24,7 +24,7 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | SOC 2 TSC | current | **20** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
-| OWASP LLM Top 10 | current | **6** | — |
+| OWASP LLM Top 10 | current | **7** | — |
 | OWASP MCP Top 10 | current | **7** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **51**
+Shipped skills mapped: **52**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -44,6 +44,7 @@ Shipped skills mapped: **51**
 | [`detect-aws-access-key-creation`](../skills/detection/detect-aws-access-key-creation) | detection | aws | iam-users, access-keys, credentials, cloudtrail |
 | [`detect-aws-enumeration-burst`](../skills/detection/detect-aws-enumeration-burst) | detection | aws | identities, compute, storage, network, organizations, cloudtrail |
 | [`detect-aws-login-profile-creation`](../skills/detection/detect-aws-login-profile-creation) | detection | aws | iam-users, login-profiles, credentials, cloudtrail |
+| [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-aws-open-security-group`](../skills/detection/detect-aws-open-security-group) | detection | aws | security-groups, ingress-rules, cloudtrail |
 | [`detect-azure-activity-logs-disabled`](../skills/detection/detect-azure-activity-logs-disabled) | detection | azure | activity-logs, diagnostic-settings, logging |
 | [`detect-azure-open-nsg`](../skills/detection/detect-azure-open-nsg) | detection | azure | network-security-groups, ingress-rules, azure-activity |
@@ -99,13 +100,14 @@ Shipped skills mapped: **51**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **45**
+Shipped skills mapped: **46**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-aws-access-key-creation`](../skills/detection/detect-aws-access-key-creation) | detection | aws | iam-users, access-keys, credentials, cloudtrail |
 | [`detect-aws-enumeration-burst`](../skills/detection/detect-aws-enumeration-burst) | detection | aws | identities, compute, storage, network, organizations, cloudtrail |
 | [`detect-aws-login-profile-creation`](../skills/detection/detect-aws-login-profile-creation) | detection | aws | iam-users, login-profiles, credentials, cloudtrail |
+| [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-aws-open-security-group`](../skills/detection/detect-aws-open-security-group) | detection | aws | security-groups, ingress-rules, cloudtrail |
 | [`detect-azure-activity-logs-disabled`](../skills/detection/detect-azure-activity-logs-disabled) | detection | azure | activity-logs, diagnostic-settings, logging |
 | [`detect-azure-open-nsg`](../skills/detection/detect-azure-open-nsg) | detection | azure | network-security-groups, ingress-rules, azure-activity |
@@ -156,10 +158,11 @@ Shipped skills mapped: **45**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **11**
+Shipped skills mapped: **12**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
 | [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
@@ -355,11 +358,12 @@ Shipped skills mapped: **3**
 
 - Registry id: `owasp-llm-top-10`
 
-Shipped skills mapped: **6**
+Shipped skills mapped: **7**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
+| [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
 | [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
