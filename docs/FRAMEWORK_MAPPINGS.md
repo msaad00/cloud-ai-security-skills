@@ -20,7 +20,7 @@ from individual `SKILL.md` files.
 | Framework | Status | Where it appears |
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
-| **MITRE ATT&CK v14** | strong and broader | 44 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst slice, and the AWS / GCP / Azure logging-impairment trio |
+| **MITRE ATT&CK v14** | strong and broader | 45 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, and the AWS / GCP / Azure logging-impairment trio |
 | **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection detection |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
@@ -52,6 +52,7 @@ Strongest current ATT&CK coverage:
 | `detect-aws-access-key-creation` | T1098.001 for successful AWS IAM `CreateAccessKey` operations that add credential material to an IAM user |
 | `detect-aws-login-profile-creation` | T1098.001 for successful AWS IAM `CreateLoginProfile` operations that add console-password credential material to an IAM user |
 | `detect-aws-enumeration-burst` | T1526 for short-window bursts of high-signal AWS discovery APIs in CloudTrail across IAM, EC2, S3, KMS, Organizations, EKS, Lambda, and CloudTrail |
+| `detect-s3-cross-account-copy` | T1537 for successful AWS S3 `CopyObject` calls where the acting principal account differs from the recipient bucket-owner account |
 | `detect-okta-mfa-fatigue` | T1621 for repeated Okta Verify push challenge + deny bursts |
 | `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-entra-role-grant-escalation` | T1098.003 for successful Entra app-role assignments that grant additional application permissions to service principals |
@@ -84,6 +85,9 @@ Notes:
 - The first AWS cloud-discovery slice now ships as
   `detect-aws-enumeration-burst`, but it is intentionally a curated API
   burst detector, not a claim that all AWS discovery behavior is covered.
+- The first AWS exfiltration-to-cloud-account slice now ships as
+  `detect-s3-cross-account-copy`, but it is intentionally limited to
+  successful cross-account `CopyObject` events, not all storage egress.
 
 ## OCSF identity normalization
 

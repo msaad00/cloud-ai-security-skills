@@ -22,11 +22,12 @@ The current north star is not "more skills" by itself. It is:
 
 ### Current shipped progress snapshot
 
-- **ATT&CK depth:** 44 mapped skills in the coverage registry, with the first
+- **ATT&CK depth:** 45 mapped skills in the coverage registry, with the first
   AWS IAM-user credential-creation slices now shipped via access-key and
   login-profile detection, the first AWS cloud-discovery burst slice now
-  shipped, and the first cross-cloud logging-impairment trio now shipped
-  across AWS, GCP, and Azure.
+  shipped, the first AWS exfiltration-to-cloud-account slice now shipped via
+  cross-account S3 copy detection, and the first cross-cloud
+  logging-impairment trio now shipped across AWS, GCP, and Azure.
 - **CIS and posture depth:** 91 shipped benchmark checks across AWS, GCP,
   Azure, Kubernetes, container, GPU, and model-serving surfaces; AWS also has
   the first guarded `--auto-remediate` slice.
