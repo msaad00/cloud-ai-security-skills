@@ -1,7 +1,7 @@
 """
 CIS AWS Foundations Benchmark v3.0 — Automated Assessment
 
-18 checks across IAM, Storage, Logging, and Networking.
+22 checks across IAM, Storage, Logging, Networking, and Security Services.
 Read-only: requires SecurityAudit managed policy.
 
 Frameworks:
@@ -823,6 +823,110 @@ def check_3_4_cloudwatch_alarms(cw) -> Finding:
         )
 
 
+def check_3_5_cloudtrail_kms_encryption(ct) -> Finding:
+    """CIS 3.5 — CloudTrail trails encrypted with KMS."""
+    try:
+        trails = ct.describe_trails()["trailList"]
+        if not trails:
+            return Finding(
+                control_id="3.5",
+                title="CloudTrail KMS encryption",
+                section="logging",
+                severity="MEDIUM",
+                status="FAIL",
+                detail="No CloudTrail trails found",
+                nist_csf="PR.DS-1",
+                iso_27001="A.8.24",
+            )
+        no_kms = [t["Name"] for t in trails if not t.get("KmsKeyId")]
+        return Finding(
+            control_id="3.5",
+            title="CloudTrail KMS encryption",
+            section="logging",
+            severity="MEDIUM",
+            status="FAIL" if no_kms else "PASS",
+            detail=f"{len(no_kms)} trails without KMS encryption"
+            if no_kms
+            else "All trails use KMS encryption",
+            nist_csf="PR.DS-1",
+            iso_27001="A.8.24",
+            resources=no_kms,
+        )
+    except ClientError as e:
+        return Finding(
+            control_id="3.5",
+            title="CloudTrail KMS encryption",
+            section="logging",
+            severity="MEDIUM",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="PR.DS-1",
+            iso_27001="A.8.24",
+        )
+
+
+def _trail_has_data_events(selectors: dict[str, Any]) -> bool:
+    for selector in selectors.get("EventSelectors", []) or []:
+        if selector.get("DataResources"):
+            return True
+    for selector in selectors.get("AdvancedEventSelectors", []) or []:
+        field_selectors = selector.get("FieldSelectors", []) or []
+        for field_selector in field_selectors:
+            if field_selector.get("Field") != "eventCategory":
+                continue
+            values = field_selector.get("Equals") or []
+            if any(str(value) == "Data" for value in values):
+                return True
+    return False
+
+
+def check_3_6_cloudtrail_data_events(ct) -> Finding:
+    """CIS 3.6 — CloudTrail data events enabled."""
+    try:
+        trails = ct.describe_trails()["trailList"]
+        if not trails:
+            return Finding(
+                control_id="3.6",
+                title="CloudTrail data events",
+                section="logging",
+                severity="MEDIUM",
+                status="FAIL",
+                detail="No CloudTrail trails found",
+                nist_csf="DE.CM-1",
+                iso_27001="A.8.15",
+            )
+        missing = []
+        for trail in trails:
+            trail_name = str(trail.get("Name") or "")
+            selectors = ct.get_event_selectors(TrailName=trail_name)
+            if not _trail_has_data_events(selectors):
+                missing.append(trail_name)
+        return Finding(
+            control_id="3.6",
+            title="CloudTrail data events",
+            section="logging",
+            severity="MEDIUM",
+            status="FAIL" if missing else "PASS",
+            detail=f"{len(missing)} trails without data events"
+            if missing
+            else "All trails record data events",
+            nist_csf="DE.CM-1",
+            iso_27001="A.8.15",
+            resources=missing,
+        )
+    except ClientError as e:
+        return Finding(
+            control_id="3.6",
+            title="CloudTrail data events",
+            section="logging",
+            severity="MEDIUM",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="DE.CM-1",
+            iso_27001="A.8.15",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Section 4 — Networking
 # ---------------------------------------------------------------------------
@@ -905,6 +1009,82 @@ def check_4_3_vpc_flow_logs(ec2) -> Finding:
             control_id="4.3",
             title="VPC flow logs enabled",
             section="networking",
+            severity="MEDIUM",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="DE.CM-1",
+            iso_27001="A.8.16",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Section 6 — Security Services
+# ---------------------------------------------------------------------------
+
+
+def check_6_1_guardduty_enabled(gd) -> Finding:
+    """CIS 6.1 — GuardDuty enabled."""
+    try:
+        detectors = gd.list_detectors().get("DetectorIds", [])
+        return Finding(
+            control_id="6.1",
+            title="GuardDuty enabled",
+            section="security-services",
+            severity="MEDIUM",
+            status="PASS" if detectors else "FAIL",
+            detail=f"{len(detectors)} GuardDuty detector(s) enabled"
+            if detectors
+            else "GuardDuty is not enabled",
+            nist_csf="DE.CM-1",
+            iso_27001="A.8.16",
+            resources=list(detectors),
+        )
+    except ClientError as e:
+        return Finding(
+            control_id="6.1",
+            title="GuardDuty enabled",
+            section="security-services",
+            severity="MEDIUM",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="DE.CM-1",
+            iso_27001="A.8.16",
+        )
+
+
+def check_6_2_securityhub_enabled(sh) -> Finding:
+    """CIS 6.2 — Security Hub enabled."""
+    try:
+        hub = sh.describe_hub()
+        hub_arn = str(hub.get("HubArn") or "")
+        return Finding(
+            control_id="6.2",
+            title="Security Hub enabled",
+            section="security-services",
+            severity="MEDIUM",
+            status="PASS" if hub_arn else "FAIL",
+            detail="Security Hub is enabled" if hub_arn else "Security Hub is not enabled",
+            nist_csf="DE.CM-1",
+            iso_27001="A.8.16",
+            resources=[hub_arn] if hub_arn else [],
+        )
+    except ClientError as e:
+        code = str(e.response.get("Error", {}).get("Code") or "")
+        if code in {"InvalidAccessException", "ResourceNotFoundException"}:
+            return Finding(
+                control_id="6.2",
+                title="Security Hub enabled",
+                section="security-services",
+                severity="MEDIUM",
+                status="FAIL",
+                detail="Security Hub is not enabled",
+                nist_csf="DE.CM-1",
+                iso_27001="A.8.16",
+            )
+        return Finding(
+            control_id="6.2",
+            title="Security Hub enabled",
+            section="security-services",
             severity="MEDIUM",
             status="ERROR",
             detail=str(e),
@@ -1396,11 +1576,17 @@ SECTIONS: dict[str, list] = {
         check_3_2_cloudtrail_validation,
         check_3_3_cloudtrail_s3_not_public,
         check_3_4_cloudwatch_alarms,
+        check_3_5_cloudtrail_kms_encryption,
+        check_3_6_cloudtrail_data_events,
     ],
     "networking": [
         check_4_1_no_unrestricted_ssh,
         check_4_2_no_unrestricted_rdp,
         check_4_3_vpc_flow_logs,
+    ],
+    "security-services": [
+        check_6_1_guardduty_enabled,
+        check_6_2_securityhub_enabled,
     ],
 }
 
@@ -1413,6 +1599,8 @@ def _get_clients(region: str) -> dict[str, Any]:
         "ct": session.client("cloudtrail"),
         "cw": session.client("cloudwatch"),
         "ec2": session.client("ec2"),
+        "gd": session.client("guardduty"),
+        "sh": session.client("securityhub"),
         "sts": session.client("sts"),
     }
 
@@ -1430,6 +1618,10 @@ def _run_check(fn, clients: dict) -> Finding:
         return fn(clients["ct"] if "cloudtrail" in name else clients["cw"])
     if name.startswith("check_4"):
         return fn(clients["ec2"])
+    if "guardduty" in name:
+        return fn(clients["gd"])
+    if "securityhub" in name:
+        return fn(clients["sh"])
     return fn(clients["iam"])
 
 

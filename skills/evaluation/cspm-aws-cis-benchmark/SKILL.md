@@ -1,8 +1,8 @@
 ---
 name: cspm-aws-cis-benchmark
 description: >-
-  Assess AWS accounts against CIS AWS Foundations Benchmark v3.0. Runs 18 automated
-  read-only checks across IAM, Storage, Logging, and Networking. Produces per-control
+  Assess AWS accounts against CIS AWS Foundations Benchmark v3.0. Runs 22 automated
+  read-only checks across IAM, Storage, Logging, Networking, and security services. Produces per-control
   pass/fail results with remediation commands. Optional `--auto-remediate` support
   adds dry-run-first plans for a narrow AWS-first control set (S3 encryption, S3 public
   access block, S3 versioning, unrestricted SSH/RDP SG rules), with `--apply` gated by
@@ -46,7 +46,7 @@ metadata:
 # CSPM — AWS CIS Foundations Benchmark v3.0
 
 Automated assessment of AWS accounts against the CIS AWS Foundations Benchmark v3.0.
-18 checks across 4 domains, each mapped to NIST CSF 2.0, ISO 27001:2022, and SOC 2.
+22 checks across 5 domains, each mapped to NIST CSF 2.0, ISO 27001:2022, and SOC 2.
 
 ## Use when
 
@@ -71,16 +71,18 @@ flowchart TD
     subgraph AWS["AWS Account"]
         IAM["IAM<br/>7 checks"]
         S3["S3 Storage<br/>4 checks"]
-        CT["CloudTrail<br/>4 checks"]
+        CT["CloudTrail<br/>6 checks"]
         VPC["VPC/Network<br/>3 checks"]
+        SEC["Security Services<br/>2 checks"]
     end
 
-    CHK["checks.py<br/>18 CIS v3.0 controls<br/>dry-run auto-remediate for supported failures"]
+    CHK["checks.py<br/>22 CIS v3.0 controls<br/>dry-run auto-remediate for supported failures"]
 
     IAM --> CHK
     S3 --> CHK
     CT --> CHK
     VPC --> CHK
+    SEC --> CHK
 
     CHK --> JSON["JSON<br/>findings or findings+plans"]
     CHK --> CON["Console<br/>pass/fail + remediation plan"]
@@ -106,7 +108,7 @@ flowchart TD
 
 ## Controls — CIS AWS Foundations v3.0 (key controls)
 
-> The full CIS AWS Foundations Benchmark v3.0 has 60+ controls. This skill automates the 18 most impactful checks — the ones most frequently flagged in audits and with the highest blast radius if misconfigured.
+> The full CIS AWS Foundations Benchmark v3.0 has 60+ controls. This skill automates 22 high-signal checks — the ones most frequently flagged in audits and with the highest blast radius if misconfigured.
 
 ### Section 1 — IAM (7 checks)
 
@@ -129,7 +131,7 @@ flowchart TD
 | 2.3 | S3 public access blocked | CRITICAL | PR.AC-3 | A.8.3 |
 | 2.4 | S3 versioning enabled | MEDIUM | PR.DS-1 | A.8.13 |
 
-### Section 3 — Logging (4 checks)
+### Section 3 — Logging (6 checks)
 
 | # | CIS Control | Severity | NIST CSF 2.0 | ISO 27001 |
 |---|------------|----------|--------------|-----------|
@@ -137,6 +139,8 @@ flowchart TD
 | 3.2 | CloudTrail log validation | HIGH | PR.DS-6 | A.8.15 |
 | 3.3 | CloudTrail S3 not public | CRITICAL | PR.AC-3 | A.8.3 |
 | 3.4 | CloudWatch alarms configured | MEDIUM | DE.CM-1 | A.8.16 |
+| 3.5 | CloudTrail KMS encryption | MEDIUM | PR.DS-1 | A.8.24 |
+| 3.6 | CloudTrail data events | MEDIUM | DE.CM-1 | A.8.15 |
 
 ### Section 4 — Networking (3 checks)
 
@@ -145,6 +149,13 @@ flowchart TD
 | 4.1 | No unrestricted SSH (0.0.0.0/0:22) | HIGH | PR.AC-5 | A.8.20 |
 | 4.2 | No unrestricted RDP (0.0.0.0/0:3389) | HIGH | PR.AC-5 | A.8.20 |
 | 4.3 | VPC flow logs enabled | MEDIUM | DE.CM-1 | A.8.16 |
+
+### Section 6 — Security Services (2 checks)
+
+| # | CIS Control | Severity | NIST CSF 2.0 | ISO 27001 |
+|---|------------|----------|--------------|-----------|
+| 6.1 | GuardDuty enabled | MEDIUM | DE.CM-1 | A.8.16 |
+| 6.2 | Security Hub enabled | MEDIUM | DE.CM-1 | A.8.16 |
 
 ## Usage
 
@@ -157,6 +168,7 @@ python src/checks.py --section iam
 python src/checks.py --section storage
 python src/checks.py --section logging
 python src/checks.py --section networking
+python src/checks.py --section security-services
 
 # Output JSON for SIEM/warehouse ingestion
 python src/checks.py --output json --output-format ocsf > cis-aws-results.json
