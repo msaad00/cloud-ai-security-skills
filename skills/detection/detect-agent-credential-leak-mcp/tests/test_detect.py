@@ -27,6 +27,7 @@ load_jsonl = MODULE.load_jsonl
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"
 INPUT_FIXTURE = GOLDEN / "mcp_credential_leak_input.native.jsonl"
 EXPECTED_FINDING = GOLDEN / "mcp_credential_leak_findings.ocsf.jsonl"
+TEST_TIME_MS = 1_700_000_000_100
 
 
 def _load(path: Path) -> list[dict[str, Any]]:
@@ -65,7 +66,7 @@ class TestSignals:
 
 class TestNormalize:
     def test_normalizes_native_event(self):
-        event = _normalize_event(_ev("s1", "query_db", {"text": "ok"}, 100))
+        event = _normalize_event(_ev("s1", "query_db", {"text": "ok"}, TEST_TIME_MS))
         assert event is not None
         assert event["source_format"] == "native"
         assert event["tool_name"] == "query_db"
@@ -73,7 +74,7 @@ class TestNormalize:
     def test_normalizes_ocsf_event_when_body_present(self):
         event = {
             "class_uid": APPLICATION_ACTIVITY_UID,
-            "time": 100,
+            "time": TEST_TIME_MS,
             "metadata": {"uid": "evt-1", "product": {"feature": {"name": "ingest-mcp-proxy-ocsf"}}},
             "mcp": {"session_uid": "s1", "method": "tools/call", "direction": "response", "tool": {"name": "query_db"}},
             "body": {"text": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"},
@@ -85,15 +86,17 @@ class TestNormalize:
 
 class TestFilter:
     def test_ignores_wrong_source(self):
-        assert _credential_leak_event(_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, 100, source_skill="other")) is None
+        assert _credential_leak_event(
+            _ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, TEST_TIME_MS, source_skill="other")
+        ) is None
 
     def test_ignores_wrong_method(self):
-        event = _ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, 100)
+        event = _ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, TEST_TIME_MS)
         event["method"] = "tools/list"
         assert _credential_leak_event(event) is None
 
     def test_accepts_leaking_response(self):
-        event = _credential_leak_event(_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, 100))
+        event = _credential_leak_event(_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, TEST_TIME_MS))
         assert event is not None
         assert event["matches"][0]["signal"] == "github-token"
 
@@ -103,17 +106,17 @@ class TestDetect:
         assert list(detect([])) == []
 
     def test_benign_response_does_not_fire(self):
-        assert list(detect([_ev("s1", "tool", {"text": "all good"}, 100)])) == []
+        assert list(detect([_ev("s1", "tool", {"text": "all good"}, TEST_TIME_MS)])) == []
 
     def test_leaking_response_fires(self):
-        findings = list(detect([_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, 100)]))
+        findings = list(detect([_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, TEST_TIME_MS)]))
         assert len(findings) == 1
         finding = findings[0]
         assert finding["class_uid"] == FINDING_CLASS_UID
         assert "mcp-credential-exposure" in finding["finding_info"]["types"]
 
     def test_deterministic_finding_uid(self):
-        event = _ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, 100)
+        event = _ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, TEST_TIME_MS)
         first = list(detect([event]))[0]["finding_info"]["uid"]
         second = list(detect([event]))[0]["finding_info"]["uid"]
         assert first == second
@@ -121,7 +124,7 @@ class TestDetect:
     def test_native_output_keeps_masked_matches_only(self):
         findings = list(
             detect(
-                [_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, 100)],
+                [_ev("s1", "tool", {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}, TEST_TIME_MS)],
                 output_format="native",
             )
         )
