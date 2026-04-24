@@ -8,8 +8,9 @@ description: >-
   binding.type and binding.name observables. Every action is dry-run by
   default, deny-listed for protected namespaces (kube-system, kube-public,
   istio-system, linkerd*) and protected binding names (any binding whose name
-  starts with system:), gated behind an incident ID plus approver for --apply,
-  and dual-audited (DynamoDB + KMS-encrypted S3). Use when the user mentions
+  starts with system:), gated behind an incident ID plus approver plus an
+  explicit cluster allow-list for --apply, and dual-audited (DynamoDB +
+  KMS-encrypted S3). Use when the user mentions
   "revoke a Kubernetes RoleBinding," "remove a ClusterRoleBinding after
   privilege escalation," "respond to RBAC self-grant alert," or "re-verify a
   K8s RBAC revocation." Do NOT use for NetworkPolicy quarantine, pod
@@ -95,6 +96,7 @@ JSONL records on stdout. Three record types:
 | Protected namespaces | Default deny-list: `kube-system`, `kube-public`, `istio-system`, `linkerd*` (see `DEFAULT_DENY_NAMESPACES`); applies to `rolebindings` only (ClusterRoleBindings are namespace-less) |
 | Protected binding names | Any binding whose name starts with `system:` is denied (`DEFAULT_DENY_BINDING_PREFIXES`) — keeps `system:masters`, `system:basic-user`, `system:public-info-viewer`, etc. out of revocation scope |
 | Apply gate | `--apply` requires `K8S_RBAC_REVOKE_INCIDENT_ID` + `K8S_RBAC_REVOKE_APPROVER` env vars — set out-of-band by the responder, not by the agent |
+| Cluster boundary | `--apply` also requires `K8S_CLUSTER_NAME` and `K8S_RBAC_REVOKE_ALLOWED_CLUSTERS`; the active cluster must be allow-listed explicitly before a delete can run |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER the delete; failure paths still write the failure audit row |
 | Re-verify | `--reverify` confirms the binding is no longer present; emits `drift` if the binding came back |
 
@@ -107,6 +109,8 @@ python skills/remediation/remediate-k8s-rbac-revoke/src/handler.py findings.ocsf
 # Apply (after out-of-band approval)
 export K8S_RBAC_REVOKE_INCIDENT_ID=INC-2026-04-19-001
 export K8S_RBAC_REVOKE_APPROVER=alice@security
+export K8S_CLUSTER_NAME=prod-eks-us-east-1
+export K8S_RBAC_REVOKE_ALLOWED_CLUSTERS=prod-eks-us-east-1
 export K8S_REMEDIATION_AUDIT_DYNAMODB_TABLE=k8s-remediation-audit
 export K8S_REMEDIATION_AUDIT_BUCKET=acme-k8s-audit
 export KMS_KEY_ARN=arn:aws:kms:us-east-1:111122223333:key/...
@@ -122,6 +126,7 @@ python skills/remediation/remediate-k8s-rbac-revoke/src/handler.py findings.ocsf
 - Edit binding subjects in place (delete-only — partial edits introduce more failure modes)
 - Recreate the binding after a window — this skill is a one-way revocation
 - Cross-cluster propagation — operates on a single API server target
+- Acting against whichever cluster ambient kubeconfig happens to point at — `--apply` now fails closed unless the active cluster name is allow-listed explicitly
 
 ## See also
 
