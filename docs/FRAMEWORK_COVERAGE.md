@@ -4,13 +4,13 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **61**
+- Total shipped skills in registry: **62**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **40** | — |
+| OCSF | 1.8.0 | **41** | — |
 | MITRE ATT&CK | v14 | **38** | 100% mapped coverage |
 | MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **3** | — |
@@ -24,8 +24,8 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | SOC 2 TSC | current | **20** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
-| OWASP LLM Top 10 | current | **2** | — |
-| OWASP MCP Top 10 | current | **4** | — |
+| OWASP LLM Top 10 | current | **3** | — |
+| OWASP MCP Top 10 | current | **5** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
 Shipped skills mapped counts the number of skills in the registry that declare this framework under `frameworks`. It does not claim per-control depth; see each skill's `SKILL.md` and `REFERENCES.md` for the concrete controls, techniques, or benchmarks covered.
@@ -36,10 +36,11 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **40**
+Shipped skills mapped: **41**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-aws-open-security-group`](../skills/detection/detect-aws-open-security-group) | detection | aws | security-groups, ingress-rules, cloudtrail |
 | [`detect-azure-open-nsg`](../skills/detection/detect-azure-open-nsg) | detection | azure | network-security-groups, ingress-rules, azure-activity |
 | [`detect-container-escape-k8s`](../skills/detection/detect-container-escape-k8s) | detection | kubernetes | clusters, containers, runtime |
@@ -331,10 +332,11 @@ Shipped skills mapped: **3**
 
 - Registry id: `owasp-llm-top-10`
 
-Shipped skills mapped: **2**
+Shipped skills mapped: **3**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 
@@ -342,10 +344,11 @@ Shipped skills mapped: **2**
 
 - Registry id: `owasp-mcp-top-10`
 
-Shipped skills mapped: **4**
+Shipped skills mapped: **5**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`ingest-mcp-proxy-ocsf`](../skills/ingestion/ingest-mcp-proxy-ocsf) | ingestion | mcp, multi | agent-tools, application-activity |
