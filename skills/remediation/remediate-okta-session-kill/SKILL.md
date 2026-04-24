@@ -98,7 +98,7 @@ Without `--apply`, the skill prints the exact API calls it WOULD make (Okta user
 
 ### 3. `--apply` requires a declared incident window
 
-The skill refuses to execute unless env var `OKTA_SESSION_KILL_INCIDENT_ID` is set to a non-empty string AND env var `OKTA_SESSION_KILL_APPROVER` is set (both checked before the first API call). The incident ID must be a valid UUID or an operator-assigned string; the approver must be one of the `approver_roles` listed in frontmatter. Both land in the audit record.
+The skill refuses to execute unless env var `OKTA_SESSION_KILL_INCIDENT_ID` is set to a non-empty string AND env var `OKTA_SESSION_KILL_APPROVER` is set (both checked before the first API call). The incident ID must be a valid UUID or an operator-assigned string; the approver identity is recorded in the audit trail, and enterprise wrappers should enforce membership in the `approver_roles` policy declared in frontmatter. Both values land in the audit record.
 
 The intent: a skill invocation that lands in a SIEM alert or a naive agent loop STILL requires an operator to register an incident before writes happen. The gate sits outside the agent loop.
 
