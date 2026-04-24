@@ -11,6 +11,8 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-04-24 — Freeze hardening and release sweep fix
+
 Skills count on `main`: **73** (15 ingest, 5 discover, 26 detect, 7 evaluate,
 12 remediate, 2 view, 3 output, 3 sources).
 
@@ -22,6 +24,12 @@ Skills count on `main`: **73** (15 ingest, 5 discover, 26 detect, 7 evaluate,
   `K8S_CLUSTER_NAME`, and that active cluster must be named explicitly in
   `K8S_RBAC_REVOKE_ALLOWED_CLUSTERS` before a binding delete can run. Dry-run
   and reverify remain read-only.
+- **Kubernetes container-escape quarantine now has an explicit cluster boundary** —
+  [`remediate-container-escape-k8s`](skills/remediation/remediate-container-escape-k8s/)
+  now requires `K8S_CLUSTER_NAME` plus
+  `K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS` before any `--apply` quarantine,
+  pod-kill, or node-drain can proceed. The write path fails closed with
+  `skipped_cluster_boundary` when the active cluster is outside the allow-list.
 
 ### Changed
 
@@ -29,6 +37,9 @@ Skills count on `main`: **73** (15 ingest, 5 discover, 26 detect, 7 evaluate,
   now describe writable skills as being pinned to explicit environment
   boundaries such as account, project, tenant, org, or cluster allow-lists
   before `--apply`, not just HITL-gated in the abstract.
+- **The release sweep is mechanically clean again** — `scripts/run_mypy.sh`
+  now skips empty `src/` directories instead of failing on skill paths that no
+  longer contain Python entrypoints.
 
 ## [0.8.0] — 2026-04-24 — Cross-cloud ATT&CK depth and repo truth sync
 

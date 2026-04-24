@@ -40,6 +40,9 @@ for dir in skills/*/*/src; do
   case " ${STRICT_SKILL_DIRS[*]} " in
     *" ${dir} "*) continue ;;
   esac
+  if ! find "$dir" -maxdepth 1 \( -name '*.py' -o -name '*.pyi' \) | grep -q .; then
+    continue
+  fi
   "${MYPY_CMD[@]}" "$dir" --config-file pyproject.toml
 done
 

@@ -1,6 +1,6 @@
 [project]
 name = "cloud-ai-security-skills"
-version = "0.8.0"
+version = "0.8.1"
 description = "Security skills for cloud and AI with repo-native and OCSF modes."
 readme = "README.md"
 requires-python = ">=3.11"
