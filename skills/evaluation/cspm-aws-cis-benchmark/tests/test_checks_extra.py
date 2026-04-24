@@ -777,6 +777,7 @@ def test_build_remediation_records_apply_executes_and_audits(monkeypatch):
     clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
     monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID", "INC-1")
     monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_APPROVER", "alice@security")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS", "123456789012")
     monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_AUDIT_DYNAMODB_TABLE", "audit-table")
     monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_AUDIT_BUCKET", "audit-bucket")
     monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_AUDIT_KMS_KEY_ARN", "arn:aws:kms:::key/123")
@@ -805,6 +806,69 @@ def test_build_remediation_records_apply_executes_and_audits(monkeypatch):
     assert records[0]["incident_id"] == "INC-1"
     assert records[0]["approver"] == "alice@security"
     clients["s3"].put_bucket_versioning.assert_called_once()
+
+
+def test_build_remediation_records_apply_requires_explicit_account_allowlist(monkeypatch):
+    clients = {"s3": MagicMock(), "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID", "INC-1")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_APPROVER", "alice@security")
+
+    findings = [
+        Finding(
+            control_id="2.3",
+            title="S3 public access blocked",
+            section="storage",
+            severity="CRITICAL",
+            status="FAIL",
+            resources=["public-bucket"],
+        )
+    ]
+
+    try:
+        _CHECKS.build_remediation_records(
+            findings,
+            clients=clients,
+            region="us-east-1",
+            apply=True,
+            confirm=_CHECKS.CONFIRM_APPLY_PHRASE,
+        )
+    except ValueError as exc:
+        assert "ALLOWED_ACCOUNT_IDS" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_build_remediation_records_apply_rejects_wrong_account_allowlist(monkeypatch):
+    clients = {"s3": MagicMock(), "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID", "INC-1")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_APPROVER", "alice@security")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS", "210987654321")
+
+    findings = [
+        Finding(
+            control_id="2.3",
+            title="S3 public access blocked",
+            section="storage",
+            severity="CRITICAL",
+            status="FAIL",
+            resources=["public-bucket"],
+        )
+    ]
+
+    try:
+        _CHECKS.build_remediation_records(
+            findings,
+            clients=clients,
+            region="us-east-1",
+            apply=True,
+            confirm=_CHECKS.CONFIRM_APPLY_PHRASE,
+        )
+    except ValueError as exc:
+        assert "123456789012" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
 
 
 def test_main_auto_remediate_json_wraps_findings_and_remediation(monkeypatch):

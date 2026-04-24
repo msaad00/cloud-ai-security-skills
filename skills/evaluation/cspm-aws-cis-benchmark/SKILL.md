@@ -6,7 +6,8 @@ description: >-
   pass/fail results with remediation commands. Optional `--auto-remediate` support
   adds dry-run-first plans for a narrow AWS-first control set (S3 encryption, S3 public
   access block, S3 versioning, unrestricted SSH/RDP SG rules), with `--apply` gated by
-  incident + approver env vars, CLI confirmation, and dual audit. Use when the user
+  incident + approver env vars, explicit allowed-account binding, CLI confirmation, and
+  dual audit. Use when the user
   mentions AWS CIS benchmark, cloud security posture, IAM hygiene audit, S3 public
   access check, or CloudTrail validation. Do NOT use for GCP, Azure, or on-prem; do
   NOT use `--auto-remediate` for unsupported controls, for CloudTrail bootstrap, or to
@@ -97,6 +98,7 @@ flowchart TD
 - **Guarded write scope**: the shipped AWS-first slice only supports controls `2.1`, `2.3`, `2.4`, `4.1`, and `4.2`.
 - **Protected resources fail closed**: buckets in `CSPM_AWS_AUTOREMEDIATE_PROTECTED_BUCKETS`, security groups in `CSPM_AWS_AUTOREMEDIATE_PROTECTED_SECURITY_GROUPS`, protected tags, and default SGs emit `would-violate-protected-resource` instead of planning/applying.
 - **HITL gate**: `--apply` requires `CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID` + `CSPM_AWS_AUTOREMEDIATE_APPROVER` and CLI confirmation.
+- **Explicit account boundary**: `--apply` also requires `CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS` to name the current 12-digit AWS account, so ambient credentials cannot silently write to the wrong account.
 - **Dual audit**: every apply writes before/after audit rows to DynamoDB + KMS-encrypted S3 via `CSPM_AWS_AUTOREMEDIATE_AUDIT_*` env vars.
 - **No credentials stored**: AWS credentials come from environment/instance profile only.
 - **No data exfiltration**: results stay local. No external API calls beyond AWS SDK.
@@ -168,6 +170,7 @@ python src/checks.py --section storage --auto-remediate --output json
 # Apply supported remediation actions (CLI-confirmed)
 export CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID=INC-2026-04-24-001
 export CSPM_AWS_AUTOREMEDIATE_APPROVER=alice@security
+export CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS=123456789012
 export CSPM_AWS_AUTOREMEDIATE_AUDIT_DYNAMODB_TABLE=cloud-sec-remediation-audit
 export CSPM_AWS_AUTOREMEDIATE_AUDIT_BUCKET=cloud-sec-remediation-audit
 export CSPM_AWS_AUTOREMEDIATE_AUDIT_KMS_KEY_ARN=arn:aws:kms:us-east-1:123456789012:key/abc123

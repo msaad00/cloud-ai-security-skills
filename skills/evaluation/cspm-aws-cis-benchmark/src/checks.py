@@ -1193,6 +1193,25 @@ def _check_apply_gate() -> tuple[bool, str]:
         return False, "CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "CSPM_AWS_AUTOREMEDIATE_APPROVER is required for --apply"
+    allowed_accounts = _parse_env_list("CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS")
+    if not allowed_accounts:
+        return (
+            False,
+            "CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS must explicitly include the current account for --apply",
+        )
+    return True, ""
+
+
+def _check_apply_account_boundary(clients: dict[str, Any]) -> tuple[bool, str]:
+    account_id = _account_id(clients)
+    if len(account_id) != 12 or not account_id.isdigit():
+        return False, "unable to resolve a valid 12-digit AWS account ID for --apply"
+    allowed_accounts = _parse_env_list("CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS")
+    if account_id not in allowed_accounts:
+        return (
+            False,
+            f"current AWS account {account_id} is not listed in CSPM_AWS_AUTOREMEDIATE_ALLOWED_ACCOUNT_IDS",
+        )
     return True, ""
 
 
@@ -1234,6 +1253,9 @@ def build_remediation_records(
     audit_writer: DualAuditWriter | None = None
     if apply:
         ok, reason = _check_apply_gate()
+        if not ok:
+            raise ValueError(reason)
+        ok, reason = _check_apply_account_boundary(clients)
         if not ok:
             raise ValueError(reason)
         _confirm_apply(confirm)
