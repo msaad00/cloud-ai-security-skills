@@ -81,6 +81,7 @@ STATUS_SKIPPED_PROTECTED_BINDING = "skipped_protected_binding"
 STATUS_WOULD_VIOLATE_PROTECTED_BINDING = "would-violate-protected-binding"
 STATUS_SKIPPED_NO_BINDING = "skipped_no_binding_pointer"
 STATUS_SKIPPED_UNSUPPORTED_TYPE = "skipped_unsupported_binding_type"
+STATUS_SKIPPED_CLUSTER_BOUNDARY = "skipped_cluster_boundary"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -321,6 +322,11 @@ def load_protected_binding_prefixes() -> tuple[str, ...]:
     return DEFAULT_DENY_BINDING_PREFIXES
 
 
+def load_allowed_clusters() -> tuple[str, ...]:
+    raw = os.getenv("K8S_RBAC_REVOKE_ALLOWED_CLUSTERS", "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
+
+
 def is_protected_namespace(namespace: str, patterns: Iterable[str]) -> tuple[bool, str]:
     value = (namespace or "").strip().lower()
     if not value:
@@ -441,10 +447,18 @@ def _verification_record(target: Target, *, status: str, detail: str) -> dict[st
 def check_apply_gate() -> tuple[bool, str]:
     incident_id = os.getenv("K8S_RBAC_REVOKE_INCIDENT_ID", "").strip()
     approver = os.getenv("K8S_RBAC_REVOKE_APPROVER", "").strip()
+    cluster_name = os.getenv("K8S_CLUSTER_NAME", "").strip()
+    allowed_clusters = load_allowed_clusters()
     if not incident_id:
         return False, "K8S_RBAC_REVOKE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "K8S_RBAC_REVOKE_APPROVER is required for --apply"
+    if not cluster_name:
+        return False, "K8S_CLUSTER_NAME is required for --apply"
+    if not allowed_clusters:
+        return False, "K8S_RBAC_REVOKE_ALLOWED_CLUSTERS is required for --apply"
+    if cluster_name not in allowed_clusters:
+        return False, f"K8S_CLUSTER_NAME `{cluster_name}` is not listed in K8S_RBAC_REVOKE_ALLOWED_CLUSTERS"
     return True, ""
 
 
@@ -553,9 +567,12 @@ def run(
     protected_prefixes: Iterable[str] = DEFAULT_DENY_BINDING_PREFIXES,
     incident_id: str = "",
     approver: str = "",
+    cluster_name: str = "",
+    allowed_clusters: Iterable[str] = (),
 ) -> Iterator[dict[str, Any]]:
     deny_namespaces = tuple(deny_namespaces)
     protected_prefixes = tuple(protected_prefixes)
+    allowed_clusters = tuple(allowed_clusters)
 
     for target, _ in parse_targets(events):
         if target is None:
@@ -626,6 +643,26 @@ def run(
             )
             continue
 
+        if not cluster_name:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_CLUSTER_BOUNDARY,
+                detail="K8S_CLUSTER_NAME is required for --apply",
+                dry_run=False,
+            )
+            continue
+        if cluster_name not in allowed_clusters:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_CLUSTER_BOUNDARY,
+                detail=(
+                    f"cluster `{cluster_name}` is not listed in "
+                    "K8S_RBAC_REVOKE_ALLOWED_CLUSTERS"
+                ),
+                dry_run=False,
+            )
+            continue
+
         if audit is None:
             raise ValueError("audit writer is required under --apply")
         yield revoke_binding(
@@ -688,6 +725,8 @@ def main(argv: list[str] | None = None) -> int:
             audit=audit,
             incident_id=incident_id,
             approver=approver,
+            cluster_name=os.getenv("K8S_CLUSTER_NAME", "").strip(),
+            allowed_clusters=load_allowed_clusters(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:

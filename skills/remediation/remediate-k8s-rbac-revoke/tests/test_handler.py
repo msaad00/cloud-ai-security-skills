@@ -16,6 +16,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_FAILURE,
     STATUS_IN_PROGRESS,
     STATUS_PLANNED,
+    STATUS_SKIPPED_CLUSTER_BOUNDARY,
     STATUS_SKIPPED_DENY_LIST,
     STATUS_SKIPPED_NO_BINDING,
     STATUS_SKIPPED_UNSUPPORTED_TYPE,
@@ -131,6 +132,8 @@ def test_accepted_producers_set_is_just_privesc():
 def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.delenv("K8S_RBAC_REVOKE_INCIDENT_ID", raising=False)
     monkeypatch.delenv("K8S_RBAC_REVOKE_APPROVER", raising=False)
+    monkeypatch.delenv("K8S_CLUSTER_NAME", raising=False)
+    monkeypatch.delenv("K8S_RBAC_REVOKE_ALLOWED_CLUSTERS", raising=False)
     ok, reason = check_apply_gate()
     assert ok is False
     assert "INCIDENT_ID" in reason
@@ -141,6 +144,21 @@ def test_check_apply_gate_requires_both_envs(monkeypatch):
     assert "APPROVER" in reason
 
     monkeypatch.setenv("K8S_RBAC_REVOKE_APPROVER", "alice@security")
+    ok, reason = check_apply_gate()
+    assert ok is False
+    assert "K8S_CLUSTER_NAME" in reason
+
+    monkeypatch.setenv("K8S_CLUSTER_NAME", "prod-cluster")
+    ok, reason = check_apply_gate()
+    assert ok is False
+    assert "K8S_RBAC_REVOKE_ALLOWED_CLUSTERS" in reason
+
+    monkeypatch.setenv("K8S_RBAC_REVOKE_ALLOWED_CLUSTERS", "staging-cluster")
+    ok, reason = check_apply_gate()
+    assert ok is False
+    assert "prod-cluster" in reason
+
+    monkeypatch.setenv("K8S_RBAC_REVOKE_ALLOWED_CLUSTERS", "prod-cluster,staging-cluster")
     ok, reason = check_apply_gate()
     assert ok is True
     assert reason == ""
@@ -282,6 +300,8 @@ def test_run_apply_revokes_namespaced_binding_with_dual_audit():
             audit=audit,
             incident_id="INC-1",
             approver="alice@security",
+            cluster_name="prod-cluster",
+            allowed_clusters=("prod-cluster",),
         )
     )
 
@@ -311,6 +331,8 @@ def test_run_apply_revokes_cluster_binding():
             audit=audit,
             incident_id="INC-2",
             approver="bob@security",
+            cluster_name="prod-cluster",
+            allowed_clusters=("prod-cluster",),
         )
     )
     rec = records[0]
@@ -332,6 +354,8 @@ def test_run_apply_writes_failure_audit_when_kube_call_throws():
             audit=audit,
             incident_id="INC-1",
             approver="alice@security",
+            cluster_name="prod-cluster",
+            allowed_clusters=("prod-cluster",),
         )
     )
     rec = records[0]
@@ -347,7 +371,38 @@ def test_run_apply_requires_audit_writer():
     import pytest
 
     with pytest.raises(ValueError, match="audit writer is required"):
-        list(run([_finding()], kube_client=_FakeKube(), apply=True, audit=None))
+        list(
+            run(
+                [_finding()],
+                kube_client=_FakeKube(),
+                apply=True,
+                audit=None,
+                cluster_name="prod-cluster",
+                allowed_clusters=("prod-cluster",),
+            )
+        )
+
+
+def test_run_apply_skips_cluster_outside_allow_list():
+    audit = _FakeAudit()
+    kube = _FakeKube(role_bindings={("payments", "attacker-grant"): {"metadata": {"name": "attacker-grant"}}})
+    records = list(
+        run(
+            [_finding()],
+            kube_client=kube,
+            apply=True,
+            audit=audit,
+            incident_id="INC-1",
+            approver="alice@security",
+            cluster_name="prod-cluster",
+            allowed_clusters=("staging-cluster",),
+        )
+    )
+    rec = records[0]
+    assert rec["status"] == STATUS_SKIPPED_CLUSTER_BOUNDARY
+    assert "prod-cluster" in rec["status_detail"]
+    assert audit.writes == []
+    assert kube.deletes == []
 
 
 # ----------------- run: re-verify path -----------------
