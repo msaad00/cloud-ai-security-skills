@@ -2,11 +2,11 @@
 name: cspm-azure-cis-benchmark
 description: >-
   Assess Azure subscriptions against a curated subset of CIS Azure Foundations
-  Benchmark v2.1. Automates 6 high-impact read-only checks across Storage and
+  Benchmark v2.1. Automates 8 high-impact read-only checks across Storage and
   Networking. Use when the user mentions Azure CIS benchmark, Azure storage
   security, or unrestricted SSH/RDP detection in NSGs. Do NOT use for AWS or GCP;
   do NOT use to remediate findings (assessment-only, Reader role only); do NOT
-  claim full CIS Azure coverage — only 6 controls are implemented, see the Roadmap
+  claim full CIS Azure coverage — only 8 controls are implemented, see the Roadmap
   section in this file for the gap.
 license: Apache-2.0
 approval_model: none
@@ -34,7 +34,7 @@ metadata:
 
 Automated assessment of Azure subscriptions against a curated subset of CIS
 Azure Foundations Benchmark v2.1. The full benchmark has 90+ controls; this
-skill implements **6 high-impact checks** that cover the most common findings
+skill implements **8 high-impact checks** that cover the most common findings
 on real subscriptions. Each check is mapped to NIST CSF 2.0.
 
 > **Honest scope:** the table below lists *only* what `src/checks.py` actually
@@ -61,7 +61,7 @@ flowchart LR
         NSG["NSG / VNet<br/>3 checks"]
     end
 
-    CHK["checks.py<br/>6 CIS v2.1 controls<br/>Reader role only"]
+    CHK["checks.py<br/>8 CIS v2.1 controls<br/>Reader role only"]
     OUT["Findings<br/>JSON · Console"]
     FIX["Remediation<br/>az CLI · Bicep PR<br/>or exception with TTL"]
     VERIFY["Re-scan<br/>control_id == pass"]
@@ -84,25 +84,27 @@ flowchart LR
 - **AI Foundry safe**: Checks managed identity, private endpoints, CMK — does not access model endpoints or data.
 - **Idempotent**: Run as often as needed with no side effects.
 
-## Implemented Controls (6)
+## Implemented Controls (8)
 
 Each row maps to one function in `src/checks.py`. If it's not in this table, it's not implemented.
 
-### Section 2 — Storage (3 checks)
+### Section 2 — Storage (4 checks)
 
 | # | CIS Control | Function | Severity | NIST CSF 2.0 |
 |---|------------|----------|----------|--------------|
+| 2.1 | Storage accounts use customer-managed keys | `check_2_1_storage_cmk` | HIGH | PR.DS-1 |
 | 2.2 | Storage account HTTPS-only | `check_2_2_https_only` | HIGH | PR.DS-2 |
 | 2.3 | No public blob access | `check_2_3_no_public_blob` | CRITICAL | PR.AC-3 |
 | 2.4 | Storage account network rules (deny by default) | `check_2_4_network_rules` | HIGH | PR.AC-5 |
 
-### Section 4 — Networking (3 checks)
+### Section 4 — Networking (4 checks)
 
 | # | CIS Control | Function | Severity | NIST CSF 2.0 |
 |---|------------|----------|----------|--------------|
 | 4.1 | No unrestricted SSH (0.0.0.0/0:22) in NSGs | `check_4_1_no_unrestricted_ssh` | HIGH | PR.AC-5 |
 | 4.2 | No unrestricted RDP (0.0.0.0/0:3389) in NSGs | `check_4_2_no_unrestricted_rdp` | HIGH | PR.AC-5 |
 | 4.3 | NSG flow logs enabled | `check_4_3_nsg_flow_logs` | MEDIUM | DE.CM-1 |
+| 4.4 | Network Watcher in all VNet regions | `check_4_4_network_watcher_regions` | MEDIUM | DE.CM-1 |
 
 ## Roadmap — Documented but Not Yet Automated
 
@@ -111,9 +113,7 @@ These controls are part of the CIS Azure Foundations v2.1 benchmark but are *not
 | Section | Controls | Why it matters |
 |---------|---------|----------------|
 | 1.x — Identity | MFA, Conditional Access, guest roles, legacy auth, PIM | Requires Microsoft Graph API + Entra ID licensing checks |
-| 2.1 | Storage account CMK encryption | KMS key resolution per account |
 | 3.x — Logging | Activity log retention, diagnostic settings, log alerts | `azure-mgmt-monitor` enumeration |
-| 4.4 | Network Watcher in all regions | Region enumeration + Network Watcher API |
 | AI Foundry | Managed identity, private endpoints, CMK, content safety, diagnostic logging | `azure-mgmt-cognitiveservices` |
 
 ## Usage

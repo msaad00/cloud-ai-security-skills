@@ -50,6 +50,22 @@ def test_2_3_public_blob_fail():
     assert f.resources == ["open"]
 
 
+def test_2_1_storage_cmk_fail():
+    client = MagicMock()
+    account = _account(name="managed")
+    account.encryption = MagicMock(key_source="Microsoft.Storage")
+    client.storage_accounts.list.return_value = [account]
+    f = _CHECKS.check_2_1_storage_cmk(client, "sub")
+    assert f.status == "FAIL"
+    assert f.resources == ["managed"]
+
+
+def test_2_1_storage_cmk_error_branch():
+    client = MagicMock()
+    client.storage_accounts.list.side_effect = RuntimeError("x")
+    assert _CHECKS.check_2_1_storage_cmk(client, "sub").status == "ERROR"
+
+
 def test_2_3_error_branch():
     client = MagicMock()
     client.storage_accounts.list.side_effect = RuntimeError("x")
@@ -262,6 +278,32 @@ def test_4_3_error_branch():
     client = MagicMock()
     client.network_security_groups.list_all.side_effect = RuntimeError("x")
     assert _CHECKS.check_4_3_nsg_flow_logs(client, "sub").status == "ERROR"
+
+
+def test_4_4_no_virtual_networks_passes():
+    client = MagicMock()
+    client.virtual_networks.list_all.return_value = []
+    client.network_watchers.list_all.return_value = []
+    f = _CHECKS.check_4_4_network_watcher_regions(client, "sub")
+    assert f.status == "PASS"
+
+
+def test_4_4_missing_watcher_region_fails():
+    client = MagicMock()
+    eastus = MagicMock(location="eastus")
+    westus = MagicMock(location="westus2")
+    watcher = MagicMock(location="eastus")
+    client.virtual_networks.list_all.return_value = [eastus, westus]
+    client.network_watchers.list_all.return_value = [watcher]
+    f = _CHECKS.check_4_4_network_watcher_regions(client, "sub")
+    assert f.status == "FAIL"
+    assert f.resources == ["westus2"]
+
+
+def test_4_4_error_branch():
+    client = MagicMock()
+    client.virtual_networks.list_all.side_effect = RuntimeError("x")
+    assert _CHECKS.check_4_4_network_watcher_regions(client, "sub").status == "ERROR"
 
 
 # ---------------------------------------------------------------------------
