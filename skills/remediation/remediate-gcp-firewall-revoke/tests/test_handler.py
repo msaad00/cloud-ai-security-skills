@@ -19,6 +19,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_IN_PROGRESS,
     STATUS_PLANNED,
     STATUS_SKIPPED_NO_TARGET,
+    STATUS_SKIPPED_PROJECT_BOUNDARY,
     STATUS_SKIPPED_PROTECTED,
     STATUS_SUCCESS,
     STATUS_WOULD_VIOLATE_PROTECTED,
@@ -133,12 +134,16 @@ def test_intentionally_open_description_marker_default():
 def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.delenv("GCP_FIREWALL_REVOKE_INCIDENT_ID", raising=False)
     monkeypatch.delenv("GCP_FIREWALL_REVOKE_APPROVER", raising=False)
+    monkeypatch.delenv("GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS", raising=False)
     ok, _ = check_apply_gate()
     assert ok is False
     monkeypatch.setenv("GCP_FIREWALL_REVOKE_INCIDENT_ID", "INC-1")
     ok, _ = check_apply_gate()
     assert ok is False
     monkeypatch.setenv("GCP_FIREWALL_REVOKE_APPROVER", "alice")
+    ok, _ = check_apply_gate()
+    assert ok is False
+    monkeypatch.setenv("GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS", "p-1")
     ok, _ = check_apply_gate()
     assert ok is True
 
@@ -276,7 +281,8 @@ def test_run_skips_intentionally_open_described_rule_in_apply():
     )
     records = list(
         run([_finding()], compute_client=compute, apply=True, audit=audit,
-            incident_id="INC-1", approver="alice")
+            incident_id="INC-1", approver="alice",
+            allowed_project_ids=("p-1",))
     )
     assert records[0]["status"] == STATUS_SKIPPED_PROTECTED
     assert compute.patches == []
@@ -298,7 +304,8 @@ def test_run_skips_via_env_protected_rule_name():
 def test_run_apply_requires_audit_writer():
     import pytest
     with pytest.raises(ValueError, match="audit writer is required"):
-        list(run([_finding()], compute_client=_FakeCompute(), apply=True, audit=None))
+        list(run([_finding()], compute_client=_FakeCompute(), apply=True, audit=None,
+                 allowed_project_ids=("p-1",)))
 
 
 def test_check_apply_gate_rejects_missing_envs(monkeypatch):
@@ -323,7 +330,8 @@ def test_run_apply_patches_with_dual_audit():
     )
     records = list(
         run([_finding()], compute_client=compute, apply=True, audit=audit,
-            incident_id="INC-1", approver="alice@security")
+            incident_id="INC-1", approver="alice@security",
+            allowed_project_ids=("p-1",))
     )
     rec = records[0]
     assert rec["status"] == STATUS_SUCCESS
@@ -347,7 +355,8 @@ def test_run_apply_delete_mode_calls_delete():
     )
     records = list(
         run([_finding()], compute_client=compute, apply=True, audit=audit,
-            incident_id="INC-1", approver="alice", mode=MODE_DELETE)
+            incident_id="INC-1", approver="alice", mode=MODE_DELETE,
+            allowed_project_ids=("p-1",))
     )
     assert records[0]["status"] == STATUS_SUCCESS
     assert compute.deletes == [("p-1", "allow-ssh-world")]
@@ -359,7 +368,8 @@ def test_run_apply_writes_failure_audit_when_patch_throws():
     compute = _FakeCompute(raise_on_patch=True)
     records = list(
         run([_finding()], compute_client=compute, apply=True, audit=audit,
-            incident_id="INC-1", approver="alice")
+            incident_id="INC-1", approver="alice",
+            allowed_project_ids=("p-1",))
     )
     assert records[0]["status"] == STATUS_FAILURE
     assert len(audit.writes) == 2
@@ -370,6 +380,20 @@ def test_run_unsupported_mode_raises():
     import pytest
     with pytest.raises(ValueError, match="unsupported mode"):
         list(run([_finding()], compute_client=_FakeCompute(), mode="purge"))
+
+
+def test_run_apply_skips_wrong_project_boundary():
+    audit = _FakeAudit()
+    compute = _FakeCompute()
+    records = list(
+        run([_finding()], compute_client=compute, apply=True, audit=audit,
+            incident_id="INC-1", approver="alice",
+            allowed_project_ids=("p-2",))
+    )
+    assert records[0]["status"] == STATUS_SKIPPED_PROJECT_BOUNDARY
+    assert compute.patches == []
+    assert compute.deletes == []
+    assert audit.writes == []
 
 
 # ---------- run: re-verify ----------

@@ -15,7 +15,9 @@ description: >-
   deny-listed against `default*`/`Default*` rule names, NSG names ending
   `-protected`, the parent NSG's `intentionally-open` tag, and any
   rule-fully-qualified-id in AZURE_NSG_REVOKE_DENY_RULE_IDS. Apply
-  requires AZURE_NSG_REVOKE_INCIDENT_ID + AZURE_NSG_REVOKE_APPROVER.
+  requires AZURE_NSG_REVOKE_INCIDENT_ID + AZURE_NSG_REVOKE_APPROVER
+  plus an explicit allowed-subscription binding via
+  AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS.
   Dual audit (DynamoDB + KMS-encrypted S3). Reverify re-reads the rule
   via `security_rules.get()` and emits VERIFIED if the rule is gone (or
   patched to Deny), DRIFT (+ paired OCSF Detection Finding via the
@@ -103,6 +105,7 @@ OCSF 1.8 Detection Finding (class 2004) from `detect-azure-open-nsg`. Required o
 | Intentionally-open tag | NSGs tagged `intentionally-open` refuse revoke; tag value is logged in the audit row |
 | Operator allowlist | `AZURE_NSG_REVOKE_DENY_RULE_IDS` env var (comma-separated rule ids) refuses revoke |
 | Apply gate | `--apply` requires `AZURE_NSG_REVOKE_INCIDENT_ID` + `AZURE_NSG_REVOKE_APPROVER` set out-of-band |
+| Subscription boundary | `--apply` also requires `AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS`, and the parsed subscription from `target.uid` must be listed there |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER the action; failure paths still write the failure audit row |
 | Re-verify | Re-reads the rule via `security_rules.get()`; emits VERIFIED if the rule is absent or patched to Deny, DRIFT (+ paired OCSF finding) if it re-appears as Allow, UNREACHABLE if the Azure API throws — never silently downgrades |
 
@@ -115,6 +118,7 @@ python skills/remediation/remediate-azure-nsg-revoke/src/handler.py findings.ocs
 # Apply (after out-of-band approval)
 export AZURE_NSG_REVOKE_INCIDENT_ID=INC-2026-04-20-001
 export AZURE_NSG_REVOKE_APPROVER=alice@security
+export AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS=00000000-0000-0000-0000-000000000001
 export AZURE_NSG_REVOKE_AUDIT_DYNAMODB_TABLE=azure-nsg-revoke-audit
 export AZURE_NSG_REVOKE_AUDIT_BUCKET=acme-azure-nsg-audit
 export KMS_KEY_ARN=arn:aws:kms:us-east-1:111122223333:key/...
@@ -142,7 +146,7 @@ The dual-audit sink also needs the same AWS DynamoDB + S3 + KMS permissions used
 
 - Deleting the NSG entirely
 - Tag-based discovery of NSG rules to revoke (this skill is finding-driven)
-- Cross-subscription auto-revoke (operators run the skill under the right credential context, or the runner does)
+- Cross-subscription auto-revoke (the skill now fails closed unless the target subscription is named explicitly in `AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS`)
 - Posture-at-rest scanning (use `cspm-azure-cis-benchmark`)
 
 ## See also
