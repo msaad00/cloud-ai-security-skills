@@ -60,6 +60,7 @@ ENTRYPOINT_CANDIDATES = (
     "src/convert.py",
     "src/checks.py",
     "src/discover.py",
+    "src/handler.py",
     "src/sink.py",
 )
 
