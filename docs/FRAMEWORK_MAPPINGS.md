@@ -20,11 +20,11 @@ from individual `SKILL.md` files.
 | Framework | Status | Where it appears |
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
-| **MITRE ATT&CK v14** | strong and broader | 45 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, and the AWS / GCP / Azure logging-impairment trio |
-| **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection plus response-layer override and exfiltration detection |
+| **MITRE ATT&CK v14** | strong and broader | 46 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, the AWS / GCP / Azure logging-impairment trio, and the first AWS model-artifact download slice |
+| **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, MCP prompt-injection plus response-layer override and exfiltration detection, and the first cloud-native model-artifact collection slice |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
-| **OWASP LLM Top 10** | partial and growing | model-serving controls plus `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, `detect-tool-output-policy-bypass`, and `detect-tool-output-exfiltration-instructions` |
+| **OWASP LLM Top 10** | partial and growing | model-serving controls plus `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, `detect-tool-output-policy-bypass`, `detect-tool-output-exfiltration-instructions`, and `detect-aws-model-artifact-download` |
 | **OWASP MCP Top 10** | partial and growing | `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, `detect-tool-output-policy-bypass`, `detect-tool-output-exfiltration-instructions`, and MCP-related repo controls |
 | **SOC 2 TSC** | partial | evaluation and remediation mappings |
 | **ISO 27001:2022** | partial | CSPM/evaluation mappings |
@@ -53,6 +53,7 @@ Strongest current ATT&CK coverage:
 | `detect-aws-login-profile-creation` | T1098.001 for successful AWS IAM `CreateLoginProfile` operations that add console-password credential material to an IAM user |
 | `detect-aws-enumeration-burst` | T1526 for short-window bursts of high-signal AWS discovery APIs in CloudTrail across IAM, EC2, S3, KMS, Organizations, EKS, Lambda, and CloudTrail |
 | `detect-s3-cross-account-copy` | T1537 for successful AWS S3 `CopyObject` calls where the acting principal account differs from the recipient bucket-owner account |
+| `detect-aws-model-artifact-download` | T1530 plus ATLAS AML.T0035 for successful AWS S3 `GetObject` downloads of model-weight and checkpoint artifacts |
 | `detect-okta-mfa-fatigue` | T1621 for repeated Okta Verify push challenge + deny bursts |
 | `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-entra-role-grant-escalation` | T1098.003 for successful Entra app-role assignments that grant additional application permissions to service principals |
@@ -129,6 +130,7 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | `detect-system-prompt-extraction` | explicit system-prompt and hidden-instruction leakage detection in MCP `tools/call` responses |
 | `detect-tool-output-policy-bypass` | response-layer prompt-injection detection for explicit policy-bypass and approval-evasion instructions in MCP `tools/call` responses |
 | `detect-tool-output-exfiltration-instructions` | response-layer prompt-injection detection for explicit data-exfiltration instructions in MCP `tools/call` responses |
+| `detect-aws-model-artifact-download` | cloud-native AI artifact collection detection for successful S3 downloads of model weights and checkpoints |
 | `discover-ai-bom` | inventory artifact plus optional AI BOM policy findings for ATLAS / AI RMF evidence and CI joins |
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
 | `discover-cloud-control-evidence` | cross-cloud evidence package with explicit NIST AI RMF evidence mode, ATT&CK / ATLAS / AI RMF inventory context, and per-provider logging / segmentation / encryption / key-management depth |
