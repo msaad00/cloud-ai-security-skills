@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-import os
-import sys
+import importlib.util
+from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+THIS = Path(__file__).resolve().parent
+SRC = THIS.parent / "src" / "detect.py"
+SPEC = importlib.util.spec_from_file_location("detect_cloudtrail_disabled_under_test", SRC)
+assert SPEC and SPEC.loader
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
 
-from detect import (  # type: ignore[import-not-found]
-    ACCEPTED_PRODUCERS,
-    DISABLING_OPERATIONS,
-    TECHNIQUE_UID,
-    detect,
-)
+ACCEPTED_PRODUCERS = MODULE.ACCEPTED_PRODUCERS
+DISABLING_OPERATIONS = MODULE.DISABLING_OPERATIONS
+TECHNIQUE_UID = MODULE.TECHNIQUE_UID
+detect = MODULE.detect
 
 
 def _ct_event(
