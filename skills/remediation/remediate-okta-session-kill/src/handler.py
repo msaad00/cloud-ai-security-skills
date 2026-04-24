@@ -9,6 +9,7 @@ Guardrails enforced in code:
 - source-skill check rejects findings from any non-Okta producer
 - deny-list of protected principals (admin / service-account / break-glass)
 - --apply requires OKTA_SESSION_KILL_INCIDENT_ID + OKTA_SESSION_KILL_APPROVER
+- --apply requires OKTA_ORG_URL to be explicitly allow-listed for this run
 - dual-audit write (DynamoDB + S3) BEFORE and AFTER each Okta API call
 - Okta API token pulled from AWS Secrets Manager at invocation time
 
@@ -80,6 +81,7 @@ STATUS_SUCCESS = "success"
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED_DENY_LIST = "skipped_deny_list"
 STATUS_SKIPPED_SOURCE = "skipped_wrong_source"
+STATUS_SKIPPED_ORG_BOUNDARY = "skipped_org_boundary"
 
 
 # -- Data classes ------------------------------------------------------------
@@ -385,14 +387,41 @@ def is_protected(target: Target, deny_patterns: tuple[str, ...]) -> tuple[bool, 
     return False, None
 
 
+def _normalize_org_url(raw: str) -> str:
+    value = raw.strip().rstrip("/")
+    return value.lower()
+
+
+def load_allowed_org_urls() -> tuple[str, ...]:
+    raw = os.environ.get("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", "").strip()
+    if not raw:
+        return ()
+    return tuple(
+        normalized
+        for normalized in (_normalize_org_url(part) for part in raw.split(","))
+        if normalized
+    )
+
+
 def check_apply_gate() -> tuple[bool, str]:
     """Return (ok, reason). Both env vars must be set before any Okta write."""
     incident_id = os.environ.get("OKTA_SESSION_KILL_INCIDENT_ID", "").strip()
     approver = os.environ.get("OKTA_SESSION_KILL_APPROVER", "").strip()
+    org_url = _normalize_org_url(os.environ.get("OKTA_ORG_URL", ""))
+    allowed_org_urls = load_allowed_org_urls()
     if not incident_id:
         return False, "OKTA_SESSION_KILL_INCIDENT_ID must be set before --apply"
     if not approver:
         return False, "OKTA_SESSION_KILL_APPROVER must be set before --apply"
+    if not org_url:
+        return False, "OKTA_ORG_URL must be set before --apply"
+    if not allowed_org_urls:
+        return False, "OKTA_SESSION_KILL_ALLOWED_ORG_URLS must be set before --apply"
+    if org_url not in allowed_org_urls:
+        return (
+            False,
+            "OKTA_ORG_URL must be included in OKTA_SESSION_KILL_ALLOWED_ORG_URLS before --apply",
+        )
     return True, ""
 
 
@@ -574,10 +603,16 @@ def run(
     deny_patterns: tuple[str, ...] | None = None,
     incident_id: str = "",
     approver: str = "",
+    org_url: str = "",
+    allowed_org_urls: tuple[str, ...] | None = None,
     now_ms: int | None = None,
     reverify: bool = False,
 ) -> Iterator[dict[str, Any]]:
     deny_patterns = deny_patterns if deny_patterns is not None else load_deny_patterns()
+    normalized_org_url = _normalize_org_url(org_url)
+    resolved_allowed_org_urls = (
+        allowed_org_urls if allowed_org_urls is not None else load_allowed_org_urls()
+    )
     for target, skip_reason in parse_targets(events):
         if target is None:
             continue
@@ -628,6 +663,14 @@ def run(
         if okta_client is None or audit is None:
             raise RuntimeError(
                 "apply=True requires both okta_client and audit to be provided"
+            )
+        if not normalized_org_url:
+            raise RuntimeError("apply=True requires org_url to be provided")
+        if not resolved_allowed_org_urls:
+            raise RuntimeError("apply=True requires allowed_org_urls to be provided")
+        if normalized_org_url not in resolved_allowed_org_urls:
+            raise RuntimeError(
+                "OKTA_ORG_URL is outside OKTA_SESSION_KILL_ALLOWED_ORG_URLS; refusing apply"
             )
         results, audit_refs = apply_actions(
             target,
@@ -823,6 +866,8 @@ def main(argv: list[str] | None = None) -> int:
             audit=audit,
             incident_id=incident_id,
             approver=approver,
+            org_url=os.environ.get("OKTA_ORG_URL", ""),
+            allowed_org_urls=load_allowed_org_urls(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:

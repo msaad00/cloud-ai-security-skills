@@ -296,6 +296,8 @@ class TestApplyGate:
     def test_missing_incident_id_fails_closed(self, monkeypatch):
         monkeypatch.delenv("OKTA_SESSION_KILL_INCIDENT_ID", raising=False)
         monkeypatch.setenv("OKTA_SESSION_KILL_APPROVER", "alice")
+        monkeypatch.setenv("OKTA_ORG_URL", "https://example.okta.com")
+        monkeypatch.setenv("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", "https://example.okta.com")
         ok, reason = check_apply_gate()
         assert ok is False
         assert "INCIDENT_ID" in reason
@@ -303,13 +305,35 @@ class TestApplyGate:
     def test_missing_approver_fails_closed(self, monkeypatch):
         monkeypatch.setenv("OKTA_SESSION_KILL_INCIDENT_ID", "inc-1")
         monkeypatch.delenv("OKTA_SESSION_KILL_APPROVER", raising=False)
+        monkeypatch.setenv("OKTA_ORG_URL", "https://example.okta.com")
+        monkeypatch.setenv("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", "https://example.okta.com")
         ok, reason = check_apply_gate()
         assert ok is False
         assert "APPROVER" in reason
 
+    def test_missing_allowed_org_urls_fails_closed(self, monkeypatch):
+        monkeypatch.setenv("OKTA_SESSION_KILL_INCIDENT_ID", "inc-1")
+        monkeypatch.setenv("OKTA_SESSION_KILL_APPROVER", "alice@example.com")
+        monkeypatch.setenv("OKTA_ORG_URL", "https://example.okta.com")
+        monkeypatch.delenv("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", raising=False)
+        ok, reason = check_apply_gate()
+        assert ok is False
+        assert "ALLOWED_ORG_URLS" in reason
+
+    def test_org_url_outside_allow_list_fails_closed(self, monkeypatch):
+        monkeypatch.setenv("OKTA_SESSION_KILL_INCIDENT_ID", "inc-1")
+        monkeypatch.setenv("OKTA_SESSION_KILL_APPROVER", "alice@example.com")
+        monkeypatch.setenv("OKTA_ORG_URL", "https://prod.okta.com")
+        monkeypatch.setenv("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", "https://sandbox.okta.com")
+        ok, reason = check_apply_gate()
+        assert ok is False
+        assert "ALLOWED_ORG_URLS" in reason
+
     def test_both_set_passes(self, monkeypatch):
         monkeypatch.setenv("OKTA_SESSION_KILL_INCIDENT_ID", "inc-1")
         monkeypatch.setenv("OKTA_SESSION_KILL_APPROVER", "alice@example.com")
+        monkeypatch.setenv("OKTA_ORG_URL", "https://example.okta.com")
+        monkeypatch.setenv("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", "https://example.okta.com")
         ok, reason = check_apply_gate()
         assert ok is True
         assert reason == ""
@@ -317,6 +341,8 @@ class TestApplyGate:
     def test_main_returns_2_when_apply_gate_blocks(self, monkeypatch, tmp_path, capsys):
         monkeypatch.delenv("OKTA_SESSION_KILL_INCIDENT_ID", raising=False)
         monkeypatch.delenv("OKTA_SESSION_KILL_APPROVER", raising=False)
+        monkeypatch.setenv("OKTA_ORG_URL", "https://example.okta.com")
+        monkeypatch.setenv("OKTA_SESSION_KILL_ALLOWED_ORG_URLS", "https://example.okta.com")
         finding_path = tmp_path / "f.jsonl"
         finding_path.write_text("{}\n")
         rc = main([str(finding_path), "--apply"])
@@ -431,6 +457,8 @@ class TestApplyEndToEnd:
                 audit=fake_audit,
                 incident_id="inc-2026-04-18-001",
                 approver="alice@example.com",
+                org_url="https://example.okta.com",
+                allowed_org_urls=("https://example.okta.com",),
                 now_ms=1776046500000,
             )
         )
@@ -465,6 +493,23 @@ class TestApplyEndToEnd:
                     audit=None,
                     incident_id="inc-1",
                     approver="alice",
+                    org_url="https://example.okta.com",
+                    allowed_org_urls=("https://example.okta.com",),
+                )
+            )
+
+    def test_apply_rejects_wrong_org_boundary(self):
+        with pytest.raises(RuntimeError, match="ALLOWED_ORG_URLS"):
+            list(
+                run(
+                    [_finding()],
+                    apply=True,
+                    okta_client=_FakeOkta(),
+                    audit=_FakeAudit(),
+                    incident_id="inc-1",
+                    approver="alice",
+                    org_url="https://prod.okta.com",
+                    allowed_org_urls=("https://sandbox.okta.com",),
                 )
             )
 
@@ -483,6 +528,8 @@ class TestApplyEndToEnd:
                 audit=fake_audit,
                 incident_id="inc-1",
                 approver="alice",
+                org_url="https://example.okta.com",
+                allowed_org_urls=("https://example.okta.com",),
             )
         )
         assert len(records) == 2

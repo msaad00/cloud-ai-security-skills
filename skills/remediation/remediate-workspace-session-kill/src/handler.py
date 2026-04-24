@@ -33,6 +33,8 @@ Guardrails enforced in code:
   root, plus an extensible WORKSPACE_SESSION_KILL_DENY_LIST_FILE
 - --apply requires WORKSPACE_SESSION_KILL_INCIDENT_ID +
   WORKSPACE_SESSION_KILL_APPROVER
+- --apply requires explicit target-domain allow-listing via
+  WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS
 - dual audit BEFORE and AFTER each Admin SDK call
 - failure paths still write the failure audit row
 
@@ -104,6 +106,7 @@ STATUS_SKIPPED_SOURCE = "skipped_wrong_source"
 STATUS_SKIPPED_DENY_LIST = "skipped_deny_list"
 STATUS_WOULD_VIOLATE_DENY_LIST = "would-violate-deny-list"
 STATUS_SKIPPED_NO_USER = "skipped_no_user_pointer"
+STATUS_SKIPPED_DOMAIN_BOUNDARY = "skipped_domain_boundary"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -378,13 +381,41 @@ def is_protected(target: Target, deny_patterns: tuple[str, ...]) -> tuple[bool, 
     return False, None
 
 
+def _email_domain(value: str) -> str:
+    candidate = value.strip().lower()
+    if "@" not in candidate:
+        return ""
+    return candidate.rsplit("@", 1)[1]
+
+
+def load_allowed_domains() -> tuple[str, ...]:
+    raw = os.getenv("WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS", "").strip()
+    if not raw:
+        return ()
+    return tuple(
+        domain
+        for domain in (part.strip().lower() for part in raw.split(","))
+        if domain
+    )
+
+
 def check_apply_gate() -> tuple[bool, str]:
     incident_id = os.getenv("WORKSPACE_SESSION_KILL_INCIDENT_ID", "").strip()
     approver = os.getenv("WORKSPACE_SESSION_KILL_APPROVER", "").strip()
+    delegated_admin = os.getenv("WORKSPACE_DELEGATED_ADMIN_EMAIL", "").strip()
+    delegated_admin_domain = _email_domain(delegated_admin)
+    allowed_domains = load_allowed_domains()
     if not incident_id:
         return False, "WORKSPACE_SESSION_KILL_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "WORKSPACE_SESSION_KILL_APPROVER is required for --apply"
+    if not allowed_domains:
+        return False, "WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS is required for --apply"
+    if delegated_admin and delegated_admin_domain not in allowed_domains:
+        return (
+            False,
+            "WORKSPACE_DELEGATED_ADMIN_EMAIL must belong to WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS",
+        )
     return True, ""
 
 
@@ -596,9 +627,13 @@ def run(
     deny_patterns: tuple[str, ...] | None = None,
     incident_id: str = "",
     approver: str = "",
+    allowed_domains: tuple[str, ...] | None = None,
     now_ms: int | None = None,
 ) -> Iterator[dict[str, Any]]:
     deny_patterns = deny_patterns if deny_patterns is not None else load_deny_patterns()
+    resolved_allowed_domains = (
+        allowed_domains if allowed_domains is not None else load_allowed_domains()
+    )
     for target, event in parse_targets(events):
         if target is None:
             continue
@@ -650,6 +685,19 @@ def run(
 
         if workspace_client is None or audit is None:
             raise RuntimeError("apply=True requires both workspace_client and audit to be provided")
+        if not resolved_allowed_domains:
+            raise RuntimeError("apply=True requires allowed_domains to be provided")
+        user_domain = _email_domain(target.user_uid)
+        if not user_domain or user_domain not in resolved_allowed_domains:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_DOMAIN_BOUNDARY,
+                detail=(
+                    "target user domain is outside WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS"
+                ),
+                dry_run=False,
+            )
+            continue
         yield apply_actions(
             target, workspace_client=workspace_client, audit=audit,
             incident_id=incident_id, approver=approver,
@@ -711,7 +759,10 @@ def main(argv: list[str] | None = None) -> int:
             load_jsonl(in_stream),
             workspace_client=workspace_client,
             apply=args.apply, reverify=args.reverify,
-            audit=audit, incident_id=incident_id, approver=approver,
+            audit=audit,
+            incident_id=incident_id,
+            approver=approver,
+            allowed_domains=load_allowed_domains(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:

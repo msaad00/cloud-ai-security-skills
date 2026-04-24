@@ -11,7 +11,8 @@ description: >-
   dry-run by default, deny-listed against admin / service-account /
   break-glass / @google.com principals (extensible via
   WORKSPACE_SESSION_KILL_DENY_LIST_FILE), gated behind an incident ID plus
-  approver for --apply, and dual-audited (DynamoDB + KMS-encrypted S3).
+  approver plus an explicit allowed-domain boundary for --apply, and
+  dual-audited (DynamoDB + KMS-encrypted S3).
   Re-verify reads the Admin SDK Reports API for any login_success since
   remediation; emits VERIFIED if absent, DRIFT (+ paired OCSF Detection
   Finding via the shared remediation_verifier contract) if the attacker
@@ -101,6 +102,7 @@ JSONL records on stdout:
 | Source check | `ACCEPTED_PRODUCERS = {"detect-google-workspace-suspicious-login"}` |
 | Protected-principal deny-list | `@google.com`, `admin`, `administrator`, `service-account`, `svc-`, `break-glass`, `emergency`, `root` (substring match on `user_uid + " " + user_name`); extensible via `WORKSPACE_SESSION_KILL_DENY_LIST_FILE` JSON array |
 | Apply gate | `--apply` requires `WORKSPACE_SESSION_KILL_INCIDENT_ID` + `WORKSPACE_SESSION_KILL_APPROVER` env vars set out-of-band |
+| Tenant boundary | `--apply` requires `WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS`; target `user.uid` domain must be in the allow-list, and the delegated admin email must belong to one of those domains when provided |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER each Admin SDK call; failure paths still write the failure audit row |
 | Re-verify | Reads Admin SDK Reports API for any `login_success` since `remediated_at`; emits VERIFIED if 0, DRIFT (+ paired OCSF finding) if any, UNREACHABLE if API throws — never silently downgrades |
 
@@ -112,6 +114,7 @@ python skills/remediation/remediate-workspace-session-kill/src/handler.py findin
 
 # Apply (after out-of-band approval)
 export WORKSPACE_DELEGATED_ADMIN_EMAIL=admin@yourdomain.com
+export WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS=yourdomain.com
 export WORKSPACE_SA_KEY_JSON='{...}'  # JSON-encoded service-account key (fetch from secrets manager)
 export WORKSPACE_SESSION_KILL_INCIDENT_ID=INC-2026-04-19-004
 export WORKSPACE_SESSION_KILL_APPROVER=alice@security
@@ -133,7 +136,7 @@ python skills/remediation/remediate-workspace-session-kill/src/handler.py findin
 ## Do NOT use
 
 - For Okta, Entra, AWS IAM, or GCP IAM sessions — those have their own per-IdP remediation skills
-- To bypass the deny-list, run with `--apply` without an explicit human-approved incident window, or edit the audit trail by hand
+- To bypass the deny-list, run with `--apply` without an explicit human-approved incident window and allowed-domain boundary, or edit the audit trail by hand
 - For full HR-departure offboarding (delete user across all systems) — that is shaped by the IAM-departures workflow
 
 ## Non-goals
