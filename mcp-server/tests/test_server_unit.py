@@ -238,6 +238,45 @@ def test_call_tool_accepts_multi_approver_context(monkeypatch):
     assert audit_events[0]["approval_count"] == 2
 
 
+def test_safe_write_invocation_allows_checks_evaluation_without_apply():
+    skill = _FakeSkill(
+        read_only=False,
+        category="evaluation",
+        entrypoint_name="checks.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, ["--auto-remediate"]) is True
+    assert MODULE._is_safe_write_invocation(skill, ["--auto-remediate", "--apply"]) is False
+
+
+def test_safe_write_invocation_still_requires_dry_run_for_other_write_surfaces():
+    skill = _FakeSkill(
+        read_only=False,
+        category="output",
+        entrypoint_name="sink.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is False
+    assert MODULE._is_safe_write_invocation(skill, ["--dry-run"]) is True
+
+
+def test_checks_evaluation_dry_run_does_not_require_approval_context(monkeypatch):
+    monkeypatch.setattr(
+        MODULE,
+        "tool_map",
+        lambda: {
+            "fake-skill": _FakeSkill(
+                read_only=False,
+                approver_roles=("security_lead",),
+                category="evaluation",
+                entrypoint_name="checks.py",
+            )
+        },
+    )
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE.subprocess, "run", lambda *args, **kwargs: _FakeCompleted())
+    result = MODULE._call_tool("fake-skill", {"args": []})
+    assert result["isError"] is False
+
+
 def test_resolve_timeout_prefers_env_override():
     skill = _FakeSkill(mcp_timeout_seconds=45)
     env = {"CLOUD_SECURITY_MCP_TIMEOUT_SECONDS": "300"}

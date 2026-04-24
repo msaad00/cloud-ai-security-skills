@@ -154,8 +154,8 @@ Before the subprocess runs, the wrapper enforces:
 - `_caller_context` and `_approval_context` must be objects with string values
   or string arrays
 - write-capable tools must stay in safe mode at the wrapper boundary:
-  `--dry-run` for generic write tools, or no `--apply` for standalone
-  remediation `handler.py` entrypoints that are dry-run by default
+  `--dry-run` for generic write tools, or no `--apply` for dry-run-default
+  `handler.py` / `checks.py` entrypoints
 - write-capable tools with `approver_roles` must receive `_approval_context`
 
 These checks are part of the audited lifecycle. A failure here still produces an

@@ -40,6 +40,8 @@ assert _SPEC and _SPEC.loader
 _CHECKS = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = _CHECKS
 _SPEC.loader.exec_module(_CHECKS)
+Finding = _CHECKS.Finding
+RemediationTarget = _CHECKS.RemediationTarget
 
 
 class _FakeIamExceptions:
@@ -479,8 +481,10 @@ def _stub_clients() -> dict:
     ec2.describe_security_groups.return_value = {"SecurityGroups": []}
     ec2.describe_vpcs.return_value = {"Vpcs": []}
     ec2.describe_flow_logs.return_value = {"FlowLogs": []}
+    sts = MagicMock()
+    sts.get_caller_identity.return_value = {"Account": "123456789012"}
 
-    return {"iam": iam, "s3": s3, "ct": ct, "cw": cw, "ec2": ec2}
+    return {"iam": iam, "s3": s3, "ct": ct, "cw": cw, "ec2": ec2, "sts": sts}
 
 
 def test_run_assessment_runs_all_sections_with_stubbed_clients(monkeypatch):
@@ -500,7 +504,7 @@ def test_run_assessment_section_filter(monkeypatch):
 def test_get_clients_builds_boto3_session():
     with patch.object(_CHECKS.boto3, "Session") as session:
         clients = _CHECKS._get_clients("us-west-2")
-    assert set(clients.keys()) == {"iam", "s3", "ct", "cw", "ec2"}
+    assert set(clients.keys()) == {"iam", "s3", "ct", "cw", "ec2", "sts"}
     session.assert_called_once_with(region_name="us-west-2")
 
 
@@ -609,3 +613,230 @@ def test_paginate_fallback_when_paginator_unavailable():
     client.list_users = MagicMock(return_value={"Users": [{"UserName": "x"}]})
     items = _CHECKS._paginate(client, "list_users", "Users")
     assert items == [{"UserName": "x"}]
+
+
+def test_build_remediation_targets_for_supported_storage_control():
+    s3 = MagicMock()
+    s3.get_bucket_tagging.side_effect = _client_error("NoSuchTagSet")
+    clients = {"s3": s3, "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+
+    findings = [
+        Finding(
+            control_id="2.3",
+            title="S3 public access blocked",
+            section="storage",
+            severity="CRITICAL",
+            status="FAIL",
+            resources=["public-bucket"],
+        )
+    ]
+
+    targets = _CHECKS.build_remediation_targets(findings, clients=clients, region="us-east-1")
+    assert len(targets) == 1
+    target, protected_reason = targets[0]
+    assert protected_reason is None
+    assert target.action == "put_public_access_block"
+    assert target.resource_id == "public-bucket"
+    assert target.account_id == "123456789012"
+
+
+def test_build_remediation_targets_marks_protected_bucket(monkeypatch):
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_PROTECTED_BUCKETS", "protected-bucket")
+    s3 = MagicMock()
+    s3.get_bucket_tagging.side_effect = _client_error("NoSuchTagSet")
+    clients = {"s3": s3, "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+
+    findings = [
+        Finding(
+            control_id="2.4",
+            title="S3 versioning enabled",
+            section="storage",
+            severity="MEDIUM",
+            status="FAIL",
+            resources=["protected-bucket"],
+        )
+    ]
+
+    targets = _CHECKS.build_remediation_targets(findings, clients=clients, region="us-east-1")
+    assert len(targets) == 1
+    _, protected_reason = targets[0]
+    assert "PROTECTED_BUCKETS" in protected_reason
+
+
+def test_build_remediation_targets_for_open_ssh_rule():
+    ec2 = MagicMock()
+    ec2.describe_security_groups.return_value = {
+        "SecurityGroups": [
+            {
+                "GroupId": "sg-1234",
+                "GroupName": "open-ssh",
+                "IpPermissions": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+                    }
+                ],
+            }
+        ]
+    }
+    clients = {"s3": MagicMock(), "ec2": ec2, "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+
+    findings = [
+        Finding(
+            control_id="4.1",
+            title="No unrestricted SSH",
+            section="networking",
+            severity="HIGH",
+            status="FAIL",
+            resources=["sg-1234 (open-ssh)"],
+        )
+    ]
+
+    targets = _CHECKS.build_remediation_targets(findings, clients=clients, region="us-east-1")
+    assert len(targets) == 1
+    target, protected_reason = targets[0]
+    assert protected_reason is None
+    assert target.action == "revoke_security_group_ingress"
+    assert target.parameters["cidrs"] == ["0.0.0.0/0"]
+
+
+def test_build_remediation_records_dry_run_plans_supported_controls():
+    s3 = MagicMock()
+    s3.get_bucket_tagging.side_effect = _client_error("NoSuchTagSet")
+    clients = {"s3": s3, "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+    findings = [
+        Finding(
+            control_id="2.1",
+            title="S3 default encryption",
+            section="storage",
+            severity="HIGH",
+            status="FAIL",
+            resources=["unencrypted-bucket"],
+        ),
+        Finding(
+            control_id="3.1",
+            title="CloudTrail multi-region",
+            section="logging",
+            severity="CRITICAL",
+            status="FAIL",
+            resources=["trail-a"],
+        ),
+    ]
+
+    records = _CHECKS.build_remediation_records(
+        findings,
+        clients=clients,
+        region="us-east-1",
+        apply=False,
+    )
+    assert len(records) == 1
+    assert records[0]["record_type"] == "remediation_plan"
+    assert records[0]["control_id"] == "2.1"
+    assert records[0]["status"] == "planned"
+
+
+def test_build_remediation_records_apply_requires_hitl_envs():
+    clients = {"s3": MagicMock(), "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+    findings = [
+        Finding(
+            control_id="2.3",
+            title="S3 public access blocked",
+            section="storage",
+            severity="CRITICAL",
+            status="FAIL",
+            resources=["public-bucket"],
+        )
+    ]
+    try:
+        _CHECKS.build_remediation_records(findings, clients=clients, region="us-east-1", apply=True)
+    except ValueError as exc:
+        assert "INCIDENT_ID" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_build_remediation_records_apply_executes_and_audits(monkeypatch):
+    class _FakeAudit:
+        def __init__(self, *args, **kwargs):
+            self.writes = []
+
+        def record(self, *, target, status, detail, incident_id, approver):
+            self.writes.append((target.resource_id, status, incident_id, approver))
+            return {"row_uid": "row-1", "s3_evidence_uri": "s3://bucket/evidence.json"}
+
+    s3 = MagicMock()
+    s3.get_bucket_tagging.side_effect = _client_error("NoSuchTagSet")
+    clients = {"s3": s3, "ec2": MagicMock(), "sts": MagicMock()}
+    clients["sts"].get_caller_identity.return_value = {"Account": "123456789012"}
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID", "INC-1")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_APPROVER", "alice@security")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_AUDIT_DYNAMODB_TABLE", "audit-table")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_AUDIT_BUCKET", "audit-bucket")
+    monkeypatch.setenv("CSPM_AWS_AUTOREMEDIATE_AUDIT_KMS_KEY_ARN", "arn:aws:kms:::key/123")
+    monkeypatch.setattr(_CHECKS, "DualAuditWriter", _FakeAudit)
+
+    findings = [
+        Finding(
+            control_id="2.4",
+            title="S3 versioning enabled",
+            section="storage",
+            severity="MEDIUM",
+            status="FAIL",
+            resources=["bucket-a"],
+        )
+    ]
+
+    records = _CHECKS.build_remediation_records(
+        findings,
+        clients=clients,
+        region="us-east-1",
+        apply=True,
+        confirm=_CHECKS.CONFIRM_APPLY_PHRASE,
+    )
+    assert records[0]["record_type"] == "remediation_action"
+    assert records[0]["status"] == "success"
+    assert records[0]["incident_id"] == "INC-1"
+    assert records[0]["approver"] == "alice@security"
+    clients["s3"].put_bucket_versioning.assert_called_once()
+
+
+def test_main_auto_remediate_json_wraps_findings_and_remediation(monkeypatch):
+    clients = _stub_clients()
+    clients["s3"].list_buckets.return_value = {"Buckets": [{"Name": "public-bucket"}]}
+    clients["s3"].get_bucket_encryption.side_effect = _client_error(
+        "ServerSideEncryptionConfigurationNotFoundError"
+    )
+    clients["s3"].get_bucket_logging.return_value = {}
+    clients["s3"].get_public_access_block.side_effect = _client_error("NoSuchPublicAccessBlockConfiguration")
+    clients["s3"].get_bucket_versioning.return_value = {}
+    clients["s3"].get_bucket_tagging = MagicMock(side_effect=_client_error("NoSuchTagSet"))
+    monkeypatch.setattr(_CHECKS, "_get_clients", lambda region: clients)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "checks.py",
+            "--section",
+            "storage",
+            "--output",
+            "json",
+            "--auto-remediate",
+        ],
+    )
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        try:
+            _CHECKS.main()
+        except SystemExit:
+            pass
+    payload = json.loads(buf.getvalue())
+    assert "findings" in payload
+    assert "remediation" in payload
+    assert payload["remediation"]

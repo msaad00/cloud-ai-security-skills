@@ -15,7 +15,9 @@ Frameworks:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -35,6 +37,22 @@ SKILL_NAME = "cspm-aws-cis-benchmark"
 BENCHMARK_NAME = "CIS AWS Foundations Benchmark v3.0"
 PROVIDER_NAME = "AWS"
 OUTPUT_FORMATS = ("native", "ocsf")
+CONFIRM_APPLY_PHRASE = "APPLY"
+SUPPORTED_AUTOREMEDIATE_CONTROLS = frozenset({"2.1", "2.3", "2.4", "4.1", "4.2"})
+RECORD_PLAN = "remediation_plan"
+RECORD_ACTION = "remediation_action"
+STATUS_PLANNED = "planned"
+STATUS_SUCCESS = "success"
+STATUS_FAILURE = "failure"
+STATUS_SKIPPED_UNSUPPORTED = "skipped_unsupported_control"
+STATUS_WOULD_VIOLATE_PROTECTED = "would-violate-protected-resource"
+DEFAULT_PROTECTED_BUCKET_PREFIXES = ("break-glass-",)
+DEFAULT_PROTECTED_SECURITY_GROUP_PREFIXES = ("default", "break-glass-")
+DEFAULT_PROTECTED_TAG_KEYS = (
+    "cspm:auto-remediate-protected",
+    "security.company.io/protected",
+)
+DEFAULT_INTENTIONALLY_OPEN_TAG = "intentionally-open"
 
 # ---------------------------------------------------------------------------
 # Data model
@@ -54,6 +72,107 @@ class Finding:
     resources: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class RemediationTarget:
+    control_id: str
+    title: str
+    resource_type: str
+    resource_id: str
+    resource_name: str
+    section: str
+    severity: str
+    region: str
+    account_id: str
+    action: str
+    detail: str
+    parameters: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class DualAuditWriter:
+    dynamodb_table: str
+    s3_bucket: str
+    kms_key_arn: str
+
+    def record(
+        self,
+        *,
+        target: RemediationTarget,
+        status: str,
+        detail: str,
+        incident_id: str,
+        approver: str,
+    ) -> dict[str, str]:
+        action_at = datetime.now(UTC).isoformat()
+        row_uid = _deterministic_uid(target.control_id, target.resource_id, target.action, action_at)
+        evidence_key = (
+            "cspm-aws-cis-benchmark/audit/"
+            f"{action_at[:4]}/{action_at[5:7]}/{action_at[8:10]}/"
+            f"{_safe_path_component(target.control_id)}/{_safe_path_component(target.resource_id)}-{action_at}.json"
+        )
+        evidence_uri = f"s3://{self.s3_bucket}/{evidence_key}"
+        envelope = {
+            "schema_mode": "native",
+            "record_type": "remediation_audit",
+            "source_skill": SKILL_NAME,
+            "benchmark": BENCHMARK_NAME,
+            "provider": PROVIDER_NAME,
+            "row_uid": row_uid,
+            "control_id": target.control_id,
+            "title": target.title,
+            "resource_type": target.resource_type,
+            "resource_id": target.resource_id,
+            "resource_name": target.resource_name,
+            "region": target.region,
+            "account_id": target.account_id,
+            "action": target.action,
+            "detail": detail,
+            "parameters": target.parameters,
+            "status": status,
+            "incident_id": incident_id,
+            "approver": approver,
+            "action_at": action_at,
+        }
+        body = json.dumps(envelope, separators=(",", ":")).encode("utf-8")
+        boto3.client("s3").put_object(
+            Bucket=self.s3_bucket,
+            Key=evidence_key,
+            Body=body,
+            ServerSideEncryption="aws:kms",
+            SSEKMSKeyId=self.kms_key_arn,
+            ContentType="application/json",
+        )
+        boto3.client("dynamodb").put_item(
+            TableName=self.dynamodb_table,
+            Item={
+                "resource_id": {"S": target.resource_id},
+                "action_at": {"S": action_at},
+                "row_uid": {"S": row_uid},
+                "control_id": {"S": target.control_id},
+                "action": {"S": target.action},
+                "status": {"S": status},
+                "incident_id": {"S": incident_id},
+                "approver": {"S": approver},
+                "resource_type": {"S": target.resource_type},
+                "resource_name": {"S": target.resource_name},
+                "section": {"S": target.section},
+                "severity": {"S": target.severity},
+                "s3_evidence_uri": {"S": evidence_uri},
+            },
+        )
+        return {"row_uid": row_uid, "s3_evidence_uri": evidence_uri}
+
+
+def _deterministic_uid(*parts: str) -> str:
+    material = "|".join(parts)
+    return f"cspmaws-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _safe_path_component(value: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in (value or "_"))
+    return safe[:120] or "_"
+
+
 def _paginate(
     client: Any, operation_name: str, result_key: str, **kwargs: Any
 ) -> list[dict[str, Any]]:
@@ -71,6 +190,70 @@ def _paginate(
     for page in paginator.paginate(**kwargs):
         items.extend(page.get(result_key, []))
     return items
+
+
+def _parse_env_list(name: str) -> set[str]:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return set()
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
+def _truthy(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _account_id(clients: dict[str, Any]) -> str:
+    try:
+        return str(clients["sts"].get_caller_identity()["Account"])
+    except Exception:
+        return ""
+
+
+def _bucket_tags(s3: Any, bucket_name: str) -> dict[str, str]:
+    try:
+        tag_set = s3.get_bucket_tagging(Bucket=bucket_name).get("TagSet", [])
+    except Exception:
+        return {}
+    return {str(tag["Key"]): str(tag["Value"]) for tag in tag_set if "Key" in tag and "Value" in tag}
+
+
+def _sg_tags(group: dict[str, Any]) -> dict[str, str]:
+    return {
+        str(tag["Key"]): str(tag["Value"])
+        for tag in group.get("Tags", [])
+        if isinstance(tag, dict) and "Key" in tag and "Value" in tag
+    }
+
+
+def _is_protected_bucket(s3: Any, bucket_name: str) -> tuple[bool, str]:
+    protected = _parse_env_list("CSPM_AWS_AUTOREMEDIATE_PROTECTED_BUCKETS")
+    if bucket_name in protected:
+        return True, "bucket listed in CSPM_AWS_AUTOREMEDIATE_PROTECTED_BUCKETS"
+    if bucket_name.lower().startswith(DEFAULT_PROTECTED_BUCKET_PREFIXES):
+        return True, "bucket matches protected prefix"
+    tags = _bucket_tags(s3, bucket_name)
+    for key in DEFAULT_PROTECTED_TAG_KEYS:
+        if key in tags and _truthy(tags[key]):
+            return True, f"bucket tag `{key}` marks it protected"
+    return False, ""
+
+
+def _is_protected_security_group(group: dict[str, Any]) -> tuple[bool, str]:
+    group_id = str(group.get("GroupId") or "")
+    group_name = str(group.get("GroupName") or "")
+    protected = _parse_env_list("CSPM_AWS_AUTOREMEDIATE_PROTECTED_SECURITY_GROUPS")
+    if group_id in protected or group_name in protected:
+        return True, "security group listed in CSPM_AWS_AUTOREMEDIATE_PROTECTED_SECURITY_GROUPS"
+    if group_name.lower().startswith(DEFAULT_PROTECTED_SECURITY_GROUP_PREFIXES):
+        return True, "security group matches protected prefix"
+    tags = _sg_tags(group)
+    if _truthy(tags.get(DEFAULT_INTENTIONALLY_OPEN_TAG, "")):
+        return True, f"security group tag `{DEFAULT_INTENTIONALLY_OPEN_TAG}` marks it intentionally open"
+    for key in DEFAULT_PROTECTED_TAG_KEYS:
+        if key in tags and _truthy(tags[key]):
+            return True, f"security group tag `{key}` marks it protected"
+    return False, ""
 
 
 # ---------------------------------------------------------------------------
@@ -731,6 +914,442 @@ def check_4_3_vpc_flow_logs(ec2) -> Finding:
 
 
 # ---------------------------------------------------------------------------
+# Auto-remediation planner / apply
+# ---------------------------------------------------------------------------
+
+
+def _build_bucket_target(
+    finding: Finding,
+    *,
+    bucket_name: str,
+    region: str,
+    account_id: str,
+    action: str,
+    detail: str,
+    parameters: dict[str, Any],
+) -> RemediationTarget:
+    return RemediationTarget(
+        control_id=finding.control_id,
+        title=finding.title,
+        resource_type="s3_bucket",
+        resource_id=bucket_name,
+        resource_name=bucket_name,
+        section=finding.section,
+        severity=finding.severity,
+        region=region,
+        account_id=account_id,
+        action=action,
+        detail=detail,
+        parameters=parameters,
+    )
+
+
+def _build_sg_targets(
+    finding: Finding,
+    *,
+    ec2: Any,
+    region: str,
+    account_id: str,
+    port: int,
+) -> list[tuple[RemediationTarget, str | None]]:
+    targets: list[tuple[RemediationTarget, str | None]] = []
+    for resource in finding.resources:
+        sg_id = resource.split(" ", 1)[0]
+        response = ec2.describe_security_groups(GroupIds=[sg_id])
+        groups = response.get("SecurityGroups", [])
+        if not groups:
+            continue
+        group = groups[0]
+        protected, reason = _is_protected_security_group(group)
+        for perm in group.get("IpPermissions", []):
+            from_port = perm.get("FromPort")
+            to_port = perm.get("ToPort")
+            if from_port is None or to_port is None or not (from_port <= port <= to_port):
+                continue
+            cidrs = [r["CidrIp"] for r in perm.get("IpRanges", []) if r.get("CidrIp") == "0.0.0.0/0"]
+            cidrs.extend(
+                r["CidrIpv6"] for r in perm.get("Ipv6Ranges", []) if r.get("CidrIpv6") == "::/0"
+            )
+            if not cidrs:
+                continue
+            targets.append(
+                (
+                    RemediationTarget(
+                        control_id=finding.control_id,
+                        title=finding.title,
+                        resource_type="security_group_rule",
+                        resource_id=sg_id,
+                        resource_name=str(group.get("GroupName") or sg_id),
+                        section=finding.section,
+                        severity=finding.severity,
+                        region=region,
+                        account_id=account_id,
+                        action="revoke_security_group_ingress",
+                        detail=f"Revoke unrestricted ingress on port {port}",
+                        parameters={
+                            "ip_protocol": perm.get("IpProtocol", "tcp"),
+                            "from_port": from_port,
+                            "to_port": to_port,
+                            "cidrs": cidrs,
+                        },
+                    ),
+                    reason if protected else None,
+                )
+            )
+    return targets
+
+
+def build_remediation_targets(
+    findings: list[Finding],
+    *,
+    clients: dict[str, Any],
+    region: str,
+) -> list[tuple[RemediationTarget, str | None]]:
+    targets: list[tuple[RemediationTarget, str | None]] = []
+    account_id = _account_id(clients)
+    s3 = clients["s3"]
+    ec2 = clients["ec2"]
+
+    for finding in findings:
+        if finding.status != "FAIL":
+            continue
+        if finding.control_id not in SUPPORTED_AUTOREMEDIATE_CONTROLS:
+            continue
+        if finding.control_id == "2.1":
+            for bucket_name in finding.resources:
+                protected, reason = _is_protected_bucket(s3, bucket_name)
+                targets.append(
+                    (
+                        _build_bucket_target(
+                            finding,
+                            bucket_name=bucket_name,
+                            region=region,
+                            account_id=account_id,
+                            action="put_bucket_encryption",
+                            detail="Enable AES256 default bucket encryption",
+                            parameters={
+                                "ServerSideEncryptionConfiguration": {
+                                    "Rules": [
+                                        {
+                                            "ApplyServerSideEncryptionByDefault": {
+                                                "SSEAlgorithm": "AES256"
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                        ),
+                        reason if protected else None,
+                    )
+                )
+        elif finding.control_id == "2.3":
+            for bucket_name in finding.resources:
+                protected, reason = _is_protected_bucket(s3, bucket_name)
+                targets.append(
+                    (
+                        _build_bucket_target(
+                            finding,
+                            bucket_name=bucket_name,
+                            region=region,
+                            account_id=account_id,
+                            action="put_public_access_block",
+                            detail="Enable all four S3 public access block settings",
+                            parameters={
+                                "PublicAccessBlockConfiguration": {
+                                    "BlockPublicAcls": True,
+                                    "IgnorePublicAcls": True,
+                                    "BlockPublicPolicy": True,
+                                    "RestrictPublicBuckets": True,
+                                }
+                            },
+                        ),
+                        reason if protected else None,
+                    )
+                )
+        elif finding.control_id == "2.4":
+            for bucket_name in finding.resources:
+                protected, reason = _is_protected_bucket(s3, bucket_name)
+                targets.append(
+                    (
+                        _build_bucket_target(
+                            finding,
+                            bucket_name=bucket_name,
+                            region=region,
+                            account_id=account_id,
+                            action="put_bucket_versioning",
+                            detail="Enable S3 bucket versioning",
+                            parameters={"VersioningConfiguration": {"Status": "Enabled"}},
+                        ),
+                        reason if protected else None,
+                    )
+                )
+        elif finding.control_id == "4.1":
+            targets.extend(
+                _build_sg_targets(
+                    finding,
+                    ec2=ec2,
+                    region=region,
+                    account_id=account_id,
+                    port=22,
+                )
+            )
+        elif finding.control_id == "4.2":
+            targets.extend(
+                _build_sg_targets(
+                    finding,
+                    ec2=ec2,
+                    region=region,
+                    account_id=account_id,
+                    port=3389,
+                )
+            )
+    return targets
+
+
+def _record_for_target(
+    target: RemediationTarget,
+    *,
+    dry_run: bool,
+    status: str,
+    status_detail: str,
+    incident_id: str = "",
+    approver: str = "",
+    audit: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    record = {
+        "schema_mode": "native",
+        "record_type": RECORD_PLAN if dry_run else RECORD_ACTION,
+        "source_skill": SKILL_NAME,
+        "benchmark": BENCHMARK_NAME,
+        "provider": PROVIDER_NAME,
+        "control_id": target.control_id,
+        "title": target.title,
+        "target": {
+            "resource_type": target.resource_type,
+            "resource_id": target.resource_id,
+            "resource_name": target.resource_name,
+            "region": target.region,
+            "account_id": target.account_id,
+        },
+        "action": {
+            "name": target.action,
+            "detail": target.detail,
+            "parameters": target.parameters,
+        },
+        "status": status,
+        "status_detail": status_detail,
+        "dry_run": dry_run,
+    }
+    if not dry_run:
+        record["incident_id"] = incident_id
+        record["approver"] = approver
+    if audit is not None:
+        record["audit"] = audit
+    return record
+
+
+def _apply_target(target: RemediationTarget, clients: dict[str, Any]) -> None:
+    if target.action == "put_bucket_encryption":
+        clients["s3"].put_bucket_encryption(
+            Bucket=target.resource_id,
+            ServerSideEncryptionConfiguration=target.parameters["ServerSideEncryptionConfiguration"],
+        )
+        return
+    if target.action == "put_public_access_block":
+        clients["s3"].put_public_access_block(
+            Bucket=target.resource_id,
+            PublicAccessBlockConfiguration=target.parameters["PublicAccessBlockConfiguration"],
+        )
+        return
+    if target.action == "put_bucket_versioning":
+        clients["s3"].put_bucket_versioning(
+            Bucket=target.resource_id,
+            VersioningConfiguration=target.parameters["VersioningConfiguration"],
+        )
+        return
+    if target.action == "revoke_security_group_ingress":
+        params = target.parameters
+        permission: dict[str, Any] = {
+            "IpProtocol": params["ip_protocol"],
+            "IpRanges": [{"CidrIp": cidr} for cidr in params["cidrs"] if ":" not in cidr],
+            "Ipv6Ranges": [{"CidrIpv6": cidr} for cidr in params["cidrs"] if ":" in cidr],
+        }
+        if params["ip_protocol"] != "-1":
+            permission["FromPort"] = params["from_port"]
+            permission["ToPort"] = params["to_port"]
+        if not permission["IpRanges"]:
+            del permission["IpRanges"]
+        if not permission["Ipv6Ranges"]:
+            del permission["Ipv6Ranges"]
+        clients["ec2"].revoke_security_group_ingress(GroupId=target.resource_id, IpPermissions=[permission])
+        return
+    raise ValueError(f"unsupported remediation action `{target.action}`")
+
+
+def _check_apply_gate() -> tuple[bool, str]:
+    incident_id = os.getenv("CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID", "").strip()
+    approver = os.getenv("CSPM_AWS_AUTOREMEDIATE_APPROVER", "").strip()
+    if not incident_id:
+        return False, "CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID is required for --apply"
+    if not approver:
+        return False, "CSPM_AWS_AUTOREMEDIATE_APPROVER is required for --apply"
+    return True, ""
+
+
+def _resolve_apply_identity() -> tuple[str, str]:
+    return (
+        os.getenv("CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID", "").strip(),
+        os.getenv("CSPM_AWS_AUTOREMEDIATE_APPROVER", "").strip(),
+    )
+
+
+def _confirm_apply(confirm: str | None) -> None:
+    if confirm == CONFIRM_APPLY_PHRASE:
+        return
+    if not sys.stdin.isatty():
+        raise ValueError(
+            f"--apply requires interactive confirmation or --confirm {CONFIRM_APPLY_PHRASE}"
+        )
+    response = input(
+        f"Type {CONFIRM_APPLY_PHRASE} to apply AWS CIS auto-remediation changes: "
+    ).strip()
+    if response != CONFIRM_APPLY_PHRASE:
+        raise ValueError("confirmation declined")
+
+
+def build_remediation_records(
+    findings: list[Finding],
+    *,
+    clients: dict[str, Any],
+    region: str,
+    apply: bool,
+    confirm: str | None = None,
+) -> list[dict[str, Any]]:
+    targets = build_remediation_targets(findings, clients=clients, region=region)
+    if not targets:
+        return []
+
+    incident_id = ""
+    approver = ""
+    audit_writer: DualAuditWriter | None = None
+    if apply:
+        ok, reason = _check_apply_gate()
+        if not ok:
+            raise ValueError(reason)
+        _confirm_apply(confirm)
+        incident_id, approver = _resolve_apply_identity()
+        audit_writer = DualAuditWriter(
+            dynamodb_table=os.environ["CSPM_AWS_AUTOREMEDIATE_AUDIT_DYNAMODB_TABLE"],
+            s3_bucket=os.environ["CSPM_AWS_AUTOREMEDIATE_AUDIT_BUCKET"],
+            kms_key_arn=os.environ["CSPM_AWS_AUTOREMEDIATE_AUDIT_KMS_KEY_ARN"],
+        )
+
+    records: list[dict[str, Any]] = []
+    for target, protected_reason in targets:
+        if protected_reason:
+            records.append(
+                _record_for_target(
+                    target,
+                    dry_run=not apply,
+                    status=STATUS_WOULD_VIOLATE_PROTECTED,
+                    status_detail=protected_reason,
+                    incident_id=incident_id,
+                    approver=approver,
+                )
+            )
+            continue
+
+        if not apply:
+            records.append(
+                _record_for_target(
+                    target,
+                    dry_run=True,
+                    status=STATUS_PLANNED,
+                    status_detail=target.detail,
+                )
+            )
+            continue
+
+        assert audit_writer is not None
+        audit = audit_writer.record(
+            target=target,
+            status="in_progress",
+            detail=f"about to execute {target.action}",
+            incident_id=incident_id,
+            approver=approver,
+        )
+        try:
+            _apply_target(target, clients)
+        except Exception as exc:
+            audit_writer.record(
+                target=target,
+                status=STATUS_FAILURE,
+                detail=str(exc),
+                incident_id=incident_id,
+                approver=approver,
+            )
+            records.append(
+                _record_for_target(
+                    target,
+                    dry_run=False,
+                    status=STATUS_FAILURE,
+                    status_detail=str(exc),
+                    incident_id=incident_id,
+                    approver=approver,
+                    audit=audit,
+                )
+            )
+            continue
+
+        success_audit = audit_writer.record(
+            target=target,
+            status=STATUS_SUCCESS,
+            detail=f"executed {target.action}",
+            incident_id=incident_id,
+            approver=approver,
+        )
+        records.append(
+            _record_for_target(
+                target,
+                dry_run=False,
+                status=STATUS_SUCCESS,
+                status_detail=target.detail,
+                incident_id=incident_id,
+                approver=approver,
+                audit=success_audit,
+            )
+        )
+    return records
+
+
+def print_remediation_summary(records: list[dict[str, Any]]) -> None:
+    if not records:
+        print("\n  No supported failing controls for auto-remediation.")
+        return
+    print("\n  [AUTO-REMEDIATE]")
+    for record in records:
+        target = record["target"]
+        print(f"  {record['control_id']} {target['resource_id']} -> {record['action']['name']}")
+        print(f"         {record['status']}: {record['status_detail']}")
+
+
+def _auto_remediation_exit_code(
+    findings: list[Finding],
+    records: list[dict[str, Any]],
+    *,
+    apply: bool,
+) -> int:
+    critical_high_fails = [
+        f for f in findings if f.status == "FAIL" and f.severity in ("CRITICAL", "HIGH")
+    ]
+    if not records:
+        return 1 if critical_high_fails else 0
+    if apply:
+        failed_records = [r for r in records if r["status"] in {STATUS_FAILURE, STATUS_WOULD_VIOLATE_PROTECTED}]
+        return 1 if failed_records or critical_high_fails else 0
+    return 1 if critical_high_fails else 0
+
+# ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 
@@ -772,6 +1391,7 @@ def _get_clients(region: str) -> dict[str, Any]:
         "ct": session.client("cloudtrail"),
         "cw": session.client("cloudwatch"),
         "ec2": session.client("ec2"),
+        "sts": session.client("sts"),
     }
 
 
@@ -791,8 +1411,13 @@ def _run_check(fn, clients: dict) -> Finding:
     return fn(clients["iam"])
 
 
-def run_assessment(region: str = "us-east-1", section: str | None = None) -> list[Finding]:
-    clients = _get_clients(region)
+def run_assessment(
+    region: str = "us-east-1",
+    section: str | None = None,
+    *,
+    clients: dict[str, Any] | None = None,
+) -> list[Finding]:
+    clients = clients or _get_clients(region)
     findings: list[Finding] = []
 
     sections_to_run = {section: SECTIONS[section]} if section and section in SECTIONS else SECTIONS
@@ -867,12 +1492,39 @@ def main():
         default="native",
         help="Structured JSON format for --output json",
     )
+    parser.add_argument(
+        "--auto-remediate",
+        action="store_true",
+        help="Emit remediation plans for supported failing controls (AWS-first slice: 2.1, 2.3, 2.4, 4.1, 4.2).",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Execute supported remediation actions. Requires --auto-remediate, HITL env vars, and confirmation.",
+    )
+    parser.add_argument(
+        "--confirm",
+        help=f"Non-interactive confirmation helper. Must equal {CONFIRM_APPLY_PHRASE} when used with --apply.",
+    )
     args = parser.parse_args()
 
-    findings = run_assessment(region=args.region, section=args.section)
+    if args.apply and not args.auto_remediate:
+        raise SystemExit("--apply requires --auto-remediate")
+
+    clients = _get_clients(args.region)
+    findings = run_assessment(region=args.region, section=args.section, clients=clients)
+    remediation_records: list[dict[str, Any]] = []
+    if args.auto_remediate:
+        remediation_records = build_remediation_records(
+            findings,
+            clients=clients,
+            region=args.region,
+            apply=args.apply,
+            confirm=args.confirm,
+        )
 
     if args.output == "json":
-        rendered = (
+        findings_rendered = (
             findings_to_ocsf(
                 findings,
                 skill_name=SKILL_NAME,
@@ -883,11 +1535,21 @@ def main():
             if args.output_format == "ocsf"
             else findings_to_native(findings)
         )
-        print(json.dumps(rendered, indent=2))
+        payload: Any = findings_rendered
+        if args.auto_remediate:
+            payload = {
+                "findings": findings_rendered,
+                "remediation": remediation_records,
+            }
+        print(json.dumps(payload, indent=2))
     else:
         print_summary(findings)
+        if args.auto_remediate:
+            print_remediation_summary(remediation_records)
 
-    # Exit code: 1 if any CRITICAL/HIGH failures
+    if args.auto_remediate:
+        sys.exit(_auto_remediation_exit_code(findings, remediation_records, apply=args.apply))
+
     critical_high_fails = [
         f for f in findings if f.status == "FAIL" and f.severity in ("CRITICAL", "HIGH")
     ]

@@ -67,7 +67,7 @@ is the row you can take to your auditor.
 | `detect-prompt-injection-mcp-proxy` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-sensitive-secret-read-k8s` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `container-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
-| `cspm-aws-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
+| `cspm-aws-cis-benchmark` | evaluation | ⚠️ write-capable | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `cspm-azure-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `cspm-gcp-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `gpu-cluster-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |

@@ -3,22 +3,31 @@ name: cspm-aws-cis-benchmark
 description: >-
   Assess AWS accounts against CIS AWS Foundations Benchmark v3.0. Runs 18 automated
   read-only checks across IAM, Storage, Logging, and Networking. Produces per-control
-  pass/fail results with remediation commands. Use when the user mentions AWS CIS
-  benchmark, cloud security posture, IAM hygiene audit, S3 public access check, or
-  CloudTrail validation. Do NOT use for GCP, Azure, or on-prem; do NOT use this skill
-  to remediate findings (it is assessment-only and has zero write permissions) — pair
-  with iam-departures-aws for IAM cleanup, or open a ticket in your remediation
-  workflow for other findings.
+  pass/fail results with remediation commands. Optional `--auto-remediate` support
+  adds dry-run-first plans for a narrow AWS-first control set (S3 encryption, S3 public
+  access block, S3 versioning, unrestricted SSH/RDP SG rules), with `--apply` gated by
+  incident + approver env vars, CLI confirmation, and dual audit. Use when the user
+  mentions AWS CIS benchmark, cloud security posture, IAM hygiene audit, S3 public
+  access check, or CloudTrail validation. Do NOT use for GCP, Azure, or on-prem; do
+  NOT use `--auto-remediate` for unsupported controls, for CloudTrail bootstrap, or to
+  bypass protected-resource deny-lists.
 license: Apache-2.0
-approval_model: none
+capability: write-cloud
+approval_model: human_required
 execution_modes: jit, ci, mcp, persistent
-side_effects: none
+side_effects: writes-cloud, writes-audit
 input_formats: raw
 output_formats: native, ocsf
 concurrency_safety: operator_coordinated
+network_egress: "*.amazonaws.com"
+caller_roles: security_engineer, incident_responder, platform_engineer
+approver_roles: security_lead
+min_approvers: 1
 compatibility: >-
   Requires Python 3.11+, boto3, and AWS credentials with SecurityAudit managed policy
-  (read-only). No write permissions needed — assessment only.
+  (read-only) for assessment. `--auto-remediate --apply` additionally needs targeted
+  write scope for S3 bucket configuration and/or EC2 security-group ingress revoke,
+  plus dual-audit write access to DynamoDB, S3, and KMS.
 metadata:
   author: msaad00
   homepage: https://github.com/msaad00/cloud-ai-security-skills
@@ -38,47 +47,60 @@ metadata:
 Automated assessment of AWS accounts against the CIS AWS Foundations Benchmark v3.0.
 18 checks across 4 domains, each mapped to NIST CSF 2.0, ISO 27001:2022, and SOC 2.
 
-## When to Use
+## Use when
 
 - Periodic cloud security posture assessment (monthly/quarterly)
 - Pre-audit preparation for SOC 2, ISO 27001, or PCI DSS
 - Post-incident validation that security controls are intact
 - New account baseline — verify guardrails before workloads deploy
 - Compliance evidence generation for auditors
+- You want dry-run remediation planning for supported AWS CIS failures without leaving the benchmark workflow
+
+## Do NOT use
+
+- For GCP, Azure, or on-prem posture checks
+- To bootstrap missing CloudTrail infrastructure or other unsupported controls
+- To bypass protected-resource deny-lists for break-glass or intentionally open assets
+- To run `--apply` without a declared incident window, approver identity, and explicit confirmation
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    subgraph AWS["AWS Account — read-only"]
+    subgraph AWS["AWS Account"]
         IAM["IAM<br/>7 checks"]
         S3["S3 Storage<br/>4 checks"]
         CT["CloudTrail<br/>4 checks"]
         VPC["VPC/Network<br/>3 checks"]
     end
 
-    CHK["checks.py<br/>18 CIS v3.0 controls<br/>SecurityAudit policy only"]
+    CHK["checks.py<br/>18 CIS v3.0 controls<br/>dry-run auto-remediate for supported failures"]
 
     IAM --> CHK
     S3 --> CHK
     CT --> CHK
     VPC --> CHK
 
-    CHK --> JSON["JSON<br/>per-control results"]
-    CHK --> CON["Console<br/>pass/fail summary"]
-    CHK --> SARIF["SARIF<br/>GitHub Security tab"]
+    CHK --> JSON["JSON<br/>findings or findings+plans"]
+    CHK --> CON["Console<br/>pass/fail + remediation plan"]
+    CHK --> SARIF["SARIF/OCSF<br/>assessment output"]
+    CHK --> AUD["Dual audit<br/>only under --apply"]
 
     style AWS fill:#1e293b,stroke:#475569,color:#e2e8f0
     style CHK fill:#172554,stroke:#3b82f6,color:#e2e8f0
+    style AUD fill:#3f1d2e,stroke:#fb7185,color:#fde7f3
 ```
 
 ## Security Guardrails
 
-- **Read-only**: Requires only `SecurityAudit` managed policy. Zero write permissions.
+- **Dry-run by default**: assessment mode stays read-only unless `--auto-remediate --apply` is explicitly requested.
+- **Guarded write scope**: the shipped AWS-first slice only supports controls `2.1`, `2.3`, `2.4`, `4.1`, and `4.2`.
+- **Protected resources fail closed**: buckets in `CSPM_AWS_AUTOREMEDIATE_PROTECTED_BUCKETS`, security groups in `CSPM_AWS_AUTOREMEDIATE_PROTECTED_SECURITY_GROUPS`, protected tags, and default SGs emit `would-violate-protected-resource` instead of planning/applying.
+- **HITL gate**: `--apply` requires `CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID` + `CSPM_AWS_AUTOREMEDIATE_APPROVER` and CLI confirmation.
+- **Dual audit**: every apply writes before/after audit rows to DynamoDB + KMS-encrypted S3 via `CSPM_AWS_AUTOREMEDIATE_AUDIT_*` env vars.
 - **No credentials stored**: AWS credentials come from environment/instance profile only.
-- **No data exfiltration**: Check results stay local. No external API calls beyond AWS SDK.
-- **Safe to run in production**: Cannot modify any AWS resources.
-- **Idempotent**: Run as often as needed with no side effects.
+- **No data exfiltration**: results stay local. No external API calls beyond AWS SDK.
+- **Safe assessment path**: running without `--auto-remediate --apply` cannot modify any AWS resources.
 
 ## Controls — CIS AWS Foundations v3.0 (key controls)
 
@@ -139,27 +161,39 @@ python src/checks.py --output json --output-format ocsf > cis-aws-results.json
 
 # Specific region
 python src/checks.py --region us-east-1
+
+# Dry-run remediation plans for supported failures
+python src/checks.py --section storage --auto-remediate --output json
+
+# Apply supported remediation actions (CLI-confirmed)
+export CSPM_AWS_AUTOREMEDIATE_INCIDENT_ID=INC-2026-04-24-001
+export CSPM_AWS_AUTOREMEDIATE_APPROVER=alice@security
+export CSPM_AWS_AUTOREMEDIATE_AUDIT_DYNAMODB_TABLE=cloud-sec-remediation-audit
+export CSPM_AWS_AUTOREMEDIATE_AUDIT_BUCKET=cloud-sec-remediation-audit
+export CSPM_AWS_AUTOREMEDIATE_AUDIT_KMS_KEY_ARN=arn:aws:kms:us-east-1:123456789012:key/abc123
+python src/checks.py --section storage --auto-remediate --apply
 ```
 
-## Remediation — Critical Findings
+## Auto-remediation Scope
 
-```
-  FINDING: Root account has access keys (1.6)
-  ────────────────────────────────────────────
-  WHY:     Root keys = unlimited blast radius. Compromised root = full account takeover.
-  FIX:     aws iam delete-access-key --user-name root --access-key-id AKIA...
-  VERIFY:  python src/checks.py --section iam | grep "1.6"
-```
+Supported in this AWS-first slice:
 
-```
-  FINDING: S3 bucket publicly accessible (2.3)
-  ─────────────────────────────────────────────
-  WHY:     Public S3 = data exfiltration. #1 source of cloud data breaches.
-  FIX:     aws s3api put-public-access-block --bucket BUCKET \
-             --public-access-block-configuration \
-             BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
-  VERIFY:  python src/checks.py --section storage | grep "2.3"
-```
+- `2.1` enable bucket default encryption (`put_bucket_encryption`, AES256)
+- `2.3` enable full S3 public access block (`put_public_access_block`)
+- `2.4` enable bucket versioning (`put_bucket_versioning`)
+- `4.1` revoke unrestricted SSH ingress (`revoke_security_group_ingress`)
+- `4.2` revoke unrestricted RDP ingress (`revoke_security_group_ingress`)
+
+Not yet supported:
+
+- IAM/user controls like MFA and root-key cleanup
+- CloudTrail bootstrap / trail creation / alarm creation
+- VPC flow-log provisioning
+
+Under `--output json --auto-remediate`, the skill emits:
+
+- `findings`: the normal benchmark results
+- `remediation`: native `remediation_plan` or `remediation_action` records for supported failed controls
 
 ## Validate with agent-bom
 
