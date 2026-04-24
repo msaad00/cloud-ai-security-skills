@@ -6,7 +6,7 @@
 - **NIST CSF 2.0** — https://www.nist.gov/cyberframework
 - **ISO/IEC 27001:2022** — https://www.iso.org/standard/27001
 
-The full v2.1 benchmark has 90+ controls. This skill implements **6
+The full v2.1 benchmark has 90+ controls. This skill implements **8
 high-impact checks** covering Storage and Networking. Identity / Logging /
 AI Foundry controls are tracked in the Roadmap section of
 [`SKILL.md`](SKILL.md).
@@ -15,8 +15,8 @@ AI Foundry controls are tracked in the Roadmap section of
 
 | Section | Provider | Method | Why |
 |---|---|---|---|
-| Storage | `Microsoft.Storage` | `storageAccounts.list` | HTTPS-only (CIS 2.2), public blob (CIS 2.3), network rules (CIS 2.4) |
-| Networking | `Microsoft.Network` | `networkSecurityGroups.listAll`, `networkWatchers.listAll`, `flowLogs.list` | Unrestricted SSH/RDP (CIS 4.1, 4.2), NSG flow logs (CIS 4.3) |
+| Storage | `Microsoft.Storage` | `storageAccounts.list` | CMK encryption (CIS 2.1), HTTPS-only (CIS 2.2), public blob (CIS 2.3), network rules (CIS 2.4) |
+| Networking | `Microsoft.Network` | `virtualNetworks.listAll`, `networkSecurityGroups.listAll`, `networkWatchers.listAll`, `flowLogs.list` | Unrestricted SSH/RDP (CIS 4.1, 4.2), NSG flow logs (CIS 4.3), Network Watcher regional coverage (CIS 4.4) |
 
 ## Required role
 
@@ -30,6 +30,7 @@ If you want a tighter custom role, the minimal action set is:
   "Name": "cspm-azure-cis-benchmark-reader",
     "Actions": [
       "Microsoft.Storage/storageAccounts/read",
+      "Microsoft.Network/virtualNetworks/read",
       "Microsoft.Network/networkSecurityGroups/read",
       "Microsoft.Network/networkWatchers/read",
       "Microsoft.Network/networkWatchers/flowLogs/read"

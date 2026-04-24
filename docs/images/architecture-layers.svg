@@ -87,14 +87,14 @@
     <g filter="url(#shadow)">
       <rect x="642" y="228" width="260" height="180" rx="28" fill="#0a3b35" stroke="#34d399" stroke-width="1.6"/>
       <text x="674" y="270" font-size="18" font-weight="800" fill="#d1fae5">L3 Detect</text>
-      <text x="674" y="332" font-size="56" font-weight="900" fill="#ffffff">14</text>
+      <text x="674" y="332" font-size="56" font-weight="900" fill="#ffffff">16</text>
       <text x="674" y="364" font-size="15" fill="#a7f3d0">deterministic MITRE-tagged</text>
       <text x="674" y="386" font-size="15" fill="#a7f3d0">OCSF Detection Finding 2004</text>
 
       <rect x="642" y="440" width="260" height="180" rx="28" fill="#0a3b35" stroke="#34d399" stroke-width="1.6"/>
       <text x="674" y="482" font-size="18" font-weight="800" fill="#d1fae5">L4 Evaluate</text>
       <text x="674" y="544" font-size="56" font-weight="900" fill="#ffffff">7</text>
-      <text x="674" y="576" font-size="15" fill="#a7f3d0">82 benchmark checks across</text>
+      <text x="674" y="576" font-size="15" fill="#a7f3d0">91 benchmark checks across</text>
       <text x="674" y="598" font-size="15" fill="#a7f3d0">CIS · K8s · container · AI</text>
     </g>
 

@@ -1,7 +1,7 @@
 """
 CIS Azure Foundations Benchmark v2.1 — Automated Assessment
 
-19 CIS controls + 5 AI Foundry controls across Identity, Storage,
+21 CIS controls + 5 AI Foundry controls across Identity, Storage,
 Logging, and Networking.
 Read-only: requires Reader role on the subscription.
 
@@ -50,6 +50,38 @@ class Finding:
 # ---------------------------------------------------------------------------
 # Section 2 — Storage
 # ---------------------------------------------------------------------------
+
+
+def check_2_1_storage_cmk(storage_client, subscription_id: str) -> Finding:
+    """CIS 2.1 — Storage accounts use customer-managed keys."""
+    try:
+        accounts = list(storage_client.storage_accounts.list())
+        non_cmk = []
+        for account in accounts:
+            encryption = getattr(account, "encryption", None)
+            key_source = getattr(encryption, "key_source", None)
+            if key_source != "Microsoft.Keyvault":
+                non_cmk.append(account.name)
+        return Finding(
+            control_id="2.1",
+            title="Storage customer-managed keys",
+            section="storage",
+            severity="HIGH",
+            status="FAIL" if non_cmk else "PASS",
+            detail=f"{len(non_cmk)} accounts do not use customer-managed keys" if non_cmk else "All accounts use customer-managed keys",
+            nist_csf="PR.DS-1",
+            resources=non_cmk,
+        )
+    except Exception as e:
+        return Finding(
+            control_id="2.1",
+            title="Storage customer-managed keys",
+            section="storage",
+            severity="HIGH",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="PR.DS-1",
+        )
 
 
 def check_2_3_no_public_blob(storage_client, subscription_id: str) -> Finding:
@@ -281,6 +313,65 @@ def check_4_3_nsg_flow_logs(network_client, subscription_id: str) -> Finding:
         )
 
 
+def check_4_4_network_watcher_regions(network_client, subscription_id: str) -> Finding:
+    """CIS 4.4 — Network Watcher enabled in all VNet regions."""
+    try:
+        vnets = list(network_client.virtual_networks.list_all())
+        vnet_regions = {
+            (getattr(vnet, "location", "") or "").lower()
+            for vnet in vnets
+            if getattr(vnet, "location", None)
+        }
+        if not vnet_regions:
+            return Finding(
+                control_id="4.4",
+                title="Network Watcher in all VNet regions",
+                section="networking",
+                severity="MEDIUM",
+                status="PASS",
+                detail="No virtual networks found",
+                nist_csf="DE.CM-1",
+            )
+
+        watchers = list(network_client.network_watchers.list_all())
+        watcher_regions = {
+            (getattr(watcher, "location", "") or "").lower()
+            for watcher in watchers
+            if getattr(watcher, "location", None)
+        }
+        missing_regions = sorted(region for region in vnet_regions if region not in watcher_regions)
+        if missing_regions:
+            return Finding(
+                control_id="4.4",
+                title="Network Watcher in all VNet regions",
+                section="networking",
+                severity="MEDIUM",
+                status="FAIL",
+                detail=f"Network Watcher missing in {len(missing_regions)} VNet region(s)",
+                nist_csf="DE.CM-1",
+                resources=missing_regions,
+            )
+        return Finding(
+            control_id="4.4",
+            title="Network Watcher in all VNet regions",
+            section="networking",
+            severity="MEDIUM",
+            status="PASS",
+            detail=f"Network Watcher enabled in all {len(vnet_regions)} VNet region(s)",
+            nist_csf="DE.CM-1",
+        )
+    except Exception as e:
+        return Finding(
+            control_id="4.4",
+            title="Network Watcher in all VNet regions",
+            section="networking",
+            severity="MEDIUM",
+            status="ERROR",
+            detail=str(e),
+            nist_csf="DE.CM-1",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
@@ -308,6 +399,7 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
 
     checks = {
         "storage": [
+            lambda: check_2_1_storage_cmk(storage_client, subscription_id),
             lambda: check_2_2_https_only(storage_client, subscription_id),
             lambda: check_2_3_no_public_blob(storage_client, subscription_id),
             lambda: check_2_4_network_rules(storage_client, subscription_id),
@@ -316,6 +408,7 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
             lambda: check_4_1_no_unrestricted_ssh(network_client, subscription_id),
             lambda: check_4_2_no_unrestricted_rdp(network_client, subscription_id),
             lambda: check_4_3_nsg_flow_logs(network_client, subscription_id),
+            lambda: check_4_4_network_watcher_regions(network_client, subscription_id),
         ],
     }
 

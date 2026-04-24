@@ -3,7 +3,7 @@
   "scan_metadata": {
     "skill": "cspm-azure-cis-benchmark",
     "skill_version": "0.1.0",
-    "benchmark": "CIS Azure Foundations v2.1 (subset of 6 controls)",
+    "benchmark": "CIS Azure Foundations v2.1 (subset of 8 controls)",
     "subscription_id": "00000000-0000-0000-0000-000000000000",
     "scan_started_at": "2026-04-10T05:00:00Z",
     "scan_completed_at": "2026-04-10T05:00:28Z"

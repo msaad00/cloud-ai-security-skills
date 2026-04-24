@@ -20,11 +20,13 @@ sys.modules[_SPEC.name] = _CHECKS
 _SPEC.loader.exec_module(_CHECKS)
 
 check_2_2_https_only = _CHECKS.check_2_2_https_only
+check_2_1_storage_cmk = _CHECKS.check_2_1_storage_cmk
 check_2_3_no_public_blob = _CHECKS.check_2_3_no_public_blob
 check_2_4_network_rules = _CHECKS.check_2_4_network_rules
 check_4_1_no_unrestricted_ssh = _CHECKS.check_4_1_no_unrestricted_ssh
 check_4_2_no_unrestricted_rdp = _CHECKS.check_4_2_no_unrestricted_rdp
 check_4_3_nsg_flow_logs = _CHECKS.check_4_3_nsg_flow_logs
+check_4_4_network_watcher_regions = _CHECKS.check_4_4_network_watcher_regions
 
 SUB_ID = "00000000-0000-0000-0000-000000000000"
 
@@ -33,14 +35,30 @@ SUB_ID = "00000000-0000-0000-0000-000000000000"
 
 
 class TestStorageChecks:
-    def _account(self, name, *, https=True, public_blob=False, default_action="Deny"):
+    def _account(self, name, *, https=True, public_blob=False, default_action="Deny", key_source="Microsoft.Keyvault"):
         a = MagicMock()
         a.name = name
         a.enable_https_traffic_only = https
         a.allow_blob_public_access = public_blob
         a.network_rule_set = MagicMock()
         a.network_rule_set.default_action = default_action
+        a.encryption = MagicMock()
+        a.encryption.key_source = key_source
         return a
+
+    def test_2_1_storage_cmk_passes(self):
+        client = MagicMock()
+        client.storage_accounts.list.return_value = [self._account("ok", key_source="Microsoft.Keyvault")]
+        f = check_2_1_storage_cmk(client, SUB_ID)
+        assert f.control_id == "2.1"
+        assert f.status == "PASS"
+
+    def test_2_1_storage_cmk_fails(self):
+        client = MagicMock()
+        client.storage_accounts.list.return_value = [self._account("bad", key_source="Microsoft.Storage")]
+        f = check_2_1_storage_cmk(client, SUB_ID)
+        assert f.status == "FAIL"
+        assert "bad" in f.resources
 
     def test_2_2_https_only_passes(self):
         client = MagicMock()
@@ -180,6 +198,32 @@ class TestNetworkChecks:
         f = check_4_3_nsg_flow_logs(client, SUB_ID)
         assert f.status == "FAIL"
         assert nsg_b.id in f.resources
+
+    def test_4_4_network_watcher_regions_passes(self):
+        client = MagicMock()
+        vnet = MagicMock()
+        vnet.location = "eastus"
+        watcher = MagicMock()
+        watcher.location = "eastus"
+        client.virtual_networks.list_all.return_value = [vnet]
+        client.network_watchers.list_all.return_value = [watcher]
+        f = check_4_4_network_watcher_regions(client, SUB_ID)
+        assert f.control_id == "4.4"
+        assert f.status == "PASS"
+
+    def test_4_4_network_watcher_regions_fails_for_missing_region(self):
+        client = MagicMock()
+        eastus = MagicMock()
+        eastus.location = "eastus"
+        westus = MagicMock()
+        westus.location = "westus"
+        watcher = MagicMock()
+        watcher.location = "eastus"
+        client.virtual_networks.list_all.return_value = [eastus, westus]
+        client.network_watchers.list_all.return_value = [watcher]
+        f = check_4_4_network_watcher_regions(client, SUB_ID)
+        assert f.status == "FAIL"
+        assert f.resources == ["westus"]
 
 
 class TestFindingStructure:
