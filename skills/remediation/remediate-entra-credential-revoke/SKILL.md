@@ -10,7 +10,8 @@ description: >-
   detect-entra-role-grant-escalation (T1098.003) via Microsoft Graph v1.0.
   Every action is dry-run by default, deny-listed against tenant-bootstrap
   and break-glass principals (display-name prefix + ENTRA_PROTECTED_OBJECT_IDS
-  env list), gated behind an incident ID plus approver for --apply, and
+  env list), gated behind an incident ID plus approver for --apply, bound to
+  an explicit tenant allow-list via ENTRA_REVOKE_ALLOWED_TENANT_IDS, and
   dual-audited (DynamoDB + KMS-encrypted S3). Re-verify confirms the SP is
   still disabled and emits a paired OCSF Detection Finding via the shared
   remediation_verifier contract on DRIFT (the SP was re-enabled). Use when
@@ -105,6 +106,7 @@ JSONL records on stdout:
 | Protected-objectId deny-list | comma-separated `ENTRA_PROTECTED_OBJECT_IDS` env var — match by exact objectId (use this for tenant-specific bootstrap SPs that don't follow the prefix convention) |
 | Target-type filter | only `ServicePrincipal` and `Application` accepted; other Graph types are out of scope |
 | Apply gate | `--apply` requires `ENTRA_REVOKE_INCIDENT_ID` + `ENTRA_REVOKE_APPROVER` env vars set out-of-band |
+| Tenant boundary | `--apply` also requires `AZURE_TENANT_ID` and `ENTRA_REVOKE_ALLOWED_TENANT_IDS`; the active tenant must be listed explicitly before Graph writes proceed |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER each Graph call; failure paths still write the failure audit row |
 | Re-verify | Reads the SP via `GET /servicePrincipals/{id}`; emits VERIFIED if `accountEnabled=false`, DRIFT (+ paired OCSF finding) if re-enabled, UNREACHABLE if Graph throws — never silently downgrades |
 
@@ -120,6 +122,7 @@ export AZURE_CLIENT_ID=...
 export AZURE_CLIENT_SECRET=...
 export ENTRA_REVOKE_INCIDENT_ID=INC-2026-04-19-003
 export ENTRA_REVOKE_APPROVER=alice@security
+export ENTRA_REVOKE_ALLOWED_TENANT_IDS=...
 export ENTRA_REVOKE_AUDIT_DYNAMODB_TABLE=entra-revoke-audit
 export ENTRA_REVOKE_AUDIT_BUCKET=acme-entra-audit
 export KMS_KEY_ARN=arn:aws:kms:us-east-1:111122223333:key/...
