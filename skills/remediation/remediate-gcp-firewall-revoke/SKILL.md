@@ -11,7 +11,9 @@ description: >-
   is dry-run by default, deny-listed against rule names matching
   `default-*`, rules whose `description` contains `intentionally-open`,
   and any rule name in GCP_FIREWALL_REVOKE_DENY_RULE_NAMES. Apply
-  requires GCP_FIREWALL_REVOKE_INCIDENT_ID + GCP_FIREWALL_REVOKE_APPROVER.
+  requires GCP_FIREWALL_REVOKE_INCIDENT_ID + GCP_FIREWALL_REVOKE_APPROVER
+  plus an explicit allowed-project binding via
+  GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS.
   Dual audit (DynamoDB + KMS-encrypted S3, same shared infra as the AWS
   pair, with `provider: "gcp"`). Reverify re-reads the rule via
   `firewalls.get` and emits VERIFIED if the rule is gone or remains
@@ -101,6 +103,7 @@ OCSF 1.8 Detection Finding (class 2004) from `detect-gcp-open-firewall`. Require
 | Intentionally-open description | rules whose `description` contains `intentionally-open` refuse revoke; description is logged in the audit row |
 | Operator allowlist | `GCP_FIREWALL_REVOKE_DENY_RULE_NAMES` env var (comma-separated rule names) refuses revoke |
 | Apply gate | `--apply` requires `GCP_FIREWALL_REVOKE_INCIDENT_ID` + `GCP_FIREWALL_REVOKE_APPROVER` set out-of-band |
+| Project boundary | `--apply` also requires `GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS`, and the finding's `account.uid` project must be listed there |
 | Mode gate | `--mode patch` (default, sets `disabled: true`) is non-destructive; `--mode delete` is opt-in and dual-logged |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER the patch/delete; failure paths still write the failure audit row |
 | Re-verify | Re-reads the rule via `firewalls.get`; emits VERIFIED if absent or `disabled: true`, DRIFT (+ paired OCSF finding) if re-enabled or re-created, UNREACHABLE if API throws — never silently downgrades |
@@ -115,6 +118,7 @@ python skills/remediation/remediate-gcp-firewall-revoke/src/handler.py findings.
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
 export GCP_FIREWALL_REVOKE_INCIDENT_ID=INC-2026-04-19-006
 export GCP_FIREWALL_REVOKE_APPROVER=alice@security
+export GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS=my-prod-project
 export GCP_FIREWALL_REVOKE_AUDIT_DYNAMODB_TABLE=gcp-firewall-revoke-audit
 export GCP_FIREWALL_REVOKE_AUDIT_BUCKET=acme-gcp-firewall-audit
 export KMS_KEY_ARN=arn:aws:kms:us-east-1:111122223333:key/...
@@ -145,7 +149,7 @@ recommended path.
 
 - Deleting all firewall rules in a project (one-rule-at-a-time, finding-driven)
 - Tag-based discovery of rules to revoke (this skill is finding-driven)
-- Cross-project auto-revoke (operators run the skill under the right project credentials, or the runner does)
+- Cross-project auto-revoke (the skill now fails closed unless the target project is named explicitly in `GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS`)
 - Posture-at-rest scanning (use `cspm-gcp-cis-benchmark`)
 
 ## See also

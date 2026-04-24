@@ -89,6 +89,7 @@ STATUS_SKIPPED_PROTECTED = "skipped_protected_rule"
 STATUS_WOULD_VIOLATE_PROTECTED = "would-violate-protected-rule"
 STATUS_SKIPPED_NO_RULE = "skipped_no_rule_pointer"
 STATUS_SKIPPED_BAD_RULE_ID = "skipped_unparseable_rule_id"
+STATUS_SKIPPED_SUBSCRIPTION_BOUNDARY = "skipped_subscription_boundary"
 
 # Format: /subscriptions/<sub>/resourceGroups/<rg>/providers/
 #         Microsoft.Network/networkSecurityGroups/<nsg>/securityRules/<rule>
@@ -518,7 +519,14 @@ def check_apply_gate() -> tuple[bool, str]:
         return False, "AZURE_NSG_REVOKE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "AZURE_NSG_REVOKE_APPROVER is required for --apply"
+    if not load_allowed_subscription_ids():
+        return False, "AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS is required for --apply"
     return True, ""
+
+
+def load_allowed_subscription_ids() -> tuple[str, ...]:
+    raw = os.getenv("AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS", "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
 
 
 def _delete_endpoint(target: Target) -> str:
@@ -814,12 +822,14 @@ def run(
     incident_id: str = "",
     approver: str = "",
     mode: str = MODE_DELETE,
+    allowed_subscription_ids: Iterable[str] = (),
 ) -> Iterator[dict[str, Any]]:
     if mode not in SUPPORTED_MODES:
         raise ValueError(f"unsupported mode `{mode}`; choose one of {sorted(SUPPORTED_MODES)}")
     rule_name_prefixes = tuple(rule_name_prefixes)
     nsg_name_suffixes = tuple(nsg_name_suffixes)
     rule_ids = tuple(rule_ids)
+    allowed_subscription_ids = tuple(allowed_subscription_ids)
 
     for target, event in parse_targets(events):
         if target is None:
@@ -843,6 +853,19 @@ def run(
                     "security rule resource id"
                 ),
                 dry_run=dry_run, mode=mode,
+            )
+            continue
+
+        if apply and target.subscription_id not in allowed_subscription_ids:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_SUBSCRIPTION_BOUNDARY,
+                detail=(
+                    f"target subscription `{target.subscription_id}` is not listed in "
+                    "AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS"
+                ),
+                dry_run=False,
+                mode=mode,
             )
             continue
 
@@ -948,6 +971,7 @@ def main(argv: list[str] | None = None) -> int:
             apply=args.apply, reverify=args.reverify, audit=audit,
             rule_ids=load_protected_rule_ids(),
             incident_id=incident_id, approver=approver, mode=args.mode,
+            allowed_subscription_ids=load_allowed_subscription_ids(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:

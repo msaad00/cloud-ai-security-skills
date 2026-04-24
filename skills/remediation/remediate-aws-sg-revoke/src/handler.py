@@ -80,6 +80,7 @@ STATUS_SKIPPED_SOURCE = "skipped_wrong_source"
 STATUS_SKIPPED_PROTECTED = "skipped_protected_sg"
 STATUS_WOULD_VIOLATE_PROTECTED = "would-violate-protected-sg"
 STATUS_SKIPPED_NO_SG = "skipped_no_sg_pointer"
+STATUS_SKIPPED_ACCOUNT_BOUNDARY = "skipped_account_boundary"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -384,7 +385,22 @@ def check_apply_gate() -> tuple[bool, str]:
         return False, "AWS_SG_REVOKE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "AWS_SG_REVOKE_APPROVER is required for --apply"
+    if not load_allowed_account_ids():
+        return False, "AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS is required for --apply"
     return True, ""
+
+
+def load_allowed_account_ids() -> tuple[str, ...]:
+    raw = os.getenv("AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS", "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
+
+
+def _resolve_current_account_id(*, profile: str = "", region: str = "") -> str:
+    import boto3
+
+    session = boto3.Session(profile_name=profile or None)
+    client = session.client("sts", region_name=region or None)
+    return str(client.get_caller_identity()["Account"])
 
 
 def _revoke_endpoint(target: Target) -> str:
@@ -649,9 +665,12 @@ def run(
     intentionally_open_tag: str = DEFAULT_INTENTIONALLY_OPEN_TAG,
     incident_id: str = "",
     approver: str = "",
+    allowed_account_ids: Iterable[str] = (),
+    current_account_id: str = "",
 ) -> Iterator[dict[str, Any]]:
     name_prefixes = tuple(name_prefixes)
     sg_ids = tuple(sg_ids)
+    allowed_account_ids = tuple(allowed_account_ids)
 
     for target, event in parse_targets(events):
         if target is None:
@@ -666,6 +685,30 @@ def run(
                 dry_run=dry_run,
             )
             continue
+
+        if apply:
+            if target.account_uid and allowed_account_ids and target.account_uid not in allowed_account_ids:
+                yield _skip_record(
+                    target,
+                    status=STATUS_SKIPPED_ACCOUNT_BOUNDARY,
+                    detail=(
+                        f"target account `{target.account_uid}` is not listed in "
+                        "AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS"
+                    ),
+                    dry_run=False,
+                )
+                continue
+            if current_account_id and target.account_uid and target.account_uid != current_account_id:
+                yield _skip_record(
+                    target,
+                    status=STATUS_SKIPPED_ACCOUNT_BOUNDARY,
+                    detail=(
+                        f"target account `{target.account_uid}` does not match current AWS account "
+                        f"`{current_account_id}`"
+                    ),
+                    dry_run=False,
+                )
+                continue
 
         # Live tag check requires a describe call. We do it once per target.
         sg_describe: dict[str, Any] | None = None
@@ -744,6 +787,14 @@ def main(argv: list[str] | None = None) -> int:
             if not ok:
                 print(reason, file=sys.stderr)
                 return 2
+            try:
+                current_account_id = _resolve_current_account_id(
+                    profile=os.environ.get("AWS_PROFILE", ""),
+                    region=os.environ.get("AWS_REGION", ""),
+                )
+            except Exception as exc:
+                print(f"failed to resolve current AWS account for --apply: {exc}", file=sys.stderr)
+                return 2
             incident_id = os.environ["AWS_SG_REVOKE_INCIDENT_ID"].strip()
             approver = os.environ["AWS_SG_REVOKE_APPROVER"].strip()
             audit = DualAuditWriter(
@@ -751,12 +802,16 @@ def main(argv: list[str] | None = None) -> int:
                 s3_bucket=os.environ["AWS_SG_REVOKE_AUDIT_BUCKET"],
                 kms_key_arn=os.environ["KMS_KEY_ARN"],
             )
+        else:
+            current_account_id = ""
 
         for record in run(
             load_jsonl(in_stream), ec2_client=ec2_client,
             apply=args.apply, reverify=args.reverify, audit=audit,
             sg_ids=load_protected_sg_ids(),
             incident_id=incident_id, approver=approver,
+            allowed_account_ids=load_allowed_account_ids(),
+            current_account_id=current_account_id,
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:
