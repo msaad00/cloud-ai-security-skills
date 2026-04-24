@@ -178,6 +178,24 @@ def _approval_count(approval_context: dict[str, Any] | None) -> int:
     return 0
 
 
+def _is_safe_write_invocation(skill: SkillSpec, args: list[str]) -> bool:
+    if skill.read_only:
+        return True
+    if skill.category == "remediation" and skill.entrypoint and skill.entrypoint.name == "handler.py":
+        return "--apply" not in args
+    if skill.category == "evaluation" and skill.entrypoint and skill.entrypoint.name == "checks.py":
+        return "--apply" not in args
+    return "--dry-run" in args
+
+
+def _requires_approval_context(skill: SkillSpec, args: list[str]) -> bool:
+    if skill.read_only or not skill.approver_roles:
+        return False
+    if skill.category == "evaluation" and skill.entrypoint and skill.entrypoint.name == "checks.py":
+        return "--apply" in args
+    return True
+
+
 def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     tools = _filtered_tool_map()
     if name not in tools:
@@ -214,11 +232,14 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
     }
 
     try:
-        if not skill.read_only and "--dry-run" not in args:
-            raise ValueError("write-capable tools must be called with `--dry-run`")
-        if not skill.read_only and skill.approver_roles and approval_context is None:
+        if not _is_safe_write_invocation(skill, args):
+            raise ValueError(
+                "write-capable tools must stay in dry-run/read-only mode under MCP "
+                "(`--dry-run`, or no `--apply` for dry-run-default handler/checks entrypoints)"
+            )
+        if _requires_approval_context(skill, args) and approval_context is None:
             raise ValueError("write-capable tools with approver_roles require `_approval_context`")
-        if not skill.read_only and (skill.min_approvers or 0) > _approval_count(approval_context):
+        if _requires_approval_context(skill, args) and (skill.min_approvers or 0) > _approval_count(approval_context):
             raise ValueError(
                 f"tool `{skill.name}` requires at least {skill.min_approvers} approver(s) in `_approval_context`"
             )

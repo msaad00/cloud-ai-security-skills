@@ -37,14 +37,17 @@ class _FakeSkill:
         approver_roles: tuple[str, ...] = (),
         min_approvers: int | None = None,
         mcp_timeout_seconds: int | None = None,
+        category: str = "detection",
+        entrypoint_name: str | None = None,
     ) -> None:
         self.name = "fake-skill"
-        self.category = "detection"
+        self.category = category
         self.capability = "read-only" if read_only else "write-remediation"
         self.read_only = read_only
         self.approver_roles = approver_roles
         self.min_approvers = min_approvers
         self.mcp_timeout_seconds = mcp_timeout_seconds
+        self.entrypoint = None if entrypoint_name is None else Path(entrypoint_name)
 
 
 def test_call_tool_injects_caller_and_approval_context(monkeypatch):
@@ -205,6 +208,54 @@ def test_call_tool_accepts_multi_approver_context(monkeypatch):
     assert env["SKILL_APPROVER_EMAILS"] == "a@example.com,b@example.com"
     assert result["isError"] is False
     assert audit_events[0]["approval_count"] == 2
+
+
+def test_safe_write_invocation_allows_handler_remediation_without_apply():
+    skill = _FakeSkill(
+        read_only=False,
+        category="remediation",
+        entrypoint_name="handler.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is True
+
+
+def test_safe_write_invocation_allows_checks_evaluation_without_apply():
+    skill = _FakeSkill(
+        read_only=False,
+        category="evaluation",
+        entrypoint_name="checks.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, ["--auto-remediate"]) is True
+    assert MODULE._is_safe_write_invocation(skill, ["--auto-remediate", "--apply"]) is False
+
+
+def test_safe_write_invocation_still_requires_dry_run_for_other_write_surfaces():
+    skill = _FakeSkill(
+        read_only=False,
+        category="output",
+        entrypoint_name="sink.py",
+    )
+    assert MODULE._is_safe_write_invocation(skill, []) is False
+    assert MODULE._is_safe_write_invocation(skill, ["--dry-run"]) is True
+
+
+def test_checks_evaluation_dry_run_does_not_require_approval_context(monkeypatch):
+    monkeypatch.setattr(
+        MODULE,
+        "tool_map",
+        lambda: {
+            "fake-skill": _FakeSkill(
+                read_only=False,
+                approver_roles=("security_lead",),
+                category="evaluation",
+                entrypoint_name="checks.py",
+            )
+        },
+    )
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE.subprocess, "run", lambda *args, **kwargs: _FakeCompleted())
+    result = MODULE._call_tool("fake-skill", {"args": []})
+    assert result["isError"] is False
 
 
 def test_resolve_timeout_prefers_env_override():

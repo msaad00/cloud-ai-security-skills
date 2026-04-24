@@ -30,8 +30,10 @@ Audit behavior:
 
 Approval behavior:
 
-- write-capable tools still require `--dry-run`; the wrapper refuses bare
-  apply-style invocations
+- write-capable tools stay in safe mode at the wrapper boundary:
+  generic write tools still require `--dry-run`, while dry-run-default
+  `handler.py` and `checks.py` entrypoints are allowed as long as `--apply`
+  is absent
 - if a skill declares `approver_roles`, the caller must provide
   `_approval_context`
 - if a skill declares `min_approvers > 1`, `_approval_context` must carry that
