@@ -4,17 +4,17 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.4.0`
 - Registry updated: `2026-04-17`
-- Total shipped skills in registry: **63**
+- Total shipped skills in registry: **64**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **42** | — |
-| MITRE ATT&CK | v14 | **39** | 100% mapped coverage |
+| OCSF | 1.8.0 | **43** | — |
+| MITRE ATT&CK | v14 | **40** | 100% mapped coverage |
 | MITRE ATLAS | current | **8** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
-| CIS GCP Foundations | v3.0 | **4** | — |
+| CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **5** | — |
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **42**
+Shipped skills mapped: **43**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -48,6 +48,7 @@ Shipped skills mapped: **42**
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
+| [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | iam-roles, role-sessions, applications, service-accounts, service-account-keys, iam-credentials, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
@@ -90,7 +91,7 @@ Shipped skills mapped: **42**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **39**
+Shipped skills mapped: **40**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -101,6 +102,7 @@ Shipped skills mapped: **39**
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
+| [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | iam-roles, role-sessions, applications, service-accounts, service-account-keys, iam-credentials, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
@@ -171,10 +173,11 @@ Shipped skills mapped: **4**
 
 - Registry id: `cis-gcp-v3`
 
-Shipped skills mapped: **4**
+Shipped skills mapped: **5**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`cspm-gcp-cis-benchmark`](../skills/evaluation/cspm-gcp-cis-benchmark) | evaluation | gcp | identities, storage, logging, network |
 | [`iam-departures-gcp`](../skills/remediation/iam-departures-gcp) | remediation | gcp | identities, access, audit, hr-events |
