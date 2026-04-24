@@ -20,6 +20,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_PLANNED,
     STATUS_SKIPPED_NO_RULE,
     STATUS_SKIPPED_PROTECTED,
+    STATUS_SKIPPED_SUBSCRIPTION_BOUNDARY,
     STATUS_SUCCESS,
     STATUS_WOULD_VIOLATE_PROTECTED,
     AzureNetworkClient,
@@ -165,12 +166,16 @@ def test_intentionally_open_tag_default():
 def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.delenv("AZURE_NSG_REVOKE_INCIDENT_ID", raising=False)
     monkeypatch.delenv("AZURE_NSG_REVOKE_APPROVER", raising=False)
+    monkeypatch.delenv("AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS", raising=False)
     ok, _ = check_apply_gate()
     assert ok is False
     monkeypatch.setenv("AZURE_NSG_REVOKE_INCIDENT_ID", "INC-1")
     ok, _ = check_apply_gate()
     assert ok is False
     monkeypatch.setenv("AZURE_NSG_REVOKE_APPROVER", "alice")
+    ok, _ = check_apply_gate()
+    assert ok is False
+    monkeypatch.setenv("AZURE_NSG_REVOKE_ALLOWED_SUBSCRIPTION_IDS", SUB)
     ok, _ = check_apply_gate()
     assert ok is True
 
@@ -353,7 +358,8 @@ def test_run_skips_intentionally_open_tagged_nsg_in_apply():
         nsgs={f"{SUB}|{RG}|{NSG}": {"name": NSG, "tags": {"intentionally-open": "yes"}}},
     )
     records = list(run([_finding()], network_client=nc, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice"))
+                       incident_id="INC-1", approver="alice",
+                       allowed_subscription_ids=(SUB,)))
     assert records[0]["status"] == STATUS_SKIPPED_PROTECTED
     assert nc.deletes == []
     assert nc.patches == []
@@ -379,7 +385,8 @@ def test_run_apply_delete_with_dual_audit():
         nsgs={f"{SUB}|{RG}|{NSG}": {"name": NSG, "tags": {}}},
     )
     records = list(run([_finding()], network_client=nc, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice@security"))
+                       incident_id="INC-1", approver="alice@security",
+                       allowed_subscription_ids=(SUB,)))
     rec = records[0]
     assert rec["status"] == STATUS_SUCCESS
     assert rec["dry_run"] is False
@@ -396,7 +403,8 @@ def test_run_apply_delete_writes_failure_audit_when_delete_throws():
     nc = _FakeNetworkClient(raise_on_delete=True,
                             nsgs={f"{SUB}|{RG}|{NSG}": {"name": NSG, "tags": {}}})
     records = list(run([_finding()], network_client=nc, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice"))
+                       incident_id="INC-1", approver="alice",
+                       allowed_subscription_ids=(SUB,)))
     assert records[0]["status"] == STATUS_FAILURE
     assert len(audit.writes) == 2
     assert audit.writes[1]["status"] == STATUS_FAILURE
@@ -405,7 +413,8 @@ def test_run_apply_delete_writes_failure_audit_when_delete_throws():
 def test_run_apply_requires_audit_writer():
     import pytest
     with pytest.raises(ValueError, match="audit writer is required"):
-        list(run([_finding()], network_client=_FakeNetworkClient(), apply=True, audit=None))
+        list(run([_finding()], network_client=_FakeNetworkClient(), apply=True, audit=None,
+                 allowed_subscription_ids=(SUB,)))
 
 
 # ---------- run: apply (patch mode) ----------
@@ -421,7 +430,8 @@ def test_run_apply_patch_to_deny():
         nsgs={f"{SUB}|{RG}|{NSG}": {"name": NSG, "tags": {}}},
     )
     records = list(run([_finding()], network_client=nc, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice", mode=MODE_PATCH))
+                       incident_id="INC-1", approver="alice", mode=MODE_PATCH,
+                       allowed_subscription_ids=(SUB,)))
     rec = records[0]
     assert rec["status"] == STATUS_SUCCESS
     assert rec["mode"] == "patch"
@@ -432,6 +442,18 @@ def test_run_apply_patch_to_deny():
     assert params["access"] == "Allow"  # the existing value, before flip
     # The fake then writes Deny back to the in-memory store
     assert nc.rules[f"{SUB}|{RG}|{NSG}|{RULE}"]["access"] == "Deny"
+
+
+def test_run_apply_skips_wrong_subscription_boundary():
+    audit = _FakeAudit()
+    nc = _FakeNetworkClient()
+    records = list(run([_finding()], network_client=nc, apply=True, audit=audit,
+                       incident_id="INC-1", approver="alice",
+                       allowed_subscription_ids=("00000000-0000-0000-0000-000000000099",)))
+    assert records[0]["status"] == STATUS_SKIPPED_SUBSCRIPTION_BOUNDARY
+    assert nc.deletes == []
+    assert nc.patches == []
+    assert audit.writes == []
 
 
 # ---------- run: re-verify ----------

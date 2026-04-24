@@ -85,6 +85,7 @@ STATUS_SKIPPED_SOURCE = "skipped_wrong_source"
 STATUS_SKIPPED_PROTECTED = "skipped_protected_firewall"
 STATUS_WOULD_VIOLATE_PROTECTED = "would-violate-protected-firewall"
 STATUS_SKIPPED_NO_TARGET = "skipped_no_firewall_pointer"
+STATUS_SKIPPED_PROJECT_BOUNDARY = "skipped_project_boundary"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -356,7 +357,14 @@ def check_apply_gate() -> tuple[bool, str]:
         return False, "GCP_FIREWALL_REVOKE_INCIDENT_ID is required for --apply"
     if not approver:
         return False, "GCP_FIREWALL_REVOKE_APPROVER is required for --apply"
+    if not load_allowed_project_ids():
+        return False, "GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS is required for --apply"
     return True, ""
+
+
+def load_allowed_project_ids() -> tuple[str, ...]:
+    raw = os.getenv("GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS", "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
 
 
 def _action_endpoint(target: Target, mode: str) -> str:
@@ -598,12 +606,14 @@ def run(
     incident_id: str = "",
     approver: str = "",
     mode: str = MODE_PATCH,
+    allowed_project_ids: Iterable[str] = (),
 ) -> Iterator[dict[str, Any]]:
     if mode not in SUPPORTED_MODES:
         raise ValueError(f"unsupported mode `{mode}`; expected one of {sorted(SUPPORTED_MODES)}")
 
     name_prefixes = tuple(name_prefixes)
     rule_names = tuple(rule_names)
+    allowed_project_ids = tuple(allowed_project_ids)
 
     for target, event in parse_targets(events):
         if target is None:
@@ -616,6 +626,19 @@ def run(
                 target, status=STATUS_SKIPPED_NO_TARGET,
                 detail="finding did not carry a target.uid (rule name) and account.uid (project) observable",
                 dry_run=dry_run, mode=mode,
+            )
+            continue
+
+        if apply and target.project_id not in allowed_project_ids:
+            yield _skip_record(
+                target,
+                status=STATUS_SKIPPED_PROJECT_BOUNDARY,
+                detail=(
+                    f"target project `{target.project_id}` is not listed in "
+                    "GCP_FIREWALL_REVOKE_ALLOWED_PROJECT_IDS"
+                ),
+                dry_run=False,
+                mode=mode,
             )
             continue
 
@@ -712,6 +735,7 @@ def main(argv: list[str] | None = None) -> int:
             apply=args.apply, reverify=args.reverify, audit=audit,
             rule_names=load_protected_rule_names(),
             incident_id=incident_id, approver=approver, mode=args.mode,
+            allowed_project_ids=load_allowed_project_ids(),
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:

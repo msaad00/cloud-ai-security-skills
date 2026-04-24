@@ -9,7 +9,8 @@ description: >-
   Every action is dry-run by default, deny-listed against `default*` SG
   names, any SG carrying the `intentionally-open` tag, and any sg id in
   AWS_SG_REVOKE_PROTECTED_IDS. Apply requires AWS_SG_REVOKE_INCIDENT_ID +
-  AWS_SG_REVOKE_APPROVER. Dual audit (DynamoDB + KMS-encrypted S3). Reverify
+  AWS_SG_REVOKE_APPROVER plus an explicit allowed-account binding via
+  AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS. Dual audit (DynamoDB + KMS-encrypted S3). Reverify
   re-reads the SG via DescribeSecurityGroups and emits VERIFIED if no
   offending IpPermissions remain, DRIFT (+ paired OCSF Detection Finding
   via the shared remediation_verifier contract) if the rule came back,
@@ -88,6 +89,7 @@ OCSF 1.8 Detection Finding (class 2004) from `detect-aws-open-security-group`. R
 | Intentionally-open tag | SGs tagged `intentionally-open` (e.g. ALB on 443) refuse revoke; tag value is logged in the audit row |
 | Operator allowlist | `AWS_SG_REVOKE_PROTECTED_IDS` env var (comma-separated sg ids) refuses revoke |
 | Apply gate | `--apply` requires `AWS_SG_REVOKE_INCIDENT_ID` + `AWS_SG_REVOKE_APPROVER` set out-of-band |
+| Account boundary | `--apply` also requires `AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS`, and the finding's `account.uid` must match both that allow-list and the caller's current STS account |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER the revoke; failure paths still write the failure audit row |
 | Re-verify | Re-reads the SG via `DescribeSecurityGroups`; emits VERIFIED if no offending permissions, DRIFT (+ paired OCSF finding) if re-added, UNREACHABLE if API throws — never silently downgrades |
 
@@ -102,6 +104,7 @@ export AWS_REGION=us-east-1
 export AWS_PROFILE=incident-response
 export AWS_SG_REVOKE_INCIDENT_ID=INC-2026-04-19-005
 export AWS_SG_REVOKE_APPROVER=alice@security
+export AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS=111122223333
 export AWS_SG_REVOKE_AUDIT_DYNAMODB_TABLE=aws-sg-revoke-audit
 export AWS_SG_REVOKE_AUDIT_BUCKET=acme-aws-sg-audit
 export KMS_KEY_ARN=arn:aws:kms:us-east-1:111122223333:key/...
@@ -135,7 +138,7 @@ The execution role needs:
 
 - Deleting the SG entirely
 - Tag-based discovery of SGs to revoke (this skill is finding-driven)
-- Cross-account auto-revoke (operators run the skill under the right account context, or the runner does)
+- Cross-account auto-revoke (the skill now fails closed unless the target account is named explicitly and matches the caller's current STS account)
 - Posture-at-rest scanning (use `cspm-aws-cis-benchmark`)
 
 ## See also
