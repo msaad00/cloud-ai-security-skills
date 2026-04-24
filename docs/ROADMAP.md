@@ -20,6 +20,18 @@ The current north star is not "more skills" by itself. It is:
 - stronger test and validation coverage
 - cleaner interoperability for agents and security teams
 
+### Current shipped progress snapshot
+
+- **ATT&CK depth:** 41 mapped skills in the coverage registry, with the first
+  cross-cloud logging-impairment trio now shipped across AWS, GCP, and Azure.
+- **CIS and posture depth:** 91 shipped benchmark checks across AWS, GCP,
+  Azure, Kubernetes, container, GPU, and model-serving surfaces; AWS also has
+  the first guarded `--auto-remediate` slice.
+- **AI-native baseline:** MCP prompt injection, tool drift, credential leak
+  detection, and MCP tool quarantine are all shipped. The next open work is
+  broader AI-native detection depth and stronger closed loops, not first
+  presence.
+
 ### AI-native status checkpoint
 
 The repo already ships a meaningful AI baseline:

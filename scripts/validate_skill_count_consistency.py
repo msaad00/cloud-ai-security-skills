@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Validate that every doc-cited skill count matches the on-disk count.
+"""Validate that every count-bearing repo-truth claim matches the on-disk count.
 
 Prevents the class of drift where a PR adds a skill but forgets to bump
-counts in README.md / ARCHITECTURE.md / hero-banner.svg / skills/README.md /
+counts in README.md / ARCHITECTURE.md / runtime/architecture SVGs /
 FRAMEWORK_COVERAGE.md / CHANGELOG.md. Run in CI next to the other
 `validate_*.py` scripts.
 
@@ -32,12 +32,29 @@ CLAIMS: list[Claim] = [
     # README.md claims
     (REPO_ROOT / "README.md", r"(\d+) shipped skill bundles", "total"),
     (REPO_ROOT / "README.md", r"\*\*Total: (\d+) shipped skills", "total"),
+    (REPO_ROOT / "README.md", r"\| \*\*Detect\*\* \| (\d+) detectors", "detection"),
     # The L3 Detect mermaid claim was removed when both README mermaids were
     # replaced by docs/images/architecture.svg in #248 phase 1. The new SVG
     # also embeds skill counts but is binary-rendered text, not regex-checkable;
     # totals remain enforced via the two claims above.
     # docs/ARCHITECTURE.md claims
     (REPO_ROOT / "docs" / "ARCHITECTURE.md", r"(\d+) shipped detectors", "detection"),
+    # Core SVG / alt-text surfaces that drifted during the ATT&CK + CIS expansion.
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"Counts: (\d+) shipped skills",
+        "total",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ ingest · (\d+) detect · \d+ discover · \d+ eval",
+        "detection",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"L3 Detect with (\d+) deterministic",
+        "detection",
+    ),
 ]
 
 # Catch-all scan: any mermaid label of the form `<br/>N skills` or `<br/>N shipped`
@@ -136,7 +153,9 @@ def _scan_drift(truth: dict[str, int]) -> list[str]:
     md_paths = sorted(
         p
         for p in REPO_ROOT.rglob("*.md")
-        if ".venv" not in p.parts and "node_modules" not in p.parts
+        if ".venv" not in p.parts
+        and "node_modules" not in p.parts
+        and ".claude" not in p.parts
     )
     for path in md_paths:
         try:
