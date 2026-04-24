@@ -16,6 +16,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_DRIFT,
     STATUS_IN_PROGRESS,
     STATUS_PLANNED,
+    STATUS_SKIPPED_CLUSTER_BOUNDARY,
     STATUS_SKIPPED_DENY_LIST,
     STATUS_SUCCESS,
     STATUS_VERIFIED,
@@ -280,6 +281,8 @@ class TestApplyGate:
     def test_apply_requires_incident_id_and_approver(self, monkeypatch):
         monkeypatch.delenv("K8S_CONTAINER_ESCAPE_INCIDENT_ID", raising=False)
         monkeypatch.delenv("K8S_CONTAINER_ESCAPE_APPROVER", raising=False)
+        monkeypatch.delenv("K8S_CLUSTER_NAME", raising=False)
+        monkeypatch.delenv("K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS", raising=False)
         ok, reason = check_apply_gate()
         assert ok is False
         assert "INCIDENT_ID" in reason
@@ -291,12 +294,29 @@ class TestApplyGate:
 
         monkeypatch.setenv("K8S_CONTAINER_ESCAPE_APPROVER", "alice@example.com")
         ok, reason = check_apply_gate()
+        assert ok is False
+        assert "K8S_CLUSTER_NAME" in reason
+
+        monkeypatch.setenv("K8S_CLUSTER_NAME", "prod-cluster")
+        ok, reason = check_apply_gate()
+        assert ok is False
+        assert "K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS" in reason
+
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS", "staging-cluster")
+        ok, reason = check_apply_gate()
+        assert ok is False
+        assert "prod-cluster" in reason
+
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS", "prod-cluster,staging-cluster")
+        ok, reason = check_apply_gate()
         assert ok is True
         assert reason == ""
 
     def test_node_drain_requires_second_distinct_approver(self, monkeypatch):
         monkeypatch.setenv("K8S_CONTAINER_ESCAPE_INCIDENT_ID", "inc-1")
         monkeypatch.setenv("K8S_CONTAINER_ESCAPE_APPROVER", "alice@example.com")
+        monkeypatch.setenv("K8S_CLUSTER_NAME", "prod-cluster")
+        monkeypatch.setenv("K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS", "prod-cluster")
         monkeypatch.delenv("K8S_CONTAINER_ESCAPE_SECOND_APPROVER", raising=False)
         ok, reason = check_apply_gate(action_mode=ACTION_NODE_DRAIN)
         assert ok is False
@@ -328,6 +348,8 @@ class TestApplyAndReverify:
                 audit=audit,
                 incident_id="inc-1",
                 approver="alice@example.com",
+                cluster_name="prod-cluster",
+                allowed_clusters=("prod-cluster",),
             )
         )
         assert len(records) == 1
@@ -339,6 +361,30 @@ class TestApplyAndReverify:
         assert [item["status"] for item in audit.writes] == [STATUS_IN_PROGRESS, STATUS_SUCCESS]
         assert kube.order == ["kube:apply"]
         assert all(item["action_mode"] == "quarantine" for item in audit.writes)
+
+    def test_apply_skips_cluster_outside_allow_list(self):
+        audit = _FakeAudit()
+        kube = _FakeKube(
+            workload_selectors={("payments", "deployments", "api"): {"app": "api"}},
+            audit=audit,
+        )
+        records = list(
+            run(
+                [_finding()],
+                kube_client=kube,
+                apply=True,
+                audit=audit,
+                incident_id="inc-1",
+                approver="alice@example.com",
+                cluster_name="prod-cluster",
+                allowed_clusters=("staging-cluster",),
+            )
+        )
+        assert len(records) == 1
+        assert records[0]["status"] == STATUS_SKIPPED_CLUSTER_BOUNDARY
+        assert "prod-cluster" in records[0]["status_detail"]
+        assert audit.writes == []
+        assert kube.order == []
 
     def test_reverify_reports_verified_when_policy_matches(self):
         kube = _FakeKube(
@@ -423,6 +469,8 @@ class TestApplyAndReverify:
                 audit=audit,
                 incident_id="inc-1",
                 approver="alice@example.com",
+                cluster_name="prod-cluster",
+                allowed_clusters=("prod-cluster",),
             )
         )
         assert len(records) == 1
@@ -466,6 +514,8 @@ class TestApplyAndReverify:
                 incident_id="inc-1",
                 approver="alice@example.com",
                 secondary_approver="bob@example.com",
+                cluster_name="prod-cluster",
+                allowed_clusters=("prod-cluster",),
             )
         )
         assert len(records) == 1

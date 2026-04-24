@@ -7,8 +7,9 @@ description: >-
   emitted by detect-container-escape-k8s and resolves the live selector from
   the Kubernetes API before emitting a native remediation plan or action
   record. Every action is dry-run by default, deny-listed for protected
-  namespaces, gated behind an incident ID plus approver for --apply, and
-  dual-audited (DynamoDB + KMS-encrypted S3). The low-risk default remains
+  namespaces, gated behind an incident ID plus approver plus an explicit
+  cluster allow-list for --apply, and dual-audited (DynamoDB +
+  KMS-encrypted S3). The low-risk default remains
   reversible quarantine; explicit destructive follow-ups are also supported
   via `--approve-pod-kill` and `--approve-node-drain`, with the node-drain
   path requiring a second approver. Use when the user mentions "quarantine a
@@ -127,15 +128,22 @@ containing the exact `NetworkPolicy` manifest, the resolved selector, and the
 mutating Kubernetes endpoint it WOULD call. Zero cluster writes occur in this
 mode.
 
-### 4. `--apply` requires an incident gate
+### 4. `--apply` requires an incident gate and explicit cluster boundary
 
 `--apply` is refused unless both env vars are set before any write:
 
 - `K8S_CONTAINER_ESCAPE_INCIDENT_ID`
 - `K8S_CONTAINER_ESCAPE_APPROVER`
+- `K8S_CLUSTER_NAME`
+- `K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS`
 
 The gate sits outside the agent loop. An alert or agent suggestion alone is not
 sufficient to mutate cluster state.
+
+The active cluster name must be listed explicitly in
+`K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS` before the skill will quarantine,
+delete a pod, or drain a node. This keeps the handler from acting against
+whichever kube context ambient credentials happen to resolve to.
 
 Destructive follow-up paths tighten that bar further:
 
@@ -229,6 +237,8 @@ cat finding.ocsf.jsonl | python src/handler.py
 # Apply quarantine — requires incident gate and audit destinations
 export K8S_CONTAINER_ESCAPE_INCIDENT_ID=inc-2026-04-19-001
 export K8S_CONTAINER_ESCAPE_APPROVER=alice@example.com
+export K8S_CLUSTER_NAME=prod-eks-us-east-1
+export K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS=prod-eks-us-east-1
 export K8S_REMEDIATION_AUDIT_DYNAMODB_TABLE=k8s-remediation-audit
 export K8S_REMEDIATION_AUDIT_BUCKET=sec-k8s-remediation
 export KMS_KEY_ARN=arn:aws:kms:us-east-1:123456789012:key/...
@@ -297,6 +307,8 @@ cat finding.ocsf.jsonl | python src/forensic_collector.py \
 - as a generic "pause traffic" control for planned maintenance
 - without setting `K8S_CONTAINER_ESCAPE_INCIDENT_ID` and
   `K8S_CONTAINER_ESCAPE_APPROVER` under `--apply`
+- without setting `K8S_CLUSTER_NAME` and
+  `K8S_CONTAINER_ESCAPE_ALLOWED_CLUSTERS` under `--apply`
 - without setting `K8S_CONTAINER_ESCAPE_SECOND_APPROVER` for
   `--approve-node-drain --apply`
 
