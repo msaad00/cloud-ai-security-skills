@@ -295,6 +295,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
         "status": native_finding["status"].capitalize(),
         "metadata": {
             "version": OCSF_VERSION,
+            "uid": native_finding["event_uid"],
             "product": {
                 "name": REPO_NAME,
                 "vendor_name": REPO_VENDOR,
