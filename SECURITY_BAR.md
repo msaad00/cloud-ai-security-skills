@@ -74,6 +74,7 @@ is the row you can take to your auditor.
 | `detect-prompt-injection-mcp-proxy` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-s3-cross-account-copy` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-sensitive-secret-read-k8s` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-system-prompt-extraction` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `container-security` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `cspm-aws-cis-benchmark` | evaluation | ⚠️ write-capable | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
 | `cspm-azure-cis-benchmark` | evaluation | ✅ | ✅ | ✅ | ✅ deterministic | ✅ 1.8 opt-in | ✅ |
@@ -99,7 +100,7 @@ is the row you can take to your auditor.
 | `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 
-_69 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+_70 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
 <!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar
