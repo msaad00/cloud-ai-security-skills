@@ -1,4 +1,8 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 62 shipped skill bundles. OCSF 1.8 on the wire. 82 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+<<<<<<< HEAD
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 62 shipped skill bundles. OCSF 1.8 on the wire. 86 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+=======
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 61 shipped skill bundles. OCSF 1.8 on the wire. 86 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+>>>>>>> origin/main
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -22,8 +26,13 @@
 |---|---:|---|---|
 | **Ingest** | 15 | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
 | **Discover** | 5 | inventory, graph, AI BOM, evidence, IAM departure manifest planning | native / bridge JSON |
+<<<<<<< HEAD
 | **Detect** | 15 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
-| **Evaluate** | 7 | 82 posture and benchmark checks | compliance result |
+| **Evaluate** | 7 | 86 posture and benchmark checks | compliance result |
+=======
+| **Detect** | 14 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
+| **Evaluate** | 7 | 86 posture and benchmark checks | compliance result |
+>>>>>>> origin/main
 | **Remediate** | 12 | guarded write paths (IAM departures AWS + GCP + Azure Entra, AWS/GCP/Azure network revoke, Okta session kill, Workspace session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
