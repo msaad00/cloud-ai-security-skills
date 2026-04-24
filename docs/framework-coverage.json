@@ -820,6 +820,31 @@
       ]
     },
     {
+      "path": "skills/detection/detect-s3-cross-account-copy",
+      "layer": "detection",
+      "providers": [
+        "aws"
+      ],
+      "asset_classes": [
+        "storage",
+        "buckets",
+        "objects",
+        "identities",
+        "cloudtrail"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-aws-open-security-group",
       "layer": "detection",
       "providers": [

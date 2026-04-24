@@ -53,6 +53,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-aws-access-key-creation`](detection/detect-aws-access-key-creation/) | successful AWS IAM `CreateAccessKey` operations against IAM users (T1098.001 Additional Cloud Credentials) |
 | [`detect-aws-login-profile-creation`](detection/detect-aws-login-profile-creation/) | successful AWS IAM `CreateLoginProfile` operations against IAM users (T1098.001 Additional Cloud Credentials) |
 | [`detect-aws-enumeration-burst`](detection/detect-aws-enumeration-burst/) | short-window burst of high-signal AWS discovery APIs in CloudTrail (T1526 Cloud Service Discovery) |
+| [`detect-s3-cross-account-copy`](detection/detect-s3-cross-account-copy/) | successful AWS S3 `CopyObject` into another account's bucket-owner context (T1537 Transfer Data to Cloud Account) |
 | [`detect-aws-open-security-group`](detection/detect-aws-open-security-group/) | AWS Security Group ingress opened to 0.0.0.0/0 or ::/0 on risky admin / database / cache ports (T1190 Exploit Public-Facing Application) |
 | [`detect-azure-open-nsg`](detection/detect-azure-open-nsg/) | Azure NSG inbound rule opened to `*` / `Internet` / `0.0.0.0/0` / `::/0` on risky admin / database / cache ports (T1190 Exploit Public-Facing Application) |
 | [`detect-gcp-open-firewall`](detection/detect-gcp-open-firewall/) | GCP VPC firewall rule opened to 0.0.0.0/0 or ::/0 on risky admin / database / cache ports via `compute.firewalls.insert` or `compute.firewalls.patch` (T1190 Exploit Public-Facing Application) |
