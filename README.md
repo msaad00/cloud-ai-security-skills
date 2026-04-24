@@ -255,7 +255,7 @@ This repo is not primarily distributed as a PyPI package. Operators clone a tagg
 
 ## Security posture
 
-- **Read-only by default.** Write paths are HITL, audited, and dry-run-first.
+- **Read-only by default.** Write paths are HITL, audited, dry-run-first, and pinned to explicit environment boundaries such as account, project, tenant, org, or cluster allow-lists before `--apply`.
 - **No hardcoded secrets.** Workload identity and short-lived credentials only.
 - **Official SDKs first**, repo-owned code second, canonical OSS only when required.
 - **CI gates** validate skill contracts, integrity, the safe-skill bar, coverage, mypy, and SBOM generation.

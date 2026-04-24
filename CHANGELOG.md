@@ -11,6 +11,25 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+Skills count on `main`: **73** (15 ingest, 5 discover, 26 detect, 7 evaluate,
+12 remediate, 2 view, 3 output, 3 sources).
+
+### Hardened
+
+- **Kubernetes RBAC revoke now has an explicit cluster boundary** —
+  [`remediate-k8s-rbac-revoke`](skills/remediation/remediate-k8s-rbac-revoke/)
+  no longer trusts ambient kube context under `--apply`. Operators must set
+  `K8S_CLUSTER_NAME`, and that active cluster must be named explicitly in
+  `K8S_RBAC_REVOKE_ALLOWED_CLUSTERS` before a binding delete can run. Dry-run
+  and reverify remain read-only.
+
+### Changed
+
+- **Repo freeze guidance now says the quiet part out loud** — top-level docs
+  now describe writable skills as being pinned to explicit environment
+  boundaries such as account, project, tenant, org, or cluster allow-lists
+  before `--apply`, not just HITL-gated in the abstract.
+
 ## [0.8.0] — 2026-04-24 — Cross-cloud ATT&CK depth and repo truth sync
 
 Skills count: **65** (15 ingest, 5 discover, 18 detect, 7 evaluate, 12 remediate,
