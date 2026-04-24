@@ -21,11 +21,11 @@ from individual `SKILL.md` files.
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
 | **MITRE ATT&CK v14** | strong and broader | 45 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, and the AWS / GCP / Azure logging-impairment trio |
-| **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection plus response-layer exfiltration detection |
+| **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection plus response-layer override and exfiltration detection |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
-| **OWASP LLM Top 10** | partial and growing | model-serving controls plus `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, and `detect-tool-output-exfiltration-instructions` |
-| **OWASP MCP Top 10** | partial and growing | `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, `detect-tool-output-exfiltration-instructions`, and MCP-related repo controls |
+| **OWASP LLM Top 10** | partial and growing | model-serving controls plus `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, `detect-tool-output-policy-bypass`, and `detect-tool-output-exfiltration-instructions` |
+| **OWASP MCP Top 10** | partial and growing | `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, `detect-system-prompt-extraction`, `detect-tool-output-policy-bypass`, `detect-tool-output-exfiltration-instructions`, and MCP-related repo controls |
 | **SOC 2 TSC** | partial | evaluation and remediation mappings |
 | **ISO 27001:2022** | partial | CSPM/evaluation mappings |
 | **PCI DSS 4.0** | partial | AWS posture mappings today |
@@ -62,6 +62,7 @@ Strongest current ATT&CK coverage:
 | `detect-azure-activity-logs-disabled` | T1562.001 for successful Azure `Microsoft.Insights/diagnosticSettings/delete` operations |
 | `detect-prompt-injection-mcp-proxy` | MITRE ATLAS AML.T0051 for explicit prompt-injection and instruction-smuggling language in MCP tool descriptions |
 | `detect-system-prompt-extraction` | MITRE ATLAS AML.T0004 / AML.T0041 for explicit system-prompt and hidden-instruction leakage markers in MCP tool-call responses |
+| `detect-tool-output-policy-bypass` | MITRE ATLAS AML.T0051 for explicit policy-bypass, approval-evasion, and user-concealment instructions embedded in MCP tool-call responses |
 | `detect-tool-output-exfiltration-instructions` | MITRE ATLAS AML.T0051 for explicit exfiltration instructions embedded in MCP tool-call responses |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
@@ -126,6 +127,7 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | `model-serving-security` | explicit ATLAS coverage plus machine-readable NIST AI RMF section scope in the benchmark metadata |
 | `detect-prompt-injection-mcp-proxy` | AI-agent / MCP prompt-injection detection for malicious tool descriptions in `tools/list` responses |
 | `detect-system-prompt-extraction` | explicit system-prompt and hidden-instruction leakage detection in MCP `tools/call` responses |
+| `detect-tool-output-policy-bypass` | response-layer prompt-injection detection for explicit policy-bypass and approval-evasion instructions in MCP `tools/call` responses |
 | `detect-tool-output-exfiltration-instructions` | response-layer prompt-injection detection for explicit data-exfiltration instructions in MCP `tools/call` responses |
 | `discover-ai-bom` | inventory artifact plus optional AI BOM policy findings for ATLAS / AI RMF evidence and CI joins |
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |

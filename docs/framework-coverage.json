@@ -870,6 +870,32 @@
       ]
     },
     {
+      "path": "skills/detection/detect-tool-output-policy-bypass",
+      "layer": "detection",
+      "providers": [
+        "mcp"
+      ],
+      "asset_classes": [
+        "agent-tools",
+        "tool-results",
+        "instructions",
+        "approvals"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-atlas",
+        "owasp-llm-top-10",
+        "owasp-mcp-top-10"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-tool-output-exfiltration-instructions",
       "layer": "detection",
       "providers": [
