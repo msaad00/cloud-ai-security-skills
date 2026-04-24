@@ -1039,6 +1039,30 @@
       ]
     },
     {
+      "path": "skills/detection/detect-azure-activity-logs-disabled",
+      "layer": "detection",
+      "providers": [
+        "azure"
+      ],
+      "asset_classes": [
+        "activity-logs",
+        "diagnostic-settings",
+        "logging"
+      ],
+      "frameworks": [
+        "mitre-attack-v14",
+        "ocsf-1.8",
+        "cis-azure-v2.1"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-container-escape-k8s",
       "layer": "detection",
       "providers": [
