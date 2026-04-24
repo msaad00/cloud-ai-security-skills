@@ -16,6 +16,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_IN_PROGRESS,
     STATUS_PLANNED,
     STATUS_SKIPPED_DENY_LIST,
+    STATUS_SKIPPED_DOMAIN_BOUNDARY,
     STATUS_SKIPPED_NO_USER,
     STATUS_SUCCESS,
     STATUS_WOULD_VIOLATE_DENY_LIST,
@@ -116,6 +117,7 @@ def test_default_deny_patterns_cover_protected_principal_classes():
 def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.delenv("WORKSPACE_SESSION_KILL_INCIDENT_ID", raising=False)
     monkeypatch.delenv("WORKSPACE_SESSION_KILL_APPROVER", raising=False)
+    monkeypatch.setenv("WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS", "example.com")
     ok, reason = check_apply_gate()
     assert ok is False and "INCIDENT_ID" in reason
     monkeypatch.setenv("WORKSPACE_SESSION_KILL_INCIDENT_ID", "INC-1")
@@ -124,6 +126,25 @@ def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.setenv("WORKSPACE_SESSION_KILL_APPROVER", "alice")
     ok, _ = check_apply_gate()
     assert ok is True
+
+
+def test_check_apply_gate_requires_allowed_domains(monkeypatch):
+    monkeypatch.setenv("WORKSPACE_SESSION_KILL_INCIDENT_ID", "INC-1")
+    monkeypatch.setenv("WORKSPACE_SESSION_KILL_APPROVER", "alice")
+    monkeypatch.delenv("WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS", raising=False)
+    ok, reason = check_apply_gate()
+    assert ok is False
+    assert "ALLOWED_DOMAINS" in reason
+
+
+def test_check_apply_gate_rejects_admin_email_outside_allowed_domains(monkeypatch):
+    monkeypatch.setenv("WORKSPACE_SESSION_KILL_INCIDENT_ID", "INC-1")
+    monkeypatch.setenv("WORKSPACE_SESSION_KILL_APPROVER", "alice")
+    monkeypatch.setenv("WORKSPACE_SESSION_KILL_ALLOWED_DOMAINS", "example.com")
+    monkeypatch.setenv("WORKSPACE_DELEGATED_ADMIN_EMAIL", "admin@other.com")
+    ok, reason = check_apply_gate()
+    assert ok is False
+    assert "DELEGATED_ADMIN_EMAIL" in reason
 
 
 # ---------- deny-list ----------
@@ -228,6 +249,7 @@ def test_run_skips_protected_principal_apply():
             [_finding(user_name="break-glass-oncall@example.com")],
             workspace_client=ws, apply=True, audit=audit,
             incident_id="INC-1", approver="alice",
+            allowed_domains=("example.com",),
         )
     )
     assert records[0]["status"] == STATUS_SKIPPED_DENY_LIST
@@ -243,7 +265,8 @@ def test_run_apply_runs_both_steps_with_dual_audit():
     ws = _FakeWorkspace()
     records = list(
         run([_finding()], workspace_client=ws, apply=True, audit=audit,
-            incident_id="INC-1", approver="alice@security")
+            incident_id="INC-1", approver="alice@security",
+            allowed_domains=("example.com",))
     )
     rec = records[0]
     assert rec["status"] == STATUS_SUCCESS
@@ -272,7 +295,8 @@ def test_run_apply_marks_failure_when_step_throws():
     ws = _FakeWorkspace(fail_on="sign_out")
     records = list(
         run([_finding()], workspace_client=ws, apply=True, audit=audit,
-            incident_id="INC-1", approver="alice")
+            incident_id="INC-1", approver="alice",
+            allowed_domains=("example.com",))
     )
     rec = records[0]
     assert rec["status"] == STATUS_FAILURE
@@ -286,9 +310,44 @@ def test_run_apply_marks_failure_when_step_throws():
 def test_run_apply_requires_both_clients():
     import pytest
     with pytest.raises(RuntimeError, match="apply=True requires"):
-        list(run([_finding()], workspace_client=_FakeWorkspace(), apply=True, audit=None))
+        list(
+            run(
+                [_finding()],
+                workspace_client=_FakeWorkspace(),
+                apply=True,
+                audit=None,
+                allowed_domains=("example.com",),
+            )
+        )
     with pytest.raises(RuntimeError, match="apply=True requires"):
-        list(run([_finding()], workspace_client=None, apply=True, audit=_FakeAudit()))
+        list(
+            run(
+                [_finding()],
+                workspace_client=None,
+                apply=True,
+                audit=_FakeAudit(),
+                allowed_domains=("example.com",),
+            )
+        )
+
+
+def test_run_apply_skips_wrong_domain_boundary():
+    audit = _FakeAudit()
+    ws = _FakeWorkspace()
+    records = list(
+        run(
+            [_finding(user_uid="alice@other.com")],
+            workspace_client=ws,
+            apply=True,
+            audit=audit,
+            incident_id="INC-1",
+            approver="alice",
+            allowed_domains=("example.com",),
+        )
+    )
+    assert records[0]["status"] == STATUS_SKIPPED_DOMAIN_BOUNDARY
+    assert ws.calls == []
+    assert audit.writes == []
 
 
 # ---------- run: re-verify ----------
