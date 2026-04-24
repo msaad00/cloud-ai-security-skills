@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.7.0-0ea5e9"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.8.0-0ea5e9"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue.svg"></a>
   <a href="https://schema.ocsf.io/1.8.0"><img alt="OCSF 1.8" src="https://img.shields.io/badge/OCSF-1.8-22d3ee"></a>
@@ -109,7 +109,7 @@ Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
 ### Closed-loop coverage at a glance
 
-![Closed-loop coverage matrix — 13 of 14 shipped detections are closed loops today; lateral movement is intentionally detection-only, and CSPM auto-remediation for AWS, GCP, and Azure is tracked separately.](docs/images/coverage-matrix.svg)
+![Closed-loop coverage matrix — 13 of 18 shipped detections are closed loops today; lateral movement is intentionally detection-only, and the AWS, GCP, and Azure logging-impairment plus MCP credential-leak slices are detection-first today.](docs/images/coverage-matrix.svg)
 
 Source of truth for detect↔remediate parity. Tracked at [#155](https://github.com/msaad00/cloud-ai-security-skills/issues/155); design + remaining per-layer SVGs at [#248](https://github.com/msaad00/cloud-ai-security-skills/issues/248).
 
@@ -275,9 +275,9 @@ Per-skill framework mapping: [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPING
 |---|---|---|
 | **Ingest** | 15 ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources |
 | **Discover** | 5 skills (AI BOM, cloud control evidence, control evidence, environment graph, IAM departures reconciler) | wider SaaS and infra evidence |
-| **Detect** | 11 detectors tied to MITRE ATT&CK (inc. credential stuffing, Okta MFA fatigue, K8s container escape + priv-esc, MCP tool drift, prompt injection) | impossible travel, more MCP patterns |
-| **Evaluate** | 7 benchmarks (82 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, model serving — native + OCSF 2003 opt-in | 50 % per-platform CIS coverage (#254), `--auto-remediate` flag |
-| **Remediate** | `iam-departures-aws`, `remediate-okta-session-kill`, `remediate-container-escape-k8s` — HITL-gated, dry-run default, dual audit | broader remediation families as detection matures |
+| **Detect** | 18 detectors across MITRE ATT&CK, MITRE ATLAS, and MCP / agent-native signals, including the shipped AWS / GCP / Azure logging-impairment trio and MCP credential-leak detection | deeper identity pivots, discovery, exfiltration, and more MCP / AI-native patterns |
+| **Evaluate** | 7 benchmarks (91 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, and model serving — native + OCSF 2003 opt-in | 50 % per-platform CIS coverage (#254), broader `--auto-remediate` depth |
+| **Remediate** | 12 guarded write paths across IAM departures, network revoke, session / token kill, K8s containment, and MCP tool quarantine — HITL-gated, dry-run-first, dual audit | broader CSPM and AI-specific remediation families as detection matures |
 | **View** | SARIF, Mermaid attack flow | graph overlay, warehouse-ready converters |
 | **Sinks** | Snowflake, ClickHouse, S3 | Security Lake, BigQuery |
 | **Packs** | `lateral-movement`, `privilege-escalation-k8s` | broader warehouse dialect coverage |

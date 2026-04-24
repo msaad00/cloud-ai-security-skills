@@ -20,12 +20,12 @@ from individual `SKILL.md` files.
 | Framework | Status | Where it appears |
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
-| **MITRE ATT&CK v14** | strong | cloud, Kubernetes, container, MCP, and remediation skills |
+| **MITRE ATT&CK v14** | strong and broader | 41 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS / GCP / Azure logging-impairment trio |
 | **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, and MCP prompt-injection detection |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
-| **OWASP LLM Top 10** | partial | model-serving controls plus `detect-prompt-injection-mcp-proxy` |
-| **OWASP MCP Top 10** | partial | `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, and MCP-related repo controls |
+| **OWASP LLM Top 10** | partial and growing | model-serving controls plus `detect-prompt-injection-mcp-proxy` and `detect-agent-credential-leak-mcp` |
+| **OWASP MCP Top 10** | partial and growing | `detect-mcp-tool-drift`, `detect-prompt-injection-mcp-proxy`, `detect-agent-credential-leak-mcp`, and MCP-related repo controls |
 | **SOC 2 TSC** | partial | evaluation and remediation mappings |
 | **ISO 27001:2022** | partial | CSPM/evaluation mappings |
 | **PCI DSS 4.0** | partial | AWS posture mappings today |
@@ -53,6 +53,9 @@ Strongest current ATT&CK coverage:
 | `detect-entra-credential-addition` | T1098.001 for successful Entra application or service-principal credential additions and federated identity credential creation |
 | `detect-entra-role-grant-escalation` | T1098.003 for successful Entra app-role assignments that grant additional application permissions to service principals |
 | `detect-google-workspace-suspicious-login` | T1110 and T1078 for provider-marked Google Workspace suspicious logins and repeated failure-then-success bursts |
+| `detect-cloudtrail-disabled` | T1562.001 for successful AWS CloudTrail `StopLogging` and `DeleteTrail` operations |
+| `detect-gcp-audit-logs-disabled` | T1562.001 for successful GCP Cloud Logging `DeleteSink` and `DeleteLog` operations |
+| `detect-azure-activity-logs-disabled` | T1562.001 for successful Azure `Microsoft.Insights/diagnosticSettings/delete` operations |
 | `detect-prompt-injection-mcp-proxy` | MITRE ATLAS AML.T0051 for explicit prompt-injection and instruction-smuggling language in MCP tool descriptions |
 | `detect-mcp-tool-drift` | T1195.001 |
 | `detect-privilege-escalation-k8s` | T1552.007, T1611, T1098, T1550.001 |
@@ -65,6 +68,9 @@ Strongest current ATT&CK coverage:
 Notes:
 - ATT&CK is pinned in the shared OCSF contract.
 - ATT&CK mappings belong inside `finding_info.attacks[]` for OCSF 1.8 outputs, not as loose side metadata.
+- Cross-cloud logging impairment is now shipped as narrow, high-confidence
+  T1562.001 slices across AWS, GCP, and Azure. Broader sink drift, destination
+  weakening, and policy-drift depth remain separate follow-on work.
 - Current cross-cloud identity depth is strongest in `detect-lateral-movement`; the Azure slice now distinguishes Azure Activity control-plane pivots from Entra / Graph application-service-principal credential pivots.
 - The GCP slice in `detect-lateral-movement` is currently pinned to service-account and IAM Credentials anchors; workload-identity federation abuse is tracked separately so the docs do not overstate provider depth.
 - The AWS slice in `detect-lateral-movement` is currently role-session-centric; IAM users, access keys, and temporary-credential pivots are tracked separately so the docs do not overstate provider depth.

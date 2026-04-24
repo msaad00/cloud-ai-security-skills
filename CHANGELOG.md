@@ -11,6 +11,63 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-04-24 — Cross-cloud ATT&CK depth and repo truth sync
+
+Skills count: **65** (15 ingest, 5 discover, 18 detect, 7 evaluate, 12 remediate,
+2 view, 3 output, 3 sources).
+
+### Added
+
+- **Cross-cloud logging-impairment ATT&CK slices** — the repo now ships
+  narrow, high-confidence T1562.001 defense-evasion detectors across the three
+  major clouds:
+  [`detect-cloudtrail-disabled`](skills/detection/detect-cloudtrail-disabled/),
+  [`detect-gcp-audit-logs-disabled`](skills/detection/detect-gcp-audit-logs-disabled/),
+  and
+  [`detect-azure-activity-logs-disabled`](skills/detection/detect-azure-activity-logs-disabled/).
+  This closes the first honest AWS / GCP / Azure logging-impairment trio in the
+  detection layer without overstating broader policy-drift coverage that is not
+  yet shipped.
+- **AI-native MCP credential-leak detection** —
+  [`detect-agent-credential-leak-mcp`](skills/detection/detect-agent-credential-leak-mcp/)
+  scans native MCP `tools/call` response bodies for high-confidence leaked
+  credential material (AWS access keys, GitHub tokens, OpenAI keys, Slack
+  tokens) and emits masked findings only — never raw secrets.
+- **Balanced CSPM depth expansion across AWS, GCP, and Azure** — the benchmark
+  surface now covers **91 checks** total after adding AWS CloudTrail KMS /
+  data-events / GuardDuty / Security Hub coverage, GCP audit logging / default
+  VPC / Private Google Access coverage, and Azure CMK / Network Watcher
+  coverage.
+- **First guarded CSPM auto-remediation slice** —
+  [`cspm-aws-cis-benchmark`](skills/evaluation/cspm-aws-cis-benchmark/) now
+  supports `--auto-remediate` for a narrow AWS-first control set with dry-run
+  planning, dual audit, protected-resource deny-lists, and explicit `--apply`
+  confirmation.
+
+### Hardened
+
+- **Explicit target-boundary enforcement on write-capable remediators** — AWS,
+  GCP, Azure, and Entra remediation paths now require explicit account /
+  project / subscription / tenant allow-lists before `--apply` can mutate
+  anything. Ambient cloud context is no longer trusted by itself.
+- **MCP approval enforcement now matches the documented HITL contract** — the
+  MCP wrapper exposes approval context in its schema, enforces `min_approvers`,
+  and keeps remediation `handler.py` skills dry-run-safe instead of silently
+  depending on undocumented wrapper fields.
+- **Session and CSPM apply boundaries are zero-trust by default** — AWS CSPM
+  auto-remediation, session revocation, network revoke, and Entra credential
+  revoke now fail closed when the caller identity is outside the explicitly
+  allowed boundary for that skill.
+
+### Changed
+
+- **Repo truth surfaces are aligned again** — README, roadmap, framework
+  mappings, changelog, version metadata, and the core diagrams now all agree on
+  the current shipped state: **65 skills, 18 detectors, 91 checks**.
+- **Count-drift validation is stricter** — the repo count validator now checks
+  the count-bearing SVG and progress-table surfaces that previously drifted
+  during rapid PR sequences.
+
 ## [0.7.0] — 2026-04-23 — Release alignment and coverage hardening
 
 Skills count: **61** (15 ingest, 5 discover, 14 detect, 7 evaluate, 12 remediate,
