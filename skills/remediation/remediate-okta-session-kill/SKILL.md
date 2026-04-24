@@ -14,7 +14,8 @@ description: >-
   response." Do NOT use for Entra / Azure AD, Google Workspace, AWS IAM,
   or GCP sessions — those have their own per-IdP remediation skills. Do
   NOT bypass the deny-list, run with --apply without an explicit
-  human-approved incident window, or edit the audit trail by hand.
+  human-approved incident window, explicit Okta org allow-list, or edit
+  the audit trail by hand.
 license: Apache-2.0
 capability: write-identity
 approval_model: human_required
@@ -102,7 +103,11 @@ The skill refuses to execute unless env var `OKTA_SESSION_KILL_INCIDENT_ID` is s
 
 The intent: a skill invocation that lands in a SIEM alert or a naive agent loop STILL requires an operator to register an incident before writes happen. The gate sits outside the agent loop.
 
-### 4. Dual audit — before and after each API call
+### 4. `--apply` requires an explicit org boundary
+
+The current `OKTA_ORG_URL` must be present in `OKTA_SESSION_KILL_ALLOWED_ORG_URLS` before any write runs. This keeps the handler from acting against whichever Okta tenant ambient credentials happen to point at. The boundary is invocation-scoped, not target-scoped: one run talks to one Okta org.
+
+### 5. Dual audit — before and after each API call
 
 For every containment action (session revoke, token revoke, password expire) the skill writes:
 
@@ -111,7 +116,7 @@ For every containment action (session revoke, token revoke, password expire) the
 
 If either write fails, the skill raises BEFORE the Okta API call. No action without an audit trail.
 
-### 5. Okta API token is fetched, not hardcoded
+### 6. Okta API token is fetched, not hardcoded
 
 `OKTA_API_TOKEN_SECRETSMANAGER_ARN` points at an AWS Secrets Manager secret. The skill calls `secretsmanager:GetSecretValue` at invocation time and never persists the token to disk or stderr.
 
@@ -156,6 +161,7 @@ cat finding.ocsf.jsonl | python src/handler.py
 
 # Apply — requires declared incident window
 export OKTA_ORG_URL=https://example.okta.com
+export OKTA_SESSION_KILL_ALLOWED_ORG_URLS=https://example.okta.com
 export OKTA_API_TOKEN_SECRETSMANAGER_ARN=arn:aws:secretsmanager:us-east-1:123456789012:secret:okta-api-token
 export OKTA_SESSION_KILL_INCIDENT_ID=inc-2026-04-18-001
 export OKTA_SESSION_KILL_APPROVER=alice@example.com
@@ -172,6 +178,7 @@ cat finding.ocsf.jsonl | python src/handler.py --apply
 - To bypass the deny-list of protected principals
 - As a generic "log out user" button for ops workflows — this is an **incident response** skill with dual audit
 - Without `OKTA_SESSION_KILL_INCIDENT_ID` set under `--apply`
+- Without `OKTA_SESSION_KILL_ALLOWED_ORG_URLS` explicitly binding the invocation to the intended Okta org
 
 ## Closed-loop verification
 
@@ -185,7 +192,7 @@ The drift-detection plumbing is tracked in #257. This skill only ensures the aud
 ## Tests
 
 - Dry-run emits a plan without any Okta HTTP call
-- Apply requires `OKTA_SESSION_KILL_INCIDENT_ID` + approver — fails closed if either is missing
+- Apply requires `OKTA_SESSION_KILL_INCIDENT_ID` + approver + org allow-list — fails closed if any are missing
 - Deny-list rejects admin / service-account / break-glass targets before any Okta API call
 - Source-skill mismatch (finding from a non-Okta detector) is skipped with `stderr` warning
 - Audit write precedes the Okta API call in the recorded order
