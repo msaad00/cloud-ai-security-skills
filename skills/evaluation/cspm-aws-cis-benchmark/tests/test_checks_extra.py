@@ -8,6 +8,10 @@ Targets the uncovered paths in src/checks.py:
     - check_3_2_cloudtrail_validation (log file validation)
     - check_3_3_cloudtrail_s3_not_public (trail bucket public-access block)
     - check_3_4_cloudwatch_alarms (empty / populated)
+    - check_3_5_cloudtrail_kms_encryption
+    - check_3_6_cloudtrail_data_events
+    - check_6_1_guardduty_enabled
+    - check_6_2_securityhub_enabled
     - _check_unrestricted_port (IPv6 path, cross-port range)
     - check_4_3_vpc_flow_logs (VPC w/ and w/o flow logs)
     - run_assessment (section filter + full run routing)
@@ -357,6 +361,57 @@ def test_3_4_cloudwatch_alarms_client_error():
     assert f.status == "ERROR"
 
 
+def test_3_5_cloudtrail_kms_encryption_detects_missing_kms():
+    ct = MagicMock()
+    ct.describe_trails.return_value = {
+        "trailList": [
+            {"Name": "bad"},
+            {"Name": "good", "KmsKeyId": "arn:aws:kms:us-east-1:123456789012:key/abc"},
+        ]
+    }
+    f = _CHECKS.check_3_5_cloudtrail_kms_encryption(ct)
+    assert f.status == "FAIL"
+    assert f.resources == ["bad"]
+
+
+def test_3_5_cloudtrail_kms_encryption_client_error():
+    ct = MagicMock()
+    ct.describe_trails.side_effect = _client_error("AccessDenied")
+    f = _CHECKS.check_3_5_cloudtrail_kms_encryption(ct)
+    assert f.status == "ERROR"
+
+
+def test_3_6_cloudtrail_data_events_detects_missing_selectors():
+    ct = MagicMock()
+    ct.describe_trails.return_value = {"trailList": [{"Name": "trail-a"}, {"Name": "trail-b"}]}
+    ct.get_event_selectors.side_effect = [
+        {"EventSelectors": [{"DataResources": [{"Type": "AWS::S3::Object", "Values": ["arn:aws:s3:::"]}]}]},
+        {"EventSelectors": []},
+    ]
+    f = _CHECKS.check_3_6_cloudtrail_data_events(ct)
+    assert f.status == "FAIL"
+    assert f.resources == ["trail-b"]
+
+
+def test_3_6_cloudtrail_data_events_accepts_advanced_event_selectors():
+    ct = MagicMock()
+    ct.describe_trails.return_value = {"trailList": [{"Name": "trail-a"}]}
+    ct.get_event_selectors.return_value = {
+        "AdvancedEventSelectors": [
+            {"FieldSelectors": [{"Field": "eventCategory", "Equals": ["Data"]}]}
+        ]
+    }
+    f = _CHECKS.check_3_6_cloudtrail_data_events(ct)
+    assert f.status == "PASS"
+
+
+def test_3_6_cloudtrail_data_events_client_error():
+    ct = MagicMock()
+    ct.describe_trails.side_effect = _client_error("AccessDenied")
+    f = _CHECKS.check_3_6_cloudtrail_data_events(ct)
+    assert f.status == "ERROR"
+
+
 # ---------------------------------------------------------------------------
 # Section 4 — Networking
 # ---------------------------------------------------------------------------
@@ -440,6 +495,39 @@ def test_4_3_vpc_flow_logs_client_error():
 
 
 # ---------------------------------------------------------------------------
+# Section 6 — Security Services
+# ---------------------------------------------------------------------------
+
+
+def test_6_1_guardduty_enabled_passes_when_detector_present():
+    gd = MagicMock()
+    gd.list_detectors.return_value = {"DetectorIds": ["12abc34d567e8fa901bc2d34e56789f0"]}
+    f = _CHECKS.check_6_1_guardduty_enabled(gd)
+    assert f.status == "PASS"
+
+
+def test_6_1_guardduty_enabled_fails_when_missing():
+    gd = MagicMock()
+    gd.list_detectors.return_value = {"DetectorIds": []}
+    f = _CHECKS.check_6_1_guardduty_enabled(gd)
+    assert f.status == "FAIL"
+
+
+def test_6_2_securityhub_enabled_handles_missing_hub_as_fail():
+    sh = MagicMock()
+    sh.describe_hub.side_effect = _client_error("InvalidAccessException")
+    f = _CHECKS.check_6_2_securityhub_enabled(sh)
+    assert f.status == "FAIL"
+
+
+def test_6_2_securityhub_enabled_passes_when_hub_exists():
+    sh = MagicMock()
+    sh.describe_hub.return_value = {"HubArn": "arn:aws:securityhub:us-east-1:123456789012:hub/default"}
+    f = _CHECKS.check_6_2_securityhub_enabled(sh)
+    assert f.status == "PASS"
+
+
+# ---------------------------------------------------------------------------
 # Runner / CLI / helpers
 # ---------------------------------------------------------------------------
 
@@ -481,18 +569,22 @@ def _stub_clients() -> dict:
     ec2.describe_security_groups.return_value = {"SecurityGroups": []}
     ec2.describe_vpcs.return_value = {"Vpcs": []}
     ec2.describe_flow_logs.return_value = {"FlowLogs": []}
+    gd = MagicMock()
+    gd.list_detectors.return_value = {"DetectorIds": ["det-1"]}
+    sh = MagicMock()
+    sh.describe_hub.return_value = {"HubArn": "arn:aws:securityhub:us-east-1:123456789012:hub/default"}
     sts = MagicMock()
     sts.get_caller_identity.return_value = {"Account": "123456789012"}
 
-    return {"iam": iam, "s3": s3, "ct": ct, "cw": cw, "ec2": ec2, "sts": sts}
+    return {"iam": iam, "s3": s3, "ct": ct, "cw": cw, "ec2": ec2, "gd": gd, "sh": sh, "sts": sts}
 
 
 def test_run_assessment_runs_all_sections_with_stubbed_clients(monkeypatch):
     monkeypatch.setattr(_CHECKS, "_get_clients", lambda region: _stub_clients())
     findings = _CHECKS.run_assessment(region="us-east-1")
-    # 18 checks defined across 4 sections
+    # 22 checks defined across 5 sections
     assert len(findings) == sum(len(v) for v in _CHECKS.SECTIONS.values())
-    assert {f.section for f in findings} == {"iam", "storage", "logging", "networking"}
+    assert {f.section for f in findings} == {"iam", "storage", "logging", "networking", "security-services"}
 
 
 def test_run_assessment_section_filter(monkeypatch):
@@ -504,7 +596,7 @@ def test_run_assessment_section_filter(monkeypatch):
 def test_get_clients_builds_boto3_session():
     with patch.object(_CHECKS.boto3, "Session") as session:
         clients = _CHECKS._get_clients("us-west-2")
-    assert set(clients.keys()) == {"iam", "s3", "ct", "cw", "ec2", "sts"}
+    assert set(clients.keys()) == {"iam", "s3", "ct", "cw", "ec2", "gd", "sh", "sts"}
     session.assert_called_once_with(region_name="us-west-2")
 
 
@@ -523,6 +615,12 @@ def test_run_check_routes_by_function_name():
     # ec2 routing
     f = _CHECKS._run_check(_CHECKS.check_4_3_vpc_flow_logs, clients)
     assert f.control_id == "4.3"
+    # guardduty routing
+    f = _CHECKS._run_check(_CHECKS.check_6_1_guardduty_enabled, clients)
+    assert f.control_id == "6.1"
+    # securityhub routing
+    f = _CHECKS._run_check(_CHECKS.check_6_2_securityhub_enabled, clients)
+    assert f.control_id == "6.2"
 
 
 def test_severity_color_and_status_symbol_cover_all_keys():
