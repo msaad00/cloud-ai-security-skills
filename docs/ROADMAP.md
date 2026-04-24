@@ -22,8 +22,10 @@ The current north star is not "more skills" by itself. It is:
 
 ### Current shipped progress snapshot
 
-- **ATT&CK depth:** 41 mapped skills in the coverage registry, with the first
-  cross-cloud logging-impairment trio now shipped across AWS, GCP, and Azure.
+- **ATT&CK depth:** 42 mapped skills in the coverage registry, with the first
+  AWS IAM-user persistence slice now shipped via access-key creation detection
+  and the first cross-cloud logging-impairment trio now shipped across AWS,
+  GCP, and Azure.
 - **CIS and posture depth:** 91 shipped benchmark checks across AWS, GCP,
   Azure, Kubernetes, container, GPU, and model-serving surfaces; AWS also has
   the first guarded `--auto-remediate` slice.
@@ -163,7 +165,7 @@ Open roadmap issues should be:
 Good examples:
 
 - `ATT&CK gap: Azure Entra and service principal credential detections`
-- `ATT&CK gap: AWS IAM users, access keys, and temporary-credential identity pivots`
+- `ATT&CK gap: AWS IAM-user login-profile and temporary-credential identity pivots`
 - `ATT&CK gap: GCP service accounts, service-account keys, and workload-identity federation abuse detections`
 - `ATLAS gap: AI endpoint and model registry evaluation coverage`
 - `PCI and SOC 2 gap: remaining cross-cloud evidence depth beyond provider-native logging, segmentation, encryption, and key-management inventory`
