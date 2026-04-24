@@ -15,6 +15,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_FAILURE,
     STATUS_IN_PROGRESS,
     STATUS_PLANNED,
+    STATUS_SKIPPED_ACCOUNT_BOUNDARY,
     STATUS_SKIPPED_NO_SG,
     STATUS_SKIPPED_PROTECTED,
     STATUS_SUCCESS,
@@ -142,12 +143,16 @@ def test_intentionally_open_tag_default():
 def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.delenv("AWS_SG_REVOKE_INCIDENT_ID", raising=False)
     monkeypatch.delenv("AWS_SG_REVOKE_APPROVER", raising=False)
+    monkeypatch.delenv("AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS", raising=False)
     ok, _ = check_apply_gate()
     assert ok is False
     monkeypatch.setenv("AWS_SG_REVOKE_INCIDENT_ID", "INC-1")
     ok, _ = check_apply_gate()
     assert ok is False
     monkeypatch.setenv("AWS_SG_REVOKE_APPROVER", "alice")
+    ok, _ = check_apply_gate()
+    assert ok is False
+    monkeypatch.setenv("AWS_SG_REVOKE_ALLOWED_ACCOUNT_IDS", "111122223333")
     ok, _ = check_apply_gate()
     assert ok is True
 
@@ -256,7 +261,9 @@ def test_run_skips_intentionally_open_tagged_sg_in_apply():
     audit = _FakeAudit()
     ec2 = _FakeEC2(sgs={"sg-rogue": {"GroupId": "sg-rogue", "Tags": [{"Key": "intentionally-open", "Value": "yes"}], "IpPermissions": []}})
     records = list(run([_finding()], ec2_client=ec2, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice"))
+                       incident_id="INC-1", approver="alice",
+                       allowed_account_ids=("111122223333",),
+                       current_account_id="111122223333"))
     assert records[0]["status"] == STATUS_SKIPPED_PROTECTED
     assert ec2.revokes == []
     assert audit.writes == []
@@ -277,7 +284,9 @@ def test_run_apply_revokes_with_dual_audit():
         "IpPermissions": [{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22,
                            "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}]}})
     records = list(run([_finding()], ec2_client=ec2, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice@security"))
+                       incident_id="INC-1", approver="alice@security",
+                       allowed_account_ids=("111122223333",),
+                       current_account_id="111122223333"))
     rec = records[0]
     assert rec["status"] == STATUS_SUCCESS
     assert rec["dry_run"] is False
@@ -308,6 +317,8 @@ def test_run_apply_revokes_all_protocol_permission_with_exact_shape():
             audit=audit,
             incident_id="INC-1",
             approver="alice@security",
+            allowed_account_ids=("111122223333",),
+            current_account_id="111122223333",
         )
     )
     assert records[0]["status"] == STATUS_SUCCESS
@@ -318,7 +329,9 @@ def test_run_apply_writes_failure_audit_when_revoke_throws():
     audit = _FakeAudit()
     ec2 = _FakeEC2(raise_on_revoke=True)
     records = list(run([_finding()], ec2_client=ec2, apply=True, audit=audit,
-                       incident_id="INC-1", approver="alice"))
+                       incident_id="INC-1", approver="alice",
+                       allowed_account_ids=("111122223333",),
+                       current_account_id="111122223333"))
     assert records[0]["status"] == STATUS_FAILURE
     assert len(audit.writes) == 2
     assert audit.writes[1]["status"] == STATUS_FAILURE
@@ -327,7 +340,20 @@ def test_run_apply_writes_failure_audit_when_revoke_throws():
 def test_run_apply_requires_audit_writer():
     import pytest
     with pytest.raises(ValueError, match="audit writer is required"):
-        list(run([_finding()], ec2_client=_FakeEC2(), apply=True, audit=None))
+        list(run([_finding()], ec2_client=_FakeEC2(), apply=True, audit=None,
+                 allowed_account_ids=("111122223333",), current_account_id="111122223333"))
+
+
+def test_run_apply_skips_wrong_account_boundary():
+    audit = _FakeAudit()
+    ec2 = _FakeEC2()
+    records = list(run([_finding()], ec2_client=ec2, apply=True, audit=audit,
+                       incident_id="INC-1", approver="alice",
+                       allowed_account_ids=("444455556666",),
+                       current_account_id="111122223333"))
+    assert records[0]["status"] == STATUS_SKIPPED_ACCOUNT_BOUNDARY
+    assert ec2.revokes == []
+    assert audit.writes == []
 
 
 # ---------- run: re-verify ----------
