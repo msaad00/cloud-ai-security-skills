@@ -4,14 +4,14 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.8.1`
 - Registry updated: `2026-04-24`
-- Total shipped skills in registry: **74**
+- Total shipped skills in registry: **75**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **53** | — |
-| MITRE ATT&CK | v14 | **47** | 100% mapped coverage |
+| OCSF | 1.8.0 | **54** | — |
+| MITRE ATT&CK | v14 | **48** | 100% mapped coverage |
 | MITRE ATLAS | current | **13** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **53**
+Shipped skills mapped: **54**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -56,6 +56,7 @@ Shipped skills mapped: **53**
 | [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
 | [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
+| [`detect-gcp-service-account-key-creation`](../skills/detection/detect-gcp-service-account-key-creation) | detection | gcp | identities, service-accounts, credentials, audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | iam-roles, role-sessions, applications, service-accounts, service-account-keys, iam-credentials, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
@@ -101,7 +102,7 @@ Shipped skills mapped: **53**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **47**
+Shipped skills mapped: **48**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -120,6 +121,7 @@ Shipped skills mapped: **47**
 | [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
 | [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
+| [`detect-gcp-service-account-key-creation`](../skills/detection/detect-gcp-service-account-key-creation) | detection | gcp | identities, service-accounts, credentials, audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | iam-roles, role-sessions, applications, service-accounts, service-account-keys, iam-credentials, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
