@@ -4,15 +4,15 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.8.1`
 - Registry updated: `2026-04-24`
-- Total shipped skills in registry: **73**
+- Total shipped skills in registry: **74**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **52** | — |
-| MITRE ATT&CK | v14 | **46** | 100% mapped coverage |
-| MITRE ATLAS | current | **12** | 100% mapped coverage |
+| OCSF | 1.8.0 | **53** | — |
+| MITRE ATT&CK | v14 | **47** | 100% mapped coverage |
+| MITRE ATLAS | current | **13** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **6** | — |
@@ -24,7 +24,7 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | SOC 2 TSC | current | **20** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
-| OWASP LLM Top 10 | current | **7** | — |
+| OWASP LLM Top 10 | current | **8** | — |
 | OWASP MCP Top 10 | current | **7** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
@@ -36,7 +36,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **52**
+Shipped skills mapped: **53**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -54,6 +54,7 @@ Shipped skills mapped: **52**
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
 | [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
+| [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | iam-roles, role-sessions, applications, service-accounts, service-account-keys, iam-credentials, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
@@ -100,7 +101,7 @@ Shipped skills mapped: **52**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **46**
+Shipped skills mapped: **47**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -117,6 +118,7 @@ Shipped skills mapped: **46**
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
 | [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
+| [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-gcp-open-firewall`](../skills/detection/detect-gcp-open-firewall) | detection | gcp | vpc-firewall-rules, ingress-rules, cloud-audit-logs |
 | [`detect-google-workspace-suspicious-login`](../skills/detection/detect-google-workspace-suspicious-login) | detection | google-workspace | identities, authentication, sessions, mfa |
 | [`detect-lateral-movement`](../skills/detection/detect-lateral-movement) | detection | aws, azure, gcp, multi | iam-roles, role-sessions, applications, service-accounts, service-account-keys, iam-credentials, service-principals, managed-identities, federated-credentials, app-role-assignments, sessions, api, network |
@@ -158,11 +160,12 @@ Shipped skills mapped: **46**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **12**
+Shipped skills mapped: **13**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
+| [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
 | [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
@@ -358,12 +361,13 @@ Shipped skills mapped: **3**
 
 - Registry id: `owasp-llm-top-10`
 
-Shipped skills mapped: **7**
+Shipped skills mapped: **8**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
+| [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
 | [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |

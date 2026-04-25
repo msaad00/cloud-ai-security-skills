@@ -1,4 +1,4 @@
-![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 73 shipped skill bundles. OCSF 1.8 on the wire. 91 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![cloud-ai-security-skills — production-grade security skills for cloud and AI systems. 74 shipped skill bundles. OCSF 1.8 on the wire. 91 CIS and Kubernetes benchmark checks. MITRE ATT&CK tagged detections. MCP audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -16,20 +16,20 @@
 
 ## What this repo gives you
 
-**73 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus twelve guarded write paths spanning AWS/GCP/Azure IAM departures, AWS/GCP/Azure network revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
+**74 shipped skill bundles** that turn raw cloud, identity, Kubernetes, and MCP signals into stable, standards-aligned findings — plus twelve guarded write paths spanning AWS/GCP/Azure IAM departures, AWS/GCP/Azure network revoke, Okta, Workspace, Entra SP, K8s quarantine, K8s RBAC, and MCP tools. Each skill is a self-contained `SKILL.md + src/ + tests/` bundle that runs unchanged from the CLI, CI, MCP, or a persistent cloud runner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
 | **Ingest** | 15 | normalize raw source → event stream | native JSONL **or** OCSF 1.8 |
 | **Discover** | 5 | inventory, graph, AI BOM, evidence, IAM departure manifest planning | native / bridge JSON |
-| **Detect** | 26 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
+| **Detect** | 27 | deterministic rules with MITRE ATT&CK | OCSF Detection Finding 2004 |
 | **Evaluate** | 7 | 91 posture and benchmark checks | compliance result |
 | **Remediate** | 12 | guarded write paths (IAM departures AWS + GCP + Azure Entra, AWS/GCP/Azure network revoke, Okta session kill, Workspace session kill, K8s quarantine, K8s RBAC revoke, MCP tool quarantine, Entra SP credential revoke) | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks (S3, Snowflake, ClickHouse) | persisted JSONL |
 | **Sources** | 3 | warehouse query adapters (S3 Select, Snowflake, Databricks) | JSONL pass-through |
 
-**Total: 73 shipped skills.**
+**Total: 74 shipped skills.**
 
 <details>
 <summary><b>Why different layers use different formats</b> — OCSF where interop matters, native where state, evidence, and audit matter more</summary>
@@ -109,7 +109,7 @@ Full crosswalk: [docs/USE_CASES.md](docs/USE_CASES.md)
 
 ### Closed-loop coverage at a glance
 
-![Closed-loop coverage matrix — 13 of 26 shipped detections are closed loops today; lateral movement is intentionally detection-only, and the AWS access-key, AWS login-profile, AWS discovery-burst, AWS cross-account S3 copy, AWS/GCP/Azure logging-impairment, AWS model-artifact download, MCP credential-leak, system-prompt-extraction, tool-output-policy-bypass, and tool-output-exfiltration-instructions slices are detection-first today.](docs/images/coverage-matrix.svg)
+![Closed-loop coverage matrix — 13 of 27 shipped detections are closed loops today; lateral movement is intentionally detection-only, and the AWS access-key, AWS login-profile, AWS discovery-burst, AWS cross-account S3 copy, AWS/GCP/Azure logging-impairment, AWS/GCP model-artifact download, MCP credential-leak, system-prompt-extraction, tool-output-policy-bypass, and tool-output-exfiltration-instructions slices are detection-first today.](docs/images/coverage-matrix.svg)
 
 Source of truth for detect↔remediate parity. Tracked at [#155](https://github.com/msaad00/cloud-ai-security-skills/issues/155); design + remaining per-layer SVGs at [#248](https://github.com/msaad00/cloud-ai-security-skills/issues/248).
 
@@ -277,7 +277,9 @@ Approximate roadmap progress is tracked here so the README reflects current ship
 |---|---:|---|
 | **MITRE ATT&CK (`#253`)** | **45%** | AWS/GCP/Azure logging-impairment trio, AWS IAM-user access-key and login-profile slices, AWS discovery burst, and AWS cross-account S3 copy are shipped |
 | **CIS + auto-remediate (`#254`)** | **35%** | 91 checks shipped across AWS/GCP/Azure/K8s/container/GPU/model-serving, with the first guarded AWS `--auto-remediate` slice shipped |
-| **MITRE ATLAS + OWASP LLM/MCP (`#255`)** | **40%** | AWS model-artifact download detection, MCP prompt injection, tool drift, credential leak, system-prompt extraction, tool-output policy-bypass detection, tool-output exfiltration-instruction detection, and MCP tool quarantine are shipped |
+| **MITRE ATLAS (`#255` umbrella)** | **45%** | AI inventory and evidence, model-serving and GPU posture, MCP prompt injection, system-prompt extraction, tool-output policy-bypass, tool-output exfiltration-instruction detection, and AWS + GCP model-artifact download detection are shipped |
+| **OWASP LLM Top 10 (`#255` umbrella)** | **45%** | model-serving controls plus MCP prompt injection, credential leak, system-prompt extraction, tool-output policy-bypass, tool-output exfiltration-instruction detection, and AWS + GCP model-artifact download detection are shipped |
+| **OWASP MCP Top 10 (`#255` umbrella)** | **50%** | MCP prompt injection, tool drift, credential leak, system-prompt extraction, tool-output policy-bypass, tool-output exfiltration-instruction detection, and MCP tool quarantine are shipped |
 
 These are repo-progress estimates, not claims of full framework completion.
 
@@ -287,7 +289,7 @@ These are repo-progress estimates, not claims of full framework completion.
 |---|---|---|
 | **Ingest** | 15 ingesters across AWS, GCP, Azure, K8s, Okta, Entra, Workspace, MCP | more identity and SaaS sources |
 | **Discover** | 5 skills (AI BOM, cloud control evidence, control evidence, environment graph, IAM departures reconciler) | wider SaaS and infra evidence |
-| **Detect** | 26 detectors across MITRE ATT&CK, MITRE ATLAS, and MCP / agent-native signals, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, the AWS / GCP / Azure logging-impairment trio, the first AWS model-artifact download slice, and the MCP credential-leak, system-prompt-extraction, plus tool-output-policy-bypass and tool-output-exfiltration-instructions slices | deeper identity pivots, discovery, exfiltration, and more MCP / AI-native patterns |
+| **Detect** | 27 detectors across MITRE ATT&CK, MITRE ATLAS, OWASP LLM / MCP, and agent-native signals, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, the AWS / GCP / Azure logging-impairment trio, the first AWS + GCP model-artifact download slices, and the MCP credential-leak, system-prompt-extraction, plus tool-output-policy-bypass and tool-output-exfiltration-instructions slices | deeper identity pivots, discovery, exfiltration, and more MCP / AI-native patterns |
 | **Evaluate** | 7 benchmarks (91 checks) across CIS AWS/GCP/Azure, K8s, container, GPU, and model serving — native + OCSF 2003 opt-in | 50 % per-platform CIS coverage (#254), broader `--auto-remediate` depth |
 | **Remediate** | 12 guarded write paths across IAM departures, network revoke, session / token kill, K8s containment, and MCP tool quarantine — HITL-gated, dry-run-first, dual audit | broader CSPM and AI-specific remediation families as detection matures |
 | **View** | SARIF, Mermaid attack flow | graph overlay, warehouse-ready converters |
