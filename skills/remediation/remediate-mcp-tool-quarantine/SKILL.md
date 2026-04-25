@@ -7,7 +7,8 @@ description: >-
   the operator's MCP client reads at startup or via hot-reload to exclude
   the tool from its discoverable surface. Every action is dry-run by
   default, deny-listed against MCP infrastructure prefixes (mcp_, system_,
-  internal_), gated behind an incident ID plus approver for --apply, and
+  internal_), gated behind an incident ID plus two distinct approvers for
+  --apply, and
   dual-audited (DynamoDB + KMS-encrypted S3). Re-verify reads the
   quarantine file and emits VERIFIED, DRIFT, or UNREACHABLE via the shared
   remediation_verifier contract — DRIFT also emits a paired OCSF Detection
@@ -69,7 +70,7 @@ The MCP attack surface is in-process from the agent's POV — there's no cloud A
 - **MCP servers in this repo** can read it via `CLOUD_SECURITY_MCP_QUARANTINED_TOOLS_FILE` (operators wire this in their `.mcp.json`).
 - **Third-party MCP clients** (Claude Code / Desktop, Codex, Cursor, Windsurf, etc.) can wire it via their per-client allow/deny config — the file is the protocol.
 
-Each line of the file is one quarantine entry with `tool_name`, `session_uid`, `fingerprint`, `producer_skill`, `finding_uid`, `incident_id`, `approver`, `quarantined_at`. The MCP client filters its discoverable tool list against this on startup.
+Each line of the file is one quarantine entry with `tool_name`, `session_uid`, `fingerprint`, `producer_skill`, `finding_uid`, `incident_id`, `approvers`, `approver_count`, and `quarantined_at`. The MCP client filters its discoverable tool list against this on startup.
 
 The dual-audit (DynamoDB + KMS-encrypted S3) is preserved for organizational traceability — same shape as the other 4 remediation skills.
 
@@ -98,7 +99,7 @@ JSONL records on stdout:
 |---|---|
 | Source check | `ACCEPTED_PRODUCERS = {"detect-mcp-tool-drift", "detect-prompt-injection-mcp-proxy"}` |
 | Protected-tool deny-list | `mcp_*`, `system_*`, `internal_*` prefixes refuse quarantine — operators should revoke / patch infrastructure tools, not silently block them |
-| Apply gate | `--apply` requires `MCP_QUARANTINE_INCIDENT_ID` + `MCP_QUARANTINE_APPROVER` env vars set out-of-band |
+| Apply gate | `--apply` requires `MCP_QUARANTINE_INCIDENT_ID` plus two distinct approvers via `MCP_QUARANTINE_APPROVER_EMAILS`, `MCP_QUARANTINE_APPROVER_IDS`, or the legacy pair `MCP_QUARANTINE_APPROVER` + `MCP_QUARANTINE_SECOND_APPROVER` |
 | Audit | Dual write (DynamoDB + KMS-encrypted S3) BEFORE and AFTER each quarantine append; failure paths still write the failure audit row |
 | Re-verify | Reads the quarantine file; emits VERIFIED if tool is present, DRIFT (+ paired OCSF finding) if removed, UNREACHABLE if file unreadable — never silently downgrades |
 
@@ -110,7 +111,7 @@ python skills/remediation/remediate-mcp-tool-quarantine/src/handler.py findings.
 
 # Apply (after out-of-band approval)
 export MCP_QUARANTINE_INCIDENT_ID=INC-2026-04-19-002
-export MCP_QUARANTINE_APPROVER=alice@security
+export MCP_QUARANTINE_APPROVER_EMAILS=alice@security,bob@security
 export MCP_QUARANTINE_FILE=$HOME/.mcp-quarantine.jsonl
 export MCP_QUARANTINE_AUDIT_DYNAMODB_TABLE=mcp-quarantine-audit
 export MCP_QUARANTINE_AUDIT_BUCKET=acme-mcp-audit

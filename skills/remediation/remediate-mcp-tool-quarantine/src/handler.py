@@ -24,7 +24,7 @@ Guardrails enforced in code:
 - protected-tool deny-list: `mcp_*`, `system_*`, `internal_*` patterns
   refuse quarantine (operators should revoke, not auto-block, infrastructure
   tools)
-- --apply requires MCP_QUARANTINE_INCIDENT_ID + MCP_QUARANTINE_APPROVER
+- --apply requires MCP_QUARANTINE_INCIDENT_ID plus two distinct approvers
 - audit row written BEFORE and AFTER each quarantine append
 - --reverify reads the quarantine file and reports VERIFIED / DRIFT /
   UNREACHABLE via the shared verifier contract
@@ -118,7 +118,7 @@ class AuditWriter(Protocol):
         status: str,
         detail: str | None,
         incident_id: str,
-        approver: str,
+        approvers: tuple[str, ...],
     ) -> dict[str, str]: ...
 
 
@@ -169,7 +169,7 @@ class DualAuditWriter:
         status: str,
         detail: str | None,
         incident_id: str,
-        approver: str,
+        approvers: tuple[str, ...],
     ) -> dict[str, str]:
         import boto3
 
@@ -197,7 +197,9 @@ class DualAuditWriter:
             "status": status,
             "status_detail": detail,
             "incident_id": incident_id,
-            "approver": approver,
+            "approver": approvers[0] if approvers else "",
+            "approvers": list(approvers),
+            "approver_count": len(approvers),
             "action_at": action_at,
         }
         body = json.dumps(envelope, separators=(",", ":"))
@@ -219,7 +221,9 @@ class DualAuditWriter:
                 "step": {"S": step},
                 "status": {"S": status},
                 "incident_id": {"S": incident_id},
-                "approver": {"S": approver},
+                "approver": {"S": approvers[0] if approvers else ""},
+                "approvers_csv": {"S": ",".join(approvers)},
+                "approver_count": {"N": str(len(approvers))},
                 "session_uid": {"S": target.session_uid},
                 "fingerprint": {"S": target.fingerprint},
                 "producer_skill": {"S": target.producer_skill},
@@ -311,17 +315,51 @@ def is_protected_tool(name: str, prefixes: Iterable[str]) -> tuple[bool, str]:
     return False, ""
 
 
+def _parse_csv_env(name: str) -> tuple[str, ...]:
+    raw = os.getenv(name, "")
+    values: list[str] = []
+    seen: set[str] = set()
+    for part in raw.split(","):
+        normalized = part.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        values.append(normalized)
+    return tuple(values)
+
+
+def _load_apply_approvers() -> tuple[str, ...]:
+    approver_ids = _parse_csv_env("MCP_QUARANTINE_APPROVER_IDS")
+    approver_emails = _parse_csv_env("MCP_QUARANTINE_APPROVER_EMAILS")
+    legacy = tuple(
+        value
+        for value in _parse_csv_env("MCP_QUARANTINE_APPROVER")
+        + _parse_csv_env("MCP_QUARANTINE_SECOND_APPROVER")
+        if value
+    )
+    if len(approver_emails) >= len(approver_ids) and approver_emails:
+        return approver_emails
+    if approver_ids:
+        return approver_ids
+    return tuple(dict.fromkeys(legacy))
+
+
 def check_apply_gate() -> tuple[bool, str]:
     incident_id = os.getenv("MCP_QUARANTINE_INCIDENT_ID", "").strip()
-    approver = os.getenv("MCP_QUARANTINE_APPROVER", "").strip()
+    approvers = _load_apply_approvers()
     if not incident_id:
         return False, "MCP_QUARANTINE_INCIDENT_ID is required for --apply"
-    if not approver:
-        return False, "MCP_QUARANTINE_APPROVER is required for --apply"
+    if len(approvers) < 2:
+        return (
+            False,
+            "two distinct approvers are required for --apply via "
+            "MCP_QUARANTINE_APPROVER_EMAILS, MCP_QUARANTINE_APPROVER_IDS, "
+            "or MCP_QUARANTINE_APPROVER + MCP_QUARANTINE_SECOND_APPROVER",
+        )
     return True, ""
 
 
-def _quarantine_entry(target: Target, *, incident_id: str, approver: str) -> dict[str, Any]:
+def _quarantine_entry(target: Target, *, incident_id: str, approvers: tuple[str, ...]) -> dict[str, Any]:
     """Structured quarantine record the MCP client reads to filter its tool list."""
     return {
         "schema_mode": "native",
@@ -334,7 +372,9 @@ def _quarantine_entry(target: Target, *, incident_id: str, approver: str) -> dic
         "producer_skill": target.producer_skill,
         "finding_uid": target.finding_uid,
         "incident_id": incident_id,
-        "approver": approver,
+        "approver": approvers[0] if approvers else "",
+        "approvers": list(approvers),
+        "approver_count": len(approvers),
         "quarantined_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -396,16 +436,16 @@ def quarantine_tool(
     store: QuarantineStore,
     audit: AuditWriter,
     incident_id: str,
-    approver: str,
+    approvers: tuple[str, ...],
 ) -> dict[str, Any]:
-    entry = _quarantine_entry(target, incident_id=incident_id, approver=approver)
+    entry = _quarantine_entry(target, incident_id=incident_id, approvers=approvers)
     first_audit = audit.record(
         target=target,
         step=STEP_QUARANTINE_TOOL,
         status=STATUS_IN_PROGRESS,
         detail=f"about to quarantine `{target.tool_name}`",
         incident_id=incident_id,
-        approver=approver,
+        approvers=approvers,
     )
     try:
         store.append(entry)
@@ -416,7 +456,7 @@ def quarantine_tool(
             status=STATUS_FAILURE,
             detail=str(exc),
             incident_id=incident_id,
-            approver=approver,
+            approvers=approvers,
         )
         record = _plan_record(target, status=STATUS_FAILURE, detail=str(exc), dry_run=False, entry=entry)
         record["audit"] = first_audit
@@ -428,7 +468,7 @@ def quarantine_tool(
         status=STATUS_SUCCESS,
         detail=f"quarantined `{target.tool_name}`",
         incident_id=incident_id,
-        approver=approver,
+        approvers=approvers,
     )
     record = _plan_record(
         target,
@@ -439,7 +479,9 @@ def quarantine_tool(
     )
     record["audit"] = second_audit
     record["incident_id"] = incident_id
-    record["approver"] = approver
+    record["approver"] = approvers[0] if approvers else ""
+    record["approvers"] = list(approvers)
+    record["approver_count"] = len(approvers)
     return record
 
 
@@ -555,7 +597,7 @@ def run(
     audit: AuditWriter | None = None,
     protected_prefixes: Iterable[str] = DEFAULT_PROTECTED_TOOL_PREFIXES,
     incident_id: str = "",
-    approver: str = "",
+    approvers: tuple[str, ...] = (),
 ) -> Iterator[dict[str, Any]]:
     protected_prefixes = tuple(protected_prefixes)
 
@@ -590,7 +632,7 @@ def run(
             continue
 
         if not apply:
-            entry = _quarantine_entry(target, incident_id=incident_id, approver=approver)
+            entry = _quarantine_entry(target, incident_id=incident_id, approvers=approvers)
             yield _plan_record(
                 target,
                 status=STATUS_PLANNED,
@@ -607,7 +649,7 @@ def run(
             store=store,
             audit=audit,
             incident_id=incident_id,
-            approver=approver,
+            approvers=approvers,
         )
 
 
@@ -653,14 +695,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         audit: AuditWriter | None = None
         incident_id = ""
-        approver = ""
+        approvers: tuple[str, ...] = ()
         if args.apply:
             ok, reason = check_apply_gate()
             if not ok:
                 print(reason, file=sys.stderr)
                 return 2
             incident_id = os.environ["MCP_QUARANTINE_INCIDENT_ID"].strip()
-            approver = os.environ["MCP_QUARANTINE_APPROVER"].strip()
+            approvers = _load_apply_approvers()
             audit = DualAuditWriter(
                 dynamodb_table=os.environ["MCP_QUARANTINE_AUDIT_DYNAMODB_TABLE"],
                 s3_bucket=os.environ["MCP_QUARANTINE_AUDIT_BUCKET"],
@@ -674,7 +716,7 @@ def main(argv: list[str] | None = None) -> int:
             reverify=args.reverify,
             audit=audit,
             incident_id=incident_id,
-            approver=approver,
+            approvers=approvers,
         ):
             out_stream.write(json.dumps(record, separators=(",", ":")) + "\n")
     finally:
