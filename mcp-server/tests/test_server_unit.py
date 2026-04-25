@@ -136,6 +136,26 @@ def test_call_tool_scrubs_ambient_secret_env(monkeypatch):
     assert env["PYTHONUNBUFFERED"] == "1"
 
 
+def test_call_tool_preserves_cloud_security_control_env(monkeypatch):
+    captured: dict[str, object] = {}
+
+    monkeypatch.setenv("CLOUD_SECURITY_CONFORMANCE_MOTO_FIXTURE", "aws-cis-storage")
+    monkeypatch.setattr(MODULE, "tool_map", lambda: {"fake-skill": _FakeSkill(read_only=True)})
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: None)
+
+    def _fake_run(*args, **kwargs):
+        captured["env"] = kwargs["env"]
+        return _FakeCompleted()
+
+    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+
+    MODULE._call_tool("fake-skill", {"args": []})
+
+    env = captured["env"]
+    assert env["CLOUD_SECURITY_CONFORMANCE_MOTO_FIXTURE"] == "aws-cis-storage"
+
+
 def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
     audit_events: list[dict[str, object]] = []
 

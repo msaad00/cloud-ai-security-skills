@@ -229,8 +229,10 @@ def _build_child_env() -> dict[str, str]:
         value = os.environ.get(key)
         if value:
             env[key] = value
-    for key in (ALLOWED_SKILLS_ENV, "CLOUD_SECURITY_MCP_TIMEOUT_SECONDS"):
-        value = os.environ.get(key, "").strip()
+    for key, raw_value in os.environ.items():
+        if not key.startswith("CLOUD_SECURITY_"):
+            continue
+        value = raw_value.strip()
         if value:
             env[key] = value
     env["PYTHONUNBUFFERED"] = "1"
