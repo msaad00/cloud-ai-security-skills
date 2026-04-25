@@ -22,7 +22,7 @@ The current north star is not "more skills" by itself. It is:
 
 ### Current shipped progress snapshot
 
-- **ATT&CK depth:** 45 mapped skills in the coverage registry, with the first
+- **ATT&CK depth:** 47 mapped skills in the coverage registry, with the first
   AWS IAM-user credential-creation slices now shipped via access-key and
   login-profile detection, the first AWS cloud-discovery burst slice now
   shipped, the first AWS exfiltration-to-cloud-account slice now shipped via
@@ -31,13 +31,16 @@ The current north star is not "more skills" by itself. It is:
 - **CIS and posture depth:** 91 shipped benchmark checks across AWS, GCP,
   Azure, Kubernetes, container, GPU, and model-serving surfaces; AWS also has
   the first guarded `--auto-remediate` slice.
-- **AI-native baseline:** MCP prompt injection, tool drift, credential leak
-  detection, explicit system-prompt extraction detection, explicit
-  tool-output policy-bypass detection, explicit tool-output
-  exfiltration-instruction detection, AWS model-artifact download detection,
-  and MCP tool quarantine are all shipped. The next open work is
-  broader AI-native detection depth and stronger closed loops, not first
-  presence.
+- **MITRE ATLAS depth:** AI inventory and evidence, model-serving and GPU
+  posture, MCP prompt injection, explicit system-prompt extraction, explicit
+  tool-output policy-bypass, explicit tool-output exfiltration-instruction
+  detection, and AWS + GCP model-artifact download detection are all shipped.
+- **OWASP LLM / MCP depth:** model-serving controls, MCP prompt injection,
+  tool drift, credential leak detection, explicit system-prompt extraction,
+  explicit tool-output policy-bypass, explicit tool-output exfiltration-
+  instruction detection, and MCP tool quarantine are all shipped. The next
+  open work is broader AI-native detection depth and stronger closed loops,
+  not first presence.
 
 ### AI-native status checkpoint
 

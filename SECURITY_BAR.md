@@ -66,6 +66,7 @@ is the row you can take to your auditor.
 | `detect-entra-credential-addition` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-entra-role-grant-escalation` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-gcp-audit-logs-disabled` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `detect-gcp-model-artifact-download` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-gcp-open-firewall` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-google-workspace-suspicious-login` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `detect-lateral-movement` | detection | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
@@ -103,7 +104,7 @@ is the row you can take to your auditor.
 | `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 
-_73 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+_74 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
 <!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar
