@@ -28,6 +28,28 @@ SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_TIMEOUT_SECONDS = 60
 ALLOWED_SKILLS_ENV = "CLOUD_SECURITY_MCP_ALLOWED_SKILLS"
+SAFE_CHILD_ENV_VARS = (
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "NO_COLOR",
+    "PATH",
+    "PATHEXT",
+    "PYTHONHOME",
+    "PYTHONPATH",
+    "SYSTEMROOT",
+    "TEMP",
+    "TERM",
+    "TMP",
+    "TMPDIR",
+    "TZ",
+    "USER",
+    "VIRTUAL_ENV",
+    "WINDIR",
+    "XDG_CACHE_HOME",
+    "XDG_CONFIG_HOME",
+)
 
 
 def _allowed_skills_filter() -> set[str] | None:
@@ -164,18 +186,55 @@ def _validate_context(raw_context: Any, field_name: str) -> dict[str, Any] | Non
     return validated
 
 
-def _approval_count(approval_context: dict[str, Any] | None) -> int:
+def _unique_nonempty_strings(raw_values: Any) -> list[str]:
+    if not isinstance(raw_values, list):
+        return []
+    values: list[str] = []
+    seen: set[str] = set()
+    for item in raw_values:
+        if not isinstance(item, str):
+            continue
+        normalized = item.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        values.append(normalized)
+    return values
+
+
+def _distinct_approvers(approval_context: dict[str, Any] | None) -> list[str]:
     if not approval_context:
-        return 0
-    approver_ids = approval_context.get("approver_ids")
-    if isinstance(approver_ids, list):
-        return len([item for item in approver_ids if item])
-    approver_emails = approval_context.get("approver_emails")
-    if isinstance(approver_emails, list):
-        return len([item for item in approver_emails if item])
-    if approval_context.get("approver_id") or approval_context.get("approver_email"):
-        return 1
-    return 0
+        return []
+    approver_ids = _unique_nonempty_strings(approval_context.get("approver_ids"))
+    approver_emails = _unique_nonempty_strings(approval_context.get("approver_emails"))
+    if len(approver_emails) >= len(approver_ids) and approver_emails:
+        return approver_emails
+    if approver_ids:
+        return approver_ids
+
+    approver_id = str(approval_context.get("approver_id") or "").strip()
+    approver_email = str(approval_context.get("approver_email") or "").strip()
+    if approver_id or approver_email:
+        return [approver_email or approver_id]
+    return []
+
+
+def _approval_count(approval_context: dict[str, Any] | None) -> int:
+    return len(_distinct_approvers(approval_context))
+
+
+def _build_child_env() -> dict[str, str]:
+    env: dict[str, str] = {}
+    for key in SAFE_CHILD_ENV_VARS:
+        value = os.environ.get(key)
+        if value:
+            env[key] = value
+    for key in (ALLOWED_SKILLS_ENV, "CLOUD_SECURITY_MCP_TIMEOUT_SECONDS"):
+        value = os.environ.get(key, "").strip()
+        if value:
+            env[key] = value
+    env["PYTHONUNBUFFERED"] = "1"
+    return env
 
 
 def _is_safe_write_invocation(skill: SkillSpec, args: list[str]) -> bool:
@@ -252,8 +311,7 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
                 f"tool `{skill.name}` requires at least {skill.min_approvers} approver(s) in `_approval_context`"
             )
 
-        env = os.environ.copy()
-        env.setdefault("PYTHONUNBUFFERED", "1")
+        env = _build_child_env()
         env["SKILL_CORRELATION_ID"] = correlation_id
         if caller_context:
             if "user_id" in caller_context:
@@ -269,10 +327,12 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
                 env["SKILL_APPROVER_ID"] = approval_context["approver_id"]
             if "approver_email" in approval_context:
                 env["SKILL_APPROVER_EMAIL"] = approval_context["approver_email"]
-            if "approver_ids" in approval_context:
-                env["SKILL_APPROVER_IDS"] = ",".join(approval_context["approver_ids"])
-            if "approver_emails" in approval_context:
-                env["SKILL_APPROVER_EMAILS"] = ",".join(approval_context["approver_emails"])
+            approver_ids = _unique_nonempty_strings(approval_context.get("approver_ids"))
+            approver_emails = _unique_nonempty_strings(approval_context.get("approver_emails"))
+            if approver_ids:
+                env["SKILL_APPROVER_IDS"] = ",".join(approver_ids)
+            if approver_emails:
+                env["SKILL_APPROVER_EMAILS"] = ",".join(approver_emails)
             if "ticket_id" in approval_context:
                 env["SKILL_APPROVAL_TICKET"] = approval_context["ticket_id"]
             if "approval_timestamp" in approval_context:

@@ -109,6 +109,33 @@ def test_call_tool_injects_caller_and_approval_context(monkeypatch):
     assert audit_events[0]["input_length"] == 0
 
 
+def test_call_tool_scrubs_ambient_secret_env(monkeypatch):
+    captured: dict[str, object] = {}
+
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "top-secret")
+    monkeypatch.setenv("UNRELATED_SECRET", "should-not-pass")
+    monkeypatch.setenv("PATH", "/usr/bin")
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+    monkeypatch.setattr(MODULE, "tool_map", lambda: {"fake-skill": _FakeSkill(read_only=True)})
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: None)
+
+    def _fake_run(*args, **kwargs):
+        captured["env"] = kwargs["env"]
+        return _FakeCompleted()
+
+    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+
+    MODULE._call_tool("fake-skill", {"args": []})
+
+    env = captured["env"]
+    assert "AWS_SECRET_ACCESS_KEY" not in env
+    assert "UNRELATED_SECRET" not in env
+    assert env["PATH"] == "/usr/bin"
+    assert env["LANG"] == "en_US.UTF-8"
+    assert env["PYTHONUNBUFFERED"] == "1"
+
+
 def test_call_tool_requires_approval_context_for_write_skill(monkeypatch):
     audit_events: list[dict[str, object]] = []
 
@@ -236,6 +263,40 @@ def test_call_tool_accepts_multi_approver_context(monkeypatch):
     assert env["SKILL_APPROVER_EMAILS"] == "a@example.com,b@example.com"
     assert result["isError"] is False
     assert audit_events[0]["approval_count"] == 2
+
+
+def test_call_tool_rejects_duplicate_multi_approver_context(monkeypatch):
+    audit_events: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        MODULE,
+        "tool_map",
+        lambda: {
+            "fake-skill": _FakeSkill(
+                read_only=False,
+                approver_roles=("security_lead", "incident_commander"),
+                min_approvers=2,
+            )
+        },
+    )
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    try:
+        MODULE._call_tool(
+            "fake-skill",
+            {
+                "args": ["--dry-run"],
+                "_approval_context": {
+                    "approver_ids": ["a-456", "a-456"],
+                    "ticket_id": "SEC-123",
+                },
+            },
+        )
+    except ValueError as exc:
+        assert "requires at least 2 approver" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+    assert audit_events[0]["approval_count"] == 1
 
 
 def test_safe_write_invocation_allows_checks_evaluation_without_apply():

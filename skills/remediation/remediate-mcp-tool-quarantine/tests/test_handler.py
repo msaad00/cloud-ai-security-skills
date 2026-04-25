@@ -58,14 +58,15 @@ def _finding(
 class _FakeAudit:
     writes: list[dict] = field(default_factory=list)
 
-    def record(self, *, target, step, status, detail, incident_id, approver):
+    def record(self, *, target, step, status, detail, incident_id, approvers):
         entry = {
             "tool_name": target.tool_name,
             "step": step,
             "status": status,
             "detail": detail,
             "incident_id": incident_id,
-            "approver": approver,
+            "approver": approvers[0] if approvers else "",
+            "approvers": list(approvers),
         }
         self.writes.append(entry)
         return {
@@ -116,9 +117,12 @@ def test_is_protected_tool_matches_prefix():
     assert is_protected_tool("", DEFAULT_PROTECTED_TOOL_PREFIXES) == (False, "")
 
 
-def test_check_apply_gate_requires_both_envs(monkeypatch):
+def test_check_apply_gate_requires_two_distinct_approvers(monkeypatch):
     monkeypatch.delenv("MCP_QUARANTINE_INCIDENT_ID", raising=False)
+    monkeypatch.delenv("MCP_QUARANTINE_APPROVER_EMAILS", raising=False)
+    monkeypatch.delenv("MCP_QUARANTINE_APPROVER_IDS", raising=False)
     monkeypatch.delenv("MCP_QUARANTINE_APPROVER", raising=False)
+    monkeypatch.delenv("MCP_QUARANTINE_SECOND_APPROVER", raising=False)
     ok, reason = check_apply_gate()
     assert ok is False
     assert "INCIDENT_ID" in reason
@@ -126,9 +130,25 @@ def test_check_apply_gate_requires_both_envs(monkeypatch):
     monkeypatch.setenv("MCP_QUARANTINE_INCIDENT_ID", "INC-1")
     ok, reason = check_apply_gate()
     assert ok is False
-    assert "APPROVER" in reason
+    assert "two distinct approvers" in reason
 
+    monkeypatch.setenv("MCP_QUARANTINE_APPROVER_EMAILS", "alice@security,bob@security")
+    ok, reason = check_apply_gate()
+    assert ok is True
+
+
+def test_check_apply_gate_rejects_duplicate_approvers(monkeypatch):
+    monkeypatch.setenv("MCP_QUARANTINE_INCIDENT_ID", "INC-1")
+    monkeypatch.setenv("MCP_QUARANTINE_APPROVER_EMAILS", "alice@security,alice@security")
+    ok, reason = check_apply_gate()
+    assert ok is False
+    assert "two distinct approvers" in reason
+
+
+def test_check_apply_gate_accepts_legacy_two_approver_envs(monkeypatch):
+    monkeypatch.setenv("MCP_QUARANTINE_INCIDENT_ID", "INC-1")
     monkeypatch.setenv("MCP_QUARANTINE_APPROVER", "alice@security")
+    monkeypatch.setenv("MCP_QUARANTINE_SECOND_APPROVER", "bob@security")
     ok, reason = check_apply_gate()
     assert ok is True
 
@@ -207,7 +227,7 @@ def test_run_skips_protected_tool_in_apply():
             apply=True,
             audit=audit,
             incident_id="INC-1",
-            approver="alice",
+            approvers=("alice", "bob"),
         )
     )
     rec = records[0]
@@ -229,7 +249,7 @@ def test_run_apply_quarantines_tool_with_dual_audit():
             apply=True,
             audit=audit,
             incident_id="INC-1",
-            approver="alice@security",
+            approvers=("alice@security", "bob@security"),
         )
     )
     rec = records[0]
@@ -243,6 +263,8 @@ def test_run_apply_quarantines_tool_with_dual_audit():
     assert len(audit.writes) == 2
     assert audit.writes[0]["status"] == STATUS_IN_PROGRESS
     assert audit.writes[1]["status"] == STATUS_SUCCESS
+    assert rec["approver_count"] == 2
+    assert rec["approvers"] == ["alice@security", "bob@security"]
 
 
 def test_run_apply_writes_failure_audit_when_store_throws():
@@ -255,7 +277,7 @@ def test_run_apply_writes_failure_audit_when_store_throws():
             apply=True,
             audit=audit,
             incident_id="INC-1",
-            approver="alice",
+            approvers=("alice", "bob"),
         )
     )
     rec = records[0]
