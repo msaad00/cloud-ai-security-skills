@@ -20,7 +20,7 @@ from individual `SKILL.md` files.
 | Framework | Status | Where it appears |
 |---|---|---|
 | **OCSF 1.8** | core wire contract | all ingestion, detection, and view flows |
-| **MITRE ATT&CK v14** | strong and broader | 47 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first AWS discovery-burst and cross-account S3-copy slices, the AWS / GCP / Azure logging-impairment trio, and the first AWS + GCP model-artifact download slices |
+| **MITRE ATT&CK v14** | strong and broader | 48 mapped skills across cloud, identity, Kubernetes, container, MCP, and remediation paths, including the shipped AWS IAM access-key and login-profile slices, the first GCP service-account-key slice, the first AWS discovery-burst and cross-account S3-copy slices, the AWS / GCP / Azure logging-impairment trio, and the first AWS + GCP model-artifact download slices |
 | **MITRE ATLAS** | partial but real | AI-oriented evaluation, discovery, MCP prompt-injection plus response-layer override and exfiltration detection, and the first AWS + GCP cloud-native model-artifact collection slices |
 | **CIS Benchmarks / Controls** | strong | AWS, GCP, Azure, Kubernetes, container evaluation skills |
 | **NIST CSF 2.0** | strong | evaluation and some remediation skills |
@@ -51,6 +51,7 @@ Strongest current ATT&CK coverage:
 | `detect-lateral-movement` | T1021, T1078.004 across AWS role sessions, GCP service-account pivots anchored in IAM Credentials and key-creation events, Azure Activity role/managed-identity pivots, and Azure Entra / Graph application-service-principal credential pivots; AWS IAM-user temporary-credential pivots plus GCP workload-identity federation abuse remain tracked follow-up gaps |
 | `detect-aws-access-key-creation` | T1098.001 for successful AWS IAM `CreateAccessKey` operations that add credential material to an IAM user |
 | `detect-aws-login-profile-creation` | T1098.001 for successful AWS IAM `CreateLoginProfile` operations that add console-password credential material to an IAM user |
+| `detect-gcp-service-account-key-creation` | T1098.001 for successful GCP IAM `CreateServiceAccountKey` operations that add credential material to a service account |
 | `detect-aws-enumeration-burst` | T1526 for short-window bursts of high-signal AWS discovery APIs in CloudTrail across IAM, EC2, S3, KMS, Organizations, EKS, Lambda, and CloudTrail |
 | `detect-s3-cross-account-copy` | T1537 for successful AWS S3 `CopyObject` calls where the acting principal account differs from the recipient bucket-owner account |
 | `detect-aws-model-artifact-download` | T1530 plus ATLAS AML.T0035 for successful AWS S3 `GetObject` downloads of model-weight and checkpoint artifacts |
@@ -82,6 +83,9 @@ Notes:
   weakening, and policy-drift depth remain separate follow-on work.
 - Current cross-cloud identity depth is strongest in `detect-lateral-movement`; the Azure slice now distinguishes Azure Activity control-plane pivots from Entra / Graph application-service-principal credential pivots.
 - The GCP slice in `detect-lateral-movement` is currently pinned to service-account and IAM Credentials anchors; workload-identity federation abuse is tracked separately so the docs do not overstate provider depth.
+- `detect-gcp-service-account-key-creation` now ships the first narrow GCP
+  service-account credential-creation slice, but workload-identity federation
+  abuse and broader token-minting depth remain separate follow-on work.
 - The AWS role-session slice stays in `detect-lateral-movement`, while
   `detect-aws-access-key-creation` and
   `detect-aws-login-profile-creation` now cover the first IAM-user

@@ -52,6 +52,7 @@ Deterministic OCSF-to-finding rules.
 | [`detect-google-workspace-suspicious-login`](detection/detect-google-workspace-suspicious-login/) | provider-marked suspicious Workspace login or repeated failures followed by success |
 | [`detect-aws-access-key-creation`](detection/detect-aws-access-key-creation/) | successful AWS IAM `CreateAccessKey` operations against IAM users (T1098.001 Additional Cloud Credentials) |
 | [`detect-aws-login-profile-creation`](detection/detect-aws-login-profile-creation/) | successful AWS IAM `CreateLoginProfile` operations against IAM users (T1098.001 Additional Cloud Credentials) |
+| [`detect-gcp-service-account-key-creation`](detection/detect-gcp-service-account-key-creation/) | successful GCP IAM `CreateServiceAccountKey` operations against service accounts (T1098.001 Additional Cloud Credentials) |
 | [`detect-aws-enumeration-burst`](detection/detect-aws-enumeration-burst/) | short-window burst of high-signal AWS discovery APIs in CloudTrail (T1526 Cloud Service Discovery) |
 | [`detect-aws-model-artifact-download`](detection/detect-aws-model-artifact-download/) | successful AWS S3 `GetObject` downloads of model-weight and checkpoint artifacts (T1530, ATLAS AML.T0035) |
 | [`detect-gcp-model-artifact-download`](detection/detect-gcp-model-artifact-download/) | successful GCS `storage.objects.get` downloads of model-weight and checkpoint artifacts (T1530, ATLAS AML.T0035) |
