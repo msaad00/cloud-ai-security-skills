@@ -206,6 +206,24 @@ class TestConvertEvent:
         assert e["resources"][0]["name"] == "projects/-/serviceAccounts/sa@p.iam.gserviceaccount.com"
         assert e["resources"][0]["type"] == "service_account"
 
+    def test_resources_include_sanitized_created_service_account_key_name(self):
+        e = convert_event(
+            self._entry(
+                response={
+                    "name": "projects/-/serviceAccounts/sa@p.iam.gserviceaccount.com/keys/key-123",
+                    "privateKeyData": "base64-secret-material",
+                }
+            )
+        )
+        assert e["resources"] == [
+            {"name": "projects/-/serviceAccounts/sa@p.iam.gserviceaccount.com", "type": "service_account"},
+            {
+                "name": "projects/-/serviceAccounts/sa@p.iam.gserviceaccount.com/keys/key-123",
+                "type": "service_account_key",
+            },
+        ]
+        assert "privateKeyData" not in e
+
     def test_failure_status(self):
         e = convert_event(self._entry(status={"code": 7, "message": "denied"}))
         assert e["status_id"] == STATUS_FAILURE
