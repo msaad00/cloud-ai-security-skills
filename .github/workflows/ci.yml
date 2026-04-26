@@ -297,8 +297,12 @@ jobs:
           tflint_version: v0.58.0
       - name: Install Azure Bicep CLI
         run: |
+          set -euo pipefail
           mkdir -p "${HOME}/.local/bin"
-          curl -sSL https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 -o "${HOME}/.local/bin/bicep"
+          curl --fail --show-error --location --retry 3 --retry-all-errors \
+            https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64 \
+            --output "${HOME}/.local/bin/bicep"
+          file "${HOME}/.local/bin/bicep" | grep -q "ELF 64-bit"
           chmod +x "${HOME}/.local/bin/bicep"
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           "${HOME}/.local/bin/bicep" --version
