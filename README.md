@@ -247,8 +247,9 @@ The `-ocsf` suffix means OCSF is the default, not the only output. Reference: [d
 
 ## Install and trust
 
-This repo is not primarily distributed as a PyPI package. Operators clone a tagged release, verify the signed SBOM set, and install only the dependency groups they need from [`pyproject.toml`](pyproject.toml). `uv.lock` is the ceiling, real installs are narrower.
+This repo is ready to download and use from GitHub tags or Releases, not as a PyPI package. Operators clone a tagged release or download the signed source tarball, verify the release assets, and install only the dependency groups they need from [`pyproject.toml`](pyproject.toml). `uv.lock` is the ceiling, real installs are narrower.
 
+- [docs/INSTALL.md](docs/INSTALL.md) — download, verify, install, and run
 - [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md) — SBOM, signing, provenance
 - [docs/CREDENTIAL_PROVENANCE.md](docs/CREDENTIAL_PROVENANCE.md) — workload identity first
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — release gates
