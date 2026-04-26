@@ -1,0 +1,52 @@
+name: Auto Merge
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-automerge:
+    name: enable-automerge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open'
+    steps:
+      - name: Enable native auto-merge for trusted labeled PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pr_json="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}")"
+          is_draft="$(jq -r '.draft' <<<"${pr_json}")"
+          head_repo="$(jq -r '.head.repo.full_name' <<<"${pr_json}")"
+          head_ref="$(jq -r '.head.ref' <<<"${pr_json}")"
+
+          if [[ "${is_draft}" == "true" ]]; then
+            echo "PR #${PR_NUMBER} is draft; skipping auto-merge enablement."
+            exit 0
+          fi
+
+          if [[ "${head_repo}" != "${REPOSITORY}" ]]; then
+            echo "PR #${PR_NUMBER} is from ${head_repo}; skipping fork auto-merge."
+            exit 0
+          fi
+
+          if ! gh api "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels" --jq '.[].name' | grep -Fxq "automerge"; then
+            echo "PR #${PR_NUMBER} does not have the automerge label; skipping."
+            exit 0
+          fi
+
+          echo "Enabling native auto-merge for PR #${PR_NUMBER} from ${head_ref}."
+          gh pr merge "${PR_NUMBER}" \
+            --repo "${REPOSITORY}" \
+            --auto \
+            --squash \
+            --delete-branch

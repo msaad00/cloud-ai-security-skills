@@ -34,6 +34,8 @@ The CI pipeline is split into independent lanes so failures point at the right k
   - CloudFormation and Terraform validation
 - `agent-bom`
   - advisory artifact and SARIF generation
+- `Auto Merge`
+  - label-gated workflow that enables GitHub native auto-merge for trusted PRs
 
 ## Simplification Rules
 
@@ -43,6 +45,19 @@ The CI pipeline is split into independent lanes so failures point at the right k
 - Install only the packages each lane needs.
 - Prefer grouped layer lanes over per-skill matrix fan-out when the skill family can share one dependency set.
 - Cancel stale in-flight runs on the same PR branch so queued checks do not pile up behind superseded pushes.
+
+## Auto-Merge Policy
+
+Auto-merge is opt-in per PR:
+
+1. The PR must come from the same repository, not a fork.
+2. The PR must not be a draft.
+3. The PR must have the `automerge` label.
+
+When those conditions are true, `.github/workflows/automerge.yml` runs with
+`pull_request_target` and does not check out or execute PR code. It calls
+GitHub native auto-merge with squash merge and delete-branch enabled. GitHub
+then waits for required checks and branch protection before merging.
 
 ## Next Tightenings
 
