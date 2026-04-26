@@ -43,11 +43,18 @@ class _FakeSkill:
         self.name = "fake-skill"
         self.category = category
         self.capability = "read-only" if read_only else "write-remediation"
+        self.description = "fake skill"
+        self.approval_model = "none" if read_only else "human_required"
+        self.execution_modes = ("local",)
+        self.side_effects = ("none",) if read_only else ("writes-cloud",)
+        self.network_egress = ()
+        self.caller_roles = ()
         self.read_only = read_only
         self.approver_roles = approver_roles
         self.min_approvers = min_approvers
         self.mcp_timeout_seconds = mcp_timeout_seconds
         self.entrypoint = None if entrypoint_name is None else Path(entrypoint_name)
+        self.output_formats = ()
 
 
 def test_call_tool_injects_caller_and_approval_context(monkeypatch):
@@ -444,6 +451,102 @@ def test_filtered_tool_map_unset_exposes_all(monkeypatch):
     monkeypatch.setattr(MODULE, "tool_map", lambda: fake_tools)
     monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
     assert set(MODULE._filtered_tool_map()) == {"a", "b"}
+
+
+def test_scoped_tool_map_intersects_operator_and_caller_allowlists(monkeypatch):
+    fake_tools = {
+        "allowed-by-both": _FakeSkill(),
+        "operator-only": _FakeSkill(),
+        "caller-only": _FakeSkill(),
+    }
+    monkeypatch.setattr(MODULE, "tool_map", lambda: fake_tools)
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", "allowed-by-both,operator-only")
+
+    scoped = MODULE._scoped_tool_map({"allowed_skills": ["allowed-by-both", "caller-only"]})
+
+    assert set(scoped) == {"allowed-by-both"}
+
+
+def test_scoped_tool_map_requires_caller_allowlist_when_enabled(monkeypatch):
+    fake_tools = {"a": _FakeSkill(), "b": _FakeSkill()}
+    monkeypatch.setattr(MODULE, "tool_map", lambda: fake_tools)
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_REQUIRE_CALLER_ALLOWED_SKILLS", "true")
+
+    assert MODULE._scoped_tool_map(None) == {}
+    assert set(MODULE._scoped_tool_map({"allowed_skills": ["b"]})) == {"b"}
+
+
+def test_call_tool_rejects_skill_outside_caller_scope(monkeypatch):
+    audit_events: list[dict[str, object]] = []
+
+    monkeypatch.setattr(MODULE, "tool_map", lambda: {"blocked-skill": _FakeSkill()})
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    try:
+        MODULE._call_tool(
+            "blocked-skill",
+            {
+                "args": [],
+                "_caller_context": {"user_id": "u-123", "allowed_skills": ["other-skill"]},
+            },
+        )
+    except KeyError as exc:
+        assert "unknown tool" in str(exc)
+    else:
+        raise AssertionError("expected KeyError for caller-scope-blocked tool")
+
+    assert audit_events[0]["tool"] == "blocked-skill"
+    assert audit_events[0]["result"] == "error"
+    assert audit_events[0]["caller_skill_scope_provided"] is True
+    assert audit_events[0]["caller_skill_scope_count"] == 1
+    assert audit_events[0]["caller_skill_scope_hash"] == MODULE._stable_hash(["other-skill"])
+
+
+def test_call_tool_forwards_caller_allowed_skill_scope(monkeypatch):
+    captured: dict[str, object] = {}
+    audit_events: list[dict[str, object]] = []
+
+    monkeypatch.setattr(MODULE, "tool_map", lambda: {"fake-skill": _FakeSkill(read_only=True)})
+    monkeypatch.setattr(MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"])
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    def _fake_run(*args, **kwargs):
+        captured["env"] = kwargs["env"]
+        return _FakeCompleted()
+
+    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+
+    MODULE._call_tool(
+        "fake-skill",
+        {"args": [], "_caller_context": {"allowed_skills": ["fake-skill", "fake-skill", ""]}},
+    )
+
+    env = captured["env"]
+    assert env["SKILL_CALLER_ALLOWED_SKILLS"] == "fake-skill"
+    assert audit_events[0]["caller_skill_scope_provided"] is True
+    assert audit_events[0]["caller_skill_scope_count"] == 1
+
+
+def test_handle_tools_list_applies_caller_scope(monkeypatch):
+    fake_tools = {"a": _FakeSkill(), "b": _FakeSkill()}
+    fake_tools["a"].name = "a"
+    fake_tools["b"].name = "b"
+    monkeypatch.setattr(MODULE, "tool_map", lambda: fake_tools)
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
+
+    response = MODULE._handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {"_caller_context": {"allowed_skills": ["b"]}},
+        }
+    )
+
+    tools = response["result"]["tools"]
+    assert [tool["name"] for tool in tools] == ["b"]
 
 
 def test_call_tool_rejects_skill_outside_allowlist(monkeypatch):
