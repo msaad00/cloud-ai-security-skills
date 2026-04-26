@@ -63,6 +63,11 @@ A finding fires on every successful Cloud Audit event from
 3. `status_id == 1`
 4. `resources[]` resolve a target service-account resource
 
+When upstream `ingest-gcp-audit-ocsf` receives a sanitized
+`protoPayload.response.name` for the created key, the detector also emits the
+exact `target_key_resource` and `target_key_id` as evidence. It does not retain
+private key material.
+
 ## OCSF output
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
@@ -71,9 +76,10 @@ OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 - `finding_info.attacks[].technique_uid = T1098` (Account Manipulation)
 - `finding_info.attacks[].sub_technique_uid = T1098.001` (Additional Cloud Credentials)
 - `observables[]` including `target.name`, `project.uid`, `actor.name`, and `api.operation`
+- `evidence.target_key_resource` / `evidence.target_key_id` when the upstream audit event includes the created key resource name
 
 The native projection (`--output-format native`) keeps the target service
-account and actor/project context in a flatter shape.
+account, created key resource, and actor/project context in a flatter shape.
 
 ## Run
 
