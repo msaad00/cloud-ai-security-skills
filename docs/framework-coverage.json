@@ -998,6 +998,30 @@
       ]
     },
     {
+      "path": "skills/detection/detect-gcp-service-account-token-minting",
+      "layer": "detection",
+      "providers": [
+        "gcp"
+      ],
+      "asset_classes": [
+        "identities",
+        "service-accounts",
+        "credentials",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8",
+        "mitre-attack-v14"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/detection/detect-aws-open-security-group",
       "layer": "detection",
       "providers": [
