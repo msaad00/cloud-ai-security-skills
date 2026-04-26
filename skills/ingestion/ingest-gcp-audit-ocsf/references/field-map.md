@@ -26,6 +26,7 @@ stays focused on triggers and guardrails.
 | `methodName` (verb segment) | `activity_id` | `Create` → 1, `Get`/`List` → 2, `Update`/`Patch` → 3, `Delete` → 4 |
 | `serviceName` | `api.service.name` | e.g. `iam.googleapis.com` |
 | `resourceName` | `resource.uid` | Fully qualified resource path |
+| `response.name` | `resources[].name` | Only copied when it is a sanitized service-account key resource name; full response and `privateKeyData` are not retained |
 | `status.code` | `status_id` | 0 → 1 (Success); non-zero → 2 (Failure) |
 | `status.message` | `status_detail` | Human-readable error |
 | `resource.labels.project_id` | `cloud.account.uid` | |

@@ -26,6 +26,7 @@ def _event(
     service: str = "iam.googleapis.com",
     success: bool = True,
     target_service_account: str = "sa-deploy@my-project.iam.gserviceaccount.com",
+    target_key_resource: str = "",
     actor_name: str = "alice@example.com",
     project_uid: str = "my-project",
     src_ip: str = "203.0.113.42",
@@ -40,6 +41,8 @@ def _event(
                 "type": resource_type,
             }
         )
+    if target_key_resource:
+        resources.append({"name": target_key_resource, "type": "service_account_key"})
     return {
         "class_uid": 6003,
         "status_id": 1 if success else 2,
@@ -76,11 +79,42 @@ def test_fires_on_create_service_account_key():
 
 
 def test_native_output_contains_target_service_account():
-    findings = list(detect([_event(target_service_account="sa-ci@my-project.iam.gserviceaccount.com")], output_format="native"))
+    findings = list(
+        detect([_event(target_service_account="sa-ci@my-project.iam.gserviceaccount.com")], output_format="native")
+    )
     finding = findings[0]
     assert finding["schema_mode"] == "native"
     assert finding["target_service_account"] == "sa-ci@my-project.iam.gserviceaccount.com"
     assert finding["rule"] == "gcp-service-account-key-creation"
+
+
+def test_native_output_contains_created_key_resource_when_present():
+    key_resource = "projects/-/serviceAccounts/sa-ci@my-project.iam.gserviceaccount.com/keys/key-123"
+    finding = list(
+        detect(
+            [
+                _event(
+                    target_service_account="sa-ci@my-project.iam.gserviceaccount.com",
+                    target_key_resource=key_resource,
+                )
+            ],
+            output_format="native",
+        )
+    )[0]
+    assert finding["target_key_resource"] == key_resource
+    assert finding["target_key_id"] == "key-123"
+
+
+def test_ocsf_output_contains_created_key_evidence_when_present():
+    key_resource = "projects/-/serviceAccounts/sa-deploy@my-project.iam.gserviceaccount.com/keys/key-123"
+    finding = list(detect([_event(target_key_resource=key_resource)]))[0]
+
+    assert finding["evidence"]["target_key_resource"] == key_resource
+    assert finding["evidence"]["target_key_id"] == "key-123"
+    assert any(
+        obs["name"] == "target.key_resource" and obs["value"] == key_resource for obs in finding["observables"]
+    )
+    assert any(obs["name"] == "target.key_id" and obs["value"] == "key-123" for obs in finding["observables"])
 
 
 def test_skips_failed_event():

@@ -144,6 +144,10 @@ def _build_resources(proto: dict[str, Any], log_entry: dict[str, Any]) -> list[d
     if name:
         rtype = ((log_entry.get("resource") or {}).get("type")) or ""
         resources.append({"name": name, "type": rtype})
+    response = proto.get("response") or {}
+    response_name = response.get("name")
+    if isinstance(response_name, str) and "/serviceAccounts/" in response_name and "/keys/" in response_name:
+        resources.append({"name": response_name, "type": "service_account_key"})
     return resources
 
 

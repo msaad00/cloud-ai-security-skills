@@ -138,6 +138,11 @@ gcloud logging read 'logName=~"cloudaudit.googleapis.com"' --format=json --limit
 - IAM policy delta in `protoPayload.serviceData` — would need its own follow-up skill
 - Multi-resource batch operations — first resource only
 
+Exception: for service-account key creation events, the ingester may copy only
+the sanitized `protoPayload.response.name` resource identifier into
+`resources[]` as `type: service_account_key`. It never copies
+`privateKeyData` or the full response object.
+
 ## Tests
 
 Golden fixture parity against [`../golden/gcp_audit_raw_sample.jsonl`](../golden/gcp_audit_raw_sample.jsonl) → [`../golden/gcp_audit_sample.ocsf.jsonl`](../golden/gcp_audit_sample.ocsf.jsonl).
