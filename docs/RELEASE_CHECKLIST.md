@@ -56,6 +56,7 @@ If a change mixes categories, bump to the highest applicable level.
    - detection `>= 80%`
    - evaluation `>= 60%`
 7. Confirm docs and registries are current:
+   - [`docs/INSTALL.md`](INSTALL.md)
    - [`docs/framework-coverage.json`](framework-coverage.json)
    - [`docs/COVERAGE_MODEL.md`](COVERAGE_MODEL.md)
    - [`docs/USE_CASES.md`](USE_CASES.md)

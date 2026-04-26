@@ -29,6 +29,10 @@ The full `uv.lock` is the **ceiling**, not a typical installation shape.
 - the repo is not packaged as one installable application; operators install
   only the dependency groups needed for the skills they run
 
+The operator-facing install path is documented in [`INSTALL.md`](INSTALL.md).
+The short version: use GitHub tags or signed GitHub Release source tarballs,
+not PyPI, Homebrew, or a container image.
+
 Today the direct runtime dependency groups are:
 
 - `aws`
