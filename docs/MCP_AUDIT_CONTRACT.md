@@ -70,6 +70,9 @@ Required top-level fields:
 | `input_sha256` | string | SHA-256 of stdin input text, or empty string when no input was provided |
 | `input_length` | integer | byte length of the stdin text as passed to the subprocess |
 | `caller_context_provided` | boolean | whether `_caller_context` was supplied |
+| `caller_skill_scope_provided` | boolean | whether `_caller_context.allowed_skills` was supplied |
+| `caller_skill_scope_count` | integer | number of distinct non-empty skills in the caller scope |
+| `caller_skill_scope_hash` | string | SHA-256 of the sorted caller skill scope, or empty string when absent |
 | `approval_context_provided` | boolean | whether `_approval_context` was supplied |
 | `caller_id` | string | `user_id` from `_caller_context`, or empty string |
 | `caller_session_id` | string | `session_id` from `_caller_context`, or empty string |
@@ -112,6 +115,7 @@ The wrapper preserves only the fields it knows about:
 
 - `_caller_context.user_id` -> `caller_id`
 - `_caller_context.session_id` -> `caller_session_id`
+- `_caller_context.allowed_skills` -> counted and hashed as caller skill scope
 - `_approval_context.ticket_id` -> `approval_ticket`
 
 Presence is tracked separately from value so operators can tell the difference
@@ -153,6 +157,10 @@ Before the subprocess runs, the wrapper enforces:
 - `output_format` must be a string when present
 - `_caller_context` and `_approval_context` must be objects with string values
   or string arrays
+- `_caller_context.allowed_skills`, when supplied, is intersected with
+  `CLOUD_SECURITY_MCP_ALLOWED_SKILLS`; setting
+  `CLOUD_SECURITY_MCP_REQUIRE_CALLER_ALLOWED_SKILLS=1` rejects calls without a
+  caller skill scope by exposing no callable tools
 - write-capable tools must stay in safe mode at the wrapper boundary:
   `--dry-run` for generic write tools, or no `--apply` for dry-run-default
   `handler.py` / `checks.py` entrypoints

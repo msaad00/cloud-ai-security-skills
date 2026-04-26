@@ -28,6 +28,7 @@ SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_TIMEOUT_SECONDS = 60
 ALLOWED_SKILLS_ENV = "CLOUD_SECURITY_MCP_ALLOWED_SKILLS"
+REQUIRE_CALLER_ALLOWED_SKILLS_ENV = "CLOUD_SECURITY_MCP_REQUIRE_CALLER_ALLOWED_SKILLS"
 SAFE_CHILD_ENV_VARS = (
     "HOME",
     "LANG",
@@ -52,6 +53,10 @@ SAFE_CHILD_ENV_VARS = (
 )
 
 
+def _skill_name_set(raw: str) -> set[str]:
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
 def _allowed_skills_filter() -> set[str] | None:
     """Return the set of skill names the current process is allowed to expose.
 
@@ -63,13 +68,46 @@ def _allowed_skills_filter() -> set[str] | None:
     raw = os.environ.get(ALLOWED_SKILLS_ENV, "").strip()
     if not raw:
         return None
-    return {part.strip() for part in raw.split(",") if part.strip()}
+    return _skill_name_set(raw)
+
+
+def _truthy_env(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _caller_allowed_skills_filter(caller_context: dict[str, Any] | None) -> set[str] | None:
+    if caller_context is None or "allowed_skills" not in caller_context:
+        return None
+    raw_allowed = caller_context["allowed_skills"]
+    if isinstance(raw_allowed, str):
+        return _skill_name_set(raw_allowed)
+    return {name.strip() for name in cast(list[str], raw_allowed) if name.strip()}
+
+
+def _effective_allowed_skills(caller_context: dict[str, Any] | None) -> set[str] | None:
+    process_allowed = _allowed_skills_filter()
+    caller_allowed = _caller_allowed_skills_filter(caller_context)
+    if _truthy_env(REQUIRE_CALLER_ALLOWED_SKILLS_ENV) and caller_allowed is None:
+        return set()
+    if process_allowed is None:
+        return caller_allowed
+    if caller_allowed is None:
+        return process_allowed
+    return process_allowed & caller_allowed
 
 
 def _filtered_tool_map() -> dict[str, SkillSpec]:
     """`tool_map()` plus the operator-scoped allowlist, if any."""
-    tools = tool_map()
-    allowed = _allowed_skills_filter()
+    return _scoped_tool_map()
+
+
+def _scoped_tool_map(
+    caller_context: dict[str, Any] | None = None,
+    tools: dict[str, SkillSpec] | None = None,
+) -> dict[str, SkillSpec]:
+    """`tool_map()` plus operator and caller-scoped allowlists, if any."""
+    tools = tool_map() if tools is None else tools
+    allowed = _effective_allowed_skills(caller_context)
     if allowed is None:
         return tools
     return {name: spec for name, spec in tools.items() if name in allowed}
@@ -223,6 +261,22 @@ def _approval_count(approval_context: dict[str, Any] | None) -> int:
     return len(_distinct_approvers(approval_context))
 
 
+def _caller_scope_audit_fields(caller_context: dict[str, Any] | None) -> dict[str, Any]:
+    allowed = _caller_allowed_skills_filter(caller_context)
+    if allowed is None:
+        return {
+            "caller_skill_scope_provided": False,
+            "caller_skill_scope_count": 0,
+            "caller_skill_scope_hash": "",
+        }
+    sorted_allowed = sorted(allowed)
+    return {
+        "caller_skill_scope_provided": True,
+        "caller_skill_scope_count": len(sorted_allowed),
+        "caller_skill_scope_hash": _stable_hash(sorted_allowed),
+    }
+
+
 def _build_child_env() -> dict[str, str]:
     env: dict[str, str] = {}
     for key in SAFE_CHILD_ENV_VARS:
@@ -266,16 +320,17 @@ def _requires_approval_context(skill: SkillSpec, args: list[str]) -> bool:
 
 
 def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
-    tools = _filtered_tool_map()
+    request_args = arguments or {}
+    caller_context = _validate_context(request_args.get("_caller_context"), "_caller_context")
+    tools = tool_map()
     if name not in tools:
         raise KeyError(f"unknown tool `{name}`")
 
     skill = tools[name]
-    args = _validate_args((arguments or {}).get("args"))
-    stdin_text = _validate_input((arguments or {}).get("input"))
-    output_format = _validate_output_format((arguments or {}).get("output_format"))
-    caller_context = _validate_context((arguments or {}).get("_caller_context"), "_caller_context")
-    approval_context = _validate_context((arguments or {}).get("_approval_context"), "_approval_context")
+    args = _validate_args(request_args.get("args"))
+    stdin_text = _validate_input(request_args.get("input"))
+    output_format = _validate_output_format(request_args.get("output_format"))
+    approval_context = _validate_context(request_args.get("_approval_context"), "_approval_context")
     correlation_id = str(uuid4())
     started = time.monotonic()
     audit_event: dict[str, Any] = {
@@ -299,8 +354,11 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
         "approval_ticket": approval_context.get("ticket_id", "") if approval_context else "",
         "result": "pending",
     }
+    audit_event.update(_caller_scope_audit_fields(caller_context))
 
     try:
+        if name not in _scoped_tool_map(caller_context, tools):
+            raise KeyError(f"unknown tool `{name}`")
         if not _is_safe_write_invocation(skill, args):
             raise ValueError(
                 "write-capable tools must stay in dry-run/read-only mode under MCP "
@@ -324,6 +382,9 @@ def _call_tool(name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
                 env["SKILL_SESSION_ID"] = caller_context["session_id"]
             if "roles" in caller_context:
                 env["SKILL_CALLER_ROLES"] = ",".join(caller_context["roles"])
+            allowed_skills = _caller_allowed_skills_filter(caller_context)
+            if allowed_skills is not None:
+                env["SKILL_CALLER_ALLOWED_SKILLS"] = ",".join(sorted(allowed_skills))
         if approval_context:
             if "approver_id" in approval_context:
                 env["SKILL_APPROVER_ID"] = approval_context["approver_id"]
@@ -402,7 +463,14 @@ def _handle_request(message: dict[str, Any]) -> dict[str, Any] | None:
         return _result_response(request_id, {})
 
     if method == "tools/list":
-        tools = [tool_definition(skill) for skill in _filtered_tool_map().values()]
+        params = message.get("params") or {}
+        if not isinstance(params, dict):
+            return _error_response(request_id, -32602, "`tools/list` params must be an object when present")
+        try:
+            caller_context = _validate_context(params.get("_caller_context"), "_caller_context")
+        except ValueError as exc:
+            return _error_response(request_id, -32602, str(exc))
+        tools = [tool_definition(skill) for skill in _scoped_tool_map(caller_context).values()]
         return _result_response(request_id, {"tools": tools})
 
     if method == "tools/call":

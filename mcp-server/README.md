@@ -77,6 +77,14 @@ isn't on the allowlist. Unset / empty = all discovered skills exposed
 (default). This is the per-client least-privilege gate referenced in
 `docs/integrations/*.md`.
 
+Trusted client wrappers can also pass `_caller_context.allowed_skills` on
+`tools/list` and `tools/call`. That caller scope is intersected with the
+operator allowlist, so process-level policy still wins and a caller can only
+narrow its own visible/callable skill set. Set
+`CLOUD_SECURITY_MCP_REQUIRE_CALLER_ALLOWED_SKILLS=1` to fail closed unless each
+request supplies `_caller_context.allowed_skills`; calls without that scope see
+no tools and cannot invoke any tool.
+
 Run locally:
 
 ```bash

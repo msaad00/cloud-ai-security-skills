@@ -128,6 +128,7 @@ class TestToolDefinition:
         skill = tool_map(REPO_ROOT)["ingest-cloudtrail-ocsf"]
         schema = tool_definition(skill)["inputSchema"]
         assert "_caller_context" in schema["properties"]
+        assert "allowed_skills" in schema["properties"]["_caller_context"]["properties"]
         assert "_approval_context" in schema["properties"]
 
     def test_mcp_tool_quarantine_requires_two_approvers_in_metadata(self):
