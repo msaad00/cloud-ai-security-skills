@@ -8,7 +8,6 @@ import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -307,6 +306,7 @@ class TestWorkdayRedaction:
     """Workday token errors must never leak response bodies or credentials."""
 
     def test_http_error_does_not_include_response_body(self):
+        httpx = pytest.importorskip("httpx")
         from reconciler import sources
 
         with patch.dict(os.environ, {
@@ -332,6 +332,7 @@ class TestWorkdayRedaction:
         assert "invalid_client" not in msg
 
     def test_network_error_hides_exception_detail(self):
+        httpx = pytest.importorskip("httpx")
         from reconciler import sources
 
         with patch.dict(os.environ, {
