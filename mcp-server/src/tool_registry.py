@@ -208,6 +208,11 @@ def tool_input_schema(skill: SkillSpec) -> dict[str, object]:
                 "email": {"type": "string"},
                 "session_id": {"type": "string"},
                 "roles": {"type": "array", "items": {"type": "string"}},
+                "allowed_skills": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional per-caller skill allowlist; intersects with operator allowlists.",
+                },
             },
             "additionalProperties": True,
         },
