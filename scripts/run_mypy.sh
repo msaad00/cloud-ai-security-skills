@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${UV_CACHE_DIR:=/tmp/cloud-security-core-foundation-uv-cache}"
 export UV_CACHE_DIR
+: "${MYPY_CACHE_DIR:=/tmp/cloud-security-mypy-cache}"
 
 if command -v uv >/dev/null 2>&1; then
   MYPY_CMD=(uv run mypy)
@@ -17,6 +18,7 @@ fi
   mcp-server/src \
   scripts \
   --config-file pyproject.toml \
+  --cache-dir "$MYPY_CACHE_DIR" \
   --disallow-untyped-defs \
   --disallow-incomplete-defs \
   --warn-return-any
@@ -31,6 +33,7 @@ for dir in "${STRICT_SKILL_DIRS[@]}"; do
   "${MYPY_CMD[@]}" \
     "$dir" \
     --config-file pyproject.toml \
+    --cache-dir "$MYPY_CACHE_DIR" \
     --disallow-untyped-defs \
     --disallow-incomplete-defs \
     --warn-return-any
@@ -43,7 +46,7 @@ for dir in skills/*/*/src; do
   if ! find "$dir" -maxdepth 1 \( -name '*.py' -o -name '*.pyi' \) | grep -q .; then
     continue
   fi
-  "${MYPY_CMD[@]}" "$dir" --config-file pyproject.toml
+  "${MYPY_CMD[@]}" "$dir" --config-file pyproject.toml --cache-dir "$MYPY_CACHE_DIR"
 done
 
-"${MYPY_CMD[@]}" mcp-server/src scripts --config-file pyproject.toml
+"${MYPY_CMD[@]}" mcp-server/src scripts --config-file pyproject.toml --cache-dir "$MYPY_CACHE_DIR"

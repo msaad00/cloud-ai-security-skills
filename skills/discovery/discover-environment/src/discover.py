@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import sys
 from dataclasses import asdict, dataclass, field
@@ -478,7 +479,7 @@ def discover_gcp(project: str) -> EnvironmentGraph:
 
     # Service Accounts
     try:
-        from google.cloud import iam_v1
+        iam_v1 = importlib.import_module("google.cloud.iam_v1")
 
         iam_client = iam_v1.IAMClient()
         request = iam_v1.ListServiceAccountsRequest(name=f"projects/{project}")
@@ -507,7 +508,7 @@ def discover_gcp(project: str) -> EnvironmentGraph:
 
     # Cloud Storage Buckets
     try:
-        from google.cloud import storage
+        storage = importlib.import_module("google.cloud.storage")
 
         storage_client = storage.Client(project=project)
         for bucket in storage_client.list_buckets():
@@ -567,12 +568,15 @@ def discover_azure(subscription_id: str) -> EnvironmentGraph:
 
         client = ResourceManagementClient(credential, subscription_id)
         for rg in client.resource_groups.list():
-            rg_id = f"azure:rg:{rg.name}"
+            rg_name = rg.name
+            if not rg_name:
+                continue
+            rg_id = f"azure:rg:{rg_name}"
             graph.add_node(
                 GraphNode(
                     id=rg_id,
                     entity_type="cloud_resource",
-                    label=rg.name,
+                    label=rg_name,
                     attributes={"location": rg.location},
                     dimensions={"cloud_provider": "azure", "surface": "resource_group"},
                 )
@@ -586,14 +590,17 @@ def discover_azure(subscription_id: str) -> EnvironmentGraph:
             )
 
             # Resources in group
-            for resource in client.resources.list_by_resource_group(rg.name):
-                res_id = f"azure:resource:{resource.name}"
+            for resource in client.resources.list_by_resource_group(rg_name):
+                resource_name = resource.name
+                if not resource_name:
+                    continue
+                res_id = f"azure:resource:{resource_name}"
                 res_type = resource.type.split("/")[-1] if resource.type else "unknown"
                 graph.add_node(
                     GraphNode(
                         id=res_id,
                         entity_type="cloud_resource",
-                        label=resource.name,
+                        label=resource_name,
                         attributes={"type": resource.type, "location": resource.location, "kind": resource.kind or ""},
                         dimensions={"cloud_provider": "azure", "surface": res_type},
                     )

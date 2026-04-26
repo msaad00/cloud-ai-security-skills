@@ -13,6 +13,7 @@ Frameworks:
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 from dataclasses import dataclass, field
@@ -439,10 +440,12 @@ def _status_symbol(status: str) -> str:
 def run_assessment(project_id: str, section: str | None = None) -> list[Finding]:
     """Run all checks. Imports GCP SDKs at call time to fail gracefully."""
     try:
-        from google.cloud import iam_admin_v1, resourcemanager_v3, storage
+        from google.cloud import iam_admin_v1, resourcemanager_v3
         from google.cloud.compute_v1.services.firewalls import FirewallsClient
         from google.cloud.compute_v1.services.networks import NetworksClient
         from google.cloud.compute_v1.services.subnetworks import SubnetworksClient
+
+        storage = importlib.import_module("google.cloud.storage")
     except ImportError:
         print(
             "ERROR: Install GCP SDKs: pip install google-cloud-iam google-cloud-storage google-cloud-resource-manager google-cloud-compute"
