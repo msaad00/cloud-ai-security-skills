@@ -32,11 +32,19 @@ CLAIMS: list[Claim] = [
     # README.md claims
     (REPO_ROOT / "README.md", r"(\d+) shipped skill bundles", "total"),
     (REPO_ROOT / "README.md", r"\*\*Total: (\d+) shipped skills", "total"),
+    (REPO_ROOT / "README.md", r"\| \*\*Ingest\*\* \| (\d+) \|", "ingest_only"),
+    (REPO_ROOT / "README.md", r"\| \*\*Discover\*\* \| (\d+) \|", "discovery"),
+    (REPO_ROOT / "README.md", r"\| \*\*Detect\*\* \| (\d+) \|", "detection"),
+    (REPO_ROOT / "README.md", r"\| \*\*Evaluate\*\* \| (\d+) \|", "evaluation"),
+    (REPO_ROOT / "README.md", r"\| \*\*Remediate\*\* \| (\d+) \|", "remediation"),
+    (REPO_ROOT / "README.md", r"\| \*\*View\*\* \| (\d+) \|", "view"),
+    (REPO_ROOT / "README.md", r"\| \*\*Output\*\* \| (\d+) \|", "output"),
+    (REPO_ROOT / "README.md", r"\| \*\*Sources\*\* \| (\d+) \|", "sources"),
     (REPO_ROOT / "README.md", r"\| \*\*Detect\*\* \| (\d+) detectors", "detection"),
+    (REPO_ROOT / "README.md", r"Closed-loop coverage matrix — \d+ of (\d+) shipped detections", "detection"),
     # The L3 Detect mermaid claim was removed when both README mermaids were
-    # replaced by docs/images/architecture.svg in #248 phase 1. The new SVG
-    # also embeds skill counts but is binary-rendered text, not regex-checkable;
-    # totals remain enforced via the two claims above.
+    # replaced by docs/images/*.svg in #248 phase 1. Count-bearing SVG text and
+    # descriptions are now checked directly because these visuals are source SVG.
     # docs/ARCHITECTURE.md claims
     (REPO_ROOT / "docs" / "ARCHITECTURE.md", r"(\d+) shipped detectors", "detection"),
     # Core SVG / alt-text surfaces that drifted during the ATT&CK + CIS expansion.
@@ -51,8 +59,138 @@ CLAIMS: list[Claim] = [
         "detection",
     ),
     (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"(\d+) ingest, \d+ detect, \d+ discover, \d+ eval",
+        "ingest_only",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ ingest, (\d+) detect, \d+ discover, \d+ eval",
+        "detection",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ ingest, \d+ detect, (\d+) discover, \d+ eval",
+        "discovery",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ ingest, \d+ detect, \d+ discover, (\d+) eval",
+        "evaluation",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"(\d+) remediate, \d+ view, \d+ sink, \d+ source",
+        "remediation",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ remediate, (\d+) view, \d+ sink, \d+ source",
+        "view",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ remediate, \d+ view, (\d+) sink, \d+ source",
+        "output",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "runtime-surfaces.svg",
+        r"\d+ remediate, \d+ view, \d+ sink, (\d+) source",
+        "sources",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"L1 Ingest with (\d+) ingesters",
+        "ingest_only",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"plus (\d+) source adapters",
+        "sources",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"L2 Discover with (\d+) inventory",
+        "discovery",
+    ),
+    (
         REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
         r"L3 Detect with (\d+) deterministic",
+        "detection",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"L4 Evaluate with (\d+) benchmark",
+        "evaluation",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"L5 Remediate with (\d+) HITL",
+        "remediation",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "architecture-layers.svg",
+        r"L6 View with (\d+) OCSF-to-render",
+        "view",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"(\d+) shipped skill bundles",
+        "total",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"current shipped layer counts: (\d+) ingest",
+        "ingest_only",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ ingest, (\d+) discover",
+        "discovery",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ discover, (\d+) detect",
+        "detection",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ detect, (\d+) evaluate",
+        "evaluation",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ evaluate, (\d+) remediate",
+        "remediation",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ remediate, (\d+) view",
+        "view",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ view, (\d+) output",
+        "output",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"\d+ output, and (\d+) source adapters",
+        "sources",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "coverage-matrix.svg",
+        r"Rows list every shipped detection \((\d+)\)",
+        "detection",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "coverage-matrix.svg",
+        r"DETECTION \((\d+)\)",
+        "detection",
+    ),
+    (
+        REPO_ROOT / "docs" / "images" / "coverage-matrix.svg",
+        r"Closed-loop ratio: <tspan[^>]*>\d+ / (\d+)</tspan>",
         "detection",
     ),
 ]
@@ -182,6 +320,28 @@ def _scan_drift(truth: dict[str, int]) -> list[str]:
     return errors
 
 
+def _check_coverage_matrix_rows(truth: dict[str, int]) -> list[str]:
+    """Validate that the coverage matrix draws one visible row per detector.
+
+    The explicit CLAIMS above catch stale numeric text. This catches a subtler
+    visual drift: updating the count to N while forgetting to add the Nth
+    detector row to the SVG.
+    """
+    path = REPO_ROOT / "docs" / "images" / "coverage-matrix.svg"
+    if not path.exists():
+        return [f"{path.relative_to(REPO_ROOT)}: file not found (row check skipped)"]
+
+    text = path.read_text(encoding="utf-8")
+    row_matches = re.findall(r'<text x="48"\s+y="\d+"\s+[^>]*>detect-[^<]+</text>', text)
+    expected = truth["detection"]
+    if len(row_matches) == expected:
+        return []
+    return [
+        f"{path.relative_to(REPO_ROOT)}: draws {len(row_matches)} visible detection rows, "
+        f"but on-disk detection count is {expected}"
+    ]
+
+
 def main() -> int:
     truth: dict[str, int] = {
         "total": _count_skills(),
@@ -221,6 +381,7 @@ def main() -> int:
 
     # Catch-all scan for any unauthorized mermaid count drift (issue #302 class)
     errors.extend(_scan_drift(truth))
+    errors.extend(_check_coverage_matrix_rows(truth))
 
     if errors:
         print("Skill-count consistency check FAILED:\n")
