@@ -449,6 +449,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pyyaml" },
     { name = "ruff" },
 ]
 gcp = [
@@ -463,6 +464,9 @@ iam-departures = [
     { name = "google-api-python-client" },
     { name = "httpx" },
     { name = "snowflake-connector-python" },
+]
+mcp = [
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
@@ -484,6 +488,7 @@ dev = [
     { name = "pre-commit", specifier = ">=3.8,<5" },
     { name = "pytest", specifier = ">=8.3,<10" },
     { name = "pytest-cov", specifier = ">=5,<8" },
+    { name = "pyyaml", specifier = ">=6,<7" },
     { name = "ruff", specifier = ">=0.6.9,<1" },
 ]
 gcp = [
@@ -499,6 +504,7 @@ iam-departures = [
     { name = "httpx", specifier = ">=0.27,<1" },
     { name = "snowflake-connector-python", specifier = ">=4.4.0,<5" },
 ]
+mcp = [{ name = "pyyaml", specifier = ">=6,<7" }]
 
 [[package]]
 name = "colorama"
