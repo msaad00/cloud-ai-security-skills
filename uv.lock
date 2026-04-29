@@ -449,7 +449,6 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "pyyaml" },
     { name = "ruff" },
 ]
 gcp = [
@@ -488,7 +487,6 @@ dev = [
     { name = "pre-commit", specifier = ">=3.8,<5" },
     { name = "pytest", specifier = ">=8.3,<10" },
     { name = "pytest-cov", specifier = ">=5,<8" },
-    { name = "pyyaml", specifier = ">=6,<7" },
     { name = "ruff", specifier = ">=0.6.9,<1" },
 ]
 gcp = [
