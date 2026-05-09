@@ -15,14 +15,23 @@ silently dropped to 73 callable through MCP.
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 
-_PARSER_DIR = Path(__file__).resolve().parent / "function_parser"
-if str(_PARSER_DIR) not in sys.path:
-    sys.path.insert(0, str(_PARSER_DIR))
+_PARSER_PATH = Path(__file__).resolve().parent / "function_parser" / "handler.py"
+_spec = importlib.util.spec_from_file_location(
+    "iam_departures_azure_entra_parser", _PARSER_PATH
+)
+assert _spec and _spec.loader, f"could not load {_PARSER_PATH}"
+_parser_mod = importlib.util.module_from_spec(_spec)
+sys.modules.setdefault("iam_departures_azure_entra_parser", _parser_mod)
+_spec.loader.exec_module(_parser_mod)
 
-from handler import main  # noqa: E402  pylint: disable=import-error,wrong-import-position
+
+def main(argv: list[str] | None = None) -> int:
+    return int(_parser_mod.main(argv))
+
 
 __all__ = ["main"]
 
