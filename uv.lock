@@ -499,7 +499,6 @@ mcp = [
 ]
 webhook = [
     { name = "fastapi" },
-    { name = "httpx" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -540,7 +539,6 @@ iam-departures = [
 mcp = [{ name = "pyyaml", specifier = ">=6,<7" }]
 webhook = [
     { name = "fastapi", specifier = ">=0.115,<1" },
-    { name = "httpx", specifier = ">=0.27,<1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30,<1" },
 ]
 
