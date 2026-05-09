@@ -65,6 +65,7 @@ jobs:
       - run: python scripts/validate_deny_list_parity.py
       - run: python scripts/generate_framework_coverage_doc.py --check
       - run: python scripts/generate_security_bar_matrix.py --check
+      - run: python scripts/coverage_summary.py --check
 
   type-check:
     runs-on: ubuntu-latest
