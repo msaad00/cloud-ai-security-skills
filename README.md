@@ -300,11 +300,11 @@ This repo is ready to download and use from GitHub tags or Releases, not as a Py
 
 CIS AWS / GCP / Azure Foundations · CIS Controls v8 · MITRE ATT&CK · MITRE ATLAS · NIST CSF 2.0 · SOC 2 TSC · ISO 27001:2022 · PCI DSS 4.0 · OWASP LLM Top 10 · OWASP MCP Top 10
 
-Per-skill framework mapping: [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) · coverage report: [docs/FRAMEWORK_COVERAGE.md](docs/FRAMEWORK_COVERAGE.md)
+Per-skill framework mapping: [docs/FRAMEWORK_MAPPINGS.md](docs/FRAMEWORK_MAPPINGS.md) · coverage report: [docs/FRAMEWORK_COVERAGE.md](docs/FRAMEWORK_COVERAGE.md) · live counts (auto-generated, CI-gated): **[docs/COVERAGE_SNAPSHOT.md](docs/COVERAGE_SNAPSHOT.md)**
 
 ## Progress snapshot
 
-Approximate roadmap progress is tracked here so the README reflects current shipped scope, not just issue titles:
+Live counts and roadmap progress are auto-generated into [docs/COVERAGE_SNAPSHOT.md](docs/COVERAGE_SNAPSHOT.md) by [`scripts/coverage_summary.py`](scripts/coverage_summary.py); a CI gate refuses any PR where the snapshot has drifted from the on-disk source of truth. The narrative table below is the operator-facing summary:
 
 | Roadmap track | Approx progress | Current shipped state |
 |---|---:|---|
