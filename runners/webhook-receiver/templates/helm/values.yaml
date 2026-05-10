@@ -1,0 +1,84 @@
+## Production-shape defaults for the webhook receiver.
+## Every security control here pairs with the Dockerfile's --read-only
+## / --cap-drop=ALL / --security-opt=no-new-privileges runtime flags.
+
+image:
+  repository: ghcr.io/msaad00/cloud-security-webhook-receiver
+  tag: ""        # defaults to .Chart.appVersion
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+## Hardened Pod security context.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  privileged: false
+
+## Resources — tight by default; loosen for high-throughput webhook
+## endpoints.
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+## Volumes — /tmp is tmpfs (writable), audit log is a PVC mount so it
+## survives pod restarts.
+volumes:
+  audit:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+    mountPath: /var/log/cloud-security
+  tmp:
+    enabled: true
+    size: 100Mi
+
+## Config — the operator sets allowlist + secrets out-of-band.
+service:
+  type: ClusterIP
+  port: 8080
+
+env:
+  WEBHOOK_ALLOWED_SKILLS: ""           # comma-separated; empty == default-deny
+  WEBHOOK_SINK_TARGETS: ""             # e.g. "s3,clickhouse"
+  WEBHOOK_HMAC_HEADER: "X-Hub-Signature-256"
+  CLOUD_SECURITY_MCP_AUDIT_LOG: "/var/log/cloud-security/audit.jsonl"
+  CLOUD_SECURITY_SKILL_MAX_BYTES: ""   # 1 GiB default, override only for memory-heavy skills
+
+## Secrets — separate Secret object the operator pre-provisions.
+secrets:
+  existingSecret: ""                   # name of a Secret with WEBHOOK_HMAC_SECRETS / WEBHOOK_BEARER_TOKEN / CLOUD_SECURITY_AUDIT_HMAC_KEY
+
+## Health / readiness — match the Dockerfile HEALTHCHECK.
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 30
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 2
+  periodSeconds: 10
+
+## Ingress — operator-owned. Most production setups put a real WAF /
+## API gateway in front and terminate TLS there; this Service is
+## ClusterIP-only by default.
+ingress:
+  enabled: false

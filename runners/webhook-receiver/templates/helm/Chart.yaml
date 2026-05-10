@@ -1,0 +1,26 @@
+apiVersion: v2
+name: cloud-security-webhook-receiver
+description: |
+  Hardened webhook receiver for cloud-ai-security-skills. Routes any
+  HTTP POST through one of the shipped atomic ingest skills and fans
+  the OCSF output into S3 / Snowflake / ClickHouse sinks.
+
+  Default-deny on routing, HMAC + bearer auth on the request body,
+  RLIMIT-bounded subprocesses on every skill call, non-root +
+  read-only rootfs + cap-drop in the container.
+type: application
+version: 0.1.0
+appVersion: "0.8.1"
+home: https://github.com/msaad00/cloud-ai-security-skills
+sources:
+  - https://github.com/msaad00/cloud-ai-security-skills/tree/main/runners/webhook-receiver
+maintainers:
+  - name: msaad00
+    url: https://github.com/msaad00
+keywords:
+  - security
+  - ocsf
+  - mcp
+  - webhook
+  - cloud
+  - ai
