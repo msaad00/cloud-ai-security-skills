@@ -22,6 +22,20 @@ The format is loosely based on Keep a Changelog.
   configurable thresholds. Detection layer count moves from 32 → 33; repo
   total moves from 79 → 80. Lands 1 of 18 detectors planned for #436;
   remaining 17 (5 Snowflake, 6 Databricks, 6 ClickHouse) stay open.
+- **`detect-databricks-token-creation`** — first Databricks vendor-depth
+  detector for #436. Reads OCSF 1.8 API Activity (class 6003) records emitted
+  by an upstream Databricks audit-log ingest pipeline, matches successful
+  `tokens/create` operations on the Databricks token-management surface, and
+  emits one OCSF Detection Finding (class 2004) per issuance tagged with MITRE
+  ATT&CK T1098.001 (Additional Cloud Credentials, tactic TA0003 Persistence).
+  Severity HIGH — Databricks PATs never expire by default and grant headless
+  API access at the issuing principal's full scope. Emits
+  `unmapped_event_type` stderr telemetry on Databricks token-management
+  operations not yet in the recognized map so operators can grep the unmapped
+  feed and propose new mappings without losing visibility. Detection layer
+  count moves from 33 → 34; repo total moves from 80 → 81. Lands 2 of 18
+  detectors planned for #436; remaining 16 (5 more Snowflake, 5 more
+  Databricks, 6 ClickHouse) stay open.
 
 ## [0.9.0] — 2026-05-10 — Agentic posture: trust contract, coverage depth, sandboxing
 

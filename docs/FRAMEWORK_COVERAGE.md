@@ -4,14 +4,14 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.8.1`
 - Registry updated: `2026-04-24`
-- Total shipped skills in registry: **80**
+- Total shipped skills in registry: **81**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **59** | — |
-| MITRE ATT&CK | v14 | **53** | 100% mapped coverage |
+| OCSF | 1.8.0 | **60** | — |
+| MITRE ATT&CK | v14 | **54** | 100% mapped coverage |
 | MITRE ATLAS | current | **13** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
@@ -25,7 +25,7 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
 | ISO 27001 | 2022 | **3** | — |
 | OWASP Top 10 | 2021 | **4** | — |
-| OWASP LLM Top 10 | current | **8** | — |
+| OWASP LLM Top 10 | current | **9** | — |
 | OWASP MCP Top 10 | current | **7** | — |
 | CycloneDX ML-BOM | current | **2** | — |
 
@@ -37,7 +37,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **59**
+Shipped skills mapped: **60**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -52,6 +52,7 @@ Shipped skills mapped: **59**
 | [`detect-cloudtrail-disabled`](../skills/detection/detect-cloudtrail-disabled) | detection | aws | cloudtrail, audit-trails, logging |
 | [`detect-container-escape-k8s`](../skills/detection/detect-container-escape-k8s) | detection | kubernetes | clusters, containers, runtime |
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
+| [`detect-databricks-token-creation`](../skills/detection/detect-databricks-token-creation) | detection | databricks | warehouse, tokens, identities |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
 | [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
@@ -108,7 +109,7 @@ Shipped skills mapped: **59**
 - Asset classes in scope: identities, api, network, clusters, containers, findings
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **53**
+Shipped skills mapped: **54**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -122,6 +123,7 @@ Shipped skills mapped: **53**
 | [`detect-cloudtrail-disabled`](../skills/detection/detect-cloudtrail-disabled) | detection | aws | cloudtrail, audit-trails, logging |
 | [`detect-container-escape-k8s`](../skills/detection/detect-container-escape-k8s) | detection | kubernetes | clusters, containers, runtime |
 | [`detect-credential-stuffing-okta`](../skills/detection/detect-credential-stuffing-okta) | detection | okta | identities, authentication, sessions |
+| [`detect-databricks-token-creation`](../skills/detection/detect-databricks-token-creation) | detection | databricks | warehouse, tokens, identities |
 | [`detect-entra-credential-addition`](../skills/detection/detect-entra-credential-addition) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials |
 | [`detect-entra-role-grant-escalation`](../skills/detection/detect-entra-role-grant-escalation) | detection | azure, entra, microsoft-graph | identities, applications, service-principals, app-role-assignments |
 | [`detect-gcp-audit-logs-disabled`](../skills/detection/detect-gcp-audit-logs-disabled) | detection | gcp | audit-logs, logging-sinks, log-streams |
@@ -387,12 +389,13 @@ Shipped skills mapped: **4**
 
 - Registry id: `owasp-llm-top-10`
 
-Shipped skills mapped: **8**
+Shipped skills mapped: **9**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
+| [`detect-databricks-token-creation`](../skills/detection/detect-databricks-token-creation) | detection | databricks | warehouse, tokens, identities |
 | [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
