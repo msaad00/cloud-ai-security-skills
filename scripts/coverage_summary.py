@@ -90,7 +90,18 @@ ROADMAP_TARGETS = [
 
 
 def _load() -> list[dict]:
-    return json.loads(COVERAGE_JSON.read_text(encoding="utf-8"))["skills"]
+    raw = json.loads(COVERAGE_JSON.read_text(encoding="utf-8"))
+    skills = raw.get("skills", [])
+    if not isinstance(skills, list):
+        raise ValueError(
+            f"{COVERAGE_JSON.name}: top-level `skills` must be a list, got {type(skills).__name__}"
+        )
+    out: list[dict] = []
+    for entry in skills:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{COVERAGE_JSON.name}: every `skills` entry must be an object")
+        out.append(entry)
+    return out
 
 
 def _bucket_by(skills: list[dict], key: str) -> dict[str, set[str]]:
