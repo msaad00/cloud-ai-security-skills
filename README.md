@@ -58,6 +58,8 @@ Five surfaces, one bundle: **CLI · CI · MCP · webhook receiver · persistent 
 
 **Find a skill:** [`docs/SKILL_INDEX.md`](docs/SKILL_INDEX.md) groups every shipped skill by **environment** (AWS · GCP · Azure/Entra · K8s · Identity · AI/MCP · Web · Cross-env) and by **purpose** (ingest / discover / detect / evaluate / remediate / view / output / source), and points at the framework-mapping docs for control-catalog pivots.
 
+**Which vendor signals normalize to OCSF today?** [`docs/INGEST_COVERAGE.md`](docs/INGEST_COVERAGE.md) — the canonical vendor × source × OCSF class matrix, 16 mappings shipped (AWS · GCP · Azure · Entra · K8s · Okta · Workspace · MCP) plus the 9 documented roadmap rows (GitHub, Slack, Workday, Salesforce, SAP, AWS Config, native ClickHouse audit, AWS web-app exfil pipeline, Workspace beyond-login).
+
 ## Architecture
 
 External signals enter through two intake layers, pass through two analyze layers, exit through two act layers, and persist through one output layer. MCP, CLI, CI, webhook, and runners all invoke the same skill bundle — the surface is transport, not behavior.
