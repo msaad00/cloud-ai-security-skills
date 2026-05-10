@@ -1,0 +1,87 @@
+# Ingest coverage — vendor signals → OCSF 1.8 classes
+
+What each cloud / identity / AI-runtime data source becomes when it flows
+through this repo's ingest layer — and what's not yet covered.
+
+This page is the single source of truth for **"which signal can I send and
+get OCSF out the other side?"** The 18 rows below are the canonical answer at
+v0.10.0; the roadmap rows below are tracked in their linked issues.
+
+## Currently shipped — 16 ingest mappings
+
+| Vendor | Source signal | OCSF 1.8 class | Skill |
+|---|---|---|---|
+| AWS | CloudTrail event records | API Activity 6003 | [`ingest-cloudtrail-ocsf`](../skills/ingestion/ingest-cloudtrail-ocsf/) |
+| AWS | GuardDuty findings | Detection Finding 2004 | [`ingest-guardduty-ocsf`](../skills/ingestion/ingest-guardduty-ocsf/) |
+| AWS | Security Hub findings | Detection Finding 2004 | [`ingest-security-hub-ocsf`](../skills/ingestion/ingest-security-hub-ocsf/) |
+| AWS | VPC Flow Logs | Network Activity 4001 | [`ingest-vpc-flow-logs-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-ocsf/) |
+| GCP | Cloud Audit (Admin / Data) | API Activity 6003 | [`ingest-gcp-audit-ocsf`](../skills/ingestion/ingest-gcp-audit-ocsf/) |
+| GCP | Security Command Center findings | Detection Finding 2004 | [`ingest-gcp-scc-ocsf`](../skills/ingestion/ingest-gcp-scc-ocsf/) |
+| GCP | VPC Flow Logs | Network Activity 4001 | [`ingest-vpc-flow-logs-gcp-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-gcp-ocsf/) |
+| Azure | Activity Log | API Activity 6003 | [`ingest-azure-activity-ocsf`](../skills/ingestion/ingest-azure-activity-ocsf/) |
+| Azure | Defender for Cloud findings | Detection Finding 2004 | [`ingest-azure-defender-for-cloud-ocsf`](../skills/ingestion/ingest-azure-defender-for-cloud-ocsf/) |
+| Azure | NSG Flow Logs | Network Activity 4001 | [`ingest-nsg-flow-logs-azure-ocsf`](../skills/ingestion/ingest-nsg-flow-logs-azure-ocsf/) |
+| Microsoft Entra | Directory Audit logs | IAM events — Authentication 3002 / Account Change 3001 / User Access 3005 | [`ingest-entra-directory-audit-ocsf`](../skills/ingestion/ingest-entra-directory-audit-ocsf/) |
+| Kubernetes | API server audit log | API Activity 6003 | [`ingest-k8s-audit-ocsf`](../skills/ingestion/ingest-k8s-audit-ocsf/) |
+| Okta | System Log | IAM events — Authentication 3002 / Account Change 3001 / User Access 3005 | [`ingest-okta-system-log-ocsf`](../skills/ingestion/ingest-okta-system-log-ocsf/) |
+| Google Workspace | Login activity (Reports API) | Authentication 3002 | [`ingest-google-workspace-login-ocsf`](../skills/ingestion/ingest-google-workspace-login-ocsf/) |
+| MCP proxy | JSON-RPC request/response log | Application Activity 6002 | [`ingest-mcp-proxy-ocsf`](../skills/ingestion/ingest-mcp-proxy-ocsf/) |
+| AWS / GCP / Azure | Cross-cloud secret-scan + AI-BOM input pipes | (consumed by downstream detect-agent-credential-leak-mcp / discover-ai-bom) | covered transitively via the four above |
+
+> 16 rows for 15 ingest skills: the Entra and Okta normalizers each emit 3
+> different OCSF IAM classes depending on the source event family, so they
+> are listed once but produce more than one OCSF class.
+
+## Warehouse read-side adapters — 3 skills
+
+These do **not** emit OCSF directly; they expose a read-side adapter that the
+matching warehouse-depth detectors (Snowflake / Databricks / ClickHouse —
+shipped under issue #436) consume. The detectors are what produces the OCSF
+Detection Finding 2004 records.
+
+| Warehouse | Source | Adapter skill | Consuming detectors |
+|---|---|---|---|
+| Snowflake | `query_history`, audit views | [`source-snowflake-query`](../skills/ingestion/source-snowflake-query/) | `detect-snowflake-bulk-data-egress`, `detect-snowflake-share-creation`, `detect-snowflake-account-key-creation`, `detect-snowflake-warehouse-resize-burst`, `detect-snowflake-unauthorized-grant` |
+| Databricks | SQL Warehouse + audit | [`source-databricks-query`](../skills/ingestion/source-databricks-query/) | `detect-databricks-token-creation` |
+| AWS S3 | `s3 select` (Athena-style) | [`source-s3-select`](../skills/ingestion/source-s3-select/) | any detector reading historical CloudTrail / GuardDuty exports from S3 |
+
+A dedicated native `ingest-clickhouse-query-log-ocsf` is on the roadmap (see
+below) — for now `detect-clickhouse-bulk-export` reads `system.query_log`
+records already shaped as OCSF API Activity 6003 by an upstream pipeline.
+
+## Roadmap — not yet shipped, tracked
+
+| Vendor | Source | Target OCSF class | Tracking |
+|---|---|---|---|
+| AWS | Config item history + change stream | Compliance Finding 2003 | [`#29`](https://github.com/msaad00/cloud-ai-security-skills/issues/29) — `ingest-aws-config-ocsf` + paired CIS-AWS evaluator |
+| ClickHouse | `system.query_log` native ingest | API Activity 6003 | [`#436`](https://github.com/msaad00/cloud-ai-security-skills/issues/436) — `ingest-clickhouse-query-log-ocsf` |
+| AWS | Lambda + API Gateway access logs | HTTP Activity 4002 | [`#253`](https://github.com/msaad00/cloud-ai-security-skills/issues/253) — first detection-side use case is the web-app exfil arc |
+| GitHub | Audit Log (org-level) | API Activity 6003 | [`#31`](https://github.com/msaad00/cloud-ai-security-skills/issues/31) — vendor story PR K (ingest + 3 detectors) |
+| Google Workspace | Drive / Admin / Mobile feeds (beyond login) | API Activity 6003 + IAM 3001/3005 | [`#32`](https://github.com/msaad00/cloud-ai-security-skills/issues/32) — vendor story PR L |
+| Slack | Audit API (org-level) | API Activity 6003 | [`#33`](https://github.com/msaad00/cloud-ai-security-skills/issues/33) — vendor story PR M |
+| Workday | HR events stream | (proprietary → canonical departure manifest, not OCSF) | [`#34`](https://github.com/msaad00/cloud-ai-security-skills/issues/34) — vendor story PR N; existing `iam-departures-reconciler` is the consumer |
+| Salesforce | Setup Audit Trail + Event Monitoring | API Activity 6003 + Authentication 3002 | [`#35`](https://github.com/msaad00/cloud-ai-security-skills/issues/35) — vendor story PR O |
+| SAP | Security Audit Log | API Activity 6003 | [`#36`](https://github.com/msaad00/cloud-ai-security-skills/issues/36) — vendor story PR P |
+
+## What "shipped" means here
+
+A row in the shipped table guarantees:
+
+1. There's a `SKILL.md` documenting the input schema, exact OCSF class emitted, and the do-not-use list.
+2. There's a synthetic golden fixture under [`skills/detection-engineering/golden/`](../skills/detection-engineering/golden/) — see [`golden/README.md`](../skills/detection-engineering/golden/README.md) for the honesty contract on what those fixtures verify (contract, determinism, schema validity) vs. what they don't (precision/recall on real workloads).
+3. The skill is exercised by at least one downstream detector or test in CI.
+4. The OCSF wire shape is locked by snapshot test.
+
+A row in the roadmap table guarantees:
+
+1. There's a tracking issue (linked).
+2. The intended OCSF class is documented up-front.
+3. Nothing is half-built or stubbed in the repo today.
+
+## Adding a new vendor mapping
+
+1. Open or claim the tracking issue.
+2. Add the SKILL.md + `src/ingest.py` + golden fixture under `skills/ingestion/ingest-<vendor>-<source>-ocsf/`.
+3. Run `scripts/coverage_summary.py --write` and `scripts/generate_framework_coverage_doc.py` to refresh the auto-generated docs.
+4. Move the row in this file from the roadmap table to the shipped table in the same PR.
+5. The CI count-consistency gate enforces the move.
