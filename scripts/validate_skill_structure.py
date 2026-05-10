@@ -44,12 +44,15 @@ STANDARD_CATEGORIES = (
 SKILL_ROOT_EXCEPTIONS: dict[str, set[str]] = {
     "_shared": set(),  # shared Python utility module — not a category
     "detection-engineering": {
-        # Doc-only category alias. `golden/` carries shared snapshot
-        # fixtures and `scoring/` ships the per-detector precision/recall
-        # corpus + scorer (issue #419). Everything else here was retired
-        # during the 2026-Q1 reorg and the index page now points at the
+        # Doc-only category alias. Three subdirectories carry real content:
+        # `golden/` (synthetic snapshot fixtures), `captured/` (provenance-
+        # tracked real-traffic fixtures, sibling honesty contract), and
+        # `scoring/` (per-detector precision/recall corpus + scorer for
+        # issue #419). Everything else here was retired during the 2026-Q1
+        # reorg and the index page now points at the
         # `skills/{ingestion,view}/` siblings.
         "golden",
+        "captured",
         "scoring",
     },
 }
