@@ -177,8 +177,9 @@ def check_1_4_drop_all_capabilities(config: dict) -> Finding:
         for c in _pod_containers(pod):
             sec = _safe_dict(c.get("securityContext") or c.get("security_context"))
             caps = _safe_dict(sec.get("capabilities"))
-            drop = caps.get("drop") if isinstance(caps.get("drop"), list) else []
-            normalized = [d.upper() for d in drop if isinstance(d, str)]
+            drop = caps.get("drop")
+            drop_list = drop if isinstance(drop, list) else []
+            normalized = [d.upper() for d in drop_list if isinstance(d, str)]
             if "ALL" not in normalized:
                 no_drop.append(f"{pod.get('name', 'unknown')}:{c.get('name', 'unknown')}")
     return Finding(

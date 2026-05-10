@@ -228,8 +228,12 @@ def test_1_1_gmail_partial():
 
 def test_1_3_sa_keys_partial():
     iam = MagicMock()
-    sa1 = MagicMock(); sa1.email = "clean@p.iam"; sa1.name = "projects/p/serviceAccounts/clean"
-    sa2 = MagicMock(); sa2.email = "leaky@p.iam"; sa2.name = "projects/p/serviceAccounts/leaky"
+    sa1 = MagicMock()
+    sa1.email = "clean@p.iam"
+    sa1.name = "projects/p/serviceAccounts/clean"
+    sa2 = MagicMock()
+    sa2.email = "leaky@p.iam"
+    sa2.name = "projects/p/serviceAccounts/leaky"
     iam.list_service_accounts.return_value = iter([sa1, sa2])
 
     def keys_for(*, request):

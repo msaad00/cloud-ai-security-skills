@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -196,7 +195,7 @@ def test_empty_input_returns_finding(check_name, client_builder):
     f = fn(client_builder())
     assert isinstance(f, Finding)
     assert f.status in {"PASS", "FAIL", "ERROR"}
-    assert f.control_id, f"missing control_id"
+    assert f.control_id, "missing control_id"
     assert f.severity in {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
     assert f.nist_csf
     assert f.iso_27001
