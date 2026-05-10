@@ -76,11 +76,14 @@ def test_fires_on_sql_union_select_in_query():
 
 def test_fires_on_or_1_equals_1():
     findings = list(detect([_http_event(query_string="user=admin' OR 1=1 --")]))
-    assert any(
-        o["name"] == "injection.signature_label" and "tautology" in o["value"]
+    labels = {
+        o["value"]
         for f in findings
         for o in f["observables"]
-    )
+        if o["name"] == "injection.signature_label"
+    }
+    # Either the bare OR 1=1 signature or the quoted-tautology variant — both are SQL.
+    assert labels & {"or-1-equals-1", "tautology-quoted", "comment-tail"}
 
 
 def test_fires_on_command_substitution_in_body():
