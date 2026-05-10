@@ -330,7 +330,10 @@ def run_mcp_sse_scenario(samples: int) -> dict[str, Any]:
             deadline = time.monotonic() + 15.0
             while time.monotonic() < deadline:
                 try:
-                    with urllib.request.urlopen(
+                    # B310: localhost-only readiness probe against a port
+                    # this process just started; URL is constructed here
+                    # and never sourced from external input.
+                    with urllib.request.urlopen(  # nosec B310
                         f"http://127.0.0.1:{port}/healthz", timeout=1.0
                     ) as resp:
                         if resp.status == 200:
@@ -372,7 +375,9 @@ def run_mcp_sse_scenario(samples: int) -> dict[str, Any]:
                 )
                 t0 = time.perf_counter()
                 try:
-                    with urllib.request.urlopen(req, timeout=10.0) as resp:
+                    # B310: localhost-only RPC; URL is constructed in this
+                    # function for the listener this process just started.
+                    with urllib.request.urlopen(req, timeout=10.0) as resp:  # nosec B310
                         dur_ms = (time.perf_counter() - t0) * 1000.0
                         if resp.status != 200:
                             failures += 1
