@@ -59,9 +59,47 @@ def _canonical_package(spec: str) -> str:
 
 
 def _load_dependency_groups() -> dict[str, set[str]]:
+    """Return each group's directly-owned package set.
+
+    Dependency-group entries may be either a package spec string
+    ("httpx>=0.27,<1") or a TOML inline-table that pulls in another
+    group ({ include-group = "http-client" }). Only the strings
+    contribute packages this group "owns"; includes are resolved by
+    uv at install time and must not double-count toward the
+    one-group-per-package rule.
+    """
     data = tomllib.loads(PYPROJECT.read_text())
     groups = data.get("dependency-groups", {})
-    return {group: {_canonical_package(spec) for spec in specs} for group, specs in groups.items()}
+    return {
+        group: {_canonical_package(spec) for spec in specs if isinstance(spec, str)}
+        for group, specs in groups.items()
+    }
+
+
+def _resolve_group(name: str, raw_groups: dict, seen: set[str] | None = None) -> set[str]:
+    """Recursively resolve a group's transitive package set, following
+    `{ include-group = ... }` references. Used by the runtime / dev
+    declaration checks so the one-group-per-package rule can stay
+    strict at the spec layer while shared groups (e.g. http-client)
+    still satisfy "is this dep declared somewhere?" coverage.
+    """
+    if seen is None:
+        seen = set()
+    if name in seen or name not in raw_groups:
+        return set()
+    seen.add(name)
+    out: set[str] = set()
+    for spec in raw_groups[name]:
+        if isinstance(spec, str):
+            out.add(_canonical_package(spec))
+        elif isinstance(spec, dict) and "include-group" in spec:
+            out.update(_resolve_group(spec["include-group"], raw_groups, seen))
+    return out
+
+
+def _load_raw_groups() -> dict[str, list]:
+    raw = tomllib.loads(PYPROJECT.read_text()).get("dependency-groups", {})
+    return {str(name): list(specs) for name, specs in raw.items()}
 
 
 def _iter_python_files(*roots: Path) -> list[Path]:
@@ -121,19 +159,25 @@ def main() -> int:
                 f"{', '.join(sorted(group_names))}"
             )
 
+    raw_groups = _load_raw_groups()
+
     runtime_required = _required_packages(_iter_python_files(*RUNTIME_ROOTS))
     runtime_declared = set().union(
-        groups.get("aws", set()),
-        groups.get("gcp", set()),
-        groups.get("azure", set()),
-        groups.get("iam_departures", set()),
+        _resolve_group("aws", raw_groups),
+        _resolve_group("gcp", raw_groups),
+        _resolve_group("azure", raw_groups),
+        _resolve_group("iam_departures", raw_groups),
+        _resolve_group("mcp", raw_groups),
+        _resolve_group("webhook", raw_groups),
+        _resolve_group("mcp-sse", raw_groups),
+        _resolve_group("http-runtime", raw_groups),
     )
     for package in sorted(runtime_required - runtime_declared):
         errors.append(f"pyproject.toml: runtime import requires undeclared package `{package}`")
 
     test_roots = [*TEST_ROOTS, *(ROOT / "skills").glob("*/*/tests")]
     test_required = _required_packages(_iter_python_files(*test_roots))
-    dev_declared = groups.get("dev", set())
+    dev_declared = _resolve_group("dev", raw_groups)
     for package in sorted(test_required & {"pytest", "moto"}):
         if package not in dev_declared:
             errors.append(f"pyproject.toml: test import requires `{package}` in the dev dependency group")
