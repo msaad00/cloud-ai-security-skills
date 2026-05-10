@@ -595,7 +595,7 @@ def check_1_12_kms_keys_not_public(kms_client, project_id: str) -> Finding:
                         members = binding.get("members")
                     members = members or []
                     if "allUsers" in members or "allAuthenticatedUsers" in members:
-                        public_keys.append(key_name)
+                        public_keys.append(str(key_name))
                         break
         return Finding(
             control_id="1.12",
@@ -638,7 +638,7 @@ def check_1_13_api_keys_restricted(apikeys_client, project_id: str) -> Finding:
             if restrictions is None and isinstance(key, dict):
                 restrictions = key.get("restrictions")
             if not restrictions:
-                unrestricted.append(label)
+                unrestricted.append(str(label))
                 continue
             api_targets = getattr(restrictions, "api_targets", None)
             if api_targets is None and isinstance(restrictions, dict):
@@ -655,7 +655,7 @@ def check_1_13_api_keys_restricted(apikeys_client, project_id: str) -> Finding:
                 )
             )
             if not has_app_restrictions or not api_targets:
-                unrestricted.append(label)
+                unrestricted.append(str(label))
         return Finding(
             control_id="1.13",
             title="API keys carry usage restrictions",
@@ -953,7 +953,7 @@ def _list_aggregated_instances(compute_client, project_id: str):
     request = {"project": project_id}
     response = compute_client.aggregated_list(request=request)
     if hasattr(response, "items") and not callable(response.items):
-        items = response.items  # type: ignore[assignment]
+        items = response.items
     else:
         items = response
     if isinstance(items, dict):
@@ -1431,7 +1431,7 @@ def run_assessment(project_id: str, section: str | None = None) -> list[Finding]
     log_metrics = LogMetricsClient() if LogMetricsClient else None
     asset = AssetClient() if AssetClient else None
     dns = DNSPoliciesClient() if DNSPoliciesClient else None
-    sql = SQLClient("sqladmin", "v1beta4").instances() if SQLClient else None  # type: ignore[misc]
+    sql = SQLClient("sqladmin", "v1beta4").instances() if SQLClient else None
     bq = BQClient(project=project_id) if BQClient else None
 
     # The logging-config client lists sinks; the metrics client lists log metrics.
