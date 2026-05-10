@@ -121,3 +121,27 @@ curl -sS -X POST localhost:8080/webhook/ingest-cloudtrail-ocsf \
   logged into the audit record per-target. The webhook response
   surfaces `"sink_results": [{"target": "s3", "ok": true}, ...]` so
   the caller can tell.
+
+## Hardened deployment (production-shape)
+
+Recommended `docker run` flags pair with the shipped Dockerfile so the
+runtime trust posture matches the Helm chart:
+
+```bash
+docker run --rm -p 8080:8080 \
+  --read-only --tmpfs /tmp \
+  --cap-drop=ALL --security-opt=no-new-privileges \
+  --user 65532:65532 \
+  --memory=512m --cpus=1.0 --pids-limit=128 \
+  -e WEBHOOK_ALLOWED_SKILLS=ingest-cloudtrail-ocsf \
+  -e WEBHOOK_HMAC_SECRETS='{"ingest-cloudtrail-ocsf":"shared-secret"}' \
+  -e WEBHOOK_SINK_TARGETS=s3,clickhouse \
+  -e CLOUD_SECURITY_MCP_AUDIT_LOG=/var/log/cloud-security/audit.jsonl \
+  -e CLOUD_SECURITY_AUDIT_HMAC_KEY="$(cat secrets/hmac.key)" \
+  -v $PWD/audit:/var/log/cloud-security:rw \
+  cloud-security-webhook-receiver
+```
+
+The same controls in Kubernetes: see [`templates/helm/`](templates/helm/) — `securityContext.runAsNonRoot: true`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, `seccompProfile.type: RuntimeDefault`, `pids-limit` via the resource block, `emptyDir{medium: Memory}` for `/tmp`.
+
+For the MCP server itself (stdio, no listening socket), see [`../../mcp-server/Dockerfile`](../../mcp-server/Dockerfile) — same hardened posture, no `EXPOSE`.
