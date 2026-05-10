@@ -81,7 +81,7 @@ a different runtime is a 10-line config change.
 ## Local quickstart
 
 ```bash
-uv sync --group dev --extra webhook
+uv sync --group dev --group webhook --group http-runtime
 export WEBHOOK_ALLOWED_SKILLS=ingest-cloudtrail-ocsf
 export WEBHOOK_HMAC_SECRETS='{"ingest-cloudtrail-ocsf":"local-dev-secret"}'
 export WEBHOOK_SINK_TARGETS=

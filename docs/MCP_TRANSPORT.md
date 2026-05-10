@@ -36,11 +36,20 @@ Audit records on this transport carry `transport: "stdio"`.
 ## SSE / streamable HTTP
 
 ```bash
+# Install:
+uv sync --group dev --group mcp-sse --group http-runtime
+
+# Run:
 MCP_SSE_BEARER_KEYS="key1,key2" \
 MCP_SSE_BIND=127.0.0.1 \
 MCP_SSE_PORT=8765 \
 python mcp-server/src/transports/sse.py
 ```
+
+The SSE transport relies on two extras: `mcp-sse` (sse-starlette + starlette
+for the listener) and `http-runtime` (uvicorn for the server driver).
+`http-runtime` is shared with the webhook receiver so the same server stack
+isn't declared in two extras.
 
 ### Endpoints
 

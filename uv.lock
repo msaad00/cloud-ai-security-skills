@@ -481,14 +481,18 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
-    { name = "sse-starlette" },
-    { name = "starlette" },
 ]
 gcp = [
     { name = "google-cloud-compute" },
     { name = "google-cloud-iam" },
     { name = "google-cloud-resource-manager" },
     { name = "google-cloud-storage" },
+]
+http-client = [
+    { name = "httpx" },
+]
+http-runtime = [
+    { name = "uvicorn", extra = ["standard"] },
 ]
 iam-departures = [
     { name = "clickhouse-connect" },
@@ -501,13 +505,12 @@ mcp = [
     { name = "pyyaml" },
 ]
 mcp-sse = [
+    { name = "httpx" },
     { name = "sse-starlette" },
     { name = "starlette" },
-    { name = "uvicorn", extra = ["standard"] },
 ]
 webhook = [
     { name = "fastapi" },
-    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
@@ -531,8 +534,6 @@ dev = [
     { name = "pytest", specifier = ">=8.3,<10" },
     { name = "pytest-cov", specifier = ">=5,<8" },
     { name = "ruff", specifier = ">=0.6.9,<1" },
-    { name = "sse-starlette", specifier = ">=2,<4" },
-    { name = "starlette", specifier = ">=0.39,<1" },
 ]
 gcp = [
     { name = "google-cloud-compute", specifier = ">=1.47.0,<2" },
@@ -540,6 +541,8 @@ gcp = [
     { name = "google-cloud-resource-manager", specifier = ">=1.17.0,<2" },
     { name = "google-cloud-storage", specifier = ">=2.18,<4" },
 ]
+http-client = [{ name = "httpx", specifier = ">=0.27,<1" }]
+http-runtime = [{ name = "uvicorn", extras = ["standard"], specifier = ">=0.30,<1" }]
 iam-departures = [
     { name = "clickhouse-connect", specifier = ">=0.7,<1" },
     { name = "databricks-sql-connector", specifier = ">=4.2.5,<5" },
@@ -549,14 +552,11 @@ iam-departures = [
 ]
 mcp = [{ name = "pyyaml", specifier = ">=6,<7" }]
 mcp-sse = [
+    { name = "httpx", specifier = ">=0.27,<1" },
     { name = "sse-starlette", specifier = ">=2,<4" },
     { name = "starlette", specifier = ">=0.39,<1" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30,<1" },
 ]
-webhook = [
-    { name = "fastapi", specifier = ">=0.115,<1" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30,<1" },
-]
+webhook = [{ name = "fastapi", specifier = ">=0.115,<1" }]
 
 [[package]]
 name = "colorama"
