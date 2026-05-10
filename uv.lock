@@ -516,7 +516,7 @@ dev = [
     { name = "bandit", extras = ["toml"], specifier = ">=1.9.4,<2" },
     { name = "defusedxml", specifier = ">=0.7.1,<1" },
     { name = "moto", specifier = ">=5,<6" },
-    { name = "mypy", specifier = ">=1.11,<2" },
+    { name = "mypy", specifier = ">=1.11,<3" },
     { name = "pip-audit", specifier = ">=2.7,<3" },
     { name = "pre-commit", specifier = ">=3.8,<5" },
     { name = "pytest", specifier = ">=8.3,<10" },
