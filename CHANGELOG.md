@@ -13,23 +13,38 @@ The format is loosely based on Keep a Changelog.
 
 ### Added
 
+- **`detect-snowflake-share-creation`** — Snowflake secure data share creation
+  detector for #436. Reads OCSF 1.8 API Activity (class 6003) records
+  normalized from Snowflake `query_history`, fires on `CREATE_SHARE` and
+  `ALTER_SHARE_ADD_ACCOUNTS` events, emits a Detection Finding tagged with
+  MITRE ATT&CK T1537 Transfer Data to Cloud Account. Severity HIGH.
+- **`detect-snowflake-account-key-creation`** — Snowflake RSA public-key
+  auth detector for #436. Fires on `ALTER USER ... SET RSA_PUBLIC_KEY` (slot
+  1 and slot 2), tagged T1098.001 Additional Cloud Credentials. Severity HIGH.
+- **`detect-snowflake-warehouse-resize-burst`** — Snowflake compute-scale
+  anomaly detector for #436. Groups `ALTER_WAREHOUSE` by `warehouse_name`
+  across a sliding window (env `SNOWFLAKE_RESIZE_WINDOW_MIN`, default 60 min),
+  fires when cumulative size-index jump ≥ `SNOWFLAKE_RESIZE_MIN_SIZE_JUMP`
+  (default 3). Tagged T1496 Resource Hijacking. Severity MEDIUM.
+- **`detect-snowflake-unauthorized-grant`** — Snowflake privileged-role
+  escalation detector for #436. Fires on `GRANT_ROLE` where the granted
+  role is in `SNOWFLAKE_PRIVILEGED_ROLES` AND the granter is not on
+  `SNOWFLAKE_AUTHORIZED_GRANTERS` (default empty = fail-open with stderr
+  warning). Tagged T1098.003. Severity HIGH.
 - **`evaluate-nist-ai-rmf-govern` / `-map` / `-measure` / `-manage`** —
   first NIST AI RMF 1.0 expansion slice for #435. Four evaluation skills,
-  one per NIST AI RMF core function (GOVERN, MAP, MEASURE, MANAGE). Each
-  implements a curated subset of high-impact subcategories (10 per
-  function, 40 total) as a manifest-completeness + freshness audit and
-  emits OCSF Compliance Finding (class 2003) per subcategory with
+  one per NIST AI RMF core function. Each implements a curated subset of 10
+  high-impact subcategories (40 total) as a manifest-completeness + freshness
+  audit, emits OCSF Compliance Finding (class 2003) per subcategory with
   `compliance.requirement` set to the subcategory ID. Each SKILL.md
-  documents the implemented subset honestly and lists the
-  documented-but-not-implemented subcategories as Roadmap. The manifest
-  contract is identical across the four (`documented`,
-  `review_cadence_days`, `last_reviewed`, `evidence_uri`, `coverage`),
-  fed via per-function env var (`NIST_AI_RMF_GOVERN_MANIFEST`,
-  `NIST_AI_RMF_MAP_MANIFEST`, `NIST_AI_RMF_MEASURE_MANIFEST`,
-  `NIST_AI_RMF_MANAGE_MANIFEST`). The evaluation layer grows from 7 to
-  11 skills; repo total goes from 82 to 86. This closes #435 in part
-  (4 of 12+ planned NIST AI RMF skills; brings #435 from 4 to 8 of 12+).
-
+  documents implemented subcategories explicitly and lists deferred ones in
+  Roadmap. Manifest contract is shared (`documented`, `review_cadence_days`,
+  `last_reviewed`, `evidence_uri`, `coverage`), fed via per-function env
+  var. Honesty caveat in every SKILL.md: "manifest-completeness check, not
+  the qualitative org-level assessment NIST AI RMF requires."
+- Detection layer 35 → 39; evaluation layer 7 → 11; repo total 82 → 90.
+  Brings #436 from 3/18 to 7/18 (1 Snowflake, 5 Databricks, 5 ClickHouse
+  remain) and #435 from 4 to 8 of 12+ planned.
 - **`detect-snowflake-bulk-data-egress`** — first warehouse-platform vendor-depth
   detector for #436. Reads OCSF 1.8 API Activity (class 6003) records from a
   Snowflake ingest pipeline, groups by `actor.user.uid` across a 60-minute
