@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.8.1-0ea5e9"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.9.0-0ea5e9"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache_2.0-blue"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue"></a>
   <a href="https://schema.ocsf.io/1.8.0"><img alt="OCSF 1.8" src="https://img.shields.io/badge/OCSF-1.8-22d3ee"></a>
@@ -12,7 +12,7 @@
   <a href="https://github.com/msaad00/agent-bom"><img alt="Scanned by agent-bom" src="https://img.shields.io/badge/scanned_by-agent--bom-164e63"></a>
 </p>
 
-<p align="center"><strong>76 production-grade security skills for cloud and AI — OCSF on the wire, MCP-ready, HITL-audited, runs everywhere the same bundle can.</strong></p>
+<p align="center"><strong>79 production-grade security skills for cloud and AI — OCSF on the wire, MCP-ready, HITL-audited, sandboxed, runs everywhere the same bundle can.</strong></p>
 
 ---
 
@@ -63,6 +63,14 @@ External signals enter through two intake layers, pass through two analyze layer
 ![Clean architecture layers diagram — signals feed intake, analyze, act, and persist stages across the seven shipped skill layers.](docs/images/architecture-layers.svg)
 
 ![Clean runtime surfaces diagram — MCP, CLI, CI, and cloud runners all invoke the same shared skill bundle.](docs/images/runtime-surfaces.svg)
+
+More visuals (Mermaid sources under [`docs/diagrams/`](docs/diagrams/), GitHub renders inline):
+
+- [`skill-hierarchy.mmd`](docs/diagrams/skill-hierarchy.mmd) — every shipped layer × every shipped skill, grouped by sub-domain (AWS / GCP / Azure / Identity / K8s / AI-MCP / Web)
+- [`surface-comparison.mmd`](docs/diagrams/surface-comparison.mmd) — the six shipped surfaces (CLI · CI · MCP · webhook · library · runners) and the eight trust controls behind every one
+- [`pipeline-blast-radius.mmd`](docs/diagrams/pipeline-blast-radius.mmd) — colour-coded by capability so the trust boundary is visible at a glance
+- [`mcp-trust-boundary.mmd`](docs/diagrams/mcp-trust-boundary.mmd) — wrapper lifecycle sequence (every guard, every short-circuit branch)
+- [`agent-topology.mmd`](docs/diagrams/agent-topology.mmd) — local stdio clients vs remote / HTTP / library / runner
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/HARNESS.md`](docs/HARNESS.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/SKILL_COMPOSITION.md`](docs/SKILL_COMPOSITION.md)
 

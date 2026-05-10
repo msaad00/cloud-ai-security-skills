@@ -11,6 +11,54 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-05-10 — Agentic posture: trust contract, coverage depth, sandboxing
+
+Skills count on `main`: **79** (15 ingest, 5 discover, 32 detect, 7 evaluate,
+12 remediate, 2 view, 3 output, 3 sources). Three new web-app detectors land
+the first OWASP Top 10 coverage; CIS depth hits the 50%-per-platform target on
+all three clouds; the sandboxing umbrella closes; the cross-cutting reliability
+contract is shipped + exercised on 19 of 32 detectors.
+
+### Coverage milestones
+
+- **CIS AWS Foundations v3**: 20 → 29 controls = **50%** (#445, closes #432)
+- **CIS Azure Foundations v2.1**: 8 → 32 controls = **53%** (#448, closes #433)
+- **CIS GCP Foundations v3**: 10 → 30 controls = **50%** (#449, closes #434)
+- **OWASP Top 10**: 0 → 30% (#446, closes #431) — A01 broken access control · A03 injection · A07 auth failures
+- **#254** umbrella per-platform CIS target: hit across all three clouds
+
+### Added
+
+- **Cross-cutting reliability contract** (#437, closes #429). `skills/_shared/{retry,errors,logging}.py`. Bounded exponential-backoff retry with hard floors / ceilings, `SkillError` hierarchy + `emit_error()` envelope, JSON-formatted structured logger that propagates `SKILL_CORRELATION_ID`. Migrated onto 19 detectors (#443, #444, #451).
+- **Sandboxing umbrella closed** (#427).
+  - Layer 1 — container hardening (#438): non-root UID 65532, read-only rootfs, `--cap-drop=ALL`, `no-new-privileges`, default seccomp. Helm chart + hardened Dockerfile for both webhook receiver and MCP server.
+  - Layer 2 — opt-in OS sandbox (#447): `bwrap` (Linux) / `sandbox-exec` (macOS), per-skill profile derived from SKILL.md `network_egress`. Off by default; `CLOUD_SECURITY_MCP_SANDBOX=on`.
+  - Layer 3 — RLIMIT enforcement (#428): `RLIMIT_AS` 1 GB · `RLIMIT_FSIZE` 100 MB · `RLIMIT_CPU` mirrors wrapper timeout. Always-on for every skill subprocess.
+- **Durable HMAC-chained audit** (#410, closes #396). One JSONL record per resolved tool call; `prev_hash` + `chain_hash` keyed by `CLOUD_SECURITY_AUDIT_HMAC_KEY`; tamper-evident. New `scripts/verify_audit_chain.py`.
+- **MCP wrapper hardening** (#424, closes #413 #414). `additionalProperties: false` on context objects; structured tool annotations replace the description blob (`category`, `capability`, `approvalModel`, `executionModes`, `sideEffects`, `inputFormats`, `outputFormats`, `networkEgress`, `callerRoles`, `approverRoles`, `minApprovers`).
+- **Webhook receiver runner** (#426, closes #425). FastAPI app, default-deny routing, per-skill HMAC + bearer auth, sink fan-out to S3 / Snowflake / ClickHouse. Hardened image + Helm chart.
+- **Python SDK shim** (#439). `skills/_shared/library.py` lets external Python apps call shipped skills as functions with the same trust controls.
+- **Persistent worker pool** (#452, closes #416). Opt-in via `CLOUD_SECURITY_MCP_WORKER_POOL=on`; one warm interpreter per skill; idle TTL + output-overflow kill. ~10× cold-start savings on CSPM benchmark walks.
+- **Skill composition contract** (#422). `docs/SKILL_COMPOSITION.md` + four shipped presets (`presets/preset-*.json`) + reference workflow under `examples/workflows/`.
+- **Harness doc** (#439). `docs/HARNESS.md` indexes the five customization surfaces, pins the scope boundary, and traces every Anthropic-published recommendation to the in-repo file that satisfies it.
+- **Three Mermaid diagrams** (#442, closes #418). `docs/diagrams/`: MCP trust boundary · multi-agent topology · pipeline blast radius.
+- **Auto-generated coverage snapshot** (#430). `docs/COVERAGE_SNAPSHOT.md` regenerable from `framework-coverage.json`; CI gate refuses drift.
+- **Per-framework control coverage** (#441). Depth metric (covered control IDs / framework total), not skill count proxy.
+- **76 → 79 MCP-callable skills** (#411). Top-level `handler.py` shims for the three `iam-departures-*` remediation skills closed the README's "76 shipped" overclaim.
+
+### CI / DX
+
+- **Tier-2 jobs parallelised** (#450). `lint` / `skill-contract` / `type-check` no longer chain serially. Critical-path PRs ~6-8 min → ~3-4 min.
+- **Batched doc-regen check** with a unified self-heal hint. Top-level `Makefile` with `make docs-regen` / `docs-check` / `validate` / `test` / `ruff`.
+- **Structural validator** (#412) — fails closed on stale or half-built skill subtrees.
+- **Behavioral skill-runtime validator** (#409) — every shipped skill imports cleanly. Coverage floors 80% global + per-layer.
+- **Preset CI gate** (#422) — `scripts/validate_presets.py` refuses any preset referencing a skill that does not ship.
+
+### README
+
+- Tightened to leading-OSS shape (#440, Langfuse / ClickHouse pattern). 339 → 150 lines. Quickstart promoted above architecture; Trust Posture replaces three prose paragraphs with one eight-row table.
+- Hero banner refresh (#421, #423) — new wordmark "agentic security skills for cloud and AI", framework pills extended to MITRE ATT&CK / ATLAS / OWASP Top 10 / OWASP LLM Top 10.
+
 ## [0.8.1] — 2026-04-24 — Freeze hardening and release sweep fix
 
 Skills count on `main`: **73** (15 ingest, 5 discover, 26 detect, 7 evaluate,
