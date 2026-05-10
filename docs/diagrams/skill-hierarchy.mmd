@@ -1,0 +1,159 @@
+%% Skill hierarchy — every layer × every shipped skill, with arrows
+%% showing which OCSF / native streams flow between them. Read this
+%% with docs/ARCHITECTURE.md §3 (Layer model) and the per-layer
+%% trust-boundary colour key from pipeline-blast-radius.mmd.
+flowchart TB
+  classDef intake fill:#0f1d36,stroke:#3b82f6,color:#dbeafe
+  classDef analyze fill:#0f2a28,stroke:#2dd4bf,color:#d1fae5
+  classDef act fill:#2a1708,stroke:#f59e0b,color:#fef3c7
+  classDef write fill:#2a0b1e,stroke:#ef4444,color:#fca5a5
+  classDef sink fill:#1f142e,stroke:#a78bfa,color:#ede9fe
+  classDef view fill:#11202c,stroke:#0ea5e9,color:#bae6fd
+  classDef discover fill:#142036,stroke:#60a5fa,color:#dbeafe
+  classDef raw fill:#0f172a,stroke:#475569,color:#f8fafc
+
+  RAW[("raw payloads<br/>vendor-native logs")]:::raw
+
+  subgraph L0["L0 · Sources"]
+    direction LR
+    src_s3["source-s3-select"]:::intake
+    src_sf["source-snowflake-query"]:::intake
+    src_db["source-databricks-query"]:::intake
+  end
+
+  subgraph L1["L1 · Ingest · 15 skills · raw → OCSF 1.8"]
+    direction LR
+    i_ct["ingest-cloudtrail-ocsf"]:::intake
+    i_vpc_aws["ingest-vpc-flow-logs-ocsf"]:::intake
+    i_vpc_gcp["ingest-vpc-flow-logs-gcp-ocsf"]:::intake
+    i_nsg["ingest-nsg-flow-logs-azure-ocsf"]:::intake
+    i_gd["ingest-guardduty-ocsf"]:::intake
+    i_sh["ingest-security-hub-ocsf"]:::intake
+    i_scc["ingest-gcp-scc-ocsf"]:::intake
+    i_def["ingest-azure-defender-for-cloud-ocsf"]:::intake
+    i_gcp["ingest-gcp-audit-ocsf"]:::intake
+    i_az["ingest-azure-activity-ocsf"]:::intake
+    i_entra["ingest-entra-directory-audit-ocsf"]:::intake
+    i_okta["ingest-okta-system-log-ocsf"]:::intake
+    i_gws["ingest-google-workspace-login-ocsf"]:::intake
+    i_k8s["ingest-k8s-audit-ocsf"]:::intake
+    i_mcp["ingest-mcp-proxy-ocsf"]:::intake
+  end
+
+  subgraph L2["L2 · Discover · 5 skills · live posture / inventory"]
+    direction LR
+    d_aibom["discover-ai-bom"]:::discover
+    d_cce["discover-cloud-control-evidence"]:::discover
+    d_ce["discover-control-evidence"]:::discover
+    d_env["discover-environment"]:::discover
+    d_iam["iam-departures-reconciler"]:::discover
+  end
+
+  subgraph L3["L3 · Detect · 32 skills · OCSF Detection Finding 2004"]
+    direction TB
+    subgraph L3aws["AWS"]
+      direction LR
+      d_aws_ak["aws-access-key-creation"]:::analyze
+      d_aws_lp["aws-login-profile-creation"]:::analyze
+      d_aws_eb["aws-enumeration-burst"]:::analyze
+      d_aws_sg["aws-open-security-group"]:::analyze
+      d_aws_ma["aws-model-artifact-download"]:::analyze
+      d_aws_ct["cloudtrail-disabled"]:::analyze
+      d_aws_s3["s3-cross-account-copy"]:::analyze
+    end
+    subgraph L3gcp["GCP"]
+      direction LR
+      d_gcp_au["gcp-audit-logs-disabled"]:::analyze
+      d_gcp_fw["gcp-open-firewall"]:::analyze
+      d_gcp_sa["gcp-service-account-key-creation"]:::analyze
+      d_gcp_tk["gcp-service-account-token-minting"]:::analyze
+      d_gcp_ma["gcp-model-artifact-download"]:::analyze
+    end
+    subgraph L3az["Azure / Entra"]
+      direction LR
+      d_az_al["azure-activity-logs-disabled"]:::analyze
+      d_az_ng["azure-open-nsg"]:::analyze
+      d_en_cred["entra-credential-addition"]:::analyze
+      d_en_role["entra-role-grant-escalation"]:::analyze
+    end
+    subgraph L3id["Identity / SaaS"]
+      direction LR
+      d_okta_mfa["okta-mfa-fatigue"]:::analyze
+      d_okta_cs["credential-stuffing-okta"]:::analyze
+      d_gws_login["google-workspace-suspicious-login"]:::analyze
+    end
+    subgraph L3k8s["Kubernetes"]
+      direction LR
+      d_k8s_pe["privilege-escalation-k8s"]:::analyze
+      d_k8s_ce["container-escape-k8s"]:::analyze
+      d_k8s_sec["sensitive-secret-read-k8s"]:::analyze
+      d_lat["lateral-movement"]:::analyze
+    end
+    subgraph L3mcp["AI / MCP runtime"]
+      direction LR
+      d_mcp_pi["prompt-injection-mcp-proxy"]:::analyze
+      d_mcp_td["mcp-tool-drift"]:::analyze
+      d_mcp_cl["agent-credential-leak-mcp"]:::analyze
+      d_mcp_sp["system-prompt-extraction"]:::analyze
+      d_mcp_ex["tool-output-exfiltration-instructions"]:::analyze
+      d_mcp_pb["tool-output-policy-bypass"]:::analyze
+    end
+    subgraph L3web["Web / OWASP"]
+      direction LR
+      d_web_ac["web-broken-access-control"]:::analyze
+      d_web_inj["web-injection"]:::analyze
+      d_web_auth["web-auth-failures"]:::analyze
+    end
+  end
+
+  subgraph L4["L4 · Evaluate · 7 skills · CIS / NIST / SOC 2 posture"]
+    direction LR
+    e_aws["cspm-aws-cis-benchmark<br/>29 / 58 controls"]:::analyze
+    e_az["cspm-azure-cis-benchmark<br/>32 / 60 controls"]:::analyze
+    e_gcp["cspm-gcp-cis-benchmark<br/>30 / 60 controls"]:::analyze
+    e_k8s["k8s-security-benchmark"]:::analyze
+    e_cont["container-security"]:::analyze
+    e_gpu["gpu-cluster-security"]:::analyze
+    e_mod["model-serving-security"]:::analyze
+  end
+
+  subgraph L5["L5 · Remediate · 12 guarded write paths · HITL gated"]
+    direction LR
+    r_iam_aws["iam-departures-aws"]:::write
+    r_iam_az["iam-departures-azure-entra"]:::write
+    r_iam_gcp["iam-departures-gcp"]:::write
+    r_aws_sg["remediate-aws-sg-revoke"]:::write
+    r_az_nsg["remediate-azure-nsg-revoke"]:::write
+    r_gcp_fw["remediate-gcp-firewall-revoke"]:::write
+    r_okta["remediate-okta-session-kill"]:::write
+    r_gws["remediate-workspace-session-kill"]:::write
+    r_entra["remediate-entra-credential-revoke"]:::write
+    r_k8s_ce["remediate-container-escape-k8s"]:::write
+    r_k8s_rb["remediate-k8s-rbac-revoke"]:::write
+    r_mcp["remediate-mcp-tool-quarantine"]:::write
+  end
+
+  subgraph L6["L6 · View · 2 · OCSF → review formats"]
+    direction LR
+    v_sarif["convert-ocsf-to-sarif"]:::view
+    v_mmd["convert-ocsf-to-mermaid-attack-flow"]:::view
+  end
+
+  subgraph L7["L7 · Output · 3 sinks · append-only persistence"]
+    direction LR
+    s_s3["sink-s3-jsonl"]:::sink
+    s_sf["sink-snowflake-jsonl"]:::sink
+    s_ch["sink-clickhouse-jsonl"]:::sink
+  end
+
+  RAW --> L1
+  L0 --> L1
+  L1 --> L3
+  L2 --> L4
+  L2 --> L5
+  L3 --> L6
+  L3 --> L7
+  L3 --> L5
+  L4 --> L7
+  L4 --> L5
+  L5 --> L7
