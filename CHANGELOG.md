@@ -11,6 +11,41 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Vendor depth — GitHub column shipped (#31)
+
+- **`ingest-github-audit-log-ocsf`** — normalize GitHub Organization
+  Audit Log rows into OCSF 1.8. Most actions route to API Activity 6003;
+  IAM-shaped actions (`org.add_member`, `org.update_member`,
+  `org.remove_member`, `team.add_member`, `team.remove_member`) route to
+  User Access Management 3005; authentication actions (`account.login`,
+  `account.failed_login`) route to Authentication 3002. Preserves
+  `_document_id`, `@timestamp`, `request_id`, visibility deltas,
+  `selected_repositories`, secret name + type, workflow id + log
+  excerpt, PAT scopes, `programmatic_access_type`, and `hashed_token`
+  under `unmapped.github.*` for downstream detector consumption. Emits
+  `unmapped_event_type` stderr telemetry + end-of-run summary for
+  unmapped actions, same contract as the Okta ingester post-#458.
+- **`detect-github-pat-creation`** — T1098.001 (Additional Cloud
+  Credentials). Fires once per successful
+  `personal_access_token.create` / `.access_granted`, severity HIGH.
+- **`detect-github-org-secret-exposure`** — T1078.004 (Cloud Accounts).
+  Fires HIGH when org-level Actions / Codespaces / Dependabot secret
+  `visibility` flips from `selected` to `all`, or MEDIUM when
+  `selected_repositories` expands by more than
+  `GITHUB_ORG_SECRET_REPO_DELTA` repos (default 5) in a single event.
+- **`detect-github-actions-secret-disclosure`** — T1552.004 (Private
+  Keys / Credentials in Logs). Fires CRITICAL when a successful
+  workflow run's log excerpt contains BOTH GitHub's `***` redaction
+  marker AND a high-entropy substring (≥ 32 chars, base64-ish, hex,
+  or JWT) the redactor missed — the classic CI exfil-via-encoding
+  vector. Length-truncated previews ship in the finding so the full
+  secret never travels on the wire.
+
+Skill counts: ingest 15 → 16, detect 43 → 46, total 94 → 98. The
+GitHub row in [`docs/INGEST_COVERAGE.md`](docs/INGEST_COVERAGE.md)
+moved from the Roadmap table into the Shipped table; the row cites
+`#31` as closed.
+
 ### Vendor depth — Snowflake column completed (#436 partial)
 
 - **`detect-snowflake-failed-mfa-burst`** — credential stuffing / MFA bombing

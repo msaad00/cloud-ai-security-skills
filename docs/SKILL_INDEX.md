@@ -1,6 +1,6 @@
 # Skill index — find a skill fast
 
-The same 86 skill bundles, pivoted three ways:
+The same 98 skill bundles, pivoted three ways:
 
 1. **[By environment](#by-environment)** — pick a cloud or platform, see every skill that touches it.
 2. **[By purpose](#by-purpose)** — pick a layer (ingest / discover / detect / evaluate / remediate / view / output / source).
@@ -81,6 +81,15 @@ not do, and what it talks to.
 | Remediate | [`remediate-container-escape-k8s`](../skills/remediation/remediate-container-escape-k8s/) | HITL — quarantine pod / drain node |
 | Remediate | [`remediate-k8s-rbac-revoke`](../skills/remediation/remediate-k8s-rbac-revoke/) | HITL — revoke RoleBindings, dry-run-first |
 
+### GitHub — 4 skills
+
+| Layer | Skill | What it does |
+|---|---|---|
+| Ingest | [`ingest-github-audit-log-ocsf`](../skills/ingestion/ingest-github-audit-log-ocsf/) | GitHub Org Audit Log → OCSF (API Activity 6003 / Authentication 3002 / User Access 3005) |
+| Detect | [`detect-github-pat-creation`](../skills/detection/detect-github-pat-creation/) | T1098.001 — personal access token issuance (classic + fine-grained) |
+| Detect | [`detect-github-org-secret-exposure`](../skills/detection/detect-github-org-secret-exposure/) | T1078.004 — org-level Actions / Codespaces / Dependabot secret scope widened |
+| Detect | [`detect-github-actions-secret-disclosure`](../skills/detection/detect-github-actions-secret-disclosure/) | T1552.004 — workflow log encodes a secret past the redactor |
+
 ### Identity (Okta · Google Workspace) — 7 skills
 
 | Layer | Skill | What it does |
@@ -158,16 +167,16 @@ not do, and what it talks to.
 
 | Layer | Count | Index |
 |---|---:|---|
-| Ingest | 15 | [`skills/ingestion/`](../skills/ingestion/) (excludes the 3 warehouse sources below) |
+| Ingest | 16 | [`skills/ingestion/`](../skills/ingestion/) (excludes the 3 warehouse sources below) |
 | Discover | 5 | [`skills/discovery/`](../skills/discovery/) |
-| Detect | 43 | [`skills/detection/`](../skills/detection/) |
+| Detect | 46 | [`skills/detection/`](../skills/detection/) |
 | Evaluate | 11 | [`skills/evaluation/`](../skills/evaluation/) |
 | Remediate | 12 | [`skills/remediation/`](../skills/remediation/) |
 | View | 2 | [`skills/view/`](../skills/view/) |
 | Output | 3 | [`skills/output/`](../skills/output/) |
 | Source | 3 | warehouse adapters: `source-databricks-query`, `source-s3-select`, `source-snowflake-query` (filed under `skills/ingestion/` on disk) |
 
-Total = 15 + 5 + 43 + 11 + 12 + 2 + 3 + 3 = **94**.
+Total = 16 + 5 + 46 + 11 + 12 + 2 + 3 + 3 = **98**.
 
 ## By framework
 
