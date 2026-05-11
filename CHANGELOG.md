@@ -11,6 +11,43 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Vendor depth — Slack column (closes #33)
+
+- **`ingest-slack-audit-ocsf`** — normalize Slack Audit Logs API
+  (`/audit/v1/logs`, Enterprise Grid) entries into OCSF 1.8 Authentication
+  (3002) for session events, User Access Management (3005) for membership
+  and role-change actions, and API Activity (6003) for app-install / file /
+  channel-create events. Preserves Slack natural IDs (`id`, `date_create`,
+  `context.location`, `context.session_id`, `details.workspace_type`,
+  `details.scopes`, `details.app`) under `unmapped.slack.*`. Uses the
+  Okta-style `_classify_event` pattern with `unmapped_event_type` stderr
+  telemetry plus an `unmapped_event_type_summary` aggregator.
+- **`detect-slack-external-channel-add`** — external-workspace guest added
+  to a sensitive Slack channel. Fires on `private_channel_member_added`,
+  `public_channel_member_added`, or `workspace_user_added_to_workspace`
+  events with `unmapped.slack.workspace_type == "external"` and channel
+  name matching `SLACK_SENSITIVE_CHANNEL_PATTERNS` (default
+  `(?i)(security|sec-ops|finance|legal|engineering-leads|exec)`). Maps to
+  MITRE ATT&CK T1078.004 (severity HIGH).
+- **`detect-slack-oauth-app-install-broad-scope`** — third-party Slack app
+  install / approval that grants broad OAuth scopes. Fires on
+  `app_installed` / `app_approved` when `chat:write` is granted together
+  with any of `files:read` / `channels:read` / `groups:read` / `im:read`
+  (or any wildcard `*:write` scope) AND the app id is not in
+  `SLACK_PREAPPROVED_APP_IDS`. Maps to MITRE ATT&CK T1098.005 (severity
+  HIGH).
+- **`detect-slack-admin-elevation`** — Slack Workspace Admin / Owner role
+  grants outside an authorized identity list or UTC change window. Fires on
+  `role_change_to_admin` / `role_change_to_owner` when the granter is not
+  in `SLACK_AUTHORIZED_GRANTERS` (default empty = fail-open with stderr
+  warning) OR the event hour is outside
+  `SLACK_GRANT_WINDOW_HOURS_UTC` (default `08-18`). Maps to MITRE ATT&CK
+  T1098.003 (severity HIGH).
+- Slack row moves from the `docs/INGEST_COVERAGE.md` Roadmap table into the
+  Shipped table; the ingest layer surfaces three OCSF classes from one
+  vendor source. Repo counts: ingest 15 → 16, detect 43 → 46, total 94 →
+  98.
+
 ### Vendor depth — Snowflake column completed (#436 partial)
 
 - **`detect-snowflake-failed-mfa-burst`** — credential stuffing / MFA bombing
