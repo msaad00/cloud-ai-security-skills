@@ -2,8 +2,8 @@
 
 This file is **generated from [`framework-coverage.json`](framework-coverage.json)** by `scripts/generate_framework_coverage_doc.py`. Do not edit by hand — update the registry and regenerate.
 
-- Registry version: `0.8.1`
-- Registry updated: `2026-04-24`
+- Registry version: `0.11.0`
+- Registry updated: `2026-05-17`
 - Total shipped skills in registry: **117**
 
 ## Roll-up

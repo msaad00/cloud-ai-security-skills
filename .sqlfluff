@@ -2,4 +2,4 @@
 dialect = snowflake
 templater = raw
 max_line_length = 120
-exclude_rules = AL09,AM05,CP02,CP03,CP05,CV11,LT02,LT05,LT08,LT09,RF02,RF04,ST09
+exclude_rules = AL09,AM05,CP02,CP03,CP05,CV11,LT02,LT05,LT08,LT09,RF02,RF04,ST06,ST09

@@ -17,6 +17,7 @@ permissions:
 jobs:
   lockfile:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -29,6 +30,7 @@ jobs:
   # ── Lint + static analysis ──────────────────────────────────────
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: lockfile
     steps:
       - uses: actions/checkout@v6
@@ -41,6 +43,7 @@ jobs:
 
   skill-contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: lockfile          # parallelised with `lint` and `type-check`; tier-3 jobs still gate on all three
     steps:
       - uses: actions/checkout@v6
@@ -62,6 +65,7 @@ jobs:
       - run: python scripts/validate_framework_coverage.py
       - run: python scripts/validate_ocsf_metadata.py
       - run: python scripts/validate_skill_count_consistency.py
+      - run: python scripts/validate_doc_counts.py
       - run: python scripts/validate_deny_list_parity.py
       - run: python scripts/validate_captured_provenance.py
       - run: python scripts/add_skill_trust_frontmatter.py --check
@@ -83,6 +87,7 @@ jobs:
 
   type-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: lockfile          # parallelised with `lint` and `skill-contract`
     steps:
       - uses: actions/checkout@v6
@@ -94,6 +99,7 @@ jobs:
 
   safe-skill-bar:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [lint, skill-contract, type-check]
     steps:
       - uses: actions/checkout@v6
@@ -115,6 +121,7 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -127,6 +134,7 @@ jobs:
   # ── Unit tests, grouped into category lanes ───────────────────
   test-compliance:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -154,6 +162,7 @@ jobs:
 
   test-remediation:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -169,6 +178,7 @@ jobs:
 
   test-detection-engineering:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -213,6 +223,7 @@ jobs:
 
   test-ai-infra-security:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     name: test-ai-infra
     steps:
@@ -242,6 +253,7 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -253,6 +265,7 @@ jobs:
 
   coverage:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -273,6 +286,7 @@ jobs:
 
   sbom:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     permissions:
       contents: read
@@ -306,6 +320,7 @@ jobs:
   # ── IaC + shell validation (CloudFormation, Terraform, Bicep, Bash) ─
   validate-iac:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     steps:
       - uses: actions/checkout@v6
@@ -353,6 +368,7 @@ jobs:
   # ── agent-bom scans (code + skills + fs + IaC with SARIF upload) ─
   agent-bom:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint, skill-contract, type-check, safe-skill-bar]
     continue-on-error: true
     steps:

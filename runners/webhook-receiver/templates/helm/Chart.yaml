@@ -10,8 +10,9 @@ description: |
   read-only rootfs + cap-drop in the container.
 type: application
 version: 0.1.0
-appVersion: "0.8.1"
+appVersion: "0.11.0"
 home: https://github.com/msaad00/cloud-ai-security-skills
+icon: https://raw.githubusercontent.com/msaad00/cloud-ai-security-skills/main/docs/images/hero-banner.svg
 sources:
   - https://github.com/msaad00/cloud-ai-security-skills/tree/main/runners/webhook-receiver
 maintainers:

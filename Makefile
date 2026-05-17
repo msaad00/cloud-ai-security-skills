@@ -2,15 +2,27 @@
 ## file — every command below has a direct shell-script equivalent
 ## documented in `CONTRIBUTING.md`.
 
-.PHONY: help docs-regen docs-check validate test ruff
+.PHONY: help docs-regen docs-check validate test ruff demo
 
 help:
 	@echo "Common targets:"
+	@echo "  make demo        — run the captured-fixture ingest→detect→view pipeline (no cloud creds)"
 	@echo "  make docs-regen  — regenerate every auto-generated doc (run after editing framework-coverage.json or adding a skill)"
 	@echo "  make docs-check  — exit 1 if any auto-generated doc is stale (mirrors the CI gate)"
 	@echo "  make validate    — run every shared validator under scripts/"
 	@echo "  make test        — pytest repo-wide"
 	@echo "  make ruff        — lint everything CI lints"
+
+demo:
+	@echo "Running 3-step ingest -> detect -> view pipeline on a captured CloudTrail fixture..."
+	@python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
+	        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
+	  | python skills/detection/detect-aws-access-key-creation/src/detect.py \
+	  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
+	  > /tmp/cloud-security-demo.sarif
+	@echo ""
+	@echo "Findings written to /tmp/cloud-security-demo.sarif"
+	@python -c "import json; d=json.load(open('/tmp/cloud-security-demo.sarif')); rs=d['runs'][0]['results']; print(f'{len(rs)} finding(s) emitted'); [print(f\"  - {r['ruleId']}: {r['message']['text']}\") for r in rs]"
 
 docs-regen:
 	@echo "Regenerating auto-generated docs..."
