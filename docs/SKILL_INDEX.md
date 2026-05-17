@@ -1,6 +1,6 @@
 # Skill index — find a skill fast
 
-The same 98 skill bundles, pivoted three ways:
+The same 117 skill bundles, pivoted three ways:
 
 1. **[By environment](#by-environment)** — pick a cloud or platform, see every skill that touches it.
 2. **[By purpose](#by-purpose)** — pick a layer (ingest / discover / detect / evaluate / remediate / view / output / source).

@@ -16,7 +16,17 @@
 
 ---
 
+## Why pick this
+
+- **Plug-and-play in 60 seconds** — repo-shipped `.mcp.json` works in Claude Code out of the box; copy-paste configs for Claude Desktop, Cursor, Windsurf, Codex, Cortex, Zed in [`docs/AGENT_QUICKSTART.md`](docs/AGENT_QUICKSTART.md).
+- **Every skill is a single-concern bundle** — `SKILL.md + src/ + tests/` you can run as a stdin/stdout one-liner, an MCP tool, a CI step, a webhook, or a library call. Same bundle, no per-surface drift.
+- **Built for agents, not just humans** — OCSF 1.8 on the wire, HMAC-chained audit, HITL gates and allowlist intersection enforced by the wrapper — so an LLM can't bypass the trust contract.
+
+---
+
 ## Quickstart
+
+> Want the shortest path to seeing a finding? Jump to [`docs/QUICKSTART.md`](docs/QUICKSTART.md) — one page, no clone required for the demo pipeline, every agent client in one place.
 
 ```bash
 # 1 · Clone a tagged release
@@ -24,7 +34,7 @@ git clone --branch v0.11.0 https://github.com/msaad00/cloud-ai-security-skills.g
 cd cloud-ai-security-skills
 
 # 2 · Install only the deps the skills you'll run need
-uv sync --group dev --extra aws --extra k8s        # or --extra gcp / --extra azure / ...
+uv sync --group dev --group aws --group k8s        # or --group gcp / --group azure / --group ai-runtime / --group databricks / --group snowflake / --group clickhouse / --group identity / --group saas
 
 # 3 · Run a detection on a captured fixture (no cloud creds needed)
 python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
