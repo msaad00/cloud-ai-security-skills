@@ -6,9 +6,10 @@ patterns the repo supports (see [`AGENT_DATA_LAKE_FLOW.md`](AGENT_DATA_LAKE_FLOW
 and the most fully wired one: write-side, read-side, and replay all live in
 this repo.
 
-The pattern is **agentless, append-only, and idempotent**. The skills mutate
-no schema. The lake owns retention. Replays converge because every uid is
-content-addressable.
+The pattern is **agentless, append-only, and replay-aware**. The skills mutate
+no schema. The lake owns retention. Stable `event_uid` and `finding_uid`
+values make replay windows duplicate-aware, but raw duplicate inserts remain
+visible because the shipped tables are append-only `MergeTree` tables.
 
 > Want the schema instead? Jump to
 > [`packs/clickhouse`](../packs/clickhouse/README.md). Want the wire
@@ -20,7 +21,7 @@ content-addressable.
    any cloud / SaaS / IdP / K8s / MCP signal
                          │
                          ▼
-                ingest-*  (15 skills)        ──── L1 normalize to OCSF 1.8
+                ingest-*  (17 skills)        ──── L1 normalize to OCSF 1.8
                          │
                          ▼
                 sink-clickhouse-jsonl --apply ──── L7 append-only insert
@@ -40,35 +41,34 @@ content-addressable.
                 source-clickhouse-query        ──── read-only SQL gate
                          │
                          ▼
-                detect-*  (14 skills)          ──── L3 deterministic rules
+                detect-*  (64 skills)          ──── L3 deterministic rules
                 view-*    (2 skills)           ──── L6 SARIF / Mermaid
                 discover-control-evidence      ──── L2 posture / compliance
                          │
                          ▼
-                sink-clickhouse-jsonl --apply  ──── close the loop
+                sink-clickhouse-jsonl --apply  ──── append findings / evidence / audit rows
 ```
 
-Every box on that diagram is shipped today. No new code is needed to stand
-the lake up — only the pack DDL and credentials.
+Every repo-owned box on that diagram is shipped in this branch. No new
+application code is needed to stand the lake up — only the pack DDL,
+credentials, and an operator-chosen ClickHouse cluster.
 
-## Why ClickHouse and not Snowflake / Security Lake / BigQuery
+## Why ClickHouse for this lane
 
-The repo's L7 ships three sinks because no single warehouse wins on every
-axis. ClickHouse is the one we tell teams to run when **all five** of these
-are true:
+The repo ships more than one persistence lane because customers standardize on
+different substrates. Use the ClickHouse lane when these constraints matter:
 
 | Trait | ClickHouse position |
 |---|---|
-| Self-host **or** managed | First-class for both. ClickHouse Cloud + Helm chart. |
-| Hot read latency | Sub-second scans of hundreds of millions of OCSF rows. |
-| Cost per ingested row | The lowest of the three managed offerings at lake-scale. |
-| Sovereign deployment | Runs anywhere. No mandatory egress to a vendor cloud. |
-| Open-format pluggability | Native JSON, Grafana, Superset, Metabase, Sigma rules. |
+| Self-host **or** managed | Works with operator-owned ClickHouse or a managed endpoint. |
+| Hot analytical reads | MergeTree tables, skip indexes, and rollups keep replay queries small and predictable. |
+| Replay economics | Raw OCSF JSONL stays append-only while materialized views answer operator summary questions. |
+| Sovereign deployment | Can run inside the customer's cloud, VPC, Kubernetes cluster, identity, and audit boundary. |
+| SQL-native operator UX | Materialized views and query templates support ClickHouse-native or existing dashboard surfaces without changing the lake contract. |
 
-Snowflake remains the right choice when your team already standardizes on a
-warehouse. AWS Security Lake remains right when OCSF Parquet on S3 is the
-contract. ClickHouse wins when you want the **operator-owned, sovereign,
-low-latency** lake — which is the modal need for an AI-era security team.
+Pick this lane for an **operator-owned, low-latency, replayable security
+lake**. Pick another shipped sink/source lane when the customer's existing
+warehouse or object-lake contract is the source of truth.
 
 ## Step 1 — Provision the lake (one shot)
 
@@ -104,7 +104,7 @@ Note: `INSERT` only — no `CREATE`, `ALTER`, `DROP`, `OPTIMIZE`, or `TRUNCATE`.
 
 ## Step 2 — Wire ingest into the lake
 
-Every shipped `ingest-*` skill emits OCSF JSONL on stdout. Pipe directly into
+Every shipped OCSF `ingest-*` skill emits JSONL on stdout. Pipe directly into
 `sink-clickhouse-jsonl`:
 
 ```bash
@@ -152,8 +152,10 @@ python skills/ingestion/source-clickhouse-query/src/ingest.py \
 ```
 
 This is the moment ClickHouse stops being a sink and starts being a **lake**:
-you can ship a new detection rule on Monday and have it backfilled against
-a week of normalized OCSF events by Monday afternoon.
+you can ship a new detection rule and replay it against historical normalized
+OCSF events without re-pulling from the vendor. For duplicate-prone backfills,
+make the query UID-aware, for example by selecting the latest row per
+`event_uid` before piping into the detector.
 
 ## Step 4 — Close the loop with view / remediate
 
@@ -173,9 +175,11 @@ python skills/ingestion/source-clickhouse-query/src/ingest.py \
   | python skills/view/convert-ocsf-to-mermaid-attack-flow/src/convert.py
 ```
 
-Every HITL-gated `remediate-*` skill also dual-writes its audit chain back
-into `security.audit_sink`, so the lake captures **what was decided** as well
-as **what fired**.
+HITL-gated `remediate-*` skills can write their audit chain into
+`security.audit_sink` through the same sink step, so the lake captures **what
+was decided** as well as **what fired**. Keep the approval and incident-window
+controls outside the sink; the ClickHouse role should only receive `INSERT`
+on the audit table.
 
 ## What it buys an AI agent
 
@@ -183,26 +187,31 @@ The ClickHouse lake is what makes the skill set agent-native, not just
 agent-callable:
 
 1. **Stateless detectors, stateful lake.** The skills never carry per-tenant
-   state. Replays converge because uids are content-addressed.
+   state. Stable UIDs make historical replay and duplicate-aware projections
+   possible without adding detector state.
 2. **MCP-callable.** Both `sink-clickhouse-jsonl` and
    `source-clickhouse-query` are auto-registered as MCP tools — Claude,
    Cursor, Codex, Cortex can pipe through them without bespoke wiring.
 3. **Bounded SQL surface.** The source skill enforces a read-only allowlist
    before the agent's SQL ever touches the wire. There is no "the LLM wrote
    a DROP TABLE" failure mode.
-4. **Sub-second triage.** The materialized views answer "top rules today",
-   "ingest volume by class", and "remediation outcome counts" in
-   milliseconds, freeing the agent's context budget for actual judgment.
+4. **Small replay surfaces.** The materialized views answer "top rules
+   today", "ingest volume by class", and "remediation outcome counts" without
+   rescanning raw JSONL rows, freeing the agent's context budget for actual
+   judgment.
 
 ## Non-goals
 
 - This doc does not turn the repo into a SIEM. The lake replaces the SIEM's
-  **storage tier**, not its **operator UX**. Pair with Grafana or Superset.
+  **storage tier**, and the operator UX stays SQL-native: materialized views
+  and query templates provide stable surfaces for ClickHouse-native consoles
+  or existing dashboard tools.
 - The sink and source skills do not perform encryption-at-rest or
   TLS-in-flight on their own. Both are properties of the ClickHouse cluster
   the operator provisions.
-- ClickHouse Cloud row-level policies are evaluated at query time. For
-  multi-region tenancy enforce a per-region cluster, not just a row policy.
+- Row policies are query-time filters. Use dedicated roles, least-privilege
+  grants, and per-region clusters where the tenancy or data-residency boundary
+  requires it.
 
 ## Related
 

@@ -1,8 +1,8 @@
 -- Materialized view: remediation outcomes per day.
 --
 -- Closed-loop telemetry: how many remediations applied, dry-ran, failed, or
--- got denied by HITL today. Pair this view with a Grafana panel + a daily
--- digest email so the security team sees drift without opening the lake.
+-- got denied by HITL today. Pair this view with an operator dashboard or a
+-- daily digest so the security team sees drift without opening the raw table.
 
 CREATE TABLE IF NOT EXISTS security.remediations_by_outcome_daily
 (

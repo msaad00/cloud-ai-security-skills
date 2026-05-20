@@ -1,64 +1,60 @@
-%% ClickHouse security data lake — closed-loop flow.
+%% ClickHouse security data lake — closed-loop lanes.
 %% Hero-narrative companion to docs/CLICKHOUSE_DATA_LAKE.md.
 %% Render with `mmdc -i clickhouse-data-lake.mmd -o clickhouse-data-lake.svg`.
 
 flowchart LR
-    classDef signal       fill:#1e293b,stroke:#94a3b8,color:#f1f5f9
-    classDef l1ingest     fill:#123b5f,stroke:#38bdf8,color:#e0f2fe
-    classDef lake         fill:#3f2d05,stroke:#fbbf24,color:#fef3c7
-    classDef l3detect     fill:#3b0a4f,stroke:#c084fc,color:#f5f3ff
-    classDef view         fill:#134e4a,stroke:#2dd4bf,color:#ccfbf1
-    classDef remediate    fill:#4a0e23,stroke:#f472b6,color:#ffe4e6
+    classDef signal    fill:#111827,stroke:#64748b,color:#f8fafc
+    classDef transform fill:#083344,stroke:#22d3ee,color:#ecfeff
+    classDef lake      fill:#422006,stroke:#facc15,color:#fef9c3
+    classDef query     fill:#1e1b4b,stroke:#a78bfa,color:#f5f3ff
+    classDef output    fill:#064e3b,stroke:#34d399,color:#ecfdf5
+    classDef audit     fill:#4c0519,stroke:#fb7185,color:#fff1f2
 
-    subgraph SIG["L0 · signals"]
+    subgraph SIG["Signals already covered by ingest-*"]
       direction TB
-      AWS["AWS · CloudTrail · VPC · GuardDuty · SecHub"]:::signal
-      GCP["GCP · audit · SCC"]:::signal
-      AZ["Azure · activity · Defender · Entra"]:::signal
-      IDP["Identity · Okta · Workspace"]:::signal
-      KSP["Kubernetes · audit"]:::signal
-      MCP["MCP · proxy events"]:::signal
-      SAAS["SaaS · GitHub · Slack"]:::signal
+      AWS["AWS<br/>CloudTrail · VPC · GuardDuty · Security Hub"]:::signal
+      GCP["GCP<br/>audit · SCC · VPC flow"]:::signal
+      AZ["Azure / Entra<br/>activity · Defender · NSG · directory audit"]:::signal
+      IDP["Identity + SaaS<br/>Okta · Workspace · GitHub · Slack"]:::signal
+      KSP["Kubernetes + MCP<br/>API audit · proxy events"]:::signal
     end
 
-    subgraph L1["L1 · ingest-* (15)"]
+    subgraph L1["Normalize and write"]
       direction TB
-      ING["normalize → OCSF 1.8 JSONL"]:::l1ingest
+      ING["17 ingest-* skills<br/>OCSF 1.8 JSONL"]:::transform
+      SINK["sink-clickhouse-jsonl<br/>append-only insert · dry-run default"]:::transform
     end
 
-    subgraph LAKE["ClickHouse — security data lake"]
+    subgraph LAKE["ClickHouse security data lake"]
       direction TB
-      ES["security.events_sink<br/>MergeTree · 90d TTL"]:::lake
-      FS["security.findings_sink<br/>MergeTree · 365d TTL"]:::lake
-      EV["security.evidence_sink<br/>MergeTree · 7y hold"]:::lake
-      AS["security.audit_sink<br/>MergeTree · legal hold"]:::lake
-      MV["materialized views<br/>findings_by_rule_hourly<br/>events_by_class_daily<br/>remediations_by_outcome_daily"]:::lake
+      HOT["events_sink<br/>90-day hot tier"]:::lake
+      FIND["findings_sink<br/>365-day finding history"]:::lake
+      EVID["evidence_sink<br/>7-year evidence hold"]:::lake
+      AUD["audit_sink<br/>legal-hold audit chain"]:::lake
+      MV["rollup materialized views<br/>rule volume · event class volume · remediation outcomes"]:::lake
     end
 
-    subgraph L3["L3 · detect-* (14)"]
+    subgraph REPLAY["Read, replay, and decide"]
       direction TB
-      DET["lateral movement · prompt injection<br/>MFA fatigue · MCP tool drift<br/>privilege escalation · …"]:::l3detect
-    end
-
-    subgraph L6["L6 · view-* (2) · L2 evidence"]
-      direction TB
-      VIEW["SARIF · Mermaid attack-flow<br/>discover-control-evidence"]:::view
-    end
-
-    subgraph L5["L5 · remediate-* (12)"]
-      direction TB
-      REM["HITL-gated · dual-audit"]:::remediate
+      SRC["source-clickhouse-query<br/>SELECT / WITH / SHOW / DESCRIBE only"]:::query
+      DET["detect-* skills<br/>deterministic rules over replayed rows"]:::query
+      VIEW["view-* + discover-control-evidence<br/>SARIF · attack-flow · compliance evidence"]:::output
+      REM["remediate-* skills<br/>HITL gated · dry-run first"]:::audit
     end
 
     SIG ==> ING
-    ING -- "sink-clickhouse-jsonl --apply" --> ES
-    ING -- "sink-clickhouse-jsonl --apply" --> FS
-    ES --> MV
-    FS --> MV
-    AS --> MV
-    ES -- "source-clickhouse-query<br/>(read-only allowlist)" --> DET
-    DET -- "sink-clickhouse-jsonl" --> FS
-    FS --> VIEW
-    EV --> VIEW
+    ING --> SINK
+    SINK -- "events" --> HOT
+    SINK -- "findings" --> FIND
+    SINK -- "evidence" --> EVID
+    HOT --> MV
+    FIND --> MV
+    AUD --> MV
+    HOT -- "replay window" --> SRC
+    FIND -- "review window" --> SRC
+    SRC --> DET
+    SRC --> VIEW
+    DET -- "new findings" --> SINK
     DET --> REM
-    REM -- "audit chain" --> AS
+    REM -- "audit record" --> AUD
+    VIEW -- "evidence artifacts" --> EVID

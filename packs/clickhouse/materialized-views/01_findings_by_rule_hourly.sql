@@ -1,14 +1,14 @@
 -- Materialized view: findings volume per rule per hour.
 --
--- Powers the operator's at-a-glance "what fired last hour" Grafana panel and
--- the agent's quick triage. Reading the rolled-up table is O(rules x hours),
--- a couple of orders of magnitude cheaper than rescanning `findings_sink`.
+-- Powers the operator's at-a-glance "what fired last hour" dashboard and the
+-- agent's quick triage. Reading the rolled-up table is O(rules x hours),
+-- materially cheaper than rescanning `findings_sink`.
 --
 -- Why a SummingMergeTree:
---   The same finding_uid is content-addressable, so an idempotent re-ingest
---   inserts the same row twice; SummingMergeTree collapses duplicates by
---   summing finding_count when parts merge. That keeps the metric correct
---   under replays.
+--   This is a volume counter over append-only rows. SummingMergeTree sums
+--   counters with the same sorting key during part merges. It does not
+--   de-duplicate repeated raw inserts; use UID-aware queries over
+--   `findings_sink` when unique finding cardinality matters.
 
 CREATE TABLE IF NOT EXISTS security.findings_by_rule_hourly
 (

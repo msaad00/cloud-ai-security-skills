@@ -94,9 +94,9 @@ Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/HARNESS.m
 
 ## ClickHouse-powered security data lake (hero use case)
 
-The repo ships an end-to-end, closed-loop story on ClickHouse: every ingest skill writes through `sink-clickhouse-jsonl`, every detection replays from `source-clickhouse-query` under a read-only SQL allowlist, every remediation dual-audits back into the same lake. Stateless skills, stateful lake, replays converge by content-addressed uid.
+The repo ships an end-to-end, closed-loop story on ClickHouse: OCSF ingest skills write through `sink-clickhouse-jsonl`, detectors replay from `source-clickhouse-query` under a read-only SQL allowlist, and remediation audit records can land back in the same lake. Stateless skills, stateful lake, stable UIDs for duplicate-aware replay.
 
-![ClickHouse security data lake — closed-loop architecture. Fifteen ingest skills normalize cloud, identity, K8s, MCP, and SaaS signals to OCSF 1.8 and write append-only into ClickHouse via sink-clickhouse-jsonl. Four MergeTree tables hold events (ninety-day TTL), findings (three-hundred-sixty-five-day TTL), evidence (seven-year hold), and audit (legal-hold). Three materialized views roll up findings by rule, events by class, and remediation outcomes. source-clickhouse-query replays under a read-only SQL allowlist into detect-star, view-star, and discover-control-evidence skills. Findings persist back, view skills render SARIF and Mermaid, and twelve HITL-gated remediate-star skills dual-audit the action chain back into audit_sink — closing the loop.](docs/images/clickhouse-data-lake.svg)
+![ClickHouse security data lake closed-loop architecture. Seventeen ingest skills normalize cloud, identity, Kubernetes, MCP, and SaaS signals to OCSF JSONL and write append-only into ClickHouse through sink-clickhouse-jsonl. Four MergeTree tables hold events, findings, evidence, and audit rows. Three materialized views roll up rule volume, event-class volume, and remediation outcomes. source-clickhouse-query replays bounded SELECT/WITH/SHOW/DESCRIBE statements into detection, view, and evidence skills. New findings, evidence artifacts, and HITL remediation audit records can write back through the same sink.](docs/images/clickhouse-data-lake.svg)
 
 | Stage | Skill | Role |
 |---|---|---|
@@ -104,9 +104,9 @@ The repo ships an end-to-end, closed-loop story on ClickHouse: every ingest skil
 | Schema | [`packs/clickhouse/`](packs/clickhouse/) | one-shot DDL · materialized views · row-level policies · TTLs |
 | Read | [`source-clickhouse-query`](skills/ingestion/source-clickhouse-query/SKILL.md) | read-only SQL allowlist · `SELECT` / `WITH` / `SHOW` / `DESCRIBE` only |
 | Replay | any `detect-*` / `view-*` / `discover-control-evidence` | re-run the same skill bundle against historical lake rows |
-| Loop | `sink-clickhouse-jsonl` → findings · `audit_sink` ← `remediate-*` | findings re-land in the lake · remediation chain dual-audits |
+| Loop | `sink-clickhouse-jsonl` → findings / evidence / audit | replay output lands back in append-only tables |
 
-Why ClickHouse for this lake — self-host or Cloud, sub-second JSON scans, native materialized views, `TTL` retention without external lifecycle services, row policies for multi-tenant isolation, Grafana / Superset / Metabase on day one, lowest cost-per-row at lake scale of the three sinks the repo ships. Full hero walk-through: [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md). Snowflake and AWS Security Lake remain first-class sinks when those are the right substrate for your team.
+Why ClickHouse for this lake — operator-owned deployment, MergeTree tables, materialized-view rollups, `TTL` retention without external lifecycle services, and row policies for multi-tenant isolation. Full hero walk-through: [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md). Use a different shipped sink/source lane when the customer has already standardized on another warehouse or object-lake contract.
 
 ## Agent integrations
 

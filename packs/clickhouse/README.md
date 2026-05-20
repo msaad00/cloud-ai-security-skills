@@ -13,12 +13,12 @@ It is the DDL contract behind:
 
 | Property | What it buys you |
 |---|---|
-| MergeTree column-store | Sub-second scans over JSON OCSF payloads at hundreds of millions of rows |
-| Materialized views | Hot rollups that stay correct under idempotent replays |
+| MergeTree column-store | Columnar storage for high-volume append-only OCSF JSONL |
+| Materialized views | Hot rollups for operator summaries without rescanning raw rows |
 | `TTL` clauses | Per-table retention without an external lifecycle service |
 | Row policies | Multi-tenant isolation via `JSONExtractString(payload, ..., uid)` |
 | Self-hosted **or** ClickHouse Cloud | Sovereign deployment is one Helm chart away |
-| Wire-compatible Grafana / Superset | Free dashboards on day one |
+| Query templates | SQL-native operator surfaces without changing the lake contract |
 
 ## Layout
 
@@ -32,7 +32,7 @@ packs/clickhouse/
 │   ├── 05_audit_sink.sql                 # remediation + MCP audit chain
 │   └── 06_row_policies.sql               # tenant isolation via row policy
 │
-├── materialized-views/                   # idempotent rollups
+├── materialized-views/                   # volume rollups
 │   ├── 01_findings_by_rule_hourly.sql
 │   ├── 02_events_by_class_daily.sql
 │   └── 03_remediations_by_outcome_daily.sql
