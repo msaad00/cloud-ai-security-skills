@@ -2518,6 +2518,28 @@
       "coverage_status": "validated"
     },
     {
+      "path": "skills/ingestion/source-clickhouse-query",
+      "layer": "ingestion",
+      "providers": [
+        "clickhouse"
+      ],
+      "asset_classes": [
+        "lakehouse",
+        "query-results",
+        "audit-logs"
+      ],
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
+      "coverage_status": "validated"
+    },
+    {
       "path": "skills/ingestion/source-s3-select",
       "layer": "ingestion",
       "providers": [

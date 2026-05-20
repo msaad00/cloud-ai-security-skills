@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="780" viewBox="0 0 1440 780" role="img" aria-labelledby="ch-title ch-desc">
+  <title id="ch-title">ClickHouse security data lake — closed loop</title>
+  <desc id="ch-desc">Five-stage closed-loop architecture. Stage one: signals from AWS CloudTrail, VPC flow logs, GuardDuty, Security Hub, GCP audit, GCP SCC, Azure activity, Azure Defender, Entra, Okta, Workspace, Kubernetes audit, MCP proxy, GitHub audit, and Slack audit. Stage two: fifteen ingest-star skills normalize the signals to OCSF 1.8 JSONL. Stage three: sink-clickhouse-jsonl writes append-only into ClickHouse MergeTree tables — events_sink ninety-day TTL, findings_sink three-hundred-sixty-five-day TTL, evidence_sink seven-year compliance hold, audit_sink legal-hold retention, plus three rollup materialized views. Stage four: source-clickhouse-query replays under a read-only SQL allowlist into fourteen detect-star skills, two view-star skills, and discover-control-evidence. Stage five: findings persist back to findings_sink, evidence renders SARIF and Mermaid, and twelve HITL-gated remediate-star skills dual-audit their action chain back into audit_sink — closing the loop.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#07101f"/>
+      <stop offset="100%" stop-color="#0f1b31"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="55%" cy="40%" r="58%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#1f2a44" stroke-opacity="0.3" stroke-width="1"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#020617" flood-opacity="0.45"/>
+    </filter>
+    <marker id="arrowSky" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#fbbf24"/>
+    </marker>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#c084fc"/>
+    </marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#2dd4bf"/>
+    </marker>
+    <marker id="arrowPink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#f472b6"/>
+    </marker>
+  </defs>
+
+  <rect width="1440" height="780" fill="url(#bg)"/>
+  <rect width="1440" height="780" fill="url(#grid)"/>
+  <rect width="1440" height="780" fill="url(#glow)"/>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <!-- Title -->
+    <text x="48" y="56" font-size="26" font-weight="800" fill="#f8fafc">ClickHouse security data lake — closed loop</text>
+    <text x="48" y="82" font-size="13" fill="#cbd5e1">Append-only · content-addressed uids · read-only SQL allowlist · replay-safe by construction</text>
+
+    <!-- ============== COLUMN 1: L0 signals (x=40, w=240) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="40" y="120" width="240" height="540" rx="20" fill="#1e293b" stroke="#94a3b8" stroke-width="1.6"/>
+      <text x="160" y="152" text-anchor="middle" font-size="14" font-weight="800" fill="#f1f5f9">L0 · signals</text>
+      <text x="60" y="186" font-size="12" fill="#cbd5e1">AWS · CloudTrail</text>
+      <text x="60" y="206" font-size="12" fill="#cbd5e1">AWS · VPC flow logs</text>
+      <text x="60" y="226" font-size="12" fill="#cbd5e1">AWS · GuardDuty</text>
+      <text x="60" y="246" font-size="12" fill="#cbd5e1">AWS · Security Hub</text>
+      <text x="60" y="266" font-size="12" fill="#cbd5e1">GCP · audit</text>
+      <text x="60" y="286" font-size="12" fill="#cbd5e1">GCP · SCC</text>
+      <text x="60" y="306" font-size="12" fill="#cbd5e1">Azure · activity</text>
+      <text x="60" y="326" font-size="12" fill="#cbd5e1">Azure · Defender</text>
+      <text x="60" y="346" font-size="12" fill="#cbd5e1">Entra · directory audit</text>
+      <text x="60" y="366" font-size="12" fill="#cbd5e1">Okta · system log</text>
+      <text x="60" y="386" font-size="12" fill="#cbd5e1">Workspace · login</text>
+      <text x="60" y="406" font-size="12" fill="#cbd5e1">Kubernetes · audit</text>
+      <text x="60" y="426" font-size="12" fill="#cbd5e1">MCP · proxy events</text>
+      <text x="60" y="446" font-size="12" fill="#cbd5e1">GitHub · audit</text>
+      <text x="60" y="466" font-size="12" fill="#cbd5e1">Slack · audit</text>
+      <text x="60" y="498" font-size="11" fill="#94a3b8">15 vendor signals</text>
+      <text x="60" y="514" font-size="11" fill="#94a3b8">agentless · read-only</text>
+    </g>
+
+    <!-- ============== COLUMN 2: L1 ingest (x=320, w=200) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="320" y="240" width="200" height="300" rx="20" fill="#123b5f" stroke="#38bdf8" stroke-width="1.6"/>
+      <text x="420" y="272" text-anchor="middle" font-size="14" font-weight="800" fill="#e0f2fe">L1 · ingest-*</text>
+      <text x="420" y="294" text-anchor="middle" font-size="12" fill="#bae6fd">15 skills</text>
+      <text x="340" y="326" font-size="11" fill="#bae6fd">deterministic transforms</text>
+      <text x="340" y="344" font-size="11" fill="#bae6fd">to OCSF 1.8 JSONL</text>
+      <text x="340" y="370" font-size="11" fill="#bae6fd">content-addressed</text>
+      <text x="340" y="386" font-size="11" fill="#bae6fd">event_uid + finding_uid</text>
+      <text x="340" y="416" font-size="11" fill="#bae6fd">stateless · idempotent</text>
+      <text x="340" y="446" font-size="11" fill="#7dd3fc">pipe through</text>
+      <text x="340" y="464" font-size="11" font-weight="700" fill="#f8fafc">sink-clickhouse-jsonl</text>
+      <text x="340" y="482" font-size="11" fill="#7dd3fc">--apply</text>
+    </g>
+
+    <!-- ============== COLUMN 3: ClickHouse lake (x=560, w=400) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="560" y="120" width="400" height="540" rx="22" fill="#3f2d05" stroke="#fbbf24" stroke-width="2"/>
+      <text x="760" y="156" text-anchor="middle" font-size="18" font-weight="800" fill="#fef3c7">ClickHouse</text>
+      <text x="760" y="178" text-anchor="middle" font-size="12" fill="#fde68a">security data lake · self-host or Cloud · sub-second JSON scans</text>
+
+      <rect x="580" y="202" width="360" height="78" rx="12" fill="#5b3f06" stroke="#facc15" stroke-width="1.2"/>
+      <text x="600" y="226" font-size="13" font-weight="700" fill="#fef9c3">security.events_sink</text>
+      <text x="600" y="246" font-size="11" fill="#fde68a">normalized OCSF 1.8 events · hot tier</text>
+      <text x="600" y="264" font-size="11" fill="#fde68a">MergeTree · 90-day TTL · day-partitioned</text>
+
+      <rect x="580" y="292" width="360" height="78" rx="12" fill="#5b3f06" stroke="#facc15" stroke-width="1.2"/>
+      <text x="600" y="316" font-size="13" font-weight="700" fill="#fef9c3">security.findings_sink</text>
+      <text x="600" y="336" font-size="11" fill="#fde68a">OCSF Detection Finding (2004) + native</text>
+      <text x="600" y="354" font-size="11" fill="#fde68a">MergeTree · 365-day TTL · month-partitioned</text>
+
+      <rect x="580" y="382" width="360" height="78" rx="12" fill="#5b3f06" stroke="#facc15" stroke-width="1.2"/>
+      <text x="600" y="406" font-size="13" font-weight="700" fill="#fef9c3">security.evidence_sink</text>
+      <text x="600" y="426" font-size="11" fill="#fde68a">control evidence · compliance artifacts</text>
+      <text x="600" y="444" font-size="11" fill="#fde68a">MergeTree · 7-year hold</text>
+
+      <rect x="580" y="472" width="360" height="78" rx="12" fill="#5b3f06" stroke="#facc15" stroke-width="1.2"/>
+      <text x="600" y="496" font-size="13" font-weight="700" fill="#fef9c3">security.audit_sink</text>
+      <text x="600" y="516" font-size="11" fill="#fde68a">remediation + MCP audit chain</text>
+      <text x="600" y="534" font-size="11" fill="#fde68a">DateTime64(ms) · legal-hold retention</text>
+
+      <rect x="580" y="562" width="360" height="82" rx="12" fill="#704c08" stroke="#fde047" stroke-width="1.2" stroke-dasharray="4 4"/>
+      <text x="600" y="586" font-size="13" font-weight="700" fill="#fef9c3">materialized views — rollups</text>
+      <text x="600" y="606" font-size="11" fill="#fde68a">findings_by_rule_hourly · events_by_class_daily</text>
+      <text x="600" y="624" font-size="11" fill="#fde68a">remediations_by_outcome_daily</text>
+    </g>
+
+    <!-- ============== COLUMN 4: L3 detect (x=1000, w=200) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="1000" y="120" width="200" height="240" rx="20" fill="#3b0a4f" stroke="#c084fc" stroke-width="1.6"/>
+      <text x="1100" y="152" text-anchor="middle" font-size="14" font-weight="800" fill="#f5f3ff">L3 · detect-*</text>
+      <text x="1100" y="174" text-anchor="middle" font-size="12" fill="#ddd6fe">14 skills</text>
+      <text x="1020" y="206" font-size="11" fill="#ddd6fe">lateral movement</text>
+      <text x="1020" y="222" font-size="11" fill="#ddd6fe">prompt injection (MCP)</text>
+      <text x="1020" y="238" font-size="11" fill="#ddd6fe">MFA fatigue (Okta)</text>
+      <text x="1020" y="254" font-size="11" fill="#ddd6fe">credential stuffing</text>
+      <text x="1020" y="270" font-size="11" fill="#ddd6fe">Entra role grant</text>
+      <text x="1020" y="286" font-size="11" fill="#ddd6fe">K8s container escape</text>
+      <text x="1020" y="302" font-size="11" fill="#ddd6fe">open SG · NSG · firewall</text>
+      <text x="1020" y="332" font-size="11" font-weight="700" fill="#fde68a">source-clickhouse-query</text>
+      <text x="1020" y="348" font-size="11" fill="#a78bfa">read-only SQL allowlist</text>
+    </g>
+
+    <!-- ============== COLUMN 4b: L6 view + L2 evidence (x=1000) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="1000" y="380" width="200" height="140" rx="20" fill="#134e4a" stroke="#2dd4bf" stroke-width="1.6"/>
+      <text x="1100" y="412" text-anchor="middle" font-size="14" font-weight="800" fill="#ccfbf1">L6 · view-* + L2</text>
+      <text x="1020" y="438" font-size="11" fill="#99f6e4">convert-ocsf-to-sarif</text>
+      <text x="1020" y="454" font-size="11" fill="#99f6e4">convert-ocsf-to-mermaid</text>
+      <text x="1020" y="478" font-size="11" fill="#99f6e4">discover-control-evidence</text>
+      <text x="1020" y="498" font-size="11" fill="#5eead4">replay from lake</text>
+    </g>
+
+    <!-- ============== COLUMN 4c: L5 remediate (x=1000) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="1000" y="540" width="200" height="120" rx="20" fill="#4a0e23" stroke="#f472b6" stroke-width="1.6"/>
+      <text x="1100" y="572" text-anchor="middle" font-size="14" font-weight="800" fill="#ffe4e6">L5 · remediate-*</text>
+      <text x="1100" y="594" text-anchor="middle" font-size="12" fill="#fbcfe8">12 skills</text>
+      <text x="1020" y="620" font-size="11" fill="#fbcfe8">HITL · dual-audit</text>
+      <text x="1020" y="636" font-size="11" fill="#fbcfe8">re-verify post-action</text>
+    </g>
+
+    <!-- ============== COLUMN 5: agents/tools (x=1240, w=160) ============== -->
+    <g filter="url(#shadow)">
+      <rect x="1240" y="160" width="160" height="460" rx="20" fill="#0b1a35" stroke="#64748b" stroke-width="1.6"/>
+      <text x="1320" y="192" text-anchor="middle" font-size="14" font-weight="800" fill="#e2e8f0">surfaces</text>
+      <text x="1260" y="222" font-size="12" font-weight="700" fill="#cbd5e1">MCP</text>
+      <text x="1260" y="240" font-size="11" fill="#94a3b8">Claude · Cursor</text>
+      <text x="1260" y="256" font-size="11" fill="#94a3b8">Codex · Cortex</text>
+      <text x="1260" y="290" font-size="12" font-weight="700" fill="#cbd5e1">CLI</text>
+      <text x="1260" y="308" font-size="11" fill="#94a3b8">stdin / stdout pipes</text>
+      <text x="1260" y="342" font-size="12" font-weight="700" fill="#cbd5e1">CI</text>
+      <text x="1260" y="360" font-size="11" fill="#94a3b8">GitHub Actions</text>
+      <text x="1260" y="394" font-size="12" font-weight="700" fill="#cbd5e1">cloud runners</text>
+      <text x="1260" y="412" font-size="11" fill="#94a3b8">S3 / EventBridge</text>
+      <text x="1260" y="428" font-size="11" fill="#94a3b8">Pub/Sub · Event Grid</text>
+      <text x="1260" y="462" font-size="12" font-weight="700" fill="#fde68a">dashboards</text>
+      <text x="1260" y="480" font-size="11" fill="#fde68a">Grafana · Superset</text>
+      <text x="1260" y="496" font-size="11" fill="#fde68a">Metabase</text>
+      <text x="1260" y="528" font-size="11" fill="#a78bfa">SIEM hand-off</text>
+      <text x="1260" y="544" font-size="11" fill="#94a3b8">SARIF · OCSF JSON</text>
+    </g>
+
+    <!-- ============== ARROWS ============== -->
+    <!-- L0 → L1 -->
+    <path d="M280 390 L320 390" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrowSky)"/>
+
+    <!-- L1 → events_sink -->
+    <path d="M520 360 C545 360, 555 240, 580 240" stroke="#38bdf8" stroke-width="2" fill="none" marker-end="url(#arrowSky)"/>
+    <!-- L1 → findings_sink (direct, e.g. GuardDuty) -->
+    <path d="M520 390 C545 390, 555 330, 580 330" stroke="#38bdf8" stroke-width="2" fill="none" marker-end="url(#arrowSky)" stroke-dasharray="4 4"/>
+
+    <!-- events_sink → detect (read-only) -->
+    <path d="M940 240 C970 240, 985 220, 1000 220" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrowAmber)"/>
+    <text x="945" y="226" font-size="10" fill="#fde68a">source-clickhouse-query</text>
+
+    <!-- detect → findings_sink (close loop) -->
+    <path d="M1000 280 C975 280, 960 320, 940 330" stroke="#c084fc" stroke-width="2" fill="none" marker-end="url(#arrowPurple)"/>
+    <text x="945" y="306" font-size="10" fill="#ddd6fe">sink-clickhouse-jsonl</text>
+
+    <!-- findings_sink → view -->
+    <path d="M940 330 C970 330, 985 430, 1000 430" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#arrowTeal)"/>
+    <!-- evidence_sink → view -->
+    <path d="M940 420 L1000 460" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#arrowTeal)"/>
+
+    <!-- detect → remediate -->
+    <path d="M1100 360 L1100 540" stroke="#f472b6" stroke-width="2" fill="none" marker-end="url(#arrowPink)"/>
+    <!-- remediate → audit_sink -->
+    <path d="M1000 600 C970 600, 960 510, 940 510" stroke="#f472b6" stroke-width="2" fill="none" marker-end="url(#arrowPink)"/>
+    <text x="945" y="495" font-size="10" fill="#fbcfe8">audit chain · dual-write</text>
+
+    <!-- audit/events/findings → MV (downward arrows inside lake) -->
+    <path d="M760 460 L760 560" stroke="#fde047" stroke-width="1.5" fill="none" stroke-dasharray="3 4" marker-end="url(#arrowAmber)"/>
+
+    <!-- surfaces → ClickHouse + sinks (read paths) -->
+    <path d="M1240 240 L1200 240" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arrowSky)" stroke-dasharray="3 3"/>
+    <path d="M1240 460 L1200 460" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arrowTeal)" stroke-dasharray="3 3"/>
+    <path d="M1240 600 L1200 600" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arrowPink)" stroke-dasharray="3 3"/>
+
+    <!-- Footer legend -->
+    <g transform="translate(48, 700)">
+      <text x="0" y="0" font-size="12" fill="#cbd5e1">Legend  ·  </text>
+      <circle cx="60" cy="-4" r="5" fill="#38bdf8"/><text x="72" y="0" font-size="12" fill="#bae6fd">write (ingest)</text>
+      <circle cx="180" cy="-4" r="5" fill="#fbbf24"/><text x="192" y="0" font-size="12" fill="#fde68a">read (source)</text>
+      <circle cx="300" cy="-4" r="5" fill="#c084fc"/><text x="312" y="0" font-size="12" fill="#ddd6fe">findings loop</text>
+      <circle cx="430" cy="-4" r="5" fill="#2dd4bf"/><text x="442" y="0" font-size="12" fill="#99f6e4">view / evidence</text>
+      <circle cx="570" cy="-4" r="5" fill="#f472b6"/><text x="582" y="0" font-size="12" fill="#fbcfe8">remediate + audit</text>
+      <text x="780" y="0" font-size="12" fill="#cbd5e1">All paths are stateless; replays converge by content-addressed uid.</text>
+    </g>
+
+    <!-- ClickHouse mark in the lake header (subtle) -->
+    <g transform="translate(580, 130)">
+      <rect x="0" y="0" width="14" height="18" fill="#fbbf24" opacity="0.95"/>
+      <rect x="18" y="0" width="14" height="18" fill="#fde047" opacity="0.95"/>
+      <rect x="36" y="0" width="14" height="14" fill="#facc15" opacity="0.95"/>
+      <rect x="54" y="0" width="14" height="10" fill="#fef08a" opacity="0.95"/>
+    </g>
+  </g>
+</svg>

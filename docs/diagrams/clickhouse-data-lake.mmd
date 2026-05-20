@@ -1,0 +1,64 @@
+%% ClickHouse security data lake — closed-loop flow.
+%% Hero-narrative companion to docs/CLICKHOUSE_DATA_LAKE.md.
+%% Render with `mmdc -i clickhouse-data-lake.mmd -o clickhouse-data-lake.svg`.
+
+flowchart LR
+    classDef signal       fill:#1e293b,stroke:#94a3b8,color:#f1f5f9
+    classDef l1ingest     fill:#123b5f,stroke:#38bdf8,color:#e0f2fe
+    classDef lake         fill:#3f2d05,stroke:#fbbf24,color:#fef3c7
+    classDef l3detect     fill:#3b0a4f,stroke:#c084fc,color:#f5f3ff
+    classDef view         fill:#134e4a,stroke:#2dd4bf,color:#ccfbf1
+    classDef remediate    fill:#4a0e23,stroke:#f472b6,color:#ffe4e6
+
+    subgraph SIG["L0 · signals"]
+      direction TB
+      AWS["AWS · CloudTrail · VPC · GuardDuty · SecHub"]:::signal
+      GCP["GCP · audit · SCC"]:::signal
+      AZ["Azure · activity · Defender · Entra"]:::signal
+      IDP["Identity · Okta · Workspace"]:::signal
+      KSP["Kubernetes · audit"]:::signal
+      MCP["MCP · proxy events"]:::signal
+      SAAS["SaaS · GitHub · Slack"]:::signal
+    end
+
+    subgraph L1["L1 · ingest-* (15)"]
+      direction TB
+      ING["normalize → OCSF 1.8 JSONL"]:::l1ingest
+    end
+
+    subgraph LAKE["ClickHouse — security data lake"]
+      direction TB
+      ES["security.events_sink<br/>MergeTree · 90d TTL"]:::lake
+      FS["security.findings_sink<br/>MergeTree · 365d TTL"]:::lake
+      EV["security.evidence_sink<br/>MergeTree · 7y hold"]:::lake
+      AS["security.audit_sink<br/>MergeTree · legal hold"]:::lake
+      MV["materialized views<br/>findings_by_rule_hourly<br/>events_by_class_daily<br/>remediations_by_outcome_daily"]:::lake
+    end
+
+    subgraph L3["L3 · detect-* (14)"]
+      direction TB
+      DET["lateral movement · prompt injection<br/>MFA fatigue · MCP tool drift<br/>privilege escalation · …"]:::l3detect
+    end
+
+    subgraph L6["L6 · view-* (2) · L2 evidence"]
+      direction TB
+      VIEW["SARIF · Mermaid attack-flow<br/>discover-control-evidence"]:::view
+    end
+
+    subgraph L5["L5 · remediate-* (12)"]
+      direction TB
+      REM["HITL-gated · dual-audit"]:::remediate
+    end
+
+    SIG ==> ING
+    ING -- "sink-clickhouse-jsonl --apply" --> ES
+    ING -- "sink-clickhouse-jsonl --apply" --> FS
+    ES --> MV
+    FS --> MV
+    AS --> MV
+    ES -- "source-clickhouse-query<br/>(read-only allowlist)" --> DET
+    DET -- "sink-clickhouse-jsonl" --> FS
+    FS --> VIEW
+    EV --> VIEW
+    DET --> REM
+    REM -- "audit chain" --> AS
