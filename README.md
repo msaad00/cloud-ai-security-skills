@@ -1,4 +1,4 @@
-![Agentic security skills for cloud and AI — 117 shipped skill bundles. OCSF 1.8 on the wire. 131 CIS + NIST AI RMF benchmark checks. Framework coverage across MITRE ATT&CK, MITRE ATLAS, OWASP Top 10, and OWASP LLM Top 10. MCP-audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, GitHub, Slack, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
+![Agentic security skills for cloud and AI — 118 shipped skill bundles. OCSF 1.8 on the wire. 131 CIS + NIST AI RMF benchmark checks. Framework coverage across MITRE ATT&CK, MITRE ATLAS, OWASP Top 10, and OWASP LLM Top 10. MCP-audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, GitHub, Slack, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -51,7 +51,7 @@ Five surfaces, one bundle: **CLI · CI · MCP · webhook receiver · persistent 
 
 ## What this repo gives you
 
-**117 shipped skill bundles** — atomic, deterministic, single-concern. Twelve are guarded write paths; the other 100 are read-only. Drop one into a pipeline, an agent, a Step Function, or a `python ... | python ...` one-liner.
+**118 shipped skill bundles** — atomic, deterministic, single-concern. Twelve are guarded write paths; the other 101 are read-only. Drop one into a pipeline, an agent, a Step Function, or a `python ... | python ...` one-liner.
 
 | Layer | Count | Purpose | Output |
 |---|---:|---|---|
@@ -62,9 +62,9 @@ Five surfaces, one bundle: **CLI · CI · MCP · webhook receiver · persistent 
 | **Remediate** | 12 | guarded write paths — IAM departures × 3 clouds, network revoke × 3, session/credential kill × 4, K8s × 2, MCP tool quarantine | audited action trail |
 | **View** | 2 | findings → review formats | SARIF · Mermaid |
 | **Output** | 3 | append-only sinks | S3 · Snowflake · ClickHouse |
-| **Sources** | 3 | warehouse query adapters | S3 Select · Snowflake · Databricks |
+| **Sources** | 4 | warehouse query adapters | S3 Select · Snowflake · Databricks · ClickHouse |
 
-**Total: 117 shipped skills.**  Live counts and per-framework coverage in [`docs/COVERAGE_SNAPSHOT.md`](docs/COVERAGE_SNAPSHOT.md) (auto-generated, CI-gated).
+**Total: 118 shipped skills.**  Live counts and per-framework coverage in [`docs/COVERAGE_SNAPSHOT.md`](docs/COVERAGE_SNAPSHOT.md) (auto-generated, CI-gated).
 
 **Find a skill:** [`docs/SKILL_INDEX.md`](docs/SKILL_INDEX.md) groups every shipped skill by **environment** (AWS · GCP · Azure/Entra · K8s · Identity · AI/MCP · Web · Cross-env) and by **purpose** (ingest / discover / detect / evaluate / remediate / view / output / source), and points at the framework-mapping docs for control-catalog pivots.
 
@@ -91,6 +91,22 @@ More visuals (Mermaid sources under [`docs/diagrams/`](docs/diagrams/), GitHub r
 - [`agent-topology.mmd`](docs/diagrams/agent-topology.mmd) — local stdio clients vs remote / HTTP / library / runner
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/HARNESS.md`](docs/HARNESS.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/SKILL_COMPOSITION.md`](docs/SKILL_COMPOSITION.md)
+
+## ClickHouse-powered security data lake (hero use case)
+
+The repo ships an end-to-end, closed-loop story on ClickHouse: every ingest skill writes through `sink-clickhouse-jsonl`, every detection replays from `source-clickhouse-query` under a read-only SQL allowlist, every remediation dual-audits back into the same lake. Stateless skills, stateful lake, replays converge by content-addressed uid.
+
+![ClickHouse security data lake — closed-loop architecture. Fifteen ingest skills normalize cloud, identity, K8s, MCP, and SaaS signals to OCSF 1.8 and write append-only into ClickHouse via sink-clickhouse-jsonl. Four MergeTree tables hold events (ninety-day TTL), findings (three-hundred-sixty-five-day TTL), evidence (seven-year hold), and audit (legal-hold). Three materialized views roll up findings by rule, events by class, and remediation outcomes. source-clickhouse-query replays under a read-only SQL allowlist into detect-star, view-star, and discover-control-evidence skills. Findings persist back, view skills render SARIF and Mermaid, and twelve HITL-gated remediate-star skills dual-audit the action chain back into audit_sink — closing the loop.](docs/images/clickhouse-data-lake.svg)
+
+| Stage | Skill | Role |
+|---|---|---|
+| Write | [`sink-clickhouse-jsonl`](skills/output/sink-clickhouse-jsonl/SKILL.md) | append-only insert · dry-run by default · identifier-validated |
+| Schema | [`packs/clickhouse/`](packs/clickhouse/) | one-shot DDL · materialized views · row-level policies · TTLs |
+| Read | [`source-clickhouse-query`](skills/ingestion/source-clickhouse-query/SKILL.md) | read-only SQL allowlist · `SELECT` / `WITH` / `SHOW` / `DESCRIBE` only |
+| Replay | any `detect-*` / `view-*` / `discover-control-evidence` | re-run the same skill bundle against historical lake rows |
+| Loop | `sink-clickhouse-jsonl` → findings · `audit_sink` ← `remediate-*` | findings re-land in the lake · remediation chain dual-audits |
+
+Why ClickHouse for this lake — self-host or Cloud, sub-second JSON scans, native materialized views, `TTL` retention without external lifecycle services, row policies for multi-tenant isolation, Grafana / Superset / Metabase on day one, lowest cost-per-row at lake scale of the three sinks the repo ships. Full hero walk-through: [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md). Snowflake and AWS Security Lake remain first-class sinks when those are the right substrate for your team.
 
 ## Agent integrations
 

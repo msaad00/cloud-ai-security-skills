@@ -15,7 +15,7 @@ Skills are grouped into layered categories — not by cloud. The category answer
 
 ```
 skills/
-├── ingestion/                     # raw source → OCSF 1.8 (15 ingest-* + 3 source-*)
+├── ingestion/                     # raw source → OCSF 1.8 (15 ingest-* + 4 source-*)
 │   ├── ingest-cloudtrail-ocsf/
 │   ├── ingest-vpc-flow-logs-ocsf/
 │   ├── ingest-vpc-flow-logs-gcp-ocsf/
@@ -33,7 +33,8 @@ skills/
 │   ├── ingest-google-workspace-login-ocsf/
 │   ├── source-s3-select/                # warehouse query adapter
 │   ├── source-snowflake-query/          # warehouse query adapter
-│   └── source-databricks-query/         # warehouse query adapter
+│   ├── source-databricks-query/         # warehouse query adapter
+│   └── source-clickhouse-query/         # warehouse query adapter
 │
 ├── discovery/                     # inventory / graph / AI BOM / evidence
 │   ├── discover-environment/
@@ -95,8 +96,9 @@ skills/
     └── golden/
 ```
 
-Current shipped counts: 61 total skills — 15 ingest, 5 discover, 14 detect,
-7 evaluate, 12 remediate, 2 view, 3 output, 3 source.
+Current shipped counts: see [`README.md`](README.md) and `docs/COVERAGE_SNAPSHOT.md`
+for live totals (auto-generated, CI-gated). Header layer composition: ingest,
+discover, detect, evaluate, remediate, view, output, source.
 
 Not every detection has a paired remediation. The source of truth for detect →
 act parity is [`README.md`](README.md#closed-loop-coverage-at-a-glance) and
