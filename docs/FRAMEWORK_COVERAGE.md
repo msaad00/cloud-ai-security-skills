@@ -4,13 +4,13 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.11.0`
 - Registry updated: `2026-05-17`
-- Total shipped skills in registry: **117**
+- Total shipped skills in registry: **118**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **96** | — |
+| OCSF | 1.8.0 | **97** | — |
 | MITRE ATT&CK | v14 | **79** | 100% mapped coverage |
 | MITRE ATLAS | current | **17** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **4** | — |
@@ -37,7 +37,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **96**
+Shipped skills mapped: **97**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -129,6 +129,7 @@ Shipped skills mapped: **96**
 | [`ingest-slack-audit-ocsf`](../skills/ingestion/ingest-slack-audit-ocsf) | ingestion | slack | identities, channels, workspaces, oauth-apps, audit-logs |
 | [`ingest-vpc-flow-logs-gcp-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-gcp-ocsf) | ingestion | gcp | network, flow-logs |
 | [`ingest-vpc-flow-logs-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-ocsf) | ingestion | aws | network, flow-logs |
+| [`source-clickhouse-query`](../skills/ingestion/source-clickhouse-query) | ingestion | clickhouse | lakehouse, query-results, audit-logs |
 | [`source-databricks-query`](../skills/ingestion/source-databricks-query) | ingestion | databricks | lakehouse, query-results, audit-logs |
 | [`source-s3-select`](../skills/ingestion/source-s3-select) | ingestion | aws | object-storage, query-results, audit-logs |
 | [`source-snowflake-query`](../skills/ingestion/source-snowflake-query) | ingestion | snowflake | lakehouse, query-results, audit-logs |

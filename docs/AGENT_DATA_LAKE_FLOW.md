@@ -40,3 +40,14 @@ Keep the projection small and explicit:
 ## Operator rule
 
 Prefer read-only source access, deterministic ingest transforms, and the smallest projection that gets the data into `detect-*`.
+
+## Hero deployment — ClickHouse security data lake
+
+When the user wants the **full** repo-owned lake (write side + schema + read
+side + replay loop), the documented hero use case is
+[`CLICKHOUSE_DATA_LAKE.md`](CLICKHOUSE_DATA_LAKE.md). It composes
+`sink-clickhouse-jsonl`, [`packs/clickhouse/`](../packs/clickhouse/), and
+`source-clickhouse-query` into one closed loop with content-addressed uids,
+TTL-managed retention, and tenant-isolating row policies. Snowflake and AWS
+Security Lake remain first-class alternatives — pick by substrate, not by
+feature.

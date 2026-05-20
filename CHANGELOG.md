@@ -45,6 +45,36 @@ control plane:
 Skill counts move from 112 → 117 total and 59 → 64 detection. #436
 remains open for the five remaining ClickHouse detectors.
 
+### ClickHouse hero data-lake story — closes the lake loop
+
+The ClickHouse story is now bidirectional. The existing
+`sink-clickhouse-jsonl` (write side) is paired with a new
+`source-clickhouse-query` skill on the read side, mirroring the Snowflake
+and Databricks query adapters. Both skills together let any `detect-*`,
+`view-*`, or `discover-control-evidence` skill **replay from the lake**
+without re-ingesting from the vendor.
+
+- `skills/ingestion/source-clickhouse-query/` — read-only SQL allowlist
+  (`SELECT` / `WITH` / `SHOW` / `DESCRIBE`); rejects comments, multiple
+  statements, session controls, admin verbs; auto-registered as an MCP
+  tool by the existing registry walker.
+- `packs/clickhouse/` — DDL + materialized views + read-side query
+  templates that turn ClickHouse into the substrate the architecture doc
+  has been calling for under PR AA. Tables: `security.events_sink`
+  (90-day TTL hot tier), `security.findings_sink` (365-day TTL),
+  `security.evidence_sink` (7-year compliance hold), `security.audit_sink`
+  (legal-hold retention). Materialized views: findings-by-rule hourly,
+  events-by-class daily, remediations-by-outcome daily. Row policies
+  isolate by `cloud.account.uid`.
+- `docs/CLICKHOUSE_DATA_LAKE.md` — end-to-end hero use case walking
+  through ingest → lake → detect → replay → close-loop.
+- `docs/images/clickhouse-data-lake.svg` +
+  `docs/diagrams/clickhouse-data-lake.mmd` — architecture diagram of the
+  closed loop.
+- README gets a hero subsection pointing at all of the above.
+
+Skill counts move from 117 → 118 total and 3 → 4 source.
+
 ## [0.11.0] — 2026-05-11 — Vendor breadth + AI-native depth + trust posture
 
 Skills count on `main`: **112** (15 ingest + 3 sources, 5 discover, 59 detect,

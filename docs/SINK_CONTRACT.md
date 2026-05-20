@@ -78,7 +78,11 @@ Sink skills are write-capable, so they must remain operator-reviewable:
 ## Current shipped sinks
 
 - `sink-snowflake-jsonl`
-- `sink-clickhouse-jsonl`
+- `sink-clickhouse-jsonl` — paired with the read-side
+  `source-clickhouse-query` skill and the
+  [`packs/clickhouse/`](../packs/clickhouse/) DDL pack (findings / events /
+  evidence / audit tables, materialized views, row-level policies) for the
+  end-to-end [security data lake hero use case](CLICKHOUSE_DATA_LAKE.md)
 - `sink-s3-jsonl`
 
 These are the current reference implementations for future sink work.
