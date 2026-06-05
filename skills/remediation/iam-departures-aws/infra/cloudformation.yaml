@@ -9,6 +9,10 @@ Parameters:
     Type: String
     Description: S3 bucket name for manifests and audit logs
     AllowedPattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
+  AccessLogBucketName:
+    Type: String
+    Description: Existing central S3 bucket that receives server access logs for the remediation bucket
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
   KmsKeyArn:
     Type: String
     Description: KMS key ARN for S3 encryption
@@ -39,6 +43,14 @@ Parameters:
     Type: String
     Default: lambda/iam-departures-worker.zip
     Description: S3 key for Lambda worker deployment package
+  LambdaSubnetIds:
+    Type: CommaDelimitedList
+    Description: >-
+      Private subnet IDs for parser and worker Lambda VPC configuration. Subnets
+      need AWS service endpoints or NAT egress.
+  LambdaSecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security group IDs for parser and worker Lambda VPC configuration.
   AlertEmail:
     Type: String
     Default: ''
@@ -77,6 +89,9 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucketName
+        LogFilePrefix: iam-departures/remediation/
       LifecycleConfiguration:
         Rules:
           - Id: ArchiveAuditLogs
@@ -483,6 +498,9 @@ Resources:
           IAM_CROSS_ACCOUNT_ROLE: !Ref CrossAccountRoleName
       TracingConfig:
         Mode: Active
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds: !Ref LambdaSecurityGroupIds
       Tags:
         - Key: Project
           Value: iam-departures-aws
@@ -513,6 +531,9 @@ Resources:
           KMS_KEY_ARN: !Ref KmsKeyArn
       TracingConfig:
         Mode: Active
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds: !Ref LambdaSecurityGroupIds
       Tags:
         - Key: Project
           Value: iam-departures-aws
