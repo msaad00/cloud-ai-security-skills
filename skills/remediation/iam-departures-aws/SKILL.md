@@ -268,7 +268,11 @@ aws cloudformation deploy \
   --template-file infra/cloudformation.yaml \
   --stack-name iam-departures-aws \
   --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides OrgId=o-abc123def4 ...
+  --parameter-overrides \
+    OrgId=o-abc123def4 \
+    AccessLogBucketName=my-central-s3-access-logs \
+    LambdaSubnetIds=subnet-0123456789abcdef0,subnet-abcdef01234567890 \
+    LambdaSecurityGroupIds=sg-0123456789abcdef0 ...
 
 # Terraform
 cd infra/terraform

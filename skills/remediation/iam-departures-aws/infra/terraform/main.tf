@@ -29,6 +29,15 @@ variable "remediation_bucket" {
   }
 }
 
+variable "access_log_bucket" {
+  description = "Existing central S3 bucket that receives server access logs for the remediation bucket"
+  type        = string
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", var.access_log_bucket))
+    error_message = "Access log bucket name must be valid S3 naming"
+  }
+}
+
 variable "kms_key_arn" {
   description = "KMS key ARN for S3 encryption"
   type        = string
@@ -81,6 +90,24 @@ variable "worker_code_s3_key" {
   default     = "lambda/iam-departures-worker.zip"
 }
 
+variable "lambda_subnet_ids" {
+  description = "Private subnet IDs for parser and worker Lambda VPC configuration. Subnets need AWS service endpoints or NAT egress."
+  type        = list(string)
+  validation {
+    condition     = alltrue([for subnet_id in var.lambda_subnet_ids : can(regex("^subnet-[A-Za-z0-9]+$", subnet_id))])
+    error_message = "Lambda subnet IDs must look like AWS subnet IDs."
+  }
+}
+
+variable "lambda_security_group_ids" {
+  description = "Security group IDs for parser and worker Lambda VPC configuration"
+  type        = list(string)
+  validation {
+    condition     = alltrue([for security_group_id in var.lambda_security_group_ids : can(regex("^sg-[A-Za-z0-9]+$", security_group_id))])
+    error_message = "Lambda security group IDs must look like AWS security group IDs."
+  }
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
@@ -117,6 +144,21 @@ locals {
 resource "aws_s3_bucket" "remediation" {
   bucket = var.remediation_bucket
   tags   = var.tags
+
+  lifecycle {
+    precondition {
+      condition     = var.kms_key_arn != ""
+      error_message = "server_side_encryption_configuration { is managed by aws_s3_bucket_server_side_encryption_configuration.remediation."
+    }
+    precondition {
+      condition     = var.remediation_bucket != ""
+      error_message = "versioning { enabled = true } is managed by aws_s3_bucket_versioning.remediation."
+    }
+    precondition {
+      condition     = var.access_log_bucket != ""
+      error_message = "logging { target_bucket = access_log_bucket } is managed by aws_s3_bucket_logging.remediation."
+    }
+  }
 }
 
 resource "aws_s3_bucket_versioning" "remediation" {
@@ -148,6 +190,12 @@ resource "aws_s3_bucket_public_access_block" "remediation" {
 resource "aws_s3_bucket_notification" "eventbridge" {
   bucket      = aws_s3_bucket.remediation.id
   eventbridge = true
+}
+
+resource "aws_s3_bucket_logging" "remediation" {
+  bucket        = aws_s3_bucket.remediation.id
+  target_bucket = var.access_log_bucket
+  target_prefix = "iam-departures/remediation/"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "remediation" {
@@ -301,9 +349,9 @@ resource "aws_iam_role_policy" "parser" {
         Resource = "*"
       },
       {
-        Sid    = "CloudWatchLogs"
-        Effect = "Allow"
-        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Sid      = "CloudWatchLogs"
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/lambda/iam-departures-parser*"
       }
     ]
@@ -381,9 +429,9 @@ resource "aws_iam_role_policy" "worker" {
         }
       },
       {
-        Sid    = "CloudWatchLogs"
-        Effect = "Allow"
-        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Sid      = "CloudWatchLogs"
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/lambda/iam-departures-worker*"
       }
     ]
@@ -433,9 +481,9 @@ resource "aws_iam_role_policy" "sfn" {
       },
       {
         # WILDCARD_OK: X-Ray telemetry APIs require Resource = "*".
-        Sid    = "XRayTracing"
-        Effect = "Allow"
-        Action = ["xray:PutTraceSegments", "xray:PutTelemetryRecords", "xray:GetSamplingRules", "xray:GetSamplingTargets"]
+        Sid      = "XRayTracing"
+        Effect   = "Allow"
+        Action   = ["xray:PutTraceSegments", "xray:PutTelemetryRecords", "xray:GetSamplingRules", "xray:GetSamplingTargets"]
         Resource = "*"
       }
     ]
@@ -593,6 +641,11 @@ resource "aws_lambda_function" "parser" {
     mode = "Active"
   }
 
+  vpc_config {
+    subnet_ids         = var.lambda_subnet_ids
+    security_group_ids = var.lambda_security_group_ids
+  }
+
   tags = var.tags
 }
 
@@ -617,15 +670,20 @@ resource "aws_lambda_function" "worker" {
 
   environment {
     variables = {
-      IAM_REMEDIATION_BUCKET     = var.remediation_bucket
-      IAM_AUDIT_DYNAMODB_TABLE   = var.audit_dynamodb_table
-      IAM_CROSS_ACCOUNT_ROLE     = var.cross_account_role_name
-      KMS_KEY_ARN                = var.kms_key_arn
+      IAM_REMEDIATION_BUCKET   = var.remediation_bucket
+      IAM_AUDIT_DYNAMODB_TABLE = var.audit_dynamodb_table
+      IAM_CROSS_ACCOUNT_ROLE   = var.cross_account_role_name
+      KMS_KEY_ARN              = var.kms_key_arn
     }
   }
 
   tracing_config {
     mode = "Active"
+  }
+
+  vpc_config {
+    subnet_ids         = var.lambda_subnet_ids
+    security_group_ids = var.lambda_security_group_ids
   }
 
   tags = var.tags

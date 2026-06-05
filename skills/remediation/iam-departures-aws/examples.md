@@ -10,8 +10,11 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
     RemediationBucket=my-security-remediation-bucket \
+    AccessLogBucketName=my-central-s3-access-logs \
     KmsKeyArn=arn:aws:kms:us-east-1:111111111111:key/abc-123 \
     OrgId=o-abc123def4 \
+    LambdaSubnetIds=subnet-0123456789abcdef0,subnet-abcdef01234567890 \
+    LambdaSecurityGroupIds=sg-0123456789abcdef0 \
   --region us-east-1
 
 # 2. Deploy the cross-account role to all member accounts via StackSets
