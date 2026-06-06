@@ -91,6 +91,7 @@ Read-only posture and benchmark evaluation skills.
 | Skill | Scope | Checks |
 |---|---|---:|
 | [`cspm-aws-cis-benchmark`](evaluation/cspm-aws-cis-benchmark/) | AWS | 18 |
+| [`evaluate-cis-aws-foundations-ocsf`](evaluation/evaluate-cis-aws-foundations-ocsf/) | AWS Config OCSF | 12 |
 | [`cspm-gcp-cis-benchmark`](evaluation/cspm-gcp-cis-benchmark/) | GCP | 7 |
 | [`cspm-azure-cis-benchmark`](evaluation/cspm-azure-cis-benchmark/) | Azure | 6 |
 | [`k8s-security-benchmark`](evaluation/k8s-security-benchmark/) | Kubernetes | 10 |

@@ -4,26 +4,26 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.11.0`
 - Registry updated: `2026-05-17`
-- Total shipped skills in registry: **119**
+- Total shipped skills in registry: **120**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **98** | — |
+| OCSF | 1.8.0 | **99** | — |
 | MITRE ATT&CK | v14 | **79** | 100% mapped coverage |
 | MITRE ATLAS | current | **17** | 100% mapped coverage |
-| CIS AWS Foundations | v3.0 | **5** | — |
+| CIS AWS Foundations | v3.0 | **6** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **6** | — |
 | CIS Kubernetes Benchmark | current | **2** | — |
 | CIS Docker Benchmark | current | **1** | — |
 | CIS Controls | v8 | **2** | — |
-| NIST CSF | 2.0 | **21** | 100% mapped coverage |
+| NIST CSF | 2.0 | **22** | 100% mapped coverage |
 | NIST AI RMF | current | **8** | — |
-| SOC 2 TSC | current | **21** | 100% mapped coverage |
+| SOC 2 TSC | current | **22** | 100% mapped coverage |
 | PCI DSS | 4.0 | **4** | 100% mapped coverage |
-| ISO 27001 | 2022 | **4** | — |
+| ISO 27001 | 2022 | **5** | — |
 | OWASP Top 10 | 2021 | **20** | — |
 | OWASP LLM Top 10 | current | **19** | — |
 | OWASP MCP Top 10 | current | **11** | — |
@@ -37,7 +37,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **98**
+Shipped skills mapped: **99**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -108,6 +108,7 @@ Shipped skills mapped: **98**
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`discover-environment`](../skills/discovery/discover-environment) | discovery | aws, azure, gcp, kubernetes, containers, multi | inventory, compute, storage, network, logging, clusters, ai-endpoints |
+| [`evaluate-cis-aws-foundations-ocsf`](../skills/evaluation/evaluate-cis-aws-foundations-ocsf) | evaluation | aws | storage, logging, network, security-services, config |
 | [`evaluate-nist-ai-rmf-govern`](../skills/evaluation/evaluate-nist-ai-rmf-govern) | evaluation | multi | ai-systems, policies, manifests |
 | [`evaluate-nist-ai-rmf-manage`](../skills/evaluation/evaluate-nist-ai-rmf-manage) | evaluation | multi | ai-systems, policies, manifests |
 | [`evaluate-nist-ai-rmf-map`](../skills/evaluation/evaluate-nist-ai-rmf-map) | evaluation | multi | ai-systems, policies, manifests |
@@ -264,13 +265,14 @@ Shipped skills mapped: **17**
 
 - Registry id: `cis-aws-v3`
 
-Shipped skills mapped: **5**
+Shipped skills mapped: **6**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`detect-aws-open-security-group`](../skills/detection/detect-aws-open-security-group) | detection | aws | security-groups, ingress-rules, cloudtrail |
 | [`detect-cloudtrail-disabled`](../skills/detection/detect-cloudtrail-disabled) | detection | aws | cloudtrail, audit-trails, logging |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
+| [`evaluate-cis-aws-foundations-ocsf`](../skills/evaluation/evaluate-cis-aws-foundations-ocsf) | evaluation | aws | storage, logging, network, security-services, config |
 | [`ingest-aws-config-ocsf`](../skills/ingestion/ingest-aws-config-ocsf) | ingestion | aws | configuration, security-posture, compliance-evidence |
 | [`remediate-aws-sg-revoke`](../skills/remediation/remediate-aws-sg-revoke) | remediation | aws | security-groups, ingress-rules, audit |
 
@@ -342,7 +344,7 @@ Shipped skills mapped: **2**
 - Asset classes in scope: identities, storage, logging, network, clusters, runtime, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **21**
+Shipped skills mapped: **22**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -351,6 +353,7 @@ Shipped skills mapped: **21**
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 | [`cspm-azure-cis-benchmark`](../skills/evaluation/cspm-azure-cis-benchmark) | evaluation | azure | identities, storage, logging, network |
 | [`cspm-gcp-cis-benchmark`](../skills/evaluation/cspm-gcp-cis-benchmark) | evaluation | gcp | identities, storage, logging, network |
+| [`evaluate-cis-aws-foundations-ocsf`](../skills/evaluation/evaluate-cis-aws-foundations-ocsf) | evaluation | aws | storage, logging, network, security-services, config |
 | [`gpu-cluster-security`](../skills/evaluation/gpu-cluster-security) | evaluation | aws, azure, gcp, kubernetes, containers, multi | gpu-fleets, clusters, containers, runtime, tenancy |
 | [`k8s-security-benchmark`](../skills/evaluation/k8s-security-benchmark) | evaluation | kubernetes | clusters, identities, network, logging |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
@@ -392,7 +395,7 @@ Shipped skills mapped: **8**
 - Asset classes in scope: access, logging, change, evidence, inventory, ai-endpoints
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **21**
+Shipped skills mapped: **22**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -400,6 +403,7 @@ Shipped skills mapped: **21**
 | [`discover-cloud-control-evidence`](../skills/discovery/discover-cloud-control-evidence) | discovery | aws, azure, gcp, multi | evidence, inventory, network-segmentation, logging, encryption, key-management, ai-endpoints |
 | [`discover-control-evidence`](../skills/discovery/discover-control-evidence) | discovery | multi | evidence, inventory, ai-endpoints |
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
+| [`evaluate-cis-aws-foundations-ocsf`](../skills/evaluation/evaluate-cis-aws-foundations-ocsf) | evaluation | aws | storage, logging, network, security-services, config |
 | [`model-serving-security`](../skills/evaluation/model-serving-security) | evaluation | aws, azure, gcp, multi | ai-endpoints, models, identities, network, logging, guardrails |
 | [`ingest-aws-config-ocsf`](../skills/ingestion/ingest-aws-config-ocsf) | ingestion | aws | configuration, security-posture, compliance-evidence |
 | [`sink-clickhouse-jsonl`](../skills/output/sink-clickhouse-jsonl) | output | clickhouse | findings, evidence, audit-logs, lakehouse |
@@ -438,13 +442,14 @@ Shipped skills mapped: **4**
 
 - Registry id: `iso-27001-2022`
 
-Shipped skills mapped: **4**
+Shipped skills mapped: **5**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
 | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark) | evaluation | aws | identities, storage, logging, network |
 | [`cspm-azure-cis-benchmark`](../skills/evaluation/cspm-azure-cis-benchmark) | evaluation | azure | identities, storage, logging, network |
 | [`cspm-gcp-cis-benchmark`](../skills/evaluation/cspm-gcp-cis-benchmark) | evaluation | gcp | identities, storage, logging, network |
+| [`evaluate-cis-aws-foundations-ocsf`](../skills/evaluation/evaluate-cis-aws-foundations-ocsf) | evaluation | aws | storage, logging, network, security-services, config |
 | [`ingest-aws-config-ocsf`](../skills/ingestion/ingest-aws-config-ocsf) | ingestion | aws | configuration, security-posture, compliance-evidence |
 
 ### OWASP Top 10 (2021)
