@@ -68,8 +68,8 @@ class ConfigItem:
     region: str
     time_ms: int
     configuration: dict[str, Any]
-    tags: dict[str, str]
-    relationships: list[dict[str, str]]
+    tags: dict[str, Any]
+    relationships: list[dict[str, Any]]
     source_uid: str
 
 
@@ -296,6 +296,22 @@ def _lower_keys(value: Any) -> Any:
     return value
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(k): v for k, v in value.items()}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _as_dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [_as_dict(item) for item in value if isinstance(item, dict)]
+
+
 def _get_ci(record: dict[str, Any]) -> ConfigItem | None:
     record_type = str(record.get("record_type") or "")
     class_uid = int(record.get("class_uid") or 0)
@@ -303,7 +319,7 @@ def _get_ci(record: dict[str, Any]) -> ConfigItem | None:
         return None
 
     if record_type == "aws_config_configuration_item":
-        resource = record.get("resource") if isinstance(record.get("resource"), dict) else {}
+        resource = _as_dict(record.get("resource"))
         return ConfigItem(
             resource_type=str(record.get("resource_type") or resource.get("type") or ""),
             resource_id=str(record.get("resource_id") or resource.get("uid") or ""),
@@ -311,18 +327,19 @@ def _get_ci(record: dict[str, Any]) -> ConfigItem | None:
             account_uid=str(record.get("account_uid") or ""),
             region=str(record.get("region") or resource.get("region") or ""),
             time_ms=int(record.get("time_ms") or 0),
-            configuration=record.get("configuration") if isinstance(record.get("configuration"), dict) else {},
-            tags=record.get("tags") if isinstance(record.get("tags"), dict) else {},
-            relationships=record.get("relationships") if isinstance(record.get("relationships"), list) else [],
+            configuration=_as_dict(record.get("configuration")),
+            tags=_as_dict(record.get("tags")),
+            relationships=_as_dict_list(record.get("relationships")),
             source_uid=str(record.get("event_uid") or ""),
         )
 
-    unmapped = record.get("unmapped") if isinstance(record.get("unmapped"), dict) else {}
-    aws_config = unmapped.get("aws_config") if isinstance(unmapped.get("aws_config"), dict) else {}
-    resources = record.get("resources") if isinstance(record.get("resources"), list) else []
-    resource = resources[0] if resources and isinstance(resources[0], dict) else {}
-    cloud = record.get("cloud") if isinstance(record.get("cloud"), dict) else {}
-    account = cloud.get("account") if isinstance(cloud.get("account"), dict) else {}
+    unmapped = _as_dict(record.get("unmapped"))
+    aws_config = _as_dict(unmapped.get("aws_config"))
+    resources = _as_list(record.get("resources"))
+    resource = _as_dict(resources[0]) if resources else {}
+    cloud = _as_dict(record.get("cloud"))
+    account = _as_dict(cloud.get("account"))
+    metadata = _as_dict(record.get("metadata"))
     return ConfigItem(
         resource_type=str(resource.get("type") or ""),
         resource_id=str(resource.get("uid") or resource.get("name") or ""),
@@ -330,10 +347,10 @@ def _get_ci(record: dict[str, Any]) -> ConfigItem | None:
         account_uid=str(account.get("uid") or ""),
         region=str(resource.get("region") or cloud.get("region") or ""),
         time_ms=int(record.get("time") or 0),
-        configuration=aws_config.get("configuration") if isinstance(aws_config.get("configuration"), dict) else {},
-        tags=aws_config.get("tags") if isinstance(aws_config.get("tags"), dict) else {},
-        relationships=aws_config.get("relationships") if isinstance(aws_config.get("relationships"), list) else [],
-        source_uid=str(record.get("metadata", {}).get("uid") or ""),
+        configuration=_as_dict(aws_config.get("configuration")),
+        tags=_as_dict(aws_config.get("tags")),
+        relationships=_as_dict_list(aws_config.get("relationships")),
+        source_uid=str(metadata.get("uid") or ""),
     )
 
 
@@ -355,15 +372,15 @@ def _get_compliance(record: dict[str, Any]) -> ConfigCompliance | None:
             description=str(record.get("description") or ""),
         )
 
-    evidence = record.get("evidence") if isinstance(record.get("evidence"), dict) else {}
+    evidence = _as_dict(record.get("evidence"))
     if evidence.get("source") != "AWS Config":
         return None
-    compliance = record.get("compliance") if isinstance(record.get("compliance"), dict) else {}
-    resources = record.get("resources") if isinstance(record.get("resources"), list) else []
-    resource = resources[0] if resources and isinstance(resources[0], dict) else {}
-    cloud = record.get("cloud") if isinstance(record.get("cloud"), dict) else {}
-    account = cloud.get("account") if isinstance(cloud.get("account"), dict) else {}
-    finding_info = record.get("finding_info") if isinstance(record.get("finding_info"), dict) else {}
+    compliance = _as_dict(record.get("compliance"))
+    resources = _as_list(record.get("resources"))
+    resource = _as_dict(resources[0]) if resources else {}
+    cloud = _as_dict(record.get("cloud"))
+    account = _as_dict(cloud.get("account"))
+    finding_info = _as_dict(record.get("finding_info"))
     return ConfigCompliance(
         rule_name=str(evidence.get("rule_name") or compliance.get("control") or ""),
         status=str(compliance.get("status") or ""),
@@ -537,9 +554,9 @@ def _has_unrestricted_port(config: dict[str, Any], port: int) -> bool:
         p = _lower_keys(permission)
         if not isinstance(p, dict) or not _permission_covers_port(p, port):
             continue
-        ranges = []
-        ranges.extend(p.get("ipranges") if isinstance(p.get("ipranges"), list) else [])
-        ranges.extend(p.get("ipv6ranges") if isinstance(p.get("ipv6ranges"), list) else [])
+        ranges: list[Any] = []
+        ranges.extend(_as_list(p.get("ipranges")))
+        ranges.extend(_as_list(p.get("ipv6ranges")))
         if any(isinstance(entry, dict) and _cidr_open(entry) for entry in ranges):
             return True
     return False
