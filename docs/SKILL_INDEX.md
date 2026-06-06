@@ -1,6 +1,6 @@
 # Skill index — find a skill fast
 
-The same 119 skill bundles, pivoted three ways:
+The same 120 skill bundles, pivoted three ways:
 
 1. **[By environment](#by-environment)** — pick a cloud or platform, see every skill that touches it.
 2. **[By purpose](#by-purpose)** — pick a layer (ingest / discover / detect / evaluate / remediate / view / output / source).
@@ -15,7 +15,7 @@ not do, and what it talks to.
 
 ## By environment
 
-### AWS — 15 skills
+### AWS — 16 skills
 
 | Layer | Skill | What it does |
 |---|---|---|
@@ -32,6 +32,7 @@ not do, and what it talks to.
 | Detect | [`detect-cloudtrail-disabled`](../skills/detection/detect-cloudtrail-disabled/) | T1562.001 — CloudTrail StopLogging / DeleteTrail |
 | Detect | [`detect-s3-cross-account-copy`](../skills/detection/detect-s3-cross-account-copy/) | T1537 — S3 cross-account exfiltration |
 | Evaluate | [`cspm-aws-cis-benchmark`](../skills/evaluation/cspm-aws-cis-benchmark/) | CIS AWS Foundations v3 — 50% control coverage |
+| Evaluate | [`evaluate-cis-aws-foundations-ocsf`](../skills/evaluation/evaluate-cis-aws-foundations-ocsf/) | CIS AWS Foundations v3 — AWS Config OCSF evidence evaluator |
 | Remediate | [`iam-departures-aws`](../skills/remediation/iam-departures-aws/) | HITL — disable / delete IAM users on departure |
 | Remediate | [`remediate-aws-sg-revoke`](../skills/remediation/remediate-aws-sg-revoke/) | HITL — revoke open SG ingress, dry-run-first |
 
@@ -180,6 +181,7 @@ not do, and what it talks to.
 | Output | [`sink-clickhouse-jsonl`](../skills/output/sink-clickhouse-jsonl/) | Append-only ClickHouse sink |
 | Output | [`sink-s3-jsonl`](../skills/output/sink-s3-jsonl/) | Append-only S3 sink |
 | Output | [`sink-snowflake-jsonl`](../skills/output/sink-snowflake-jsonl/) | Append-only Snowflake sink |
+| Source | [`source-clickhouse-query`](../skills/ingestion/source-clickhouse-query/) | ClickHouse warehouse adapter |
 | Source | [`source-databricks-query`](../skills/ingestion/source-databricks-query/) | Databricks SQL warehouse adapter |
 | Source | [`source-s3-select`](../skills/ingestion/source-s3-select/) | S3 Select adapter |
 | Source | [`source-snowflake-query`](../skills/ingestion/source-snowflake-query/) | Snowflake warehouse adapter |
@@ -188,16 +190,16 @@ not do, and what it talks to.
 
 | Layer | Count | Index |
 |---|---:|---|
-| Ingest | 16 | [`skills/ingestion/`](../skills/ingestion/) (excludes the 3 warehouse sources below) |
+| Ingest | 18 | [`skills/ingestion/`](../skills/ingestion/) (excludes the 4 warehouse sources below) |
 | Discover | 5 | [`skills/discovery/`](../skills/discovery/) |
-| Detect | 51 | [`skills/detection/`](../skills/detection/) |
-| Evaluate | 11 | [`skills/evaluation/`](../skills/evaluation/) |
+| Detect | 64 | [`skills/detection/`](../skills/detection/) |
+| Evaluate | 12 | [`skills/evaluation/`](../skills/evaluation/) |
 | Remediate | 12 | [`skills/remediation/`](../skills/remediation/) |
 | View | 2 | [`skills/view/`](../skills/view/) |
 | Output | 3 | [`skills/output/`](../skills/output/) |
-| Source | 3 | warehouse adapters: `source-databricks-query`, `source-s3-select`, `source-snowflake-query` (filed under `skills/ingestion/` on disk) |
+| Source | 4 | warehouse adapters: `source-clickhouse-query`, `source-databricks-query`, `source-s3-select`, `source-snowflake-query` (filed under `skills/ingestion/` on disk) |
 
-Total = 16 + 5 + 51 + 11 + 12 + 2 + 3 + 3 = **103**.
+Total = 18 + 5 + 64 + 12 + 12 + 2 + 3 + 4 = **120**.
 
 ## By framework
 
@@ -217,8 +219,8 @@ Quick orientation:
 | OWASP Top 10 (web) | `detect-web-*` |
 | OWASP LLM Top 10 | `detect-prompt-injection-*`, `detect-system-prompt-extraction`, `detect-tool-output-*`, `detect-agent-credential-leak-mcp`, `detect-mcp-adversarial-input-corpus`, `detect-mcp-model-artifact-tampering`, `detect-mcp-model-token-flood`, `detect-mcp-plugin-supply-chain`, `detect-mcp-unbounded-tool-output`, `model-serving-security` |
 | OWASP MCP Top 10 | `detect-mcp-tool-drift`, `detect-mcp-shadow-tool-injection`, `detect-mcp-plugin-supply-chain`, `detect-mcp-adversarial-input-corpus`, `detect-mcp-unbounded-tool-output`, `detect-agent-credential-leak-mcp`, `detect-prompt-injection-mcp-proxy`, `remediate-mcp-tool-quarantine` |
-| CIS AWS / GCP / Azure / K8s / Containers | `cspm-*`, `container-security`, `k8s-security-benchmark` |
-| NIST CSF 2.0 | `cspm-*` benchmark mappings + AI runtime evaluators |
+| CIS AWS / GCP / Azure / K8s / Containers | `cspm-*`, `evaluate-cis-aws-foundations-ocsf`, `container-security`, `k8s-security-benchmark` |
+| NIST CSF 2.0 | `cspm-*`, `evaluate-cis-aws-foundations-ocsf` benchmark mappings + AI runtime evaluators |
 | NIST AI RMF 1.0 | `evaluate-nist-ai-rmf-{govern,map,measure,manage}` (manifest evaluators) + cross-tagged AI runtime skills |
 | SOC 2 / ISO 27001 / PCI / FedRAMP | rolled up via `discover-control-evidence` |
 | CycloneDX ML-BOM | `discover-ai-bom` |
