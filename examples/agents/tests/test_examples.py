@@ -150,3 +150,80 @@ class TestHitlGateReachable:
         )
         assert result.returncode == 0
         assert '"dry_run"' in result.stdout
+
+
+class TestLangGraphSocWorkflow:
+    """Regression coverage for the expanded SOC workflow graph."""
+
+    SCRIPT = EXAMPLES / "langgraph_security_graph.py"
+    EXPECTED_TRACE = [
+        "ingest",
+        "normalize",
+        "enrich",
+        "correlate",
+        "confidence",
+        "map",
+        "review",
+        "remediate",
+        "writeback",
+    ]
+
+    def _run(self, *, approved: bool = False) -> tuple[dict, subprocess.CompletedProcess[str]]:
+        env = {**os.environ}
+        if approved:
+            env.update({
+                "DEMO_APPROVE": "yes",
+                "DEMO_APPROVER": "reviewer@example.com",
+                "DEMO_TICKET": "SEC-LANGGRAPH-1",
+            })
+        else:
+            env.pop("DEMO_APPROVE", None)
+            env.pop("DEMO_APPROVER", None)
+            env.pop("DEMO_TICKET", None)
+        result = subprocess.run(
+            [sys.executable, str(self.SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout), result
+
+    def test_trace_covers_end_to_end_soc_dag(self):
+        summary, _ = self._run()
+        assert summary["trace"] == self.EXPECTED_TRACE
+        assert summary["findings_count"] == 1
+        assert summary["confidence_scores"][0]["reason_codes"] == [
+            "rule_match",
+            "stable_resource_uid",
+            "identity_correlation",
+            "high_epss",
+        ]
+        framework_map = summary["framework_maps"][0]
+        assert framework_map["mitre_attack"] == ["T1098"]
+        assert framework_map["cvss"]["severity"] == "high"
+        assert framework_map["epss_percentile"] == 0.91
+        assert framework_map["kev_listed"] is False
+
+    def test_no_approval_blocks_remediation_but_writes_audit_and_eval(self):
+        summary, result = self._run()
+        assert summary["review"]["status"] == "blocked"
+        assert summary["remediation"]["status"] == "skipped"
+        assert "planned_steps" not in summary["remediation"]
+        assert summary["audit"]["event"] == "agentic_soc_workflow"
+        assert summary["audit"]["remediation_status"] == "skipped"
+        assert summary["eval"]["status"] == "blocked"
+        assert '"node": "review"' in result.stderr
+        assert '"status": "blocked"' in result.stderr
+
+    def test_approval_allows_dry_run_only(self):
+        summary, _ = self._run(approved=True)
+        assert summary["review"]["status"] == "approved"
+        assert summary["review"]["approval"]["ticket_id"] == "SEC-LANGGRAPH-1"
+        assert summary["remediation"]["status"] == "dry_run"
+        assert summary["remediation"]["dry_run"] is True
+        assert summary["remediation"]["skill"] == "iam-departures-aws"
+        assert summary["audit"]["remediation_status"] == "dry_run"
+        assert summary["eval"]["status"] == "pass"
