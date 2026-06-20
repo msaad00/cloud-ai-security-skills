@@ -3,8 +3,8 @@
 The production shape this models is:
 
     ingest -> normalize -> enrich -> correlate -> confidence score
-    -> MITRE/CVSS/EPSS/KEV map -> analyst review -> dry-run remediation
-    -> audit/eval writeback
+    -> MITRE/CVSS/EPSS/KEV map -> bounded LLM triage
+    -> analyst review -> dry-run remediation -> audit/eval writeback
 
 Each node is intentionally a thin, deterministic wrapper around what a real
 LangGraph node would call through MCP, CLI, CI, runner, or library surfaces.
@@ -12,10 +12,9 @@ LangGraph owns state, branches, retries, and checkpointing. The skill bundles
 still own facts, schemas, scores, mappings, dry-run behavior, HITL gates, and
 audit/eval artifacts.
 
-The LangGraph SDK is not pinned as a repo dependency. This module stays
-runnable offline and emits the same deterministic trace a graph runner would
-produce. Real code would replace `run_graph` with `StateGraph` assembly and
-keep these node functions as graph nodes.
+The LangGraph SDK is optional. This module stays runnable offline, and
+`DEMO_LANGGRAPH_RUNTIME=yes` compiles the same nodes into a real StateGraph
+with conditional edges for HITL, retry, escalation, and writeback routing.
 
 Run:
 
@@ -50,11 +49,18 @@ WorkflowStage = Literal[
     "correlate",
     "confidence",
     "map",
+    "llm_triage",
     "review",
     "remediate",
+    "retry_queue",
+    "escalate",
     "writeback",
 ]
 ApiErrorClassification = Literal["retryable", "terminal"]
+LlmMode = Literal["deterministic_offline", "external_llm_optional"]
+ReviewRoute = Literal["remediate", "writeback"]
+RemediationRoute = Literal["retry_queue", "escalate", "writeback"]
+AgentKind = Literal["deterministic_skill", "llm_optional", "human_gate", "governance"]
 
 
 class CallerContext(TypedDict):
@@ -107,6 +113,41 @@ class FrameworkMap(TypedDict):
     epss_percentile: float
     kev_listed: bool
     controls: list[str]
+
+
+class AgentHarnessConfig(TypedDict):
+    mode: LlmMode
+    provider: str
+    model: str
+    allowed_outputs: list[str]
+    prompt_hash: str
+
+
+class AgentDefinition(TypedDict):
+    agent_id: str
+    kind: AgentKind
+    owns: list[WorkflowStage]
+    authority: str
+    allowed_outputs: list[str]
+    forbidden_outputs: list[str]
+
+
+class AgentRunRecord(TypedDict):
+    run_id: str
+    agent_id: str
+    stage: WorkflowStage
+    authority: str
+    input_hash: str
+    output_hash: str
+
+
+class AgentRecommendation(TypedDict):
+    finding_uid: str
+    priority: Literal["critical", "high", "medium", "low"]
+    recommended_action: Literal["request_approval", "investigate", "close"]
+    rationale: str
+    generated_by: str
+    output_hash: str
 
 
 class ReviewDecision(TypedDict):
@@ -164,8 +205,14 @@ class GraphState(TypedDict, total=False):
     correlations: list[Correlation]
     confidence_scores: list[ConfidenceScore]
     framework_maps: list[FrameworkMap]
+    harness_config: AgentHarnessConfig
+    agent_manifest: list[AgentDefinition]
+    agent_runs: list[AgentRunRecord]
+    agent_recommendations: list[AgentRecommendation]
     review_decision: ReviewDecision
     remediation_result: RemediationResult
+    retry_record: dict[str, Any]
+    escalation_record: dict[str, Any]
     integrity: IntegrityRecord
     idempotency: IdempotencyRecord
     api_errors: list[ApiErrorRecord]
@@ -183,6 +230,137 @@ def _emit_node(stage: WorkflowStage, **payload: Any) -> None:
 def _stable_hash(payload: Any) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _agent_manifest() -> list[AgentDefinition]:
+    return [
+        {
+            "agent_id": "evidence-agent",
+            "kind": "deterministic_skill",
+            "owns": ["ingest", "normalize", "enrich", "correlate"],
+            "authority": "read_only_evidence_collection",
+            "allowed_outputs": ["raw_events", "ocsf_events", "findings", "correlations"],
+            "forbidden_outputs": ["approval", "write_intent", "policy_override"],
+        },
+        {
+            "agent_id": "risk-map-agent",
+            "kind": "deterministic_skill",
+            "owns": ["confidence", "map"],
+            "authority": "deterministic_security_facts",
+            "allowed_outputs": ["confidence_scores", "framework_maps"],
+            "forbidden_outputs": ["approval", "write_intent", "audit_chain_mutation"],
+        },
+        {
+            "agent_id": "triage-agent",
+            "kind": "llm_optional",
+            "owns": ["llm_triage"],
+            "authority": "rank_summarize_draft_only",
+            "allowed_outputs": ["rank_findings", "summarize_evidence", "draft_analyst_note", "request_human_review"],
+            "forbidden_outputs": ["approval", "cvss", "mitre", "epss", "kev", "write_intent", "audit_chain_mutation"],
+        },
+        {
+            "agent_id": "review-gate",
+            "kind": "human_gate",
+            "owns": ["review"],
+            "authority": "operator_attested_approval_only",
+            "allowed_outputs": ["approved", "blocked", "approval_context"],
+            "forbidden_outputs": ["synthetic_approval", "model_attested_approval"],
+        },
+        {
+            "agent_id": "remediation-planner",
+            "kind": "deterministic_skill",
+            "owns": ["remediate"],
+            "authority": "dry_run_after_hitl_only",
+            "allowed_outputs": ["dry_run_plan", "idempotency_key", "retry_decision"],
+            "forbidden_outputs": ["apply", "ungated_write", "new_idempotency_key_on_retry"],
+        },
+        {
+            "agent_id": "retry-coordinator",
+            "kind": "governance",
+            "owns": ["retry_queue"],
+            "authority": "bounded_retry_same_idempotency_key",
+            "allowed_outputs": ["retry_record"],
+            "forbidden_outputs": ["new_write_intent", "approval_bypass"],
+        },
+        {
+            "agent_id": "escalation-agent",
+            "kind": "governance",
+            "owns": ["escalate"],
+            "authority": "terminal_error_human_queue",
+            "allowed_outputs": ["escalation_record"],
+            "forbidden_outputs": ["auto_apply", "silent_drop"],
+        },
+        {
+            "agent_id": "audit-writer",
+            "kind": "deterministic_skill",
+            "owns": ["writeback"],
+            "authority": "append_only_audit_eval",
+            "allowed_outputs": ["audit_record", "eval_record", "state_hash"],
+            "forbidden_outputs": ["overwrite_history", "remove_agent_run"],
+        },
+    ]
+
+
+def _agent_by_id(agent_id: str) -> AgentDefinition:
+    for agent in _agent_manifest():
+        if agent["agent_id"] == agent_id:
+            return agent
+    raise KeyError(agent_id)
+
+
+def _record_agent_run(
+    state: GraphState,
+    *,
+    agent_id: str,
+    stage: WorkflowStage,
+    inputs: Any,
+    outputs: Any,
+) -> None:
+    state.setdefault("agent_manifest", _agent_manifest())
+    agent = _agent_by_id(agent_id)
+    runs = state.setdefault("agent_runs", [])
+    runs.append({
+        "run_id": f"run-{len(runs) + 1:02d}-{agent_id}",
+        "agent_id": agent_id,
+        "stage": stage,
+        "authority": agent["authority"],
+        "input_hash": _stable_hash(inputs)[:16],
+        "output_hash": _stable_hash(outputs)[:16],
+    })
+
+
+def _agent_harness_config() -> AgentHarnessConfig:
+    """Describe the LLM/agent harness without requiring a live model."""
+    mode: LlmMode = (
+        "external_llm_optional"
+        if os.environ.get("DEMO_EXTERNAL_LLM_ALLOWED") == "yes"
+        else "deterministic_offline"
+    )
+    provider = os.environ.get("DEMO_LLM_PROVIDER", "deterministic-local")
+    model = os.environ.get("DEMO_LLM_MODEL", "policy-bounded-triage-v1")
+    allowed_outputs = [
+        "rank_findings",
+        "summarize_evidence",
+        "draft_analyst_note",
+        "request_human_review",
+    ]
+    return {
+        "mode": mode,
+        "provider": provider,
+        "model": model,
+        "allowed_outputs": allowed_outputs,
+        "prompt_hash": _stable_hash({
+            "system": "llm may rank, summarize, and draft only",
+            "forbidden": [
+                "approve",
+                "set_security_facts",
+                "change_cvss_mitre_epss_kev",
+                "call_write_tools",
+                "write_audit",
+            ],
+            "allowed_outputs": allowed_outputs,
+        })[:16],
+    }
 
 
 def _classify_api_error(status_code: int) -> ApiErrorClassification:
@@ -217,9 +395,25 @@ def _append_trace(state: GraphState, stage: WorkflowStage) -> None:
     state.setdefault("trace", []).append(stage)
 
 
+def route_after_review(state: GraphState) -> ReviewRoute:
+    decision = state.get("review_decision") or {}
+    return "remediate" if decision.get("status") == "approved" else "writeback"
+
+
+def route_after_remediation(state: GraphState) -> RemediationRoute:
+    result = state.get("remediation_result") or {}
+    reason = result.get("reason")
+    if reason == "retryable_api_error":
+        return "retry_queue"
+    if reason == "terminal_api_error":
+        return "escalate"
+    return "writeback"
+
+
 def ingest_node(state: GraphState) -> GraphState:
     """Collect raw evidence from an approved source surface."""
     _append_trace(state, "ingest")
+    state.setdefault("agent_manifest", _agent_manifest())
     raw_events = state.get("raw_events") or [{
         "source": "cloudtrail",
         "event_name": "CreateAccessKey",
@@ -307,6 +501,19 @@ def correlate_node(state: GraphState) -> GraphState:
             "window_minutes": 15,
         })
     state["correlations"] = correlations
+    _record_agent_run(
+        state,
+        agent_id="evidence-agent",
+        stage="correlate",
+        inputs={
+            "raw_events": state.get("raw_events"),
+            "ocsf_events": state.get("ocsf_events"),
+        },
+        outputs={
+            "findings": state.get("findings"),
+            "correlations": correlations,
+        },
+    )
     _emit_node("correlate", joins=["identity", "resource", "tool"], correlations=len(correlations))
     return state
 
@@ -347,7 +554,76 @@ def map_node(state: GraphState) -> GraphState:
             "controls": ["CIS-1.4", "NIST-CSF-PR.AA"],
         })
     state["framework_maps"] = maps
+    _record_agent_run(
+        state,
+        agent_id="risk-map-agent",
+        stage="map",
+        inputs={
+            "findings": state.get("findings"),
+            "enrichments": state.get("enrichments"),
+            "confidence_scores": state.get("confidence_scores"),
+        },
+        outputs={"framework_maps": maps},
+    )
     _emit_node("map", frameworks=["MITRE", "CVSS", "EPSS", "KEV", "CIS", "NIST"], mappings=len(maps))
+    return state
+
+
+def llm_triage_node(state: GraphState) -> GraphState:
+    """Bounded agent layer: rank and summarize only, never decide facts."""
+    _append_trace(state, "llm_triage")
+    harness_config = _agent_harness_config()
+    confidence_by_uid = {
+        score["finding_uid"]: score["score"]
+        for score in state.get("confidence_scores") or []
+    }
+    recommendations = []
+    for mapped in state.get("framework_maps") or []:
+        finding_uid = mapped["finding_uid"]
+        confidence = confidence_by_uid.get(finding_uid, 0.0)
+        recommended_action: Literal["request_approval", "investigate", "close"] = (
+            "request_approval" if confidence >= 0.90 else "investigate"
+        )
+        priority: Literal["critical", "high", "medium", "low"] = (
+            "high" if mapped["cvss"]["base_score"] >= 7.0 else "medium"
+        )
+        recommendation_payload = {
+            "finding_uid": finding_uid,
+            "priority": priority,
+            "recommended_action": recommended_action,
+            "confidence": confidence,
+            "provider": harness_config["provider"],
+            "model": harness_config["model"],
+        }
+        recommendations.append({
+            "finding_uid": finding_uid,
+            "priority": priority,
+            "recommended_action": recommended_action,
+            "rationale": "Deterministic triage from rule confidence, CVSS, EPSS, and mapping coverage.",
+            "generated_by": f"{harness_config['provider']}:{harness_config['model']}",
+            "output_hash": _stable_hash(recommendation_payload)[:16],
+        })
+    state["harness_config"] = harness_config
+    state["agent_recommendations"] = recommendations
+    _record_agent_run(
+        state,
+        agent_id="triage-agent",
+        stage="llm_triage",
+        inputs={
+            "confidence_scores": state.get("confidence_scores"),
+            "framework_maps": state.get("framework_maps"),
+            "harness_config": harness_config,
+        },
+        outputs={"agent_recommendations": recommendations},
+    )
+    _emit_node(
+        "llm_triage",
+        mode=harness_config["mode"],
+        provider=harness_config["provider"],
+        model=harness_config["model"],
+        recommendations=len(recommendations),
+        authority="rank_summarize_draft_only",
+    )
     return state
 
 
@@ -371,7 +647,19 @@ def analyst_review_node(state: GraphState) -> GraphState:
             "reason": "missing approval_context",
             "approval": None,
         }
+        state["remediation_result"] = {
+            "status": "skipped",
+            "skill": ALLOWED_SKILLS_REMEDIATION,
+            "reason": "review blocked; remediation node not routed",
+        }
     state["review_decision"] = decision
+    _record_agent_run(
+        state,
+        agent_id="review-gate",
+        stage="review",
+        inputs={"agent_recommendations": state.get("agent_recommendations")},
+        outputs=decision,
+    )
     _emit_node("review", status=decision["status"], reason=decision["reason"])
     return state
 
@@ -387,6 +675,13 @@ def dry_run_remediation_node(state: GraphState) -> GraphState:
             "skill": ALLOWED_SKILLS_REMEDIATION,
             "reason": "no approval_context; HITL gate blocked remediation",
         }
+        _record_agent_run(
+            state,
+            agent_id="remediation-planner",
+            stage="remediate",
+            inputs={"review_decision": decision},
+            outputs=state["remediation_result"],
+        )
         _emit_node("remediate", status="skipped", reason="hitl_not_approved")
         return state
 
@@ -422,6 +717,13 @@ def dry_run_remediation_node(state: GraphState) -> GraphState:
             "idempotency_key": remediation_key,
             "approval": approval,
         }
+        _record_agent_run(
+            state,
+            agent_id="remediation-planner",
+            stage="remediate",
+            inputs=approved_payload,
+            outputs=state["remediation_result"],
+        )
         _emit_node("remediate", status="skipped", reason="duplicate_idempotency_key", idempotency_key=remediation_key)
         return state
 
@@ -442,6 +744,13 @@ def dry_run_remediation_node(state: GraphState) -> GraphState:
             "retry_decision": retry_decision,
             "approval": approval,
         }
+        _record_agent_run(
+            state,
+            agent_id="remediation-planner",
+            stage="remediate",
+            inputs={**approved_payload, "api_error": api_error},
+            outputs=state["remediation_result"],
+        )
         _emit_node(
             "remediate",
             status="skipped",
@@ -460,6 +769,13 @@ def dry_run_remediation_node(state: GraphState) -> GraphState:
         "approval": approval,
     }
     state["remediation_result"] = result
+    _record_agent_run(
+        state,
+        agent_id="remediation-planner",
+        stage="remediate",
+        inputs=approved_payload,
+        outputs=result,
+    )
     _emit_node(
         "remediate",
         status="dry_run",
@@ -470,13 +786,86 @@ def dry_run_remediation_node(state: GraphState) -> GraphState:
     return state
 
 
+def retry_queue_node(state: GraphState) -> GraphState:
+    """Schedule a bounded retry without minting a new write intent."""
+    _append_trace(state, "retry_queue")
+    result = state.get("remediation_result") or {}
+    retry_decision = result.get("retry_decision") or {}
+    retry_record = {
+        "status": "scheduled",
+        "idempotency_key": retry_decision.get("idempotency_key"),
+        "max_attempts": retry_decision.get("max_attempts", 0),
+        "retry_after_seconds": retry_decision.get("retry_after_seconds"),
+        "policy": "bounded_retry_same_idempotency_key",
+    }
+    state["retry_record"] = retry_record
+    _record_agent_run(
+        state,
+        agent_id="retry-coordinator",
+        stage="retry_queue",
+        inputs={"remediation_result": result},
+        outputs=retry_record,
+    )
+    _emit_node(
+        "retry_queue",
+        status=retry_record["status"],
+        idempotency_key=retry_record["idempotency_key"],
+        max_attempts=retry_record["max_attempts"],
+    )
+    return state
+
+
+def escalation_node(state: GraphState) -> GraphState:
+    """Escalate terminal API failures to a human queue."""
+    _append_trace(state, "escalate")
+    result = state.get("remediation_result") or {}
+    escalation_record = {
+        "status": "queued",
+        "reason": result.get("reason", "manual_review_required"),
+        "idempotency_key": result.get("idempotency_key"),
+        "queue": "security-operations-review",
+    }
+    state["escalation_record"] = escalation_record
+    _record_agent_run(
+        state,
+        agent_id="escalation-agent",
+        stage="escalate",
+        inputs={"remediation_result": result},
+        outputs=escalation_record,
+    )
+    _emit_node(
+        "escalate",
+        status=escalation_record["status"],
+        reason=escalation_record["reason"],
+        queue=escalation_record["queue"],
+    )
+    return state
+
+
 def audit_eval_writeback_node(state: GraphState) -> GraphState:
     """Emit deterministic audit and eval records for the workflow run."""
     _append_trace(state, "writeback")
+    _record_agent_run(
+        state,
+        agent_id="audit-writer",
+        stage="writeback",
+        inputs={
+            "trace": state.get("trace"),
+            "review_decision": state.get("review_decision"),
+            "remediation_result": state.get("remediation_result"),
+            "retry_record": state.get("retry_record"),
+            "escalation_record": state.get("escalation_record"),
+        },
+        outputs={"writeback": "audit_eval_pending"},
+    )
     summary_payload = {
         "caller_context": state.get("caller_context"),
         "trace": state.get("trace"),
         "findings": state.get("findings"),
+        "harness_config": state.get("harness_config"),
+        "agent_manifest": state.get("agent_manifest"),
+        "agent_runs": state.get("agent_runs"),
+        "agent_recommendations": state.get("agent_recommendations"),
         "integrity": {
             key: value
             for key, value in (state.get("integrity") or {}).items()
@@ -486,6 +875,8 @@ def audit_eval_writeback_node(state: GraphState) -> GraphState:
         "api_errors": state.get("api_errors") or [],
         "review_decision": state.get("review_decision"),
         "remediation_result": state.get("remediation_result"),
+        "retry_record": state.get("retry_record"),
+        "escalation_record": state.get("escalation_record"),
     }
     state_hash = _stable_hash(summary_payload)
     integrity = dict(state.get("integrity") or {})
@@ -501,10 +892,15 @@ def audit_eval_writeback_node(state: GraphState) -> GraphState:
         "state_hash": state_hash,
         "idempotency_key": idempotency.get("remediation_key") or idempotency.get("workflow_key"),
         "api_error_count": len(api_errors),
+        "agent_run_count": len(state.get("agent_runs") or []),
         "retryable_api_error_count": sum(
             1 for error in api_errors if error["classification"] == "retryable"
         ),
         "remediation_status": state.get("remediation_result", {}).get("status"),
+        "route": {
+            "after_review": route_after_review(state),
+            "after_remediation": route_after_remediation(state),
+        },
     }
     eval_status: Literal["pass", "blocked"] = (
         "pass" if state.get("remediation_result", {}).get("status") == "dry_run" else "blocked"
@@ -520,6 +916,9 @@ def audit_eval_writeback_node(state: GraphState) -> GraphState:
             "integrity_hash_present",
             "idempotency_key_stable",
             "api_error_classification",
+            "llm_harness_bounded",
+            "multi_agent_ledger",
+            "conditional_edges",
         ],
         "status": eval_status,
     }
@@ -536,23 +935,30 @@ NODES = (
     correlate_node,
     confidence_node,
     map_node,
+    llm_triage_node,
     analyst_review_node,
-    dry_run_remediation_node,
-    audit_eval_writeback_node,
 )
 
 
 def run_graph(initial: GraphState) -> GraphState:
-    """Deterministic linear execution.
-
-    A real LangGraph graph would add conditional edges for retries, sandbox
-    replays, escalation, and checkpointing. The security invariant stays the
-    same: every write path reaches `dry_run_remediation_node` only after
-    `analyst_review_node` provides an approval context.
-    """
+    """Deterministic execution that mirrors the StateGraph route decisions."""
     state: GraphState = dict(initial)
     for node in NODES:
         state = node(state)
+    if route_after_review(state) == "remediate":
+        state = dry_run_remediation_node(state)
+        remediation_route = route_after_remediation(state)
+        if remediation_route == "retry_queue":
+            state = retry_queue_node(state)
+        elif remediation_route == "escalate":
+            state = escalation_node(state)
+    else:
+        state.setdefault("remediation_result", {
+            "status": "skipped",
+            "skill": ALLOWED_SKILLS_REMEDIATION,
+            "reason": "review blocked; remediation node not routed",
+        })
+    state = audit_eval_writeback_node(state)
     return state
 
 
@@ -577,8 +983,11 @@ def build_langgraph_app() -> Any:
     graph.add_node("correlate", correlate_node)
     graph.add_node("confidence", confidence_node)
     graph.add_node("map", map_node)
+    graph.add_node("llm_triage", llm_triage_node)
     graph.add_node("review", analyst_review_node)
     graph.add_node("remediate", dry_run_remediation_node)
+    graph.add_node("retry_queue", retry_queue_node)
+    graph.add_node("escalate", escalation_node)
     graph.add_node("writeback", audit_eval_writeback_node)
     graph.add_edge(START, "ingest")
     graph.add_edge("ingest", "normalize")
@@ -586,9 +995,27 @@ def build_langgraph_app() -> Any:
     graph.add_edge("enrich", "correlate")
     graph.add_edge("correlate", "confidence")
     graph.add_edge("confidence", "map")
-    graph.add_edge("map", "review")
-    graph.add_edge("review", "remediate")
-    graph.add_edge("remediate", "writeback")
+    graph.add_edge("map", "llm_triage")
+    graph.add_edge("llm_triage", "review")
+    graph.add_conditional_edges(
+        "review",
+        route_after_review,
+        {
+            "remediate": "remediate",
+            "writeback": "writeback",
+        },
+    )
+    graph.add_conditional_edges(
+        "remediate",
+        route_after_remediation,
+        {
+            "retry_queue": "retry_queue",
+            "escalate": "escalate",
+            "writeback": "writeback",
+        },
+    )
+    graph.add_edge("retry_queue", "writeback")
+    graph.add_edge("escalate", "writeback")
     graph.add_edge("writeback", END)
     return graph.compile()
 
@@ -606,8 +1033,14 @@ def summarize(final: GraphState) -> dict[str, Any]:
         "findings_count": len(final.get("findings") or []),
         "confidence_scores": final.get("confidence_scores"),
         "framework_maps": final.get("framework_maps"),
+        "harness": final.get("harness_config"),
+        "agents": final.get("agent_manifest"),
+        "agent_runs": final.get("agent_runs"),
+        "agent_recommendations": final.get("agent_recommendations"),
         "review": final.get("review_decision"),
         "remediation": final.get("remediation_result"),
+        "retry": final.get("retry_record"),
+        "escalation": final.get("escalation_record"),
         "integrity": final.get("integrity"),
         "idempotency": final.get("idempotency"),
         "api_errors": final.get("api_errors") or [],
