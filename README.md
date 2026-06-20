@@ -90,6 +90,7 @@ More visuals (Mermaid sources under [`docs/diagrams/`](docs/diagrams/), GitHub r
 - [`mcp-trust-boundary.mmd`](docs/diagrams/mcp-trust-boundary.mmd) — wrapper lifecycle sequence (every guard, every short-circuit branch)
 - [`agent-topology.mmd`](docs/diagrams/agent-topology.mmd) — local stdio clients vs remote / HTTP / library / runner
 - [`agentic-soc-orchestrator.mmd`](docs/diagrams/agentic-soc-orchestrator.mmd) — optional LangGraph / LangChain workflow over deterministic skills and non-bypassable trust rails
+- [`langgraph-agent-harness.mmd`](docs/diagrams/langgraph-agent-harness.mmd) — multi-agent LangGraph harness with HITL, retry, escalation, and audit/eval routing
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/HARNESS.md`](docs/HARNESS.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/SKILL_COMPOSITION.md`](docs/SKILL_COMPOSITION.md)
 
@@ -104,9 +105,9 @@ next.
 
 The shipped [`examples/agents/langgraph_security_graph.py`](examples/agents/langgraph_security_graph.py)
 shows the reference pattern as an actual optional LangGraph `StateGraph`:
-one graph node per skill layer, a bounded LLM/agent triage node, explicit
-state, conditional edges for HITL/retry/escalation/writeback, and a hard HITL
-node before remediation. The end-to-end route is
+one graph node per skill layer, a bounded multi-agent harness, explicit
+state, an agent-run ledger, conditional edges for HITL/retry/escalation/writeback,
+and a hard HITL node before remediation. The end-to-end route is
 `ingest -> normalize -> enrich -> correlate -> confidence score -> MITRE/CVSS/EPSS/KEV map -> LLM triage -> analyst review -> dry-run remediation -> retry/escalate/writeback -> audit/eval`
 without moving trust into prompts.
 

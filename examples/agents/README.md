@@ -81,9 +81,9 @@ python examples/agents/anthropic_sdk_security_agent.py
 
 The LangGraph reference is dependency-light by default but also includes a
 real optional `StateGraph` runtime. The graph keeps security facts in
-deterministic skill nodes, adds a bounded LLM/agent triage node that can only
-rank/summarize/draft/request review, and uses conditional edges for HITL,
-retry, terminal-error escalation, duplicate suppression, and writeback.
+deterministic skill nodes, adds a bounded multi-agent harness with an
+auditable `agent_runs` ledger, and uses conditional edges for HITL, retry,
+terminal-error escalation, duplicate suppression, and writeback.
 
 ```bash
 # Blocked path: no approval context, no remediation action.
@@ -117,9 +117,10 @@ python examples/agents/langgraph_security_graph.py
 The LangGraph summary includes `integrity.evidence_hash`,
 `integrity.state_hash`, stable workflow/remediation idempotency keys, and
 retryable-vs-terminal API error classification. It also includes the
-`harness` provider/model/mode and bounded `agent_recommendations` so operators
-can see which model would have drafted the analyst note without letting that
-model set policy, mappings, approvals, or audit facts. Use
+`harness` provider/model/mode, `agents` manifest, `agent_runs` ledger, and
+bounded `agent_recommendations` so operators can see which role and model would
+have drafted the analyst note without letting that model set policy, mappings,
+approvals, or audit facts. Use
 `DEMO_API_ERROR_STATUS=429` for retryable errors or `403` for terminal errors.
 
 See each example file's module-level docstring for framework-specific

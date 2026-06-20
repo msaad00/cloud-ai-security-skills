@@ -1,0 +1,32 @@
+%% Governed multi-agent LangGraph harness over deterministic security skills.
+%% Keep security facts in skill nodes; use agents for routing, review, and bounded drafting.
+
+flowchart LR
+    classDef agent fill:#0b1830,stroke:#60a5fa,color:#dbeafe
+    classDef fact fill:#052e2b,stroke:#34d399,color:#ecfdf5
+    classDef gate fill:#3b2403,stroke:#f59e0b,color:#fef3c7
+    classDef write fill:#4c0519,stroke:#fb7185,color:#fff1f2
+    classDef audit fill:#1f2937,stroke:#94a3b8,color:#f8fafc
+
+    subgraph LG["LangGraph StateGraph: nodes, edges, conditions, checkpoints"]
+        E["Evidence agent<br/>ingest · normalize · enrich · correlate"]:::fact
+        R["Risk map agent<br/>confidence · MITRE · CVSS · EPSS · KEV"]:::fact
+        T["Triage agent<br/>LLM optional<br/>rank · summarize · draft only"]:::agent
+        H["Review gate<br/>operator approval only"]:::gate
+        P["Remediation planner<br/>dry-run only<br/>stable idempotency key"]:::write
+        Q["Retry coordinator<br/>retryable API error<br/>same key"]:::gate
+        X["Escalation agent<br/>terminal API error<br/>human queue"]:::gate
+        A["Audit writer<br/>agent ledger · state hash · eval"]:::audit
+    end
+
+    Rails["Non-bypassable rails<br/>allowlist intersection · HITL · dry-run · HMAC audit · RLIMIT"]:::audit
+
+    E --> R --> T --> H
+    H -- blocked --> A
+    H -- approved --> P
+    P -- dry-run OK --> A
+    P -- retryable --> Q --> A
+    P -- terminal --> X --> A
+    Rails -. enforced around tool calls .-> E
+    Rails -. constrains LLM authority .-> T
+    Rails -. gates write paths .-> P

@@ -156,6 +156,16 @@ class TestLangGraphSocWorkflow:
     """Regression coverage for the expanded SOC workflow graph."""
 
     SCRIPT = EXAMPLES / "langgraph_security_graph.py"
+    EXPECTED_AGENT_IDS = [
+        "evidence-agent",
+        "risk-map-agent",
+        "triage-agent",
+        "review-gate",
+        "remediation-planner",
+        "retry-coordinator",
+        "escalation-agent",
+        "audit-writer",
+    ]
     EXPECTED_TRACE = [
         "ingest",
         "normalize",
@@ -222,6 +232,15 @@ class TestLangGraphSocWorkflow:
             "draft_analyst_note",
             "request_human_review",
         ]
+        assert [agent["agent_id"] for agent in summary["agents"]] == self.EXPECTED_AGENT_IDS
+        assert [run["agent_id"] for run in summary["agent_runs"]] == [
+            "evidence-agent",
+            "risk-map-agent",
+            "triage-agent",
+            "review-gate",
+            "audit-writer",
+        ]
+        assert all(run["input_hash"] and run["output_hash"] for run in summary["agent_runs"])
         assert summary["agent_recommendations"][0]["recommended_action"] == "request_approval"
         assert summary["agent_recommendations"][0]["generated_by"] == "deterministic-local:policy-bounded-triage-v1"
         assert summary["confidence_scores"][0]["reason_codes"] == [
@@ -248,6 +267,7 @@ class TestLangGraphSocWorkflow:
             "after_review": "writeback",
             "after_remediation": "writeback",
         }
+        assert summary["audit"]["agent_run_count"] == 5
         assert summary["eval"]["status"] == "blocked"
         assert '"node": "review"' in result.stderr
         assert '"status": "blocked"' in result.stderr
@@ -272,6 +292,15 @@ class TestLangGraphSocWorkflow:
             "after_review": "remediate",
             "after_remediation": "writeback",
         }
+        assert [run["agent_id"] for run in summary["agent_runs"]] == [
+            "evidence-agent",
+            "risk-map-agent",
+            "triage-agent",
+            "review-gate",
+            "remediation-planner",
+            "audit-writer",
+        ]
+        assert summary["audit"]["agent_run_count"] == 6
         assert summary["audit"]["remediation_status"] == "dry_run"
         assert summary["eval"]["status"] == "pass"
 
@@ -287,6 +316,9 @@ class TestLangGraphSocWorkflow:
         assert "call_write_tools" not in summary["harness"]["allowed_outputs"]
         assert summary["agent_recommendations"][0]["generated_by"] == "openai:gpt-4.1-mini"
         assert summary["remediation"]["status"] == "skipped"
+        triage_agent = next(agent for agent in summary["agents"] if agent["agent_id"] == "triage-agent")
+        assert "approval" in triage_agent["forbidden_outputs"]
+        assert "write_intent" in triage_agent["forbidden_outputs"]
 
     def test_integrity_and_workflow_idempotency_are_stable(self):
         first, _ = self._run()
@@ -295,6 +327,7 @@ class TestLangGraphSocWorkflow:
         assert first["integrity"]["state_hash"] == second["integrity"]["state_hash"]
         assert first["idempotency"]["workflow_key"] == second["idempotency"]["workflow_key"]
         assert first["audit"]["chain_hash"] == second["audit"]["chain_hash"]
+        assert first["agent_runs"] == second["agent_runs"]
 
     def test_duplicate_remediation_key_suppresses_write_intent(self):
         approved, _ = self._run(approved=True)
@@ -308,6 +341,7 @@ class TestLangGraphSocWorkflow:
         assert "planned_steps" not in replay["remediation"]
         assert replay["idempotency"]["duplicate_write_suppressed"] is True
         assert replay["remediation"]["idempotency_key"] == remediation_key
+        assert replay["audit"]["agent_run_count"] == 6
 
     def test_retryable_api_error_does_not_bypass_hitl(self):
         summary, _ = self._run(extra_env={"DEMO_API_ERROR_STATUS": "429"})
@@ -337,6 +371,11 @@ class TestLangGraphSocWorkflow:
         assert retry_decision["idempotency_key"] == summary["idempotency"]["remediation_key"]
         assert summary["retry"]["status"] == "scheduled"
         assert summary["retry"]["idempotency_key"] == summary["idempotency"]["remediation_key"]
+        assert [run["agent_id"] for run in summary["agent_runs"]][-2:] == [
+            "retry-coordinator",
+            "audit-writer",
+        ]
+        assert summary["audit"]["agent_run_count"] == 7
         assert summary["audit"]["api_error_count"] == 1
         assert summary["audit"]["retryable_api_error_count"] == 1
         assert summary["audit"]["route"]["after_remediation"] == "retry_queue"
@@ -358,6 +397,11 @@ class TestLangGraphSocWorkflow:
         assert summary["remediation"]["retry_decision"]["max_attempts"] == 0
         assert summary["escalation"]["status"] == "queued"
         assert summary["escalation"]["reason"] == "terminal_api_error"
+        assert [run["agent_id"] for run in summary["agent_runs"]][-2:] == [
+            "escalation-agent",
+            "audit-writer",
+        ]
+        assert summary["audit"]["agent_run_count"] == 7
         assert summary["audit"]["api_error_count"] == 1
         assert summary["audit"]["retryable_api_error_count"] == 0
         assert summary["audit"]["route"]["after_remediation"] == "escalate"

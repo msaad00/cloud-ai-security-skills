@@ -44,6 +44,9 @@ ingest -> normalize -> enrich -> correlate -> confidence -> map
    blocked  -> writeback
 ```
 
+Diagram source:
+[`docs/diagrams/langgraph-agent-harness.mmd`](diagrams/langgraph-agent-harness.mmd).
+
 The LLM/agent harness records provider/model/mode in state and audit output.
 Its allowed outputs are intentionally narrow: rank findings, summarize
 evidence, draft analyst notes, and request human review. It cannot set CVSS,
@@ -51,6 +54,12 @@ MITRE, EPSS, KEV, tenant scope, idempotency keys, HITL approval, dry-run state,
 or audit-chain facts. The compiled LangGraph path uses conditional edges for
 HITL, retryable API errors, terminal API errors, duplicate write suppression,
 and audit/eval writeback; the offline runner mirrors those routes for tests.
+
+The example exposes a concrete `agents` manifest and `agent_runs` ledger:
+`evidence-agent`, `risk-map-agent`, `triage-agent`, `review-gate`,
+`remediation-planner`, `retry-coordinator`, `escalation-agent`, and
+`audit-writer`. Each run carries an authority label plus input/output hashes
+so replay can detect drift without trusting prompt text.
 
 ## Customization knobs
 
