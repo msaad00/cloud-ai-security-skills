@@ -89,14 +89,39 @@ More visuals (Mermaid sources under [`docs/diagrams/`](docs/diagrams/), GitHub r
 - [`pipeline-blast-radius.mmd`](docs/diagrams/pipeline-blast-radius.mmd) — colour-coded by capability so the trust boundary is visible at a glance
 - [`mcp-trust-boundary.mmd`](docs/diagrams/mcp-trust-boundary.mmd) — wrapper lifecycle sequence (every guard, every short-circuit branch)
 - [`agent-topology.mmd`](docs/diagrams/agent-topology.mmd) — local stdio clients vs remote / HTTP / library / runner
+- [`agentic-soc-orchestrator.mmd`](docs/diagrams/agentic-soc-orchestrator.mmd) — optional LangGraph / LangChain workflow over deterministic skills and non-bypassable trust rails
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/HARNESS.md`](docs/HARNESS.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/SKILL_COMPOSITION.md`](docs/SKILL_COMPOSITION.md)
+
+## Agentic SOC orchestration
+
+The repo is strongest when the skills stay deterministic and LangGraph /
+LangChain sits above them as an optional workflow engine. That is better than
+making every skill LangGraph-native: CVSS, MITRE, EPSS, KEV, OCSF schemas,
+tenant scope, allowlists, confidence, dry-run state, and audit records remain
+reproducible code paths, while the graph decides which approved surface to call
+next.
+
+The shipped [`examples/agents/langgraph_security_graph.py`](examples/agents/langgraph_security_graph.py)
+shows the reference pattern: one graph node per skill layer, explicit state,
+and a hard HITL node before remediation. Production teams can expand that into
+`ingest -> normalize -> enrich -> correlate -> confidence score -> MITRE/CVSS/EPSS/KEV map -> analyst review -> dry-run remediation -> audit/eval writeback`
+without moving trust into prompts.
+
+![Optional agentic SOC orchestrator: LangGraph or LangChain controls the workflow DAG and LLM/model choice, while cloud-ai-security-skills owns deterministic ingest, normalize, enrich, correlate, map, review, audit, eval artifacts, sandbox/RLIMIT, allowlist, dry-run, HITL, and HMAC audit rails.](docs/images/agentic-soc-orchestrator.svg)
+
+| Layer | Belongs in | Why |
+|---|---|---|
+| Facts, schemas, scores, mappings | `cloud-ai-security-skills` | replayable, testable, CI-gated, tied to skill contracts |
+| Workflow state and branching | LangGraph / LangChain / SOAR | nodes, edges, retries, escalation, checkpointing |
+| LLM output | Orchestrator | rank, summarize, explain, and draft; never authoritative for policy or audit |
+| Write approval | HITL gate + remediation skill | dry-run first, bounded blast radius, audited operator context |
 
 ## ClickHouse-powered security data lake (hero use case)
 
 The repo ships an end-to-end, closed-loop story on ClickHouse: OCSF ingest skills write through `sink-clickhouse-jsonl`, detectors replay from `source-clickhouse-query` under a read-only SQL allowlist, and remediation audit records can land back in the same lake. Stateless skills, stateful lake, stable UIDs for duplicate-aware replay.
 
-![ClickHouse security data lake closed-loop architecture. Twenty-one ingest skills normalize cloud, identity, Kubernetes, MCP, and SaaS signals to OCSF JSONL and write append-only into ClickHouse through sink-clickhouse-jsonl. Four MergeTree tables hold events, findings, evidence, and audit rows. Three materialized views roll up rule volume, event-class volume, and remediation outcomes. source-clickhouse-query replays bounded SELECT/WITH/SHOW/DESCRIBE statements into detection, view, and evidence skills. New findings, evidence artifacts, and HITL remediation audit records can write back through the same sink.](docs/images/clickhouse-data-lake.svg)
+![ClickHouse security data lake closed-loop architecture. Twenty-two ingest skills normalize cloud, identity, Kubernetes, MCP, and SaaS signals to OCSF JSONL and write append-only into ClickHouse through sink-clickhouse-jsonl. Four MergeTree tables hold events, findings, evidence, and audit rows. Three materialized views roll up rule volume, event-class volume, and remediation outcomes. source-clickhouse-query replays bounded SELECT/WITH/SHOW/DESCRIBE statements into detection, view, and evidence skills. New findings, evidence artifacts, and HITL remediation audit records can write back through the same sink.](docs/images/clickhouse-data-lake.svg)
 
 | Stage | Skill | Role |
 |---|---|---|
@@ -112,7 +137,7 @@ Why ClickHouse for this lake — operator-owned deployment, MergeTree tables, ma
 
 The same closed loop ships warehouse-native on Snowflake, for customers who run their enterprise lakehouse there: OCSF ingest skills write through `sink-snowflake-jsonl`, detectors replay from `source-snowflake-query` under a read-only SQL allowlist, and remediation audit records land back in the same lake. Built on current Snowflake — dynamic-table rollups, row access policies, and an optional Snowflake-managed Apache Iceberg variant so the lake stays open-format and Spark/Trino-readable through the Horizon Catalog.
 
-![Snowflake security data lake closed-loop architecture. Twenty-one ingest skills normalize cloud, identity, Kubernetes, MCP, and SaaS signals to OCSF JSONL and write append-only into Snowflake through sink-snowflake-jsonl, with Openflow and Snowpipe Streaming as managed in-VPC ingest options. Four tables in security_db.ops hold events, findings, evidence, and audit rows under row access policies, optionally as Snowflake-managed Apache Iceberg governed by the Horizon Catalog. Three dynamic tables roll up rule volume, event-class volume, and remediation outcomes. source-snowflake-query replays bounded SELECT/WITH/SHOW/DESCRIBE statements into detection (including nine Snowflake-native detectors), view, and evidence skills. New findings, evidence artifacts, and HITL remediation audit records write back through the same sink.](docs/images/snowflake-data-lake.svg)
+![Snowflake security data lake closed-loop architecture. Twenty-two ingest skills normalize cloud, identity, Kubernetes, MCP, and SaaS signals to OCSF JSONL and write append-only into Snowflake through sink-snowflake-jsonl. Four tables in security_db.ops hold events, findings, evidence, and audit rows under row access policies, optionally as Snowflake-managed Apache Iceberg governed by the Horizon Catalog. Dynamic tables roll up rule volume, event-class volume, and remediation outcomes. source-snowflake-query replays bounded SELECT/WITH/SHOW/DESCRIBE statements into detection, view, and evidence skills. New findings, evidence artifacts, and HITL remediation audit records write back through the same sink.](docs/images/snowflake-data-lake.svg)
 
 | Stage | Skill | Role |
 |---|---|---|
