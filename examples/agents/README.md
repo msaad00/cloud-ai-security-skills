@@ -93,6 +93,11 @@ DEMO_APPROVE=yes \
 DEMO_APPROVER=reviewer@example.com \
 DEMO_TICKET=SEC-LANGGRAPH-1 \
 python examples/agents/langgraph_security_graph.py
+
+# Real LangGraph runtime: compiles the same nodes into StateGraph.
+uv sync --group dev --group langgraph
+DEMO_LANGGRAPH_RUNTIME=yes \
+python examples/agents/langgraph_security_graph.py
 ```
 
 See each example file's module-level docstring for framework-specific

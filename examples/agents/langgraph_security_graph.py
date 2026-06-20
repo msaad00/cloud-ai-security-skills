@@ -21,6 +21,7 @@ Run:
 
     python examples/agents/langgraph_security_graph.py
     DEMO_APPROVE=yes python examples/agents/langgraph_security_graph.py
+    DEMO_LANGGRAPH_RUNTIME=yes python examples/agents/langgraph_security_graph.py
 """
 
 from __future__ import annotations
@@ -389,6 +390,48 @@ def run_graph(initial: GraphState) -> GraphState:
     return state
 
 
+def build_langgraph_app() -> Any:
+    """Compile the real LangGraph app.
+
+    Kept behind an optional import so the repository can run the deterministic
+    example without pulling LangGraph into the base environment.
+    """
+    try:
+        from langgraph.graph import END, START, StateGraph
+    except ModuleNotFoundError as exc:  # pragma: no cover - exercised by CLI path
+        raise RuntimeError(
+            "LangGraph is not installed. Run `uv sync --group dev --group langgraph` "
+            "or use the default deterministic trace runner."
+        ) from exc
+
+    graph = StateGraph(GraphState)
+    graph.add_node("ingest", ingest_node)
+    graph.add_node("normalize", normalize_node)
+    graph.add_node("enrich", enrich_node)
+    graph.add_node("correlate", correlate_node)
+    graph.add_node("confidence", confidence_node)
+    graph.add_node("map", map_node)
+    graph.add_node("review", analyst_review_node)
+    graph.add_node("remediate", dry_run_remediation_node)
+    graph.add_node("writeback", audit_eval_writeback_node)
+    graph.add_edge(START, "ingest")
+    graph.add_edge("ingest", "normalize")
+    graph.add_edge("normalize", "enrich")
+    graph.add_edge("enrich", "correlate")
+    graph.add_edge("correlate", "confidence")
+    graph.add_edge("confidence", "map")
+    graph.add_edge("map", "review")
+    graph.add_edge("review", "remediate")
+    graph.add_edge("remediate", "writeback")
+    graph.add_edge("writeback", END)
+    return graph.compile()
+
+
+def run_langgraph(initial: GraphState) -> GraphState:
+    """Run the workflow through a compiled LangGraph StateGraph."""
+    return dict(build_langgraph_app().invoke(dict(initial)))
+
+
 def summarize(final: GraphState) -> dict[str, Any]:
     """Strip state to a stable operator-facing summary."""
     return {
@@ -414,7 +457,11 @@ def main() -> int:
         },
         "raw_events": [{"source": "demo"}],
     }
-    print(json.dumps(summarize(run_graph(initial)), indent=2))
+    if os.environ.get("DEMO_LANGGRAPH_RUNTIME") == "yes":
+        final = run_langgraph(initial)
+    else:
+        final = run_graph(initial)
+    print(json.dumps(summarize(final), indent=2))
     return 0
 
 

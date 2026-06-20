@@ -227,3 +227,25 @@ class TestLangGraphSocWorkflow:
         assert summary["remediation"]["skill"] == "iam-departures-aws"
         assert summary["audit"]["remediation_status"] == "dry_run"
         assert summary["eval"]["status"] == "pass"
+
+    def test_real_langgraph_runtime_when_dependency_is_installed(self):
+        pytest.importorskip("langgraph.graph")
+        env = {**os.environ, "DEMO_LANGGRAPH_RUNTIME": "yes"}
+        result = subprocess.run(
+            [sys.executable, str(self.SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+        summary = json.loads(result.stdout)
+        assert summary["trace"] == self.EXPECTED_TRACE
+        assert summary["remediation"]["status"] == "skipped"
+
+    def test_stategraph_builder_is_present_without_importing_dependency(self):
+        text = self.SCRIPT.read_text(encoding="utf-8")
+        assert "StateGraph(GraphState)" in text
+        assert 'graph.add_edge("review", "remediate")' in text
+        assert "DEMO_LANGGRAPH_RUNTIME" in text
