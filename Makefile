@@ -2,7 +2,7 @@
 ## file — every command below has a direct shell-script equivalent
 ## documented in `CONTRIBUTING.md`.
 
-.PHONY: help docs-regen docs-check validate test ruff demo
+.PHONY: help docs-regen docs-check validate test ruff agent-evals demo
 
 help:
 	@echo "Common targets:"
@@ -12,6 +12,7 @@ help:
 	@echo "  make validate    — run every shared validator under scripts/"
 	@echo "  make test        — pytest repo-wide"
 	@echo "  make ruff        — lint everything CI lints"
+	@echo "  make agent-evals — run agent example tests and LangGraph harness evals"
 
 demo:
 	@echo "Running 3-step ingest -> detect -> view pipeline on a captured CloudTrail fixture..."
@@ -59,3 +60,8 @@ test:
 
 ruff:
 	ruff check skills/ tests/ mcp-server/ scripts/ --config pyproject.toml
+
+agent-evals:
+	ruff check examples/agents --config pyproject.toml
+	python -m pytest examples/agents/tests/test_examples.py -q
+	python examples/agents/eval_langgraph_harness.py --check
