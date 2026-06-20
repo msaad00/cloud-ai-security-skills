@@ -150,3 +150,175 @@ class TestHitlGateReachable:
         )
         assert result.returncode == 0
         assert '"dry_run"' in result.stdout
+
+
+class TestLangGraphSocWorkflow:
+    """Regression coverage for the expanded SOC workflow graph."""
+
+    SCRIPT = EXAMPLES / "langgraph_security_graph.py"
+    EXPECTED_TRACE = [
+        "ingest",
+        "normalize",
+        "enrich",
+        "correlate",
+        "confidence",
+        "map",
+        "review",
+        "remediate",
+        "writeback",
+    ]
+
+    def _run(
+        self,
+        *,
+        approved: bool = False,
+        extra_env: dict[str, str] | None = None,
+    ) -> tuple[dict, subprocess.CompletedProcess[str]]:
+        env = {**os.environ}
+        if approved:
+            env.update({
+                "DEMO_APPROVE": "yes",
+                "DEMO_APPROVER": "reviewer@example.com",
+                "DEMO_TICKET": "SEC-LANGGRAPH-1",
+            })
+        else:
+            env.pop("DEMO_APPROVE", None)
+            env.pop("DEMO_APPROVER", None)
+            env.pop("DEMO_TICKET", None)
+        if extra_env:
+            env.update(extra_env)
+        result = subprocess.run(
+            [sys.executable, str(self.SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout), result
+
+    def test_trace_covers_end_to_end_soc_dag(self):
+        summary, _ = self._run()
+        assert summary["trace"] == self.EXPECTED_TRACE
+        assert summary["findings_count"] == 1
+        assert summary["confidence_scores"][0]["reason_codes"] == [
+            "rule_match",
+            "stable_resource_uid",
+            "identity_correlation",
+            "high_epss",
+        ]
+        framework_map = summary["framework_maps"][0]
+        assert framework_map["mitre_attack"] == ["T1098"]
+        assert framework_map["cvss"]["severity"] == "high"
+        assert framework_map["epss_percentile"] == 0.91
+        assert framework_map["kev_listed"] is False
+
+    def test_no_approval_blocks_remediation_but_writes_audit_and_eval(self):
+        summary, result = self._run()
+        assert summary["review"]["status"] == "blocked"
+        assert summary["remediation"]["status"] == "skipped"
+        assert "planned_steps" not in summary["remediation"]
+        assert summary["audit"]["event"] == "agentic_soc_workflow"
+        assert summary["audit"]["remediation_status"] == "skipped"
+        assert summary["eval"]["status"] == "blocked"
+        assert '"node": "review"' in result.stderr
+        assert '"status": "blocked"' in result.stderr
+        assert summary["api_errors"] == []
+        assert summary["integrity"]["evidence_hash"]
+        assert summary["integrity"]["state_hash"] == summary["audit"]["state_hash"]
+        assert summary["idempotency"]["workflow_key"].startswith("wf-")
+
+    def test_approval_allows_dry_run_only(self):
+        summary, _ = self._run(approved=True)
+        assert summary["review"]["status"] == "approved"
+        assert summary["review"]["approval"]["ticket_id"] == "SEC-LANGGRAPH-1"
+        assert summary["remediation"]["status"] == "dry_run"
+        assert summary["remediation"]["dry_run"] is True
+        assert summary["remediation"]["skill"] == "iam-departures-aws"
+        assert summary["remediation"]["idempotency_key"].startswith("rem-")
+        assert summary["idempotency"]["remediation_key"] == summary["remediation"]["idempotency_key"]
+        assert summary["integrity"]["approved_payload_hash"]
+        assert summary["audit"]["idempotency_key"] == summary["remediation"]["idempotency_key"]
+        assert summary["audit"]["remediation_status"] == "dry_run"
+        assert summary["eval"]["status"] == "pass"
+
+    def test_integrity_and_workflow_idempotency_are_stable(self):
+        first, _ = self._run()
+        second, _ = self._run()
+        assert first["integrity"]["evidence_hash"] == second["integrity"]["evidence_hash"]
+        assert first["integrity"]["state_hash"] == second["integrity"]["state_hash"]
+        assert first["idempotency"]["workflow_key"] == second["idempotency"]["workflow_key"]
+        assert first["audit"]["chain_hash"] == second["audit"]["chain_hash"]
+
+    def test_duplicate_remediation_key_suppresses_write_intent(self):
+        approved, _ = self._run(approved=True)
+        remediation_key = approved["remediation"]["idempotency_key"]
+        replay, _ = self._run(
+            approved=True,
+            extra_env={"DEMO_SEEN_IDEMPOTENCY_KEYS": remediation_key},
+        )
+        assert replay["remediation"]["status"] == "skipped"
+        assert replay["remediation"]["reason"] == "duplicate idempotency key; write intent suppressed"
+        assert "planned_steps" not in replay["remediation"]
+        assert replay["idempotency"]["duplicate_write_suppressed"] is True
+        assert replay["remediation"]["idempotency_key"] == remediation_key
+
+    def test_retryable_api_error_does_not_bypass_hitl(self):
+        summary, _ = self._run(extra_env={"DEMO_API_ERROR_STATUS": "429"})
+        assert summary["review"]["status"] == "blocked"
+        assert summary["remediation"]["status"] == "skipped"
+        assert summary["remediation"]["reason"] == "no approval_context; HITL gate blocked remediation"
+        assert "retry_decision" not in summary["remediation"]
+        assert summary["api_errors"] == []
+        assert summary["audit"]["api_error_count"] == 0
+
+    def test_retryable_api_error_reuses_idempotency_key_when_approved(self):
+        summary, _ = self._run(
+            approved=True,
+            extra_env={"DEMO_API_ERROR_STATUS": "429"},
+        )
+        assert summary["remediation"]["status"] == "skipped"
+        assert summary["remediation"]["reason"] == "retryable_api_error"
+        assert "planned_steps" not in summary["remediation"]
+        assert summary["api_errors"][0]["classification"] == "retryable"
+        retry_decision = summary["remediation"]["retry_decision"]
+        assert retry_decision["max_attempts"] == 3
+        assert retry_decision["idempotency_key"] == summary["idempotency"]["remediation_key"]
+        assert summary["audit"]["api_error_count"] == 1
+        assert summary["audit"]["retryable_api_error_count"] == 1
+
+    def test_terminal_api_error_blocks_write_intent(self):
+        summary, _ = self._run(
+            approved=True,
+            extra_env={"DEMO_API_ERROR_STATUS": "403"},
+        )
+        assert summary["remediation"]["status"] == "skipped"
+        assert summary["remediation"]["reason"] == "terminal_api_error"
+        assert "planned_steps" not in summary["remediation"]
+        assert summary["api_errors"][0]["classification"] == "terminal"
+        assert summary["remediation"]["retry_decision"]["max_attempts"] == 0
+        assert summary["audit"]["api_error_count"] == 1
+        assert summary["audit"]["retryable_api_error_count"] == 0
+
+    def test_real_langgraph_runtime_when_dependency_is_installed(self):
+        pytest.importorskip("langgraph.graph")
+        env = {**os.environ, "DEMO_LANGGRAPH_RUNTIME": "yes"}
+        result = subprocess.run(
+            [sys.executable, str(self.SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+        summary = json.loads(result.stdout)
+        assert summary["trace"] == self.EXPECTED_TRACE
+        assert summary["remediation"]["status"] == "skipped"
+
+    def test_stategraph_builder_is_present_without_importing_dependency(self):
+        text = self.SCRIPT.read_text(encoding="utf-8")
+        assert "StateGraph(GraphState)" in text
+        assert 'graph.add_edge("review", "remediate")' in text
+        assert "DEMO_LANGGRAPH_RUNTIME" in text

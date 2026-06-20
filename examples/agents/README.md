@@ -9,7 +9,7 @@ allowlist regardless of which SDK is driving the loop.
 |---|---|---|
 | [`anthropic_sdk_security_agent.py`](anthropic_sdk_security_agent.py) | Anthropic Python SDK (Managed Agent) | CSPM scan → triage loop with HITL gate on remediation |
 | [`openai_sdk_security_agent.py`](openai_sdk_security_agent.py) | OpenAI Agents SDK | Parallel port of the Anthropic example for portability |
-| [`langgraph_security_graph.py`](langgraph_security_graph.py) | LangGraph | One graph node per layer (ingest → detect → evaluate → HITL → remediate) |
+| [`langgraph_security_graph.py`](langgraph_security_graph.py) | LangGraph | SOC workflow DAG: ingest → normalize → enrich → correlate → confidence → MITRE/CVSS/EPSS/KEV map → HITL → dry-run remediation → audit/eval writeback |
 
 ## Safety posture — every example enforces the same invariants
 
@@ -79,14 +79,47 @@ uv sync --group dev --extra aws
 python examples/agents/anthropic_sdk_security_agent.py
 ```
 
+The LangGraph reference is also dependency-light: it does not require the
+LangGraph package for the demo trace, but its node functions are shaped so a
+production runner can drop them into `StateGraph` without changing the trust
+boundary.
+
+```bash
+# Blocked path: no approval context, no remediation action.
+python examples/agents/langgraph_security_graph.py
+
+# Approved path: remediation reaches dry-run only and writes audit/eval output.
+DEMO_APPROVE=yes \
+DEMO_APPROVER=reviewer@example.com \
+DEMO_TICKET=SEC-LANGGRAPH-1 \
+python examples/agents/langgraph_security_graph.py
+
+# Real LangGraph runtime: compiles the same nodes into StateGraph.
+uv sync --group dev --group langgraph
+DEMO_LANGGRAPH_RUNTIME=yes \
+python examples/agents/langgraph_security_graph.py
+
+# Retryable API error path: no write intent is created without approval;
+# approved retries reuse the same remediation idempotency key.
+DEMO_APPROVE=yes \
+DEMO_API_ERROR_STATUS=429 \
+python examples/agents/langgraph_security_graph.py
+```
+
+The LangGraph summary includes `integrity.evidence_hash`,
+`integrity.state_hash`, stable workflow/remediation idempotency keys, and
+retryable-vs-terminal API error classification. Use
+`DEMO_API_ERROR_STATUS=429` for retryable errors or `403` for terminal errors.
+
 See each example file's module-level docstring for framework-specific
 prerequisites.
 
 ## What's NOT in these examples
 
-- **Production-grade error handling.** These are reference loops; a real
-  agent stack would add retry/backoff, circuit breakers, and structured
-  observability.
+- **Production-grade API operations.** These are reference loops; API error
+  classes, retry decisions, and idempotency keys are modeled deterministically,
+  but a real stack would connect them to durable queues, circuit breakers,
+  backoff timers, and structured observability.
 - **Multi-tenancy.** Each example runs in a single operator context.
 - **Cloud credential brokering.** Examples rely on the shell environment
   (moto for tests, AWS profile for local runs).
