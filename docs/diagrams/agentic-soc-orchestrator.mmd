@@ -1,0 +1,28 @@
+%% Optional agentic SOC orchestrator over cloud-ai-security-skills.
+%% LangGraph/LangChain own workflow state; repo skills own facts and gates.
+
+flowchart LR
+    classDef orch fill:#0b1830,stroke:#60a5fa,color:#dbeafe
+    classDef skill fill:#052e2b,stroke:#34d399,color:#ecfdf5
+    classDef guard fill:#2a1207,stroke:#d97706,color:#fed7aa
+    classDef audit fill:#4c0519,stroke:#fb7185,color:#fff1f2
+
+    AGENT["SOC agent"]:::orch
+    GRAPH["LangGraph / LangChain DAG<br/>nodes · edges · conditions"]:::orch
+    LLM["LLM options<br/>OpenAI · local · customer model"]:::orch
+    TOOL["Tool boundary<br/>MCP · CLI · CI · runner · library"]:::orch
+
+    ING["ingest"]:::skill
+    NORM["normalize"]:::skill
+    ENRICH["enrich<br/>OSV · NVD · EPSS · KEV"]:::skill
+    CORR["correlate<br/>identity · tools · lineage"]:::skill
+    MAP["map<br/>MITRE · CVSS · controls · confidence"]:::skill
+    REVIEW["analyst review<br/>HITL gate"]:::audit
+    WRITE["dry-run remediation<br/>audit/evidence writeback"]:::audit
+
+    RAILS["non-bypassable rails<br/>sandbox · RLIMIT · allowlist intersection · HMAC audit · dry-run first"]:::guard
+
+    AGENT --> GRAPH --> LLM --> TOOL
+    TOOL --> ING --> NORM --> ENRICH --> CORR --> MAP --> REVIEW --> WRITE
+    RAILS -. enforced around every tool call .-> TOOL
+    RAILS -. blocks unsafe writes .-> REVIEW
