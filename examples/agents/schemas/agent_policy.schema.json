@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-ai-security-skills.local/examples/agents/schemas/agent_policy.schema.json",
+  "title": "LangGraph SOC effective agent policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "effective_allowed_skills",
+    "entries",
+    "policy_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "langgraph-agent-policy-v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "effective_allowed_skills": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "kind",
+          "privilege_boundary",
+          "owns",
+          "requested_skill_scope",
+          "effective_skill_grants",
+          "denied_skill_scope",
+          "model_tier",
+          "model_policy_tier",
+          "requires_human_approval",
+          "approval_satisfied",
+          "write_policy",
+          "decision"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "deterministic_skill",
+              "llm_optional",
+              "human_gate",
+              "governance"
+            ]
+          },
+          "privilege_boundary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owns": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "requested_skill_scope": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "effective_skill_grants": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "denied_skill_scope": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "model_tier": {
+            "type": "string",
+            "enum": [
+              "none",
+              "tiny",
+              "small",
+              "large"
+            ]
+          },
+          "model_policy_tier": {
+            "type": "string",
+            "enum": [
+              "none",
+              "tiny",
+              "small",
+              "large"
+            ]
+          },
+          "requires_human_approval": {
+            "type": "boolean"
+          },
+          "approval_satisfied": {
+            "type": "boolean"
+          },
+          "write_policy": {
+            "type": "string",
+            "enum": [
+              "none",
+              "dry_run_only_after_hitl",
+              "append_only_audit_eval"
+            ]
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "no_direct_tools",
+              "blocked_by_allowlist",
+              "requires_human_approval",
+              "ready",
+              "metadata_only"
+            ]
+          }
+        }
+      }
+    },
+    "policy_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{16}$"
+    }
+  }
+}

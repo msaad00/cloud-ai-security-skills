@@ -130,6 +130,24 @@ def validate_harness_summary(summary: Mapping[str, Any]) -> tuple[str, ...]:
     if remediation_agent.get("privilege_boundary") != "dry_run_write_planning":
         errors.append("remediation-planner must stay dry-run write planning only")
 
+    agent_policy = summary.get("agent_policy") or {}
+    if agent_policy.get("schema_version") != "langgraph-agent-policy-v1":
+        errors.append("agent policy report must use langgraph-agent-policy-v1")
+    if not agent_policy.get("policy_hash"):
+        errors.append("agent policy report must include policy_hash")
+    policy_entries = {
+        entry.get("agent_id"): entry
+        for entry in agent_policy.get("entries") or []
+    }
+    triage_policy = policy_entries.get("triage-agent") or {}
+    if triage_policy.get("effective_skill_grants") not in ((), []):
+        errors.append("triage-agent policy must not grant tool skills")
+    if triage_policy.get("decision") != "no_direct_tools":
+        errors.append("triage-agent policy decision must be no_direct_tools")
+    remediation_policy = policy_entries.get("remediation-planner") or {}
+    if remediation_policy.get("write_policy") != "dry_run_only_after_hitl":
+        errors.append("remediation-planner policy must stay dry-run-only after HITL")
+
     review = summary.get("review") or {}
     remediation = summary.get("remediation") or {}
     if remediation.get("status") == "dry_run" and review.get("status") != "approved":

@@ -106,6 +106,7 @@ DEMO_HARNESS_PROFILE=examples/agents/harness_profiles/readonly-soc.json \
 python examples/agents/langgraph_security_graph.py
 
 # Approved path: remediation reaches dry-run only and writes audit/eval output.
+DEMO_HARNESS_PROFILE=examples/agents/harness_profiles/dry-run-remediation.json \
 DEMO_APPROVE=yes \
 DEMO_APPROVER=reviewer@example.com \
 DEMO_TICKET=SEC-LANGGRAPH-1 \
@@ -174,7 +175,8 @@ The LangGraph summary includes `integrity.evidence_hash`,
 retryable-vs-terminal API error classification. It also includes the
 `profile`, `effective_allowed_skills`, `harness` provider/model/mode/model
 policy/token budget, `agents` manifest, `pipeline_contract`, `agent_runs`
-ledger, compact LLM evidence cards, token budget usage, and bounded
+ledger, `agent_policy` effective grants report, compact LLM evidence cards,
+token budget usage, and bounded
 `agent_recommendations` so
 operators can see which role and model would have drafted the analyst note
 without letting that model set policy, mappings, approvals, or audit facts. Use
@@ -191,6 +193,9 @@ Profiles can also carry concise `agent_roster` overrides. The loader preserves
 fixed graph ownership and re-applies safety boundaries, so an operator can set
 the triage model tier or document remediation posture without granting the LLM
 agent tool-write scope or bypassing HITL.
+`agent_policy` is the compiled view of those choices: per-agent requested
+skills, effective grants, denied skills, model tier, write policy, approval
+state, and decision.
 Importable harness wrapper:
 
 ```bash

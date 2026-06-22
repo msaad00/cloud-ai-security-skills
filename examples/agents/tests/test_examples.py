@@ -223,7 +223,11 @@ class TestHitlGateReachable:
         assert "remediation_dry_run" in result.stdout or "reconciler" in (result.stdout + result.stderr)
 
     def test_langgraph_reaches_remediation_with_approval(self):
-        env = {**os.environ, "DEMO_APPROVE": "yes"}
+        env = {
+            **os.environ,
+            "DEMO_APPROVE": "yes",
+            "DEMO_HARNESS_PROFILE": str(EXAMPLES / "harness_profiles" / "dry-run-remediation.json"),
+        }
         result = subprocess.run(
             [sys.executable, str(EXAMPLES / "langgraph_security_graph.py")],
             capture_output=True,
@@ -405,6 +409,16 @@ class TestLangGraphSocWorkflow:
         remediation_agent = next(agent for agent in summary["agents"] if agent["agent_id"] == "remediation-planner")
         assert remediation_agent["requires_human_approval"] is True
         assert remediation_agent["privilege_boundary"] == "dry_run_write_planning"
+        assert summary["agent_policy"]["schema_version"] == "langgraph-agent-policy-v1"
+        assert summary["agent_policy"]["policy_hash"] == summary["audit"]["agent_policy_hash"]
+        policy_entries = {
+            entry["agent_id"]: entry
+            for entry in summary["agent_policy"]["entries"]
+        }
+        assert policy_entries["triage-agent"]["decision"] == "no_direct_tools"
+        assert policy_entries["triage-agent"]["effective_skill_grants"] == []
+        assert policy_entries["remediation-planner"]["denied_skill_scope"] == ["iam-departures-aws"]
+        assert policy_entries["remediation-planner"]["decision"] == "blocked_by_allowlist"
         assert [run["agent_id"] for run in summary["agent_runs"]] == [
             "evidence-agent",
             "risk-map-agent",
@@ -490,8 +504,25 @@ class TestLangGraphSocWorkflow:
         assert summary["integrity"]["state_hash"] == summary["audit"]["state_hash"]
         assert summary["idempotency"]["workflow_key"].startswith("wf-")
 
-    def test_approval_allows_dry_run_only(self):
+    def test_approval_without_remediation_skill_does_not_create_write_intent(self):
         summary, _ = self._run(approved=True)
+        assert summary["trace"] == self.EXPECTED_APPROVED_TRACE
+        assert summary["review"]["status"] == "approved"
+        assert summary["remediation"]["status"] == "skipped"
+        assert summary["remediation"]["reason"] == "remediation skill not in effective allowlist"
+        assert "planned_steps" not in summary["remediation"]
+        remediation_policy = next(
+            entry for entry in summary["agent_policy"]["entries"]
+            if entry["agent_id"] == "remediation-planner"
+        )
+        assert remediation_policy["denied_skill_scope"] == ["iam-departures-aws"]
+        assert remediation_policy["decision"] == "blocked_by_allowlist"
+
+    def test_approval_allows_dry_run_only(self):
+        summary, _ = self._run(
+            approved=True,
+            extra_env={"DEMO_HARNESS_PROFILE": str(self.PROFILES / "dry-run-remediation.json")},
+        )
         assert summary["trace"] == self.EXPECTED_APPROVED_TRACE
         assert summary["review"]["status"] == "approved"
         assert summary["review"]["approval"]["ticket_id"] == "SEC-LANGGRAPH-1"
@@ -506,6 +537,13 @@ class TestLangGraphSocWorkflow:
             "after_review": "remediate",
             "after_remediation": "writeback",
         }
+        policy_entries = {
+            entry["agent_id"]: entry
+            for entry in summary["agent_policy"]["entries"]
+        }
+        assert policy_entries["remediation-planner"]["effective_skill_grants"] == ["iam-departures-aws"]
+        assert policy_entries["remediation-planner"]["denied_skill_scope"] == []
+        assert policy_entries["remediation-planner"]["decision"] == "ready"
         assert [run["agent_id"] for run in summary["agent_runs"]] == [
             "evidence-agent",
             "risk-map-agent",
@@ -714,11 +752,17 @@ class TestLangGraphSocWorkflow:
         assert first["agent_runs"] == second["agent_runs"]
 
     def test_duplicate_remediation_key_suppresses_write_intent(self):
-        approved, _ = self._run(approved=True)
+        approved, _ = self._run(
+            approved=True,
+            extra_env={"DEMO_HARNESS_PROFILE": str(self.PROFILES / "dry-run-remediation.json")},
+        )
         remediation_key = approved["remediation"]["idempotency_key"]
         replay, _ = self._run(
             approved=True,
-            extra_env={"DEMO_SEEN_IDEMPOTENCY_KEYS": remediation_key},
+            extra_env={
+                "DEMO_HARNESS_PROFILE": str(self.PROFILES / "dry-run-remediation.json"),
+                "DEMO_SEEN_IDEMPOTENCY_KEYS": remediation_key,
+            },
         )
         assert replay["remediation"]["status"] == "skipped"
         assert replay["remediation"]["reason"] == "duplicate idempotency key; write intent suppressed"
@@ -739,7 +783,10 @@ class TestLangGraphSocWorkflow:
     def test_retryable_api_error_reuses_idempotency_key_when_approved(self):
         summary, _ = self._run(
             approved=True,
-            extra_env={"DEMO_API_ERROR_STATUS": "429"},
+            extra_env={
+                "DEMO_HARNESS_PROFILE": str(self.PROFILES / "dry-run-remediation.json"),
+                "DEMO_API_ERROR_STATUS": "429",
+            },
         )
         assert summary["trace"] == [
             *self.EXPECTED_APPROVED_TRACE[:-1],
@@ -767,7 +814,10 @@ class TestLangGraphSocWorkflow:
     def test_terminal_api_error_blocks_write_intent(self):
         summary, _ = self._run(
             approved=True,
-            extra_env={"DEMO_API_ERROR_STATUS": "403"},
+            extra_env={
+                "DEMO_HARNESS_PROFILE": str(self.PROFILES / "dry-run-remediation.json"),
+                "DEMO_API_ERROR_STATUS": "403",
+            },
         )
         assert summary["trace"] == [
             *self.EXPECTED_APPROVED_TRACE[:-1],
@@ -813,6 +863,7 @@ class TestLangGraphSocWorkflow:
             **os.environ,
             "DEMO_LANGGRAPH_RUNTIME": "yes",
             "DEMO_APPROVE": "yes",
+            "DEMO_HARNESS_PROFILE": str(self.PROFILES / "dry-run-remediation.json"),
             "DEMO_API_ERROR_STATUS": "429",
         }
         result = subprocess.run(
@@ -909,6 +960,7 @@ class TestLangGraphContractSchemas:
     PROFILE_SCHEMA = SCHEMAS / "harness_profile.schema.json"
     ADAPTER_SCHEMA = SCHEMAS / "llm_adapter_recommendations.schema.json"
     PIPELINE_SCHEMA = SCHEMAS / "pipeline_contract.schema.json"
+    AGENT_POLICY_SCHEMA = SCHEMAS / "agent_policy.schema.json"
     CHECKPOINT_SCHEMA = SCHEMAS / "checkpoint.schema.json"
     EVAL_REPORT_SCHEMA = SCHEMAS / "eval_report.schema.json"
     GRAPH = EXAMPLES / "langgraph_security_graph.py"
@@ -920,6 +972,7 @@ class TestLangGraphContractSchemas:
             self.PROFILE_SCHEMA,
             self.ADAPTER_SCHEMA,
             self.PIPELINE_SCHEMA,
+            self.AGENT_POLICY_SCHEMA,
             self.CHECKPOINT_SCHEMA,
             self.EVAL_REPORT_SCHEMA,
         ]:
@@ -1018,6 +1071,30 @@ class TestLangGraphContractSchemas:
             node for node in contract["nodes"] if node["node"] == "llm_triage"
         )
         assert triage_node["skills"] == []
+
+    def test_emitted_agent_policy_matches_schema_and_known_boundaries(self):
+        result = subprocess.run(
+            [sys.executable, str(self.GRAPH)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        summary = json.loads(result.stdout)
+        agent_policy = summary["agent_policy"]
+        schema = json.loads(self.AGENT_POLICY_SCHEMA.read_text(encoding="utf-8"))
+        assert _schema_errors(schema, agent_policy) == []
+        assert agent_policy["policy_hash"] == summary["audit"]["agent_policy_hash"]
+
+        entries = {
+            entry["agent_id"]: entry
+            for entry in agent_policy["entries"]
+        }
+        assert entries["triage-agent"]["effective_skill_grants"] == []
+        assert entries["triage-agent"]["decision"] == "no_direct_tools"
+        assert entries["remediation-planner"]["write_policy"] == "dry_run_only_after_hitl"
+        assert entries["remediation-planner"]["denied_skill_scope"] == ["iam-departures-aws"]
 
 
 class TestLangGraphHarnessSetup:

@@ -153,6 +153,13 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
     model_policy = (summary.get("harness") or {}).get("model_policy") or {}
     agents = {agent.get("agent_id"): agent for agent in summary.get("agents") or []}
     remediation_agent = agents.get("remediation-planner") or {}
+    agent_policy = summary.get("agent_policy") or {}
+    policy_entries = {
+        entry.get("agent_id"): entry
+        for entry in agent_policy.get("entries") or []
+    }
+    triage_policy = policy_entries.get("triage-agent") or {}
+    remediation_policy = policy_entries.get("remediation-planner") or {}
     checks.extend([
         _check("token_budget_status_present", token_usage.get("status") in {"within_budget", "fallback"}, True),
         _check(
@@ -192,6 +199,11 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
         ),
         _check("remediation_agent_requires_hitl", remediation_agent.get("requires_human_approval"), True),
         _check("remediation_agent_dry_run_boundary", remediation_agent.get("privilege_boundary"), "dry_run_write_planning"),
+        _check("agent_policy_schema_version", agent_policy.get("schema_version"), "langgraph-agent-policy-v1"),
+        _check("agent_policy_hash_present", bool(agent_policy.get("policy_hash")), True),
+        _check("triage_policy_grants_no_skills", triage_policy.get("effective_skill_grants"), []),
+        _check("triage_policy_decision_no_direct_tools", triage_policy.get("decision"), "no_direct_tools"),
+        _check("remediation_policy_write_boundary", remediation_policy.get("write_policy"), "dry_run_only_after_hitl"),
     ])
 
     if "recommendation_generated_by" in expected:
