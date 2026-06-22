@@ -68,6 +68,14 @@
       "model": "policy-bounded-triage-v1"
     }
   },
+  "agent_roster": [
+    {
+      "agent_id": "triage-agent",
+      "model_tier": "tiny",
+      "privilege_boundary": "no_tool_writes",
+      "skill_scope": []
+    }
+  ],
   "approval_policy": {
     "remediation_requires_approval_context": true,
     "approval_source": "not_enabled_for_this_profile"

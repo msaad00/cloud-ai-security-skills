@@ -397,6 +397,14 @@ class TestLangGraphSocWorkflow:
         assert all("raw_events" not in card for card in summary["llm_evidence_cards"])
         assert all("ocsf_events" not in card for card in summary["llm_evidence_cards"])
         assert [agent["agent_id"] for agent in summary["agents"]] == self.EXPECTED_AGENT_IDS
+        triage_agent = next(agent for agent in summary["agents"] if agent["agent_id"] == "triage-agent")
+        assert triage_agent["privilege_boundary"] == "no_tool_writes"
+        assert triage_agent["skill_scope"] == []
+        assert triage_agent["model_tier"] == "tiny"
+        assert "approval" in triage_agent["forbidden_outputs"]
+        remediation_agent = next(agent for agent in summary["agents"] if agent["agent_id"] == "remediation-planner")
+        assert remediation_agent["requires_human_approval"] is True
+        assert remediation_agent["privilege_boundary"] == "dry_run_write_planning"
         assert [run["agent_id"] for run in summary["agent_runs"]] == [
             "evidence-agent",
             "risk-map-agent",
@@ -669,6 +677,10 @@ class TestLangGraphSocWorkflow:
         assert summary["harness"]["model"] == "gpt-4.1-mini"
         assert summary["harness"]["model_policy"]["selected_model_tier"] == "small"
         assert summary["harness"]["model_policy"]["selection_source"] == "profile_model_policy"
+        triage_agent = next(agent for agent in summary["agents"] if agent["agent_id"] == "triage-agent")
+        assert triage_agent["model_tier"] == "small"
+        assert triage_agent["privilege_boundary"] == "no_tool_writes"
+        assert triage_agent["skill_scope"] == []
         assert summary["agent_recommendations"][0]["generated_by"] == "openai:gpt-4.1-mini"
         assert summary["review"]["status"] == "blocked"
 
@@ -932,6 +944,13 @@ class TestLangGraphContractSchemas:
             assert profile["model_policy"]["policy_version"] == "langgraph-model-policy-v1"
             assert profile["model_policy"]["selection_strategy"] == "smallest_sufficient"
             assert profile["token_budget"]["model_tier"] in profile["model_policy"]["allowed_model_tiers"]
+            if profile.get("agent_roster"):
+                roster = {agent["agent_id"]: agent for agent in profile["agent_roster"]}
+                if "triage-agent" in roster:
+                    assert roster["triage-agent"]["privilege_boundary"] == "no_tool_writes"
+                    assert roster["triage-agent"]["skill_scope"] == []
+                if "remediation-planner" in roster:
+                    assert roster["remediation-planner"]["requires_human_approval"] is True
 
     def test_llm_adapter_eval_fixtures_match_expected_schema_outcome(self):
         schema = json.loads(self.ADAPTER_SCHEMA.read_text(encoding="utf-8"))
@@ -1081,6 +1100,13 @@ class TestLangGraphHarnessSetup:
             "provider": "openai",
             "model": "gpt-4.1-mini",
         }
+        roster = {agent["agent_id"]: agent for agent in profile["agent_roster"]}
+        assert roster["triage-agent"] == {
+            "agent_id": "triage-agent",
+            "model_tier": "small",
+            "privilege_boundary": "no_tool_writes",
+            "skill_scope": [],
+        }
         assert "iam-departures-aws" not in profile["allowed_skills"]
 
         dotenv = env_path.read_text(encoding="utf-8")
@@ -1107,6 +1133,9 @@ class TestLangGraphHarnessSetup:
         assert summary["harness"]["token_budget"]["model_tier"] == "small"
         assert summary["harness"]["model_policy"]["selected_model_tier"] == "small"
         assert summary["harness"]["model_policy"]["selection_source"] == "profile_model_policy"
+        triage_agent = next(agent for agent in summary["agents"] if agent["agent_id"] == "triage-agent")
+        assert triage_agent["model_tier"] == "small"
+        assert triage_agent["skill_scope"] == []
         assert summary["review"]["status"] == "blocked"
 
     def test_setup_generator_dry_run_profile_still_requires_approval(self, tmp_path: Path):
@@ -1140,6 +1169,9 @@ class TestLangGraphHarnessSetup:
         assert profile["approval_policy"]["remediation_requires_approval_context"] is True
         assert profile["token_budget"]["model_tier"] == "tiny"
         assert profile["model_policy"]["allowed_model_tiers"] == ["tiny"]
+        roster = {agent["agent_id"]: agent for agent in profile["agent_roster"]}
+        assert roster["remediation-planner"]["requires_human_approval"] is True
+        assert roster["remediation-planner"]["privilege_boundary"] == "dry_run_write_planning"
 
         blocked = subprocess.run(
             [sys.executable, str(self.GRAPH)],

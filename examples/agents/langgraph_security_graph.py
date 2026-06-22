@@ -93,6 +93,7 @@ class HarnessProfile(TypedDict, total=False):
     llm: dict[str, str]
     approval_policy: dict[str, Any]
     model_policy: dict[str, Any]
+    agent_roster: list[dict[str, Any]]
     runtime: dict[str, Any]
 
 
@@ -156,6 +157,11 @@ class AgentDefinition(TypedDict):
     kind: AgentKind
     owns: list[WorkflowStage]
     authority: str
+    privilege_boundary: str
+    skill_scope: list[str]
+    model_tier: str
+    requires_human_approval: bool
+    failure_route: str
     allowed_outputs: list[str]
     forbidden_outputs: list[str]
 
@@ -329,6 +335,118 @@ DEFAULT_MODEL_POLICY = {
     },
 }
 
+DEFAULT_AGENT_ROSTER: list[AgentDefinition] = [
+    {
+        "agent_id": "evidence-agent",
+        "kind": "deterministic_skill",
+        "owns": ["ingest", "normalize", "enrich", "correlate"],
+        "authority": "read_only_evidence_collection",
+        "privilege_boundary": "read_only",
+        "skill_scope": [
+            "ingest-cloudtrail-ocsf",
+            "source-snowflake-query",
+            "detect-lateral-movement",
+            "discover-control-evidence",
+        ],
+        "model_tier": "none",
+        "requires_human_approval": False,
+        "failure_route": "writeback",
+        "allowed_outputs": ["raw_events", "ocsf_events", "findings", "correlations"],
+        "forbidden_outputs": ["approval", "write_intent", "policy_override"],
+    },
+    {
+        "agent_id": "risk-map-agent",
+        "kind": "deterministic_skill",
+        "owns": ["confidence", "map"],
+        "authority": "deterministic_security_facts",
+        "privilege_boundary": "read_only",
+        "skill_scope": ["detect-lateral-movement", "cspm-aws-cis-benchmark"],
+        "model_tier": "none",
+        "requires_human_approval": False,
+        "failure_route": "writeback",
+        "allowed_outputs": ["confidence_scores", "framework_maps"],
+        "forbidden_outputs": ["approval", "write_intent", "audit_chain_mutation"],
+    },
+    {
+        "agent_id": "triage-agent",
+        "kind": "llm_optional",
+        "owns": ["llm_triage"],
+        "authority": "rank_summarize_draft_only",
+        "privilege_boundary": "no_tool_writes",
+        "skill_scope": [],
+        "model_tier": "tiny",
+        "requires_human_approval": False,
+        "failure_route": "deterministic_fallback",
+        "allowed_outputs": ["rank_findings", "summarize_evidence", "draft_analyst_note", "request_human_review"],
+        "forbidden_outputs": ["approval", "cvss", "mitre", "epss", "kev", "write_intent", "audit_chain_mutation"],
+    },
+    {
+        "agent_id": "review-gate",
+        "kind": "human_gate",
+        "owns": ["review"],
+        "authority": "operator_attested_approval_only",
+        "privilege_boundary": "approval_context_only",
+        "skill_scope": [],
+        "model_tier": "none",
+        "requires_human_approval": True,
+        "failure_route": "writeback",
+        "allowed_outputs": ["approved", "blocked", "approval_context"],
+        "forbidden_outputs": ["synthetic_approval", "model_attested_approval"],
+    },
+    {
+        "agent_id": "remediation-planner",
+        "kind": "deterministic_skill",
+        "owns": ["remediate"],
+        "authority": "dry_run_after_hitl_only",
+        "privilege_boundary": "dry_run_write_planning",
+        "skill_scope": [ALLOWED_SKILLS_REMEDIATION],
+        "model_tier": "none",
+        "requires_human_approval": True,
+        "failure_route": "retry_or_escalate",
+        "allowed_outputs": ["dry_run_plan", "idempotency_key", "retry_decision"],
+        "forbidden_outputs": ["apply", "ungated_write", "new_idempotency_key_on_retry"],
+    },
+    {
+        "agent_id": "retry-coordinator",
+        "kind": "governance",
+        "owns": ["retry_queue"],
+        "authority": "bounded_retry_same_idempotency_key",
+        "privilege_boundary": "retry_metadata_only",
+        "skill_scope": [],
+        "model_tier": "none",
+        "requires_human_approval": True,
+        "failure_route": "writeback",
+        "allowed_outputs": ["retry_record"],
+        "forbidden_outputs": ["new_write_intent", "approval_bypass"],
+    },
+    {
+        "agent_id": "escalation-agent",
+        "kind": "governance",
+        "owns": ["escalate"],
+        "authority": "terminal_error_human_queue",
+        "privilege_boundary": "queue_metadata_only",
+        "skill_scope": [],
+        "model_tier": "none",
+        "requires_human_approval": True,
+        "failure_route": "writeback",
+        "allowed_outputs": ["escalation_record"],
+        "forbidden_outputs": ["auto_apply", "silent_drop"],
+    },
+    {
+        "agent_id": "audit-writer",
+        "kind": "deterministic_skill",
+        "owns": ["writeback"],
+        "authority": "append_only_audit_eval",
+        "privilege_boundary": "append_only",
+        "skill_scope": ["convert-ocsf-to-sarif"],
+        "model_tier": "none",
+        "requires_human_approval": False,
+        "failure_route": "fail_closed",
+        "allowed_outputs": ["audit_record", "eval_record", "state_hash"],
+        "forbidden_outputs": ["overwrite_history", "remove_agent_run"],
+    },
+]
+
 
 def _default_harness_profile() -> HarnessProfile:
     return {
@@ -353,6 +471,7 @@ def _default_harness_profile() -> HarnessProfile:
         },
         "token_budget": DEFAULT_TOKEN_BUDGET,
         "model_policy": DEFAULT_MODEL_POLICY,
+        "agent_roster": DEFAULT_AGENT_ROSTER,
         "approval_policy": {
             "remediation_requires_approval_context": True,
             "approval_source": "operator_idp_or_ticketing_system",
@@ -362,6 +481,49 @@ def _default_harness_profile() -> HarnessProfile:
             "dry_run_default": True,
         },
     }
+
+
+def _merge_agent_roster(profile_roster: list[dict[str, Any]] | None) -> list[AgentDefinition]:
+    if not profile_roster:
+        return [dict(agent) for agent in DEFAULT_AGENT_ROSTER]
+    merged: list[AgentDefinition] = []
+    for default in DEFAULT_AGENT_ROSTER:
+        override = next(
+            (agent for agent in profile_roster if agent.get("agent_id") == default["agent_id"]),
+            {},
+        )
+        candidate = {**default, **override}
+        if candidate["agent_id"] != default["agent_id"]:
+            candidate["agent_id"] = default["agent_id"]
+        if candidate["kind"] != default["kind"]:
+            candidate["kind"] = default["kind"]
+        if candidate["owns"] != default["owns"]:
+            candidate["owns"] = default["owns"]
+        if candidate["authority"] != default["authority"]:
+            candidate["authority"] = default["authority"]
+        if candidate["agent_id"] == "triage-agent":
+            candidate["privilege_boundary"] = "no_tool_writes"
+            candidate["skill_scope"] = []
+            candidate["requires_human_approval"] = False
+            candidate["forbidden_outputs"] = sorted({
+                *default["forbidden_outputs"],
+                *candidate.get("forbidden_outputs", []),
+                "approval",
+                "write_intent",
+                "audit_chain_mutation",
+            })
+        if candidate["agent_id"] == "remediation-planner":
+            candidate["requires_human_approval"] = True
+            candidate["privilege_boundary"] = "dry_run_write_planning"
+            candidate["skill_scope"] = [ALLOWED_SKILLS_REMEDIATION]
+            candidate["forbidden_outputs"] = sorted({
+                *default["forbidden_outputs"],
+                *candidate.get("forbidden_outputs", []),
+                "apply",
+                "ungated_write",
+            })
+        merged.append(candidate)  # type: ignore[arg-type]
+    return merged
 
 
 def load_harness_profile(path_text: str | None = None) -> HarnessProfile:
@@ -396,6 +558,7 @@ def load_harness_profile(path_text: str | None = None) -> HarnessProfile:
         **default["model_policy"]["fallback"],
         **payload.get("model_policy", {}).get("fallback", {}),
     }
+    profile["agent_roster"] = _merge_agent_roster(payload.get("agent_roster"))
     return profile
 
 
@@ -405,76 +568,15 @@ def _effective_allowed_skills(profile: HarnessProfile) -> list[str]:
     return [skill for skill in requested if skill in safe_surface]
 
 
-def _agent_manifest() -> list[AgentDefinition]:
-    return [
-        {
-            "agent_id": "evidence-agent",
-            "kind": "deterministic_skill",
-            "owns": ["ingest", "normalize", "enrich", "correlate"],
-            "authority": "read_only_evidence_collection",
-            "allowed_outputs": ["raw_events", "ocsf_events", "findings", "correlations"],
-            "forbidden_outputs": ["approval", "write_intent", "policy_override"],
-        },
-        {
-            "agent_id": "risk-map-agent",
-            "kind": "deterministic_skill",
-            "owns": ["confidence", "map"],
-            "authority": "deterministic_security_facts",
-            "allowed_outputs": ["confidence_scores", "framework_maps"],
-            "forbidden_outputs": ["approval", "write_intent", "audit_chain_mutation"],
-        },
-        {
-            "agent_id": "triage-agent",
-            "kind": "llm_optional",
-            "owns": ["llm_triage"],
-            "authority": "rank_summarize_draft_only",
-            "allowed_outputs": ["rank_findings", "summarize_evidence", "draft_analyst_note", "request_human_review"],
-            "forbidden_outputs": ["approval", "cvss", "mitre", "epss", "kev", "write_intent", "audit_chain_mutation"],
-        },
-        {
-            "agent_id": "review-gate",
-            "kind": "human_gate",
-            "owns": ["review"],
-            "authority": "operator_attested_approval_only",
-            "allowed_outputs": ["approved", "blocked", "approval_context"],
-            "forbidden_outputs": ["synthetic_approval", "model_attested_approval"],
-        },
-        {
-            "agent_id": "remediation-planner",
-            "kind": "deterministic_skill",
-            "owns": ["remediate"],
-            "authority": "dry_run_after_hitl_only",
-            "allowed_outputs": ["dry_run_plan", "idempotency_key", "retry_decision"],
-            "forbidden_outputs": ["apply", "ungated_write", "new_idempotency_key_on_retry"],
-        },
-        {
-            "agent_id": "retry-coordinator",
-            "kind": "governance",
-            "owns": ["retry_queue"],
-            "authority": "bounded_retry_same_idempotency_key",
-            "allowed_outputs": ["retry_record"],
-            "forbidden_outputs": ["new_write_intent", "approval_bypass"],
-        },
-        {
-            "agent_id": "escalation-agent",
-            "kind": "governance",
-            "owns": ["escalate"],
-            "authority": "terminal_error_human_queue",
-            "allowed_outputs": ["escalation_record"],
-            "forbidden_outputs": ["auto_apply", "silent_drop"],
-        },
-        {
-            "agent_id": "audit-writer",
-            "kind": "deterministic_skill",
-            "owns": ["writeback"],
-            "authority": "append_only_audit_eval",
-            "allowed_outputs": ["audit_record", "eval_record", "state_hash"],
-            "forbidden_outputs": ["overwrite_history", "remove_agent_run"],
-        },
-    ]
+def _agent_manifest(state: GraphState | None = None) -> list[AgentDefinition]:
+    profile = (state or {}).get("harness_profile") if state else None
+    if profile and profile.get("agent_roster"):
+        return _merge_agent_roster(profile.get("agent_roster"))
+    return [dict(agent) for agent in DEFAULT_AGENT_ROSTER]
 
 
-def _pipeline_node_contracts() -> list[PipelineNodeContract]:
+def _pipeline_node_contracts(state: GraphState | None = None) -> list[PipelineNodeContract]:
+    agent_by_id = {agent["agent_id"]: agent for agent in _agent_manifest(state)}
     return [
         {
             "node": "ingest",
@@ -549,7 +651,7 @@ def _pipeline_node_contracts() -> list[PipelineNodeContract]:
         {
             "node": "remediate",
             "agent_id": "remediation-planner",
-            "skills": [ALLOWED_SKILLS_REMEDIATION],
+            "skills": agent_by_id["remediation-planner"]["skill_scope"],
             "inputs": ["review_decision", "framework_maps", "confidence_scores", "idempotency"],
             "outputs": ["remediation_result", "api_errors", "idempotency.remediation_key"],
             "guardrails": ["dry_run_default", "approval_context_required", "stable_idempotency_key"],
@@ -600,11 +702,11 @@ def _pipeline_edge_contracts() -> list[PipelineEdgeContract]:
     ]
 
 
-def pipeline_contract() -> dict[str, Any]:
+def pipeline_contract(state: GraphState | None = None) -> dict[str, Any]:
     return {
         "schema_version": "langgraph-soc-pipeline-contract-v1",
         "description": "Code-backed LangGraph SOC workflow contract for nodes, edges, skills, and guardrails.",
-        "nodes": _pipeline_node_contracts(),
+        "nodes": _pipeline_node_contracts(state),
         "edges": _pipeline_edge_contracts(),
         "invariants": [
             "skills own facts; LangGraph owns routing and state",
@@ -616,13 +718,6 @@ def pipeline_contract() -> dict[str, Any]:
     }
 
 
-def _agent_by_id(agent_id: str) -> AgentDefinition:
-    for agent in _agent_manifest():
-        if agent["agent_id"] == agent_id:
-            return agent
-    raise KeyError(agent_id)
-
-
 def _record_agent_run(
     state: GraphState,
     *,
@@ -632,8 +727,9 @@ def _record_agent_run(
     outputs: Any,
     token_budget: dict[str, Any] | None = None,
 ) -> None:
-    state.setdefault("agent_manifest", _agent_manifest())
-    agent = _agent_by_id(agent_id)
+    state.setdefault("agent_manifest", _agent_manifest(state))
+    agent_by_id = {agent["agent_id"]: agent for agent in state["agent_manifest"]}
+    agent = agent_by_id[agent_id]
     runs = state.setdefault("agent_runs", [])
     record: AgentRunRecord = {
         "run_id": f"run-{len(runs) + 1:02d}-{agent_id}",
@@ -803,8 +899,8 @@ def route_after_remediation(state: GraphState) -> RemediationRoute:
 def ingest_node(state: GraphState) -> GraphState:
     """Collect raw evidence from an approved source surface."""
     _append_trace(state, "ingest")
-    state.setdefault("agent_manifest", _agent_manifest())
     profile = state.setdefault("harness_profile", _default_harness_profile())
+    state["agent_manifest"] = _agent_manifest(state)
     effective_skills = _effective_allowed_skills(profile)
     state["effective_allowed_skills"] = effective_skills
     raw_events = state.get("raw_events") or [{
@@ -1478,7 +1574,7 @@ def summarize(final: GraphState) -> dict[str, Any]:
         "confidence_scores": final.get("confidence_scores"),
         "framework_maps": final.get("framework_maps"),
         "harness": final.get("harness_config"),
-        "pipeline_contract": pipeline_contract(),
+        "pipeline_contract": pipeline_contract(final),
         "agents": final.get("agent_manifest"),
         "agent_runs": final.get("agent_runs"),
         "agent_recommendations": final.get("agent_recommendations"),

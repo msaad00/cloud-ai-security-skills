@@ -94,6 +94,20 @@ def build_profile(args: argparse.Namespace) -> dict[str, Any]:
     session_id = args.session_id or f"{args.profile_id}-session"
     user_id = args.user_id or args.email.split("@", 1)[0]
     model_tier = "small" if args.external_llm else "tiny"
+    agent_roster = [
+        {
+            "agent_id": "triage-agent",
+            "model_tier": model_tier,
+            "privilege_boundary": "no_tool_writes",
+            "skill_scope": [],
+        },
+        {
+            "agent_id": "remediation-planner",
+            "requires_human_approval": True,
+            "privilege_boundary": "dry_run_write_planning",
+            "skill_scope": [ALLOWED_SKILLS_REMEDIATION] if ROLE_DEFAULTS[role]["include_remediation"] else [],
+        },
+    ]
     return {
         "profile_id": args.profile_id,
         "description": args.description or ROLE_DEFAULTS[role]["description"],
@@ -127,6 +141,7 @@ def build_profile(args: argparse.Namespace) -> dict[str, Any]:
                 },
             },
         },
+        "agent_roster": agent_roster,
         "approval_policy": {
             "remediation_requires_approval_context": True,
             "approval_source": args.approval_source,

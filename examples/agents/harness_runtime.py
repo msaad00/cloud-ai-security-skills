@@ -113,6 +113,23 @@ def validate_harness_summary(summary: Mapping[str, Any]) -> tuple[str, ...]:
             errors.append("llm evidence cards must not include raw or full OCSF events")
             break
 
+    agents = {agent.get("agent_id"): agent for agent in summary.get("agents") or []}
+    triage_agent = agents.get("triage-agent") or {}
+    if triage_agent.get("privilege_boundary") != "no_tool_writes":
+        errors.append("triage-agent must use no_tool_writes privilege boundary")
+    if triage_agent.get("skill_scope") not in ((), []):
+        errors.append("triage-agent must not have direct skill scope")
+    if {"approval", "write_intent"} - set(triage_agent.get("forbidden_outputs") or []):
+        errors.append("triage-agent must forbid approval and write_intent outputs")
+    if triage_agent.get("model_tier") not in set(model_policy.get("allowed_model_tiers") or []):
+        errors.append("triage-agent model tier must be allowed by model policy")
+
+    remediation_agent = agents.get("remediation-planner") or {}
+    if remediation_agent.get("requires_human_approval") is not True:
+        errors.append("remediation-planner must require human approval")
+    if remediation_agent.get("privilege_boundary") != "dry_run_write_planning":
+        errors.append("remediation-planner must stay dry-run write planning only")
+
     review = summary.get("review") or {}
     remediation = summary.get("remediation") or {}
     if remediation.get("status") == "dry_run" and review.get("status") != "approved":

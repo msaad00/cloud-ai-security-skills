@@ -104,8 +104,13 @@ fallback when the budget is exceeded.
 The example exposes a concrete `agents` manifest and `agent_runs` ledger:
 `evidence-agent`, `risk-map-agent`, `triage-agent`, `review-gate`,
 `remediation-planner`, `retry-coordinator`, `escalation-agent`, and
-`audit-writer`. Each run carries an authority label plus input/output hashes
-so replay can detect drift without trusting prompt text.
+`audit-writer`. Profiles can declare concise `agent_roster` overrides for
+model tier, privilege boundary, skill scope, and HITL posture. Runtime loading
+then re-applies fixed graph ownership and safety boundaries: the LLM triage
+agent keeps `no_tool_writes` with an empty skill scope, while remediation
+planning keeps `dry_run_write_planning` and requires human approval. Each run
+carries an authority label plus input/output hashes so replay can detect drift
+without trusting prompt text.
 The operator-facing summary also emits `pipeline_contract`, a code-backed list
 of nodes, edges, route conditions, skills, input/output state keys, and
 guardrails for approval, dry-run remediation, retries, idempotency, and audit
@@ -153,13 +158,14 @@ share a closed eval-report schema.
 Operator profiles live under
 [`examples/agents/harness_profiles/`](../examples/agents/harness_profiles/).
 They are JSON metadata only: allowed skills, caller context, identity hints,
-LLM provider/model metadata, model-policy selection, token-budget limits, and
-approval-policy documentation. They do not store cloud secrets and they do not
-grant approval. A remediation profile can make a dry-run skill visible, but
-the graph still needs `_approval_context` from the operator's IDP or ticketing
-workflow before routing to remediation. Profiles can declare `model_policy`
-and `token_budget` together so small triage tasks stay on tiny/small model
-tiers and oversized context falls back deterministically.
+LLM provider/model metadata, model-policy selection, token-budget limits,
+agent-roster overrides, and approval-policy documentation. They do not store
+cloud secrets and they do not grant approval. A remediation profile can make a
+dry-run skill visible, but the graph still needs `_approval_context` from the
+operator's IDP or ticketing workflow before routing to remediation. Profiles
+can declare `model_policy`, `token_budget`, and `agent_roster` together so
+small triage tasks stay on tiny/small model tiers, oversized context falls back
+deterministically, and write-capable stages remain deterministic plus HITL.
 Closed JSON Schema contracts live under
 [`examples/agents/schemas/`](../examples/agents/schemas/) for harness
 profiles, LLM adapter recommendation payloads, and the emitted
