@@ -47,6 +47,11 @@ Profiles control:
 - `approval_policy`: documentation of the HITL source; profiles never grant
   approval by themselves.
 
+At runtime the harness emits `agent_policy`, which intersects the roster skill
+scope with `allowed_skills`. Approval alone is not enough to reach dry-run
+remediation; the remediation skill must also be present in the effective
+allowlist.
+
 Included profiles:
 
 | Profile | Use |

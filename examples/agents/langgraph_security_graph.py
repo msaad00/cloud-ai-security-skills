@@ -191,6 +191,22 @@ class AgentRunRecord(TypedDict, total=False):
     token_budget: dict[str, Any]
 
 
+class AgentPolicyEntry(TypedDict):
+    agent_id: str
+    kind: AgentKind
+    privilege_boundary: str
+    owns: list[WorkflowStage]
+    requested_skill_scope: list[str]
+    effective_skill_grants: list[str]
+    denied_skill_scope: list[str]
+    model_tier: str
+    model_policy_tier: str
+    requires_human_approval: bool
+    approval_satisfied: bool
+    write_policy: str
+    decision: str
+
+
 class AgentRecommendation(TypedDict):
     finding_uid: str
     priority: Literal["critical", "high", "medium", "low"]
@@ -267,6 +283,7 @@ class GraphState(TypedDict, total=False):
     framework_maps: list[FrameworkMap]
     harness_config: AgentHarnessConfig
     agent_manifest: list[AgentDefinition]
+    agent_policy: dict[str, Any]
     agent_runs: list[AgentRunRecord]
     agent_recommendations: list[AgentRecommendation]
     llm_validation: list[LlmValidationRecord]
@@ -715,6 +732,82 @@ def pipeline_contract(state: GraphState | None = None) -> dict[str, Any]:
             "API errors route to retry_queue only when classified retryable",
             "audit/eval writeback records state_hash and idempotency keys",
         ],
+    }
+
+
+def _agent_write_policy(agent: AgentDefinition) -> str:
+    if agent["agent_id"] == "remediation-planner":
+        return "dry_run_only_after_hitl"
+    if agent["agent_id"] == "audit-writer":
+        return "append_only_audit_eval"
+    return "none"
+
+
+def _agent_policy_decision(
+    *,
+    agent: AgentDefinition,
+    effective_grants: list[str],
+    denied_scope: list[str],
+    approval_satisfied: bool,
+) -> str:
+    if agent["agent_id"] == "triage-agent":
+        return "no_direct_tools"
+    if denied_scope:
+        return "blocked_by_allowlist"
+    if agent["requires_human_approval"] and not approval_satisfied:
+        return "requires_human_approval"
+    if effective_grants or agent["kind"] in {"human_gate", "governance"}:
+        return "ready"
+    return "metadata_only"
+
+
+def effective_agent_policy(state: GraphState) -> dict[str, Any]:
+    """Compile profile, roster, and allowlist into per-agent grants."""
+    profile = state.get("harness_profile") or {}
+    effective_allowed = list(state.get("effective_allowed_skills") or _effective_allowed_skills(profile))
+    allowed_set = set(effective_allowed)
+    harness_config = state.get("harness_config") or _agent_harness_config(state)
+    selected_model_tier = (harness_config.get("model_policy") or {}).get("selected_model_tier")
+    review_status = (state.get("review_decision") or {}).get("status")
+    entries: list[AgentPolicyEntry] = []
+    for agent in state.get("agent_manifest") or _agent_manifest(state):
+        requested_scope = list(agent["skill_scope"])
+        effective_grants = [skill for skill in requested_scope if skill in allowed_set]
+        denied_scope = [skill for skill in requested_scope if skill not in allowed_set]
+        approval_satisfied = (
+            not agent["requires_human_approval"]
+            or review_status == "approved"
+        )
+        model_policy_tier = selected_model_tier if agent["kind"] == "llm_optional" else "none"
+        entries.append({
+            "agent_id": agent["agent_id"],
+            "kind": agent["kind"],
+            "privilege_boundary": agent["privilege_boundary"],
+            "owns": list(agent["owns"]),
+            "requested_skill_scope": requested_scope,
+            "effective_skill_grants": effective_grants,
+            "denied_skill_scope": denied_scope,
+            "model_tier": agent["model_tier"],
+            "model_policy_tier": model_policy_tier,
+            "requires_human_approval": agent["requires_human_approval"],
+            "approval_satisfied": approval_satisfied,
+            "write_policy": _agent_write_policy(agent),
+            "decision": _agent_policy_decision(
+                agent=agent,
+                effective_grants=effective_grants,
+                denied_scope=denied_scope,
+                approval_satisfied=approval_satisfied,
+            ),
+        })
+    payload = {
+        "schema_version": "langgraph-agent-policy-v1",
+        "profile_id": profile.get("profile_id"),
+        "effective_allowed_skills": effective_allowed,
+        "entries": entries,
+    }
+    return {
+        **payload,
+        "policy_hash": _stable_hash(payload)[:16],
     }
 
 
@@ -1206,6 +1299,23 @@ def dry_run_remediation_node(state: GraphState) -> GraphState:
         _emit_node("remediate", status="skipped", reason="hitl_not_approved")
         return state
 
+    if ALLOWED_SKILLS_REMEDIATION not in set(state.get("effective_allowed_skills") or []):
+        state["remediation_result"] = {
+            "status": "skipped",
+            "skill": ALLOWED_SKILLS_REMEDIATION,
+            "reason": "remediation skill not in effective allowlist",
+            "approval": approval,
+        }
+        _record_agent_run(
+            state,
+            agent_id="remediation-planner",
+            stage="remediate",
+            inputs={"review_decision": decision, "effective_allowed_skills": state.get("effective_allowed_skills")},
+            outputs=state["remediation_result"],
+        )
+        _emit_node("remediate", status="skipped", reason="skill_not_allowed")
+        return state
+
     finding_uids = sorted(finding["uid"] for finding in state.get("findings") or [])
     approved_payload = {
         "approval_ticket": approval["ticket_id"],
@@ -1379,6 +1489,7 @@ def audit_eval_writeback_node(state: GraphState) -> GraphState:
         },
         outputs={"writeback": "audit_eval_pending"},
     )
+    state["agent_policy"] = effective_agent_policy(state)
     summary_payload = {
         "caller_context": state.get("caller_context"),
         "harness_profile": {
@@ -1393,6 +1504,7 @@ def audit_eval_writeback_node(state: GraphState) -> GraphState:
         "harness_config": state.get("harness_config"),
         "token_budget_usage": state.get("token_budget_usage"),
         "agent_manifest": state.get("agent_manifest"),
+        "agent_policy": state.get("agent_policy"),
         "agent_runs": state.get("agent_runs"),
         "agent_recommendations": state.get("agent_recommendations"),
         "llm_validation": state.get("llm_validation"),
@@ -1425,6 +1537,7 @@ def audit_eval_writeback_node(state: GraphState) -> GraphState:
         "idempotency_key": idempotency.get("remediation_key") or idempotency.get("workflow_key"),
         "api_error_count": len(api_errors),
         "agent_run_count": len(state.get("agent_runs") or []),
+        "agent_policy_hash": (state.get("agent_policy") or {}).get("policy_hash"),
         "llm_adapter_accepted": sum(1 for record in llm_validation if record["status"] == "accepted"),
         "llm_adapter_rejected": sum(1 for record in llm_validation if record["status"] == "rejected"),
         "llm_token_budget_status": (state.get("token_budget_usage") or {}).get("status"),
@@ -1576,6 +1689,7 @@ def summarize(final: GraphState) -> dict[str, Any]:
         "harness": final.get("harness_config"),
         "pipeline_contract": pipeline_contract(final),
         "agents": final.get("agent_manifest"),
+        "agent_policy": final.get("agent_policy"),
         "agent_runs": final.get("agent_runs"),
         "agent_recommendations": final.get("agent_recommendations"),
         "llm_validation": final.get("llm_validation"),

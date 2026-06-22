@@ -111,6 +111,10 @@ agent keeps `no_tool_writes` with an empty skill scope, while remediation
 planning keeps `dry_run_write_planning` and requires human approval. Each run
 carries an authority label plus input/output hashes so replay can detect drift
 without trusting prompt text.
+The summary also emits `agent_policy`, a compiled effective-grants report that
+intersects each agent's roster skill scope with the profile allowlist. It shows
+granted skills, denied skills, model tier, write policy, approval satisfaction,
+and a stable `policy_hash` copied into audit.
 The operator-facing summary also emits `pipeline_contract`, a code-backed list
 of nodes, edges, route conditions, skills, input/output state keys, and
 guardrails for approval, dry-run remediation, retries, idempotency, and audit
@@ -168,8 +172,8 @@ small triage tasks stay on tiny/small model tiers, oversized context falls back
 deterministically, and write-capable stages remain deterministic plus HITL.
 Closed JSON Schema contracts live under
 [`examples/agents/schemas/`](../examples/agents/schemas/) for harness
-profiles, LLM adapter recommendation payloads, and the emitted
-`pipeline_contract` topology. Checkpoint artifacts have a closed schema
+profiles, LLM adapter recommendation payloads, emitted `agent_policy`, and the
+emitted `pipeline_contract` topology. Checkpoint artifacts have a closed schema
 envelope for replay persistence, and eval reports use a shared schema for
 both JSON output and JSONL history rows.
 
