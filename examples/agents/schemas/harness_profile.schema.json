@@ -237,6 +237,14 @@
         }
       }
     },
+    "agent_roster": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/agent_roster_entry"
+      }
+    },
     "approval_policy": {
       "type": "object",
       "additionalProperties": false,
@@ -298,6 +306,120 @@
         "model": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "agent_roster_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_id"
+      ],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "enum": [
+            "evidence-agent",
+            "risk-map-agent",
+            "triage-agent",
+            "review-gate",
+            "remediation-planner",
+            "retry-coordinator",
+            "escalation-agent",
+            "audit-writer"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "deterministic_skill",
+            "llm_optional",
+            "human_gate",
+            "governance"
+          ]
+        },
+        "owns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "ingest",
+              "normalize",
+              "enrich",
+              "correlate",
+              "confidence",
+              "map",
+              "llm_triage",
+              "review",
+              "remediate",
+              "retry_queue",
+              "escalate",
+              "writeback"
+            ]
+          }
+        },
+        "authority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "privilege_boundary": {
+          "type": "string",
+          "enum": [
+            "read_only",
+            "no_tool_writes",
+            "approval_context_only",
+            "dry_run_write_planning",
+            "retry_metadata_only",
+            "queue_metadata_only",
+            "append_only"
+          ]
+        },
+        "skill_scope": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "model_tier": {
+          "type": "string",
+          "enum": [
+            "none",
+            "tiny",
+            "small",
+            "large"
+          ]
+        },
+        "requires_human_approval": {
+          "type": "boolean"
+        },
+        "failure_route": {
+          "type": "string",
+          "enum": [
+            "writeback",
+            "deterministic_fallback",
+            "retry_or_escalate",
+            "fail_closed"
+          ]
+        },
+        "allowed_outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_outputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }

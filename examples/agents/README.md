@@ -187,6 +187,10 @@ forms share a closed schema contract under [`schemas/`](schemas/).
 `pipeline_contract` is code-backed topology metadata: node ownership, skills,
 input/output state keys, conditional edges, and guardrails for dry-run,
 approval, retries, idempotency, and audit writeback.
+Profiles can also carry concise `agent_roster` overrides. The loader preserves
+fixed graph ownership and re-applies safety boundaries, so an operator can set
+the triage model tier or document remediation posture without granting the LLM
+agent tool-write scope or bypassing HITL.
 Importable harness wrapper:
 
 ```bash

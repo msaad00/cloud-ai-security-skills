@@ -41,6 +41,9 @@ Profiles control:
 - `token_budget`: model tier and hard estimated token caps; the harness sends
   compact evidence cards only and falls back deterministically when a request
   would exceed budget.
+- `agent_roster`: concise per-agent overrides for model tier, privilege
+  boundary, skill scope, and HITL posture. The loader keeps the graph topology
+  fixed and re-applies no-write/HITL guardrails.
 - `approval_policy`: documentation of the HITL source; profiles never grant
   approval by themselves.
 

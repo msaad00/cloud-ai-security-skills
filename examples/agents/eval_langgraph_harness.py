@@ -151,6 +151,8 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
     token_usage = summary.get("token_budget_usage") or {}
     token_budget = (summary.get("harness") or {}).get("token_budget") or {}
     model_policy = (summary.get("harness") or {}).get("model_policy") or {}
+    agents = {agent.get("agent_id"): agent for agent in summary.get("agents") or []}
+    remediation_agent = agents.get("remediation-planner") or {}
     checks.extend([
         _check("token_budget_status_present", token_usage.get("status") in {"within_budget", "fallback"}, True),
         _check(
@@ -181,6 +183,15 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
             all("raw_events" not in card and "ocsf_events" not in card for card in summary.get("llm_evidence_cards") or []),
             True,
         ),
+        _check("triage_agent_no_write_privilege", triage_agent.get("privilege_boundary"), "no_tool_writes"),
+        _check("triage_agent_no_skill_scope", triage_agent.get("skill_scope"), []),
+        _check(
+            "triage_agent_model_tier_allowed",
+            triage_agent.get("model_tier") in set(model_policy.get("allowed_model_tiers") or []),
+            True,
+        ),
+        _check("remediation_agent_requires_hitl", remediation_agent.get("requires_human_approval"), True),
+        _check("remediation_agent_dry_run_boundary", remediation_agent.get("privilege_boundary"), "dry_run_write_planning"),
     ])
 
     if "recommendation_generated_by" in expected:
