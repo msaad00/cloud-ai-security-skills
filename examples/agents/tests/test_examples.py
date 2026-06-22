@@ -239,6 +239,7 @@ class TestLangGraphSocWorkflow:
     """Regression coverage for the expanded SOC workflow graph."""
 
     SCRIPT = EXAMPLES / "langgraph_security_graph.py"
+    CHECKPOINT_SCHEMA = SCHEMAS / "checkpoint.schema.json"
     PROFILES = EXAMPLES / "harness_profiles"
     EXPECTED_AGENT_IDS = [
         "evidence-agent",
@@ -727,9 +728,14 @@ class TestLangGraphSocWorkflow:
         assert result.returncode == 0, result.stderr
         original_summary = json.loads(result.stdout)
         payload = json.loads(checkpoint.read_text(encoding="utf-8"))
+        schema = json.loads(self.CHECKPOINT_SCHEMA.read_text(encoding="utf-8"))
+        assert _schema_errors(schema, payload) == []
         assert payload["event"] == "langgraph_soc_checkpoint"
         assert payload["schema_version"] == "langgraph-soc-checkpoint-v1"
         assert payload["state_hash"] == original_summary["integrity"]["state_hash"]
+        assert payload["state"]["integrity"]["state_hash"] == payload["state_hash"]
+        assert payload["state"]["audit_record"]["state_hash"] == payload["state_hash"]
+        assert payload["state"]["audit_record"]["chain_hash"] == payload["state_hash"]
         assert payload["checkpoint_hash"]
         assert payload["summary_hash"]
 
@@ -789,12 +795,18 @@ class TestLangGraphContractSchemas:
     PROFILE_SCHEMA = SCHEMAS / "harness_profile.schema.json"
     ADAPTER_SCHEMA = SCHEMAS / "llm_adapter_recommendations.schema.json"
     PIPELINE_SCHEMA = SCHEMAS / "pipeline_contract.schema.json"
+    CHECKPOINT_SCHEMA = SCHEMAS / "checkpoint.schema.json"
     GRAPH = EXAMPLES / "langgraph_security_graph.py"
     PROFILES = EXAMPLES / "harness_profiles"
     DATASET = EXAMPLES / "evals" / "langgraph_triage_golden.json"
 
     def test_schema_files_are_closed_json_schema_documents(self):
-        for schema_path in [self.PROFILE_SCHEMA, self.ADAPTER_SCHEMA, self.PIPELINE_SCHEMA]:
+        for schema_path in [
+            self.PROFILE_SCHEMA,
+            self.ADAPTER_SCHEMA,
+            self.PIPELINE_SCHEMA,
+            self.CHECKPOINT_SCHEMA,
+        ]:
             schema = json.loads(schema_path.read_text(encoding="utf-8"))
             assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
             assert schema["type"] == "object"
