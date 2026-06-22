@@ -189,8 +189,8 @@ graph selects deterministic fallback, JSON fixture, or optional LangChain chat
 fixture adapters, then applies one closed schema gate before any recommendation
 enters graph state.
 Checkpoint artifacts use `langgraph-soc-checkpoint-v1`, include the final
-state, `state_hash`, `summary_hash`, and `checkpoint_hash`, and replay only
-after those hashes verify.
+state, `state_hash`, `summary_hash`, and `checkpoint_hash`, match a closed
+schema envelope, and replay only after those hashes verify.
 
 Profile examples live under
 [`harness_profiles/`](harness_profiles/):
@@ -203,7 +203,8 @@ Profile examples live under
 
 Contract schemas live under [`schemas/`](schemas/). They define the closed
 shape for harness profiles, the LLM adapter recommendation payload accepted by
-the reference graph, and the emitted `pipeline_contract` topology.
+the reference graph, the emitted `pipeline_contract` topology, and checkpoint
+artifact envelopes.
 
 Use [`configure_langgraph_harness.py`](configure_langgraph_harness.py) when
 customizing the harness for a buyer or internal environment. It asks for role,

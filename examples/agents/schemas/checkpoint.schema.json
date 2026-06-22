@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-ai-security-skills.local/examples/agents/schemas/checkpoint.schema.json",
+  "title": "LangGraph SOC checkpoint artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event",
+    "schema_version",
+    "profile_id",
+    "trace",
+    "state_hash",
+    "summary_hash",
+    "state",
+    "checkpoint_hash"
+  ],
+  "properties": {
+    "event": {
+      "type": "string",
+      "const": "langgraph_soc_checkpoint"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "langgraph-soc-checkpoint-v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trace": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "ingest",
+          "normalize",
+          "enrich",
+          "correlate",
+          "confidence",
+          "map",
+          "llm_triage",
+          "review",
+          "remediate",
+          "retry_queue",
+          "escalate",
+          "writeback"
+        ]
+      }
+    },
+    "state_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "summary_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "state": {
+      "type": "object",
+      "required": [
+        "harness_profile",
+        "caller_context",
+        "effective_allowed_skills",
+        "trace",
+        "raw_events",
+        "ocsf_events",
+        "findings",
+        "enrichments",
+        "correlations",
+        "confidence_scores",
+        "framework_maps",
+        "harness_config",
+        "agent_manifest",
+        "agent_runs",
+        "agent_recommendations",
+        "llm_validation",
+        "integrity",
+        "idempotency",
+        "review_decision",
+        "remediation_result",
+        "audit_record",
+        "eval_record"
+      ],
+      "properties": {
+        "trace": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "required": [
+            "evidence_hash",
+            "state_hash"
+          ],
+          "properties": {
+            "evidence_hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "state_hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "idempotency": {
+          "type": "object",
+          "required": [
+            "workflow_key",
+            "duplicate_write_suppressed"
+          ],
+          "properties": {
+            "workflow_key": {
+              "type": "string",
+              "pattern": "^wf-[0-9a-f]{16}$"
+            },
+            "duplicate_write_suppressed": {
+              "type": "boolean"
+            }
+          }
+        },
+        "audit_record": {
+          "type": "object",
+          "required": [
+            "event",
+            "chain_hash",
+            "state_hash",
+            "idempotency_key",
+            "route"
+          ],
+          "properties": {
+            "event": {
+              "type": "string",
+              "const": "agentic_soc_workflow"
+            },
+            "chain_hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "state_hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "route": {
+              "type": "object"
+            }
+          }
+        },
+        "eval_record": {
+          "type": "object",
+          "required": [
+            "dataset_version",
+            "model_policy",
+            "prompt_hash",
+            "cases",
+            "status"
+          ],
+          "properties": {
+            "dataset_version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "model_policy": {
+              "type": "string",
+              "const": "llm_may_rank_summarize_draft_only"
+            },
+            "prompt_hash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$"
+            },
+            "cases": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "blocked"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "checkpoint_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

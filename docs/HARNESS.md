@@ -93,9 +93,9 @@ python examples/agents/langgraph_security_graph.py
 ```
 
 The artifact stores `schema_version=langgraph-soc-checkpoint-v1`, final graph
-state, `state_hash`, `summary_hash`, and `checkpoint_hash`. Replay verifies
-those hashes before returning the operator-facing summary and does not re-run
-graph nodes or tool calls.
+state, `state_hash`, `summary_hash`, and `checkpoint_hash`, and matches a
+closed schema envelope. Replay verifies those hashes before returning the
+operator-facing summary and does not re-run graph nodes or tool calls.
 
 Eval fixtures live under
 [`examples/agents/evals/`](../examples/agents/evals/). The offline gate
@@ -130,7 +130,8 @@ from the operator's IDP or ticketing workflow before routing to remediation.
 Closed JSON Schema contracts live under
 [`examples/agents/schemas/`](../examples/agents/schemas/) for harness
 profiles, LLM adapter recommendation payloads, and the emitted
-`pipeline_contract` topology.
+`pipeline_contract` topology. Checkpoint artifacts have a closed schema
+envelope for replay persistence.
 
 ## Customization knobs
 
