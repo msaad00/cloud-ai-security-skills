@@ -94,6 +94,10 @@ python examples/agents/run_langgraph_harness.py \
   --checkpoint artifacts/langgraph-checkpoint.json
 
 python examples/agents/run_langgraph_harness.py \
+  --profile examples/agents/harness_profiles/dry-run-remediation.json \
+  --approval-context artifacts/approval-context.json
+
+python examples/agents/run_langgraph_harness.py \
   --replay-checkpoint artifacts/langgraph-checkpoint.json
 ```
 
@@ -101,7 +105,9 @@ The runner calls the same importable wrapper used by CI or SOAR integrations,
 keeps validation on by default, and accepts `--langgraph-runtime` when the
 optional LangGraph dependency is installed. `--approve` only supplies demo
 HITL metadata; remediation still requires the profile allowlist and remains
-dry-run only.
+dry-run only. Embedded callers should pass `approval_context` directly to
+`HarnessRunConfig`; the older `DEMO_APPROVE` environment variables remain a
+compatibility path for the original example script.
 
 `HARNESS.md` is therefore the readable operator contract; the graph nodes,
 adapter gates, runtime wrapper, schemas, checkpoint replay, and eval runner are

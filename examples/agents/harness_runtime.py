@@ -33,6 +33,7 @@ class HarnessRunConfig:
     profile_path: str | Path | None = None
     raw_events: tuple[Mapping[str, Any], ...] | None = None
     caller_context: Mapping[str, Any] | None = None
+    approval_context: Mapping[str, Any] | None = None
     use_langgraph_runtime: bool = False
     checkpoint_path: str | Path | None = None
     replay_checkpoint_path: str | Path | None = None
@@ -58,11 +59,14 @@ def build_initial_state(config: HarnessRunConfig | None = None) -> GraphState:
     if config.caller_context:
         caller_context.update(config.caller_context)
     raw_events = [dict(event) for event in (config.raw_events or ({"source": "demo"},))]
-    return {
+    state: GraphState = {
         "harness_profile": profile,
         "caller_context": caller_context,
         "raw_events": raw_events,
     }
+    if config.approval_context:
+        state["approval_context"] = dict(config.approval_context)
+    return state
 
 
 def validate_harness_summary(summary: Mapping[str, Any]) -> tuple[str, ...]:
