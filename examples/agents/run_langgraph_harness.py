@@ -4,9 +4,9 @@ This is the operator-facing CLI for the executable harness. It loads profile
 metadata, optional evidence fixtures, optional caller context overrides, then
 runs either the deterministic route mirror or the real LangGraph StateGraph.
 
-The runner does not read cloud credentials or call live models. Approval flags
-only populate the demo approval context consumed by the graph; remediation
-still requires the profile allowlist and remains dry-run only.
+The runner does not read cloud credentials or call live models. Approval
+metadata is carried in graph state; remediation still requires the profile
+allowlist and remains dry-run only.
 
 Run:
 
@@ -25,6 +25,7 @@ import json
 import os
 import sys
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterator, Mapping
 
@@ -62,15 +63,27 @@ def _load_raw_events(path: Path | None) -> tuple[Mapping[str, Any], ...] | None:
     return tuple(payload)
 
 
+def _approval_context_from_args(args: argparse.Namespace) -> dict[str, Any] | None:
+    explicit = _load_mapping_argument(args.approval_context, label="--approval-context")
+    if explicit:
+        return explicit
+    if not args.approve:
+        return None
+    return {
+        "approver_id": args.approver,
+        "ticket_id": args.ticket,
+        "approval_timestamp": datetime.now(UTC).replace(microsecond=0).isoformat(),
+    }
+
+
 @contextmanager
 def _temporary_demo_approval(args: argparse.Namespace) -> Iterator[None]:
     keys = ("DEMO_APPROVE", "DEMO_APPROVER", "DEMO_TICKET")
     previous = {key: os.environ.get(key) for key in keys}
     try:
         if args.approve:
-            os.environ["DEMO_APPROVE"] = "yes"
-            os.environ["DEMO_APPROVER"] = args.approver
-            os.environ["DEMO_TICKET"] = args.ticket
+            for key in keys:
+                os.environ.pop(key, None)
         elif args.clear_approval_env:
             for key in keys:
                 os.environ.pop(key, None)
@@ -105,6 +118,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output", type=Path, help="Optional JSON summary output path")
     parser.add_argument("--no-check", action="store_true", help="Emit summary even if wrapper validation fails")
     parser.add_argument(
+        "--approval-context",
+        help="JSON object or path with approver_id, ticket_id, and approval_timestamp",
+    )
+    parser.add_argument(
         "--approve",
         action="store_true",
         help="Populate demo approval context for HITL-gated dry-run planning",
@@ -129,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
             profile_path=args.profile,
             raw_events=_load_raw_events(args.raw_events),
             caller_context=_load_mapping_argument(args.caller_context, label="--caller-context"),
+            approval_context=_approval_context_from_args(args),
             use_langgraph_runtime=args.langgraph_runtime,
             checkpoint_path=args.checkpoint,
             replay_checkpoint_path=args.replay_checkpoint,

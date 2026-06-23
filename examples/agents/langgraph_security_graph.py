@@ -272,6 +272,7 @@ class EvalRecord(TypedDict):
 
 class GraphState(TypedDict, total=False):
     caller_context: CallerContext
+    approval_context: ApprovalContext
     harness_profile: HarnessProfile
     effective_allowed_skills: list[str]
     raw_events: list[dict[str, Any]]
@@ -1301,15 +1302,22 @@ def llm_triage_node(state: GraphState) -> GraphState:
 def analyst_review_node(state: GraphState) -> GraphState:
     """Hard pause. No auto-approval and no hallucinated approval context."""
     _append_trace(state, "review")
-    if os.environ.get("DEMO_APPROVE") == "yes":
-        approval: ApprovalContext | None = {
+    approval: ApprovalContext | None = state.get("approval_context")
+    if approval:
+        decision: ReviewDecision = {
+            "status": "approved",
+            "reason": "operator approval context present",
+            "approval": approval,
+        }
+    elif os.environ.get("DEMO_APPROVE") == "yes":
+        approval = {
             "approver_id": os.environ.get("DEMO_APPROVER", "operator@example.com"),
             "ticket_id": os.environ.get("DEMO_TICKET", "SEC-GRAPH-1"),
             "approval_timestamp": datetime.now(UTC).replace(microsecond=0).isoformat(),
         }
         decision: ReviewDecision = {
             "status": "approved",
-            "reason": "operator approval present",
+            "reason": "operator approval env present",
             "approval": approval,
         }
     else:
@@ -1737,6 +1745,9 @@ def summarize(final: GraphState) -> dict[str, Any]:
     """Strip state to a stable operator-facing summary."""
     return {
         "caller_context": final.get("caller_context"),
+        "approval_context_present": bool(
+            final.get("approval_context") or (final.get("review_decision") or {}).get("approval")
+        ),
         "profile": final.get("harness_profile"),
         "effective_allowed_skills": final.get("effective_allowed_skills"),
         "trace": final.get("trace"),

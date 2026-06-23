@@ -127,6 +127,11 @@ python examples/agents/run_langgraph_harness.py \
   --approver reviewer@example.com \
   --ticket SEC-LANGGRAPH-1
 
+# Embedded/SOAR-style approval metadata can also come from JSON, not env vars.
+python examples/agents/run_langgraph_harness.py \
+  --profile examples/agents/harness_profiles/dry-run-remediation.json \
+  --approval-context /path/to/approval-context.json
+
 # Approved path: remediation reaches dry-run only and writes audit/eval output.
 DEMO_HARNESS_PROFILE=examples/agents/harness_profiles/dry-run-remediation.json \
 DEMO_APPROVE=yes \
@@ -240,7 +245,9 @@ operator contract, not the implementation body.
 `run_langgraph_harness.py` is the CLI over that wrapper: it accepts profile
 paths, raw-event fixtures, caller-context overrides, LangGraph runtime
 selection, checkpoint write/replay, JSON output, and explicit demo approval
-metadata without duplicating graph logic.
+metadata without duplicating graph logic. `HarnessRunConfig` also accepts
+stateful `approval_context`, so CI, SOAR, ticketing, or MCP wrappers do not
+need to rely on process-wide approval env vars.
 Adapter plumbing lives in [`harness_adapters.py`](harness_adapters.py): the
 graph selects deterministic fallback, JSON fixture, or optional LangChain chat
 fixture adapters, then applies one closed schema gate before any recommendation

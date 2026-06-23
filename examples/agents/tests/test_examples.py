@@ -305,6 +305,26 @@ class TestLangGraphHarnessRuntime:
         assert replayed.runtime["replayed"] is True
         assert replayed.summary["integrity"]["state_hash"] == first.summary["integrity"]["state_hash"]
 
+    def test_runtime_wrapper_accepts_stateful_approval_context(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("DEMO_APPROVE", raising=False)
+        runtime = self._runtime_module()
+        config = runtime.HarnessRunConfig(
+            profile_path=EXAMPLES / "harness_profiles" / "dry-run-remediation.json",
+            approval_context={
+                "approver_id": "reviewer@example.com",
+                "ticket_id": "SEC-RUNTIME-1",
+                "approval_timestamp": "2026-06-23T00:00:00+00:00",
+            },
+        )
+
+        result = runtime.run_harness(config)
+
+        assert result.validation_errors == ()
+        assert result.summary["approval_context_present"] is True
+        assert result.summary["review"]["status"] == "approved"
+        assert result.summary["review"]["reason"] == "operator approval context present"
+        assert result.summary["remediation"]["status"] == "dry_run"
+
 
 class TestLangGraphHarnessRunner:
     """CLI coverage for the operator-facing harness runner."""
@@ -386,9 +406,31 @@ class TestLangGraphHarnessRunner:
         )
 
         assert summary["review"]["status"] == "approved"
+        assert summary["approval_context_present"] is True
+        assert summary["review"]["reason"] == "operator approval context present"
         assert summary["review"]["approval"]["ticket_id"] == "SEC-RUNNER-1"
         assert summary["remediation"]["status"] == "dry_run"
         assert summary["remediation"]["dry_run"] is True
+
+    def test_runner_accepts_explicit_approval_context_file(self, tmp_path: Path):
+        approval_context = tmp_path / "approval.json"
+        approval_context.write_text(json.dumps({
+            "approver_id": "reviewer@example.com",
+            "ticket_id": "SEC-RUNNER-FILE-1",
+            "approval_timestamp": "2026-06-23T00:00:00+00:00",
+        }), encoding="utf-8")
+
+        summary, _ = self._run(
+            "--profile",
+            str(EXAMPLES / "harness_profiles" / "dry-run-remediation.json"),
+            "--approval-context",
+            str(approval_context),
+            "--clear-approval-env",
+        )
+
+        assert summary["approval_context_present"] is True
+        assert summary["review"]["approval"]["ticket_id"] == "SEC-RUNNER-FILE-1"
+        assert summary["remediation"]["status"] == "dry_run"
 
     def test_runner_writes_output_and_replays_checkpoint(self, tmp_path: Path):
         checkpoint = tmp_path / "checkpoint.json"
