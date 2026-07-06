@@ -16,22 +16,17 @@ Prerequisites:
 
 Run:
 
-    PYTHONPATH=examples/agents python examples/agents/openai_sdk_security_agent.py
+    python examples/agents/openai_sdk_security_agent.py
 
-    DEMO_APPROVE=yes PYTHONPATH=examples/agents python examples/agents/openai_sdk_security_agent.py
+    DEMO_APPROVE=yes python examples/agents/openai_sdk_security_agent.py
 """
 
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
 from typing import Any
 
-EXAMPLES_DIR = Path(__file__).resolve().parent
-if str(EXAMPLES_DIR) not in sys.path:
-    sys.path.insert(0, str(EXAMPLES_DIR))
-
+from harness_mcp_transport import safe_mcp_env
 from sdk_agent_common import (
     dry_run_remediation,
     human_approval_gate,
@@ -40,7 +35,6 @@ from sdk_agent_common import (
     read_allowlist,
     run_cspm_triage,
 )
-from harness_mcp_transport import safe_mcp_env
 
 
 def build_mcp_config(profile: dict[str, Any]) -> dict[str, Any]:

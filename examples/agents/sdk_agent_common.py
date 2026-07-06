@@ -242,9 +242,7 @@ def dry_run_remediation(
     env = safe_mcp_env(allowed_skills=remediation_allowlist())
     result = subprocess.run(
         cmd,
-        input=json.dumps(
-            {"caller_context": caller_context, "approval_context": approval_context}
-        ),
+        input=json.dumps({"caller_context": caller_context, "approval_context": approval_context}),
         capture_output=True,
         text=True,
         timeout=30,

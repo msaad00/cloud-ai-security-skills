@@ -11,21 +11,15 @@ Prerequisites:
 
 Run:
 
-    PYTHONPATH=examples/agents python examples/agents/anthropic_sdk_security_agent.py
+    python examples/agents/anthropic_sdk_security_agent.py
 
     CLOUD_SECURITY_HARNESS_PROFILE=examples/agents/harness_profiles/sdk-cspm-agent.json \\
-      DEMO_APPROVE=yes PYTHONPATH=examples/agents python examples/agents/anthropic_sdk_security_agent.py
+      DEMO_APPROVE=yes python examples/agents/anthropic_sdk_security_agent.py
 """
 
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
-
-EXAMPLES_DIR = Path(__file__).resolve().parent
-if str(EXAMPLES_DIR) not in sys.path:
-    sys.path.insert(0, str(EXAMPLES_DIR))
 
 from sdk_agent_common import (
     dry_run_remediation,
