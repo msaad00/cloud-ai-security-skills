@@ -125,7 +125,10 @@ class TestDocShape:
 
     def test_tool_name_pinned(self):
         doc = convert([_detection_finding()])
-        assert doc["runs"][0]["tool"]["driver"]["name"] == "cloud-ai-security-skills-detection-engineering"
+        assert (
+            doc["runs"][0]["tool"]["driver"]["name"]
+            == "cloud-ai-security-skills-detection-engineering"
+        )
 
     def test_skips_non_detection_finding(self, capsys):
         doc = convert(
