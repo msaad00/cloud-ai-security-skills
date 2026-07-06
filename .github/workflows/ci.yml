@@ -39,6 +39,7 @@ jobs:
           python-version: "3.11"
           packages: ruff sqlfluff
       - run: ruff check skills/ tests/ mcp-server/ scripts/ --config pyproject.toml
+      - run: ruff format --check . --config pyproject.toml
       - run: sqlfluff lint packs
 
   skill-contract:
@@ -176,7 +177,12 @@ jobs:
             cspm-gcp-cis-benchmark \
             cspm-azure-cis-benchmark \
             k8s-security-benchmark \
-            container-security
+            container-security \
+            evaluate-cis-aws-foundations-ocsf \
+            evaluate-nist-ai-rmf-govern \
+            evaluate-nist-ai-rmf-map \
+            evaluate-nist-ai-rmf-measure \
+            evaluate-nist-ai-rmf-manage
           do
             echo "==> skills/evaluation/${skill}"
             pytest "skills/evaluation/${skill}/tests/" -v -o "testpaths=tests"
