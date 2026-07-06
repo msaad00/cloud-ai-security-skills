@@ -1356,7 +1356,11 @@ def llm_triage_node(state: GraphState) -> GraphState:
         harness_config=harness_config,
         evidence_cards=evidence_cards,
     )
-    adapter = select_triage_adapter(harness_config=harness_config, environ=os.environ)
+    adapter = select_triage_adapter(
+        harness_config=harness_config,
+        environ=os.environ,
+        evidence_cards=evidence_cards,
+    )
     adapter_recommendations = {}
     if initial_budget_usage["status"] != "fallback":
         adapter_recommendations = {
@@ -1425,6 +1429,8 @@ def llm_triage_node(state: GraphState) -> GraphState:
         mode=harness_config["mode"],
         provider=harness_config["provider"],
         model=harness_config["model"],
+        adapter=adapter.adapter_id,
+        adapter_error=getattr(adapter, "last_error", None),
         recommendations=len(recommendations),
         accepted=sum(1 for record in validation_records if record["status"] == "accepted"),
         rejected=sum(1 for record in validation_records if record["status"] == "rejected"),
