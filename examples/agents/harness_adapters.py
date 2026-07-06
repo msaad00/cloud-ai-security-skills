@@ -9,6 +9,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Literal, Mapping, Protocol
 
@@ -181,10 +184,157 @@ class LangChainChatFixtureAdapter:
         return []
 
 
+_DEFAULT_LIVE_TIMEOUT_SECONDS = 30
+_MAX_LIVE_TIMEOUT_SECONDS = 120
+_MAX_LIVE_OUTPUT_TOKENS = 1024
+_JSON_FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+_LIVE_SYSTEM_PROMPT = (
+    "You are a bounded SOC triage assistant. You may rank, summarize, and "
+    "draft only. You never approve actions, never set CVSS/MITRE/EPSS/KEV "
+    "facts, never set tenant scope or write intent, and never mutate audit "
+    "state. For each evidence card, reply with STRICT JSON only: an array of "
+    'objects with exactly these keys: "finding_uid" (copy it verbatim), '
+    '"priority" (one of critical|high|medium|low), "recommended_action" '
+    '(one of request_approval|investigate|close), and "rationale" (one or '
+    "two sentences). No prose outside the JSON."
+)
+
+
+def _parse_adapter_payload(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        recommendations = payload.get("recommendations", [])
+        return [item for item in recommendations if isinstance(item, dict)]
+    return []
+
+
+class OpenAICompatTriageAdapter:
+    """Live BYOM adapter for any OpenAI-compatible chat-completions endpoint.
+
+    One adapter covers OpenAI, Azure OpenAI, Ollama, vLLM, LiteLLM, and any
+    other server that speaks `POST {base_url}/chat/completions`. It holds no
+    authority: outputs are untrusted candidates and every recommendation
+    still passes ``validate_adapter_recommendation`` before use. Failures
+    (network, HTTP, bad JSON) degrade to the deterministic fallback by
+    returning no candidates; the reason is kept on ``last_error`` for the
+    caller's telemetry. Single attempt, bounded timeout, no retries.
+    """
+
+    adapter_id = "openai_compat_adapter"
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        model: str,
+        evidence_cards: list[dict[str, Any]],
+        api_key: str | None = None,
+        timeout_seconds: int = _DEFAULT_LIVE_TIMEOUT_SECONDS,
+        max_output_tokens: int = _MAX_LIVE_OUTPUT_TOKENS,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.evidence_cards = evidence_cards
+        self.api_key = api_key
+        self.timeout_seconds = max(1, min(int(timeout_seconds), _MAX_LIVE_TIMEOUT_SECONDS))
+        self.max_output_tokens = max(64, min(int(max_output_tokens), _MAX_LIVE_OUTPUT_TOKENS))
+        self.last_error: str | None = None
+
+    def _request(self) -> urllib.request.Request:
+        body = {
+            "model": self.model,
+            "temperature": 0,
+            "max_tokens": self.max_output_tokens,
+            "messages": [
+                {"role": "system", "content": _LIVE_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": json.dumps({"evidence_cards": self.evidence_cards}, sort_keys=True),
+                },
+            ],
+        }
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return urllib.request.Request(  # noqa: S310 - operator-configured HTTPS/local endpoint
+            f"{self.base_url}/chat/completions",
+            data=json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+
+    def _extract_content(self, response_payload: Mapping[str, Any]) -> str:
+        choices = response_payload.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise ValueError("response has no choices")
+        message = choices[0].get("message") if isinstance(choices[0], dict) else None
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("response has no message content")
+        return content
+
+    def recommendations(self) -> list[dict[str, Any]]:
+        self.last_error = None
+        if not self.evidence_cards:
+            return []
+        try:
+            with urllib.request.urlopen(  # noqa: S310 - see _request
+                self._request(), timeout=self.timeout_seconds
+            ) as response:
+                response_payload = json.loads(response.read().decode("utf-8"))
+            content = self._extract_content(response_payload).strip()
+            fenced = _JSON_FENCE.search(content)
+            if fenced:
+                content = fenced.group(1).strip()
+            return _parse_adapter_payload(json.loads(content))
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            ValueError,
+            json.JSONDecodeError,
+            OSError,
+        ) as exc:
+            # Degrade to the deterministic fallback instead of failing the
+            # graph; the schema gate reports fallback per finding.
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            return []
+
+
+def _live_adapter_from_env(
+    *,
+    harness_config: Mapping[str, Any],
+    environ: Mapping[str, str],
+    evidence_cards: list[dict[str, Any]] | None,
+) -> OpenAICompatTriageAdapter | None:
+    base_url = (environ.get("DEMO_OPENAI_BASE_URL") or "").strip()
+    if not base_url:
+        return None
+    if harness_config.get("mode") != "external_llm_optional":
+        # Profiles stay authoritative: a live endpoint never activates in
+        # deterministic_offline mode.
+        return None
+    # Workload-identity-first: the key itself is never in the profile; the
+    # operator names the env var that holds it (keyless is fine for local
+    # Ollama / vLLM endpoints).
+    key_env = environ.get("DEMO_OPENAI_API_KEY_ENV", "OPENAI_API_KEY")
+    timeout_raw = (environ.get("DEMO_OPENAI_TIMEOUT_SECONDS") or "").strip()
+    timeout_seconds = int(timeout_raw) if timeout_raw.isdigit() else _DEFAULT_LIVE_TIMEOUT_SECONDS
+    return OpenAICompatTriageAdapter(
+        base_url=base_url,
+        model=str(harness_config.get("model") or "policy-bounded-triage-v1"),
+        evidence_cards=list(evidence_cards or []),
+        api_key=environ.get(key_env) or None,
+        timeout_seconds=timeout_seconds,
+    )
+
+
 def select_triage_adapter(
     *,
     harness_config: Mapping[str, Any],
     environ: Mapping[str, str] = os.environ,
+    evidence_cards: list[dict[str, Any]] | None = None,
 ) -> TriageAdapter:
     """Select the optional adapter without granting it extra authority."""
     langchain_fixture = environ.get("DEMO_LANGCHAIN_ADAPTER_FIXTURE")
@@ -195,8 +345,13 @@ def select_triage_adapter(
     if fixture_path:
         return FixtureTriageAdapter(Path(fixture_path))
 
-    if harness_config.get("provider") == "langchain":
-        return DeterministicFallbackAdapter()
+    live_adapter = _live_adapter_from_env(
+        harness_config=harness_config,
+        environ=environ,
+        evidence_cards=evidence_cards,
+    )
+    if live_adapter is not None:
+        return live_adapter
 
     return DeterministicFallbackAdapter()
 

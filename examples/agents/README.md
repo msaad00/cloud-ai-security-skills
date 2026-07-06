@@ -200,6 +200,27 @@ DEMO_LLM_MODEL=chat-model-fixture-v1 \
 DEMO_LANGCHAIN_ADAPTER_FIXTURE=/path/to/langchain-message.json \
 python examples/agents/langgraph_security_graph.py
 
+# Live BYOM adapter: one OpenAI-compatible client covers OpenAI, Azure
+# OpenAI, Ollama, vLLM, and LiteLLM. Activates only in
+# external_llm_optional mode; stdlib-only; single bounded call, no retries.
+# The API key is never in a profile — name the env var that holds it
+# (default OPENAI_API_KEY; keyless is fine for local Ollama/vLLM).
+# Model output still passes the same closed schema gate; any network or
+# parse failure falls back to deterministic triage.
+DEMO_EXTERNAL_LLM_ALLOWED=yes \
+DEMO_LLM_PROVIDER=openai \
+DEMO_LLM_MODEL=gpt-4.1-mini \
+DEMO_OPENAI_BASE_URL=https://api.openai.com/v1 \
+DEMO_OPENAI_API_KEY_ENV=OPENAI_API_KEY \
+python examples/agents/langgraph_security_graph.py
+
+# Same adapter against a local Ollama endpoint (no key):
+DEMO_EXTERNAL_LLM_ALLOWED=yes \
+DEMO_LLM_PROVIDER=ollama \
+DEMO_LLM_MODEL=llama3.1 \
+DEMO_OPENAI_BASE_URL=http://127.0.0.1:11434/v1 \
+python examples/agents/langgraph_security_graph.py
+
 # Retryable API error path: no write intent is created without approval;
 # approved retries reuse the same remediation idempotency key.
 DEMO_APPROVE=yes \
@@ -221,6 +242,16 @@ python examples/agents/eval_langgraph_harness.py --check
 python examples/agents/eval_langgraph_harness.py --check \
   --output artifacts/langgraph-harness-eval.json \
   --append-jsonl artifacts/langgraph-harness-eval-history.jsonl
+
+# Model-quality mode: score the configured triage adapter (fixture or live
+# OpenAI-compatible endpoint) against the golden priorities/actions. With no
+# adapter configured it scores the deterministic path (agreement 1.0), so the
+# same command works offline in CI and against a live model for BYOM drift.
+DEMO_OPENAI_BASE_URL=http://127.0.0.1:11434/v1 \
+python examples/agents/eval_langgraph_harness.py --model-quality --check \
+  --min-agreement 0.75 \
+  --output artifacts/langgraph-model-quality.json \
+  --append-jsonl artifacts/langgraph-model-quality-history.jsonl
 
 # Diagram artifact: render docs/diagrams/langgraph-agent-harness.mmd
 # from the code-backed pipeline_contract().
@@ -285,9 +316,14 @@ metadata without duplicating graph logic. `HarnessRunConfig` also accepts
 stateful `approval_context`, so CI, SOAR, ticketing, or MCP wrappers do not
 need to rely on process-wide approval env vars.
 Adapter plumbing lives in [`harness_adapters.py`](harness_adapters.py): the
-graph selects deterministic fallback, JSON fixture, or optional LangChain chat
-fixture adapters, then applies one closed schema gate before any recommendation
-enters graph state.
+graph selects deterministic fallback, JSON fixture, optional LangChain chat
+fixture, or the live OpenAI-compatible BYOM adapter, then applies one closed
+schema gate before any recommendation enters graph state. The live adapter
+(`OpenAICompatTriageAdapter`) speaks the `chat/completions` wire format, so a
+single client covers OpenAI, Azure OpenAI, Ollama, vLLM, and LiteLLM; it makes
+one bounded call (clamped timeout, capped output tokens, no retries) and any
+failure degrades to deterministic triage with the reason recorded in node
+telemetry.
 The graph sends compact finding cards to the optional adapter, not raw events
 or full OCSF payloads. Each triage run records estimated raw and compact input
 tokens, output tokens, compression ratio, cache key, model tier, and fallback

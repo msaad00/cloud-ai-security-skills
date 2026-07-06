@@ -32,7 +32,14 @@ ENV_KEYS = [
     "DEMO_LLM_PROVIDER",
     "DEMO_LLM_MODEL",
     "DEMO_LLM_ADAPTER_FIXTURE",
+    "DEMO_OPENAI_BASE_URL",
+    "DEMO_OPENAI_API_KEY_ENV",
+    "DEMO_OPENAI_TIMEOUT_SECONDS",
 ]
+# Model-quality mode keeps the operator's adapter env (fixture or live
+# OpenAI-compatible endpoint) so the run measures that adapter; it still
+# strips approval context so no case can auto-approve.
+MODEL_QUALITY_STRIPPED_ENV_KEYS = ["DEMO_APPROVE", "DEMO_APPROVER", "DEMO_TICKET"]
 
 
 def _stable_hash(payload: Any) -> str:
@@ -518,6 +525,114 @@ def run_dataset(dataset_path: Path) -> dict[str, Any]:
     }
 
 
+def _first_validation(summary: dict[str, Any]) -> dict[str, Any]:
+    records = summary.get("llm_validation") or []
+    if not records:
+        return {}
+    return records[0]
+
+
+def _operator_adapter_configured() -> bool:
+    return any(
+        os.environ.get(key)
+        for key in (
+            "DEMO_LLM_ADAPTER_FIXTURE",
+            "DEMO_LANGCHAIN_ADAPTER_FIXTURE",
+            "DEMO_OPENAI_BASE_URL",
+        )
+    )
+
+
+def run_model_quality_case(case: dict[str, Any], *, operator_adapter: bool) -> dict[str, Any]:
+    """Replay one golden case and score adapter agreement with the golden triage.
+
+    Unlike ``run_case`` this keeps the operator's DEMO_LLM_* / DEMO_OPENAI_*
+    env so the fixture or live OpenAI-compatible adapter under test actually
+    runs. When no operator adapter is configured, case-declared fixtures
+    apply, matching the regression behavior. Approval env is always stripped.
+    """
+    saved_env = {key: os.environ.get(key) for key in MODEL_QUALITY_STRIPPED_ENV_KEYS}
+    for key in saved_env:
+        os.environ.pop(key, None)
+    fixture_path = None if operator_adapter else _write_adapter_fixture(case)
+    case_env = {
+        key: str(value)
+        for key, value in (case.get("env") or {}).items()
+        if key not in MODEL_QUALITY_STRIPPED_ENV_KEYS and not (operator_adapter and key in ENV_KEYS)
+    }
+    saved_env.update({key: os.environ.get(key) for key in case_env})
+    if fixture_path:
+        saved_env.setdefault("DEMO_LLM_ADAPTER_FIXTURE", os.environ.get("DEMO_LLM_ADAPTER_FIXTURE"))
+    try:
+        os.environ.update(case_env)
+        if fixture_path:
+            os.environ["DEMO_LLM_ADAPTER_FIXTURE"] = str(fixture_path)
+        profile = load_harness_profile(str(_resolve(case["profile"])))
+        initial = {
+            "harness_profile": profile,
+            "caller_context": profile["caller_context"],
+            "raw_events": case.get("raw_events") or [{"source": "demo"}],
+        }
+        summary = summarize(run_graph(initial))
+    finally:
+        if fixture_path:
+            fixture_path.unlink(missing_ok=True)
+        _restore_env(saved_env)
+
+    expected = case["expected"]
+    recommendation = _first_recommendation(summary)
+    validation = _first_validation(summary)
+    priority_agrees = recommendation.get("priority") == expected["recommendation_priority"]
+    action_agrees = recommendation.get("recommended_action") == expected["recommendation_action"]
+    return {
+        "case_id": case["case_id"],
+        "adapter": validation.get("adapter", "deterministic_fallback"),
+        "adapter_status": validation.get("status", "fallback"),
+        "adapter_reason": validation.get("reason"),
+        "generated_by": recommendation.get("generated_by"),
+        "expected_priority": expected["recommendation_priority"],
+        "actual_priority": recommendation.get("priority"),
+        "expected_action": expected["recommendation_action"],
+        "actual_action": recommendation.get("recommended_action"),
+        "priority_agrees": priority_agrees,
+        "action_agrees": action_agrees,
+        "agreement": priority_agrees and action_agrees,
+    }
+
+
+def run_model_quality(dataset_path: Path) -> dict[str, Any]:
+    dataset = json.loads(dataset_path.read_text(encoding="utf-8"))
+    operator_adapter = _operator_adapter_configured()
+    results = [
+        run_model_quality_case(case, operator_adapter=operator_adapter) for case in dataset["cases"]
+    ]
+    total = len(results)
+    agreements = sum(1 for result in results if result["agreement"])
+    status_counts = {"accepted": 0, "rejected": 0, "fallback": 0}
+    for result in results:
+        status = result["adapter_status"]
+        if status in status_counts:
+            status_counts[status] += 1
+    return {
+        "event": "langgraph_model_quality_eval",
+        "dataset_version": dataset["dataset_version"],
+        "dataset_hash": _stable_hash(dataset)[:16],
+        "adapter_env": {
+            "fixture": bool(os.environ.get("DEMO_LLM_ADAPTER_FIXTURE")),
+            "langchain_fixture": bool(os.environ.get("DEMO_LANGCHAIN_ADAPTER_FIXTURE")),
+            "live_openai_compat": bool(os.environ.get("DEMO_OPENAI_BASE_URL")),
+        },
+        "cases_total": total,
+        "adapter_accepted": status_counts["accepted"],
+        "adapter_rejected": status_counts["rejected"],
+        "adapter_fallback": status_counts["fallback"],
+        "agreement": agreements,
+        "agreement_rate": agreements / total if total else 0.0,
+        "model_policy": "llm_may_rank_summarize_draft_only",
+        "results": results,
+    }
+
+
 def _encoded_report(report: dict[str, Any]) -> str:
     return json.dumps(report, indent=2, sort_keys=True) + "\n"
 
@@ -547,6 +662,21 @@ def main() -> int:
         "--check", action="store_true", help="exit nonzero when pass rate is below threshold"
     )
     parser.add_argument(
+        "--model-quality",
+        action="store_true",
+        help=(
+            "score the configured triage adapter (fixture or live "
+            "OpenAI-compatible endpoint) against the golden priorities and "
+            "actions instead of running the harness regression checks"
+        ),
+    )
+    parser.add_argument(
+        "--min-agreement",
+        type=float,
+        default=1.0,
+        help="minimum agreement rate for --model-quality --check",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         help="write the JSON eval report to this path",
@@ -558,14 +688,19 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    report = run_dataset(args.dataset)
+    if args.model_quality:
+        report = run_model_quality(args.dataset)
+        gate = report["agreement_rate"] >= args.min_agreement
+    else:
+        report = run_dataset(args.dataset)
+        gate = report["pass_rate"] >= args.min_pass_rate
     encoded = _encoded_report(report)
     print(encoded, end="")
     if args.output:
         _write_json(args.output, encoded)
     if args.append_jsonl:
         _append_history(args.append_jsonl, report)
-    if args.check and report["pass_rate"] < args.min_pass_rate:
+    if args.check and not gate:
         return 1
     return 0
 
