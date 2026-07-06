@@ -5,9 +5,9 @@
     {
       "tool": {
         "driver": {
-          "name": "cloud-ai-security-skills-detection-engineering",
+          "name": "quiver-detection-engineering",
           "version": "0.1.0",
-          "informationUri": "https://github.com/msaad00/cloud-ai-security-skills",
+          "informationUri": "https://github.com/msaad00/quiver",
           "rules": [
             {
               "id": "T1552",

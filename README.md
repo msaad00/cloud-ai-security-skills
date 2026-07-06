@@ -1,7 +1,7 @@
-![Agentic security skills for cloud and AI — 131 shipped skill bundles. OCSF 1.8 on the wire. 143 CIS + NIST AI RMF benchmark checks. Framework coverage across MITRE ATT&CK, MITRE ATLAS, OWASP Top 10, and OWASP LLM Top 10. MCP-audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, GitHub, Slack, Workday, Salesforce, SAP, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, webhook, library, and persistent cloud runners.](docs/images/hero-banner.svg)
+![Quiver — agent-safe cloud and AI security skills. 131 shipped skill bundles. OCSF 1.8 on the wire. 143 CIS + NIST AI RMF benchmark checks. Framework coverage across MITRE ATT&CK, MITRE ATLAS, OWASP Top 10, and OWASP LLM Top 10. MCP-audited tool calls. HITL dual-audited remediation. Runs against AWS, GCP, Azure, Kubernetes, Okta, Microsoft Entra, Google Workspace, GitHub, Slack, Workday, Salesforce, SAP, Snowflake, Databricks, ClickHouse, and MCP proxy. Access surfaces: CLI, CI, MCP, webhook, library, and persistent cloud runners.](docs/images/hero-banner.svg)
 
 <p align="center">
-  <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/msaad00/quiver/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/quiver/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.11.0-0ea5e9"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache_2.0-blue"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue"></a>
@@ -12,7 +12,7 @@
   <a href="https://github.com/msaad00/agent-bom"><img alt="Scanned by agent-bom" src="https://img.shields.io/badge/scanned_by-agent--bom-164e63"></a>
 </p>
 
-<p align="center"><strong>131 production-grade security skills for cloud and AI — OCSF on the wire, MCP-ready, HITL-audited, sandboxed, runs everywhere the same bundle can.</strong></p>
+<p align="center"><strong>Quiver — 131 production-grade security skills for cloud and AI, drawn one at a time. OCSF on the wire, MCP-ready, HITL-audited, sandboxed, runs everywhere the same bundle can.</strong></p>
 
 ---
 
@@ -41,8 +41,8 @@
 
 ```bash
 # 1 · Clone a tagged release
-git clone --branch v0.11.0 https://github.com/msaad00/cloud-ai-security-skills.git
-cd cloud-ai-security-skills
+git clone --branch v0.11.0 https://github.com/msaad00/quiver.git
+cd quiver
 
 # 2 · Install only the deps the skills you'll run need
 uv sync --group dev --group aws        # or --group gcp / --group azure / --group mcp / --group iam_departures / --group langgraph / --group webhook — see docs/INSTALL.md
@@ -148,11 +148,11 @@ write-back for pass-rate and cost drift. Integrity hashes, idempotency keys,
 and retryable-vs-terminal API error routing stay in deterministic state, not in
 model output.
 
-![Optional agentic SOC orchestrator: LangGraph or LangChain controls the workflow DAG and LLM/model choice, while cloud-ai-security-skills owns deterministic ingest, normalize, enrich, correlate, map, review, audit, eval artifacts, sandbox/RLIMIT, allowlist, dry-run, HITL, and HMAC audit rails.](docs/images/agentic-soc-orchestrator.svg)
+![Optional agentic SOC orchestrator: LangGraph or LangChain controls the workflow DAG and LLM/model choice, while quiver owns deterministic ingest, normalize, enrich, correlate, map, review, audit, eval artifacts, sandbox/RLIMIT, allowlist, dry-run, HITL, and HMAC audit rails.](docs/images/agentic-soc-orchestrator.svg)
 
 | Layer | Belongs in | Why |
 |---|---|---|
-| Facts, schemas, scores, mappings | `cloud-ai-security-skills` | replayable, testable, CI-gated, tied to skill contracts |
+| Facts, schemas, scores, mappings | `quiver` | replayable, testable, CI-gated, tied to skill contracts |
 | Workflow state and branching | LangGraph / LangChain / SOAR | nodes, edges, retries, escalation, checkpointing |
 | LLM output | Orchestrator | rank, summarize, explain, and draft; never authoritative for policy or audit |
 | Write approval | HITL gate + remediation skill | dry-run first, bounded blast radius, audited operator context |

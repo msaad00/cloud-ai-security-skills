@@ -36,7 +36,7 @@ _log = get_logger(__name__, skill="detect-databricks-cluster-init-script-abuse",
 SKILL_NAME = "detect-databricks-cluster-init-script-abuse"
 OCSF_VERSION = "1.8.0"
 CANONICAL_VERSION = "2026-04"
-REPO_NAME = "cloud-ai-security-skills"
+REPO_NAME = "quiver"
 
 OUTPUT_FORMATS = ("ocsf", "native")
 

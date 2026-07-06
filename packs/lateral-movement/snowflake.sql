@@ -197,8 +197,8 @@ SELECT
             'version', '1.8.0',
             'uid', finding_uid,
             'product', OBJECT_CONSTRUCT(
-                'name', 'cloud-ai-security-skills',
-                'vendor_name', 'msaad00/cloud-ai-security-skills',
+                'name', 'quiver',
+                'vendor_name', 'msaad00/quiver',
                 'feature', OBJECT_CONSTRUCT('name', 'packs/lateral-movement/snowflake.sql')
             ),
             'labels', ARRAY_CONSTRUCT('query-pack', LOWER(provider), 'lateral-movement', 'snowflake')

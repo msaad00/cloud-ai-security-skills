@@ -80,7 +80,7 @@ def _event(
             "uid": uid,
             "product": {
                 "name": REPO_NAME,
-                "vendor_name": "msaad00/cloud-ai-security-skills",
+                "vendor_name": "msaad00/quiver",
                 "feature": {"name": producer},
             },
         },

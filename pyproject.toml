@@ -1,7 +1,7 @@
 [project]
-name = "cloud-ai-security-skills"
+name = "quiver"
 version = "0.11.0"
-description = "Agentic security skills for cloud and AI — OCSF on the wire, MCP-ready, HITL-audited, sandboxed."
+description = "Quiver — agent-safe cloud and AI security skills. OCSF on the wire, MCP-ready, HITL-audited, sandboxed."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

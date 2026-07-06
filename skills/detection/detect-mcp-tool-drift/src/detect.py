@@ -205,7 +205,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
             "version": OCSF_VERSION,
             "uid": native_finding["event_uid"],
             "product": {
-                "name": "cloud-ai-security-skills",
+                "name": "quiver",
                 "vendor_name": VENDOR_NAME,
                 "feature": {"name": SKILL_NAME},
             },

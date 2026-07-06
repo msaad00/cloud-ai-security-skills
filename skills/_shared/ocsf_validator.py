@@ -34,8 +34,8 @@ from typing import Any
 
 OCSF_VERSION = "1.8.0"
 
-REPO_PRODUCT_NAME = "cloud-ai-security-skills"
-REPO_PRODUCT_VENDOR = "msaad00/cloud-ai-security-skills"
+REPO_PRODUCT_NAME = "quiver"
+REPO_PRODUCT_VENDOR = "msaad00/quiver"
 
 # OCSF severity_id enum per 1.8.
 SEVERITY_IDS = {0, 1, 2, 3, 4, 5, 6}

@@ -1,6 +1,7 @@
 # Changelog
 
-All notable changes to `cloud-ai-security-skills` should be recorded here.
+All notable changes to `quiver` (formerly `cloud-ai-security-skills`) should
+be recorded here.
 
 This changelog is intentionally **repo-level**, not per-skill semver. The repo
 is released as one trust boundary: one CI bar, one MCP wrapper, one validation
@@ -10,6 +11,26 @@ metadata inside their own docs.
 The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
+
+### Rebrand: the project is now Quiver
+
+The repository renamed from `cloud-ai-security-skills` to `quiver` — a quiver
+of single-purpose arrows an agent draws one at a time, each precise and
+inspected. GitHub redirects the old URLs, and existing clones keep working
+(update remotes with
+`git remote set-url origin git@github.com:msaad00/quiver.git`).
+
+- New three-arrow logo mark (`docs/images/quiver-logo.svg`), refreshed hero
+  banner wordmark/tagline, and a social-preview card
+  (`docs/images/social-preview.png`).
+- All in-repo references updated: repo URLs, MCP server name in `.mcp.json`
+  and agent quickstart snippets, `pyproject.toml` project name, SARIF tool
+  name (`quiver-detection-engineering`), default OCSF
+  `metadata.product.name` / `vendor_name` identity strings, release SBOM
+  asset names, and golden fixtures. Operator overrides via
+  `CLOUD_SECURITY_VENDOR_NAME` / `CLOUD_SECURITY_PRODUCT_NAME` are unchanged.
+- Historical changelog entries below keep the old name where it was accurate
+  at the time.
 
 ### Snowflake security data lake — hero use case end-to-end
 
