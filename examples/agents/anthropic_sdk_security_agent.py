@@ -1,4 +1,4 @@
-"""Anthropic Agent SDK — CSPM scan + triage against cloud-ai-security-skills.
+"""Anthropic Agent SDK — CSPM scan + triage against quiver.
 
 This is a **reference implementation**. It demonstrates:
 

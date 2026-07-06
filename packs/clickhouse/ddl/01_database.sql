@@ -5,4 +5,4 @@
 -- rights; they only insert into / select from the pre-provisioned tables below.
 
 CREATE DATABASE IF NOT EXISTS security
-COMMENT 'cloud-ai-security-skills — append-only security data lake';
+COMMENT 'quiver — append-only security data lake';

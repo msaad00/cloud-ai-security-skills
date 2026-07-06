@@ -9,7 +9,7 @@
 -- contract (`security_db.ops.findings_sink`). Keep them aligned.
 
 CREATE DATABASE IF NOT EXISTS security_db
-  COMMENT = 'cloud-ai-security-skills — append-only security data lake';
+  COMMENT = 'quiver — append-only security data lake';
 
 CREATE SCHEMA IF NOT EXISTS security_db.ops
   COMMENT = 'Operational security lake: events, findings, evidence, audit.';

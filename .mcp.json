@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "cloud-ai-security-skills": {
+    "quiver": {
       "command": "python3",
       "args": ["mcp-server/src/server.py"]
     }

@@ -1,6 +1,6 @@
 # Cortex Code CLI (Snowflake)
 
-Setup for loading `cloud-ai-security-skills` into Snowflake Cortex Code CLI
+Setup for loading `quiver` into Snowflake Cortex Code CLI
 via MCP bridge.
 
 > **Why this integration matters:** Cortex Code runs inside a Snowflake
@@ -15,7 +15,7 @@ Project-scoped: `.cortex/mcp.json`
 ```json
 {
   "mcpServers": {
-    "cloud-ai-security-skills": {
+    "quiver": {
       "command": "python3",
       "args": ["${workspaceFolder}/mcp-server/src/server.py"]
     }
@@ -55,7 +55,7 @@ destructive remediation):
 ```json
 {
   "mcpServers": {
-    "cloud-ai-security-skills": {
+    "quiver": {
       "command": "python3",
       "args": ["${workspaceFolder}/mcp-server/src/server.py"],
       "env": {

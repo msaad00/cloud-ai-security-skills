@@ -1262,7 +1262,7 @@ def correlate_node(state: GraphState) -> GraphState:
                 "finding_uid": finding["uid"],
                 "resource_uid": finding.get("resource_uid", "unknown"),
                 "actor_uid": (event or {}).get("actor", {}).get("uid", "unknown"),
-                "tool_name": "cloud-ai-security-skills",
+                "tool_name": "quiver",
                 "window_minutes": 15,
             }
         )

@@ -8,22 +8,22 @@ against the repo's MCP server.
 Codex CLI reads MCP servers from `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.cloud-ai-security-skills]
+[mcp_servers.quiver]
 command = "python3"
-args = ["/absolute/path/to/cloud-ai-security-skills/mcp-server/src/server.py"]
+args = ["/absolute/path/to/quiver/mcp-server/src/server.py"]
 ```
 
 Verify:
 
 ```bash
 codex mcp list
-# cloud-ai-security-skills  (stdio, N tools)
+# quiver  (stdio, N tools)
 ```
 
 Start a session with skills available:
 
 ```bash
-codex chat --mcp cloud-ai-security-skills
+codex chat --mcp quiver
 ```
 
 ## IDE extension setup
@@ -35,7 +35,7 @@ VS Code, `Restart IDE` in JetBrains) to pick up the new MCP entry.
 ## Least-privilege example — ingest + detect only
 
 ```toml
-[mcp_servers.cloud-ai-security-skills]
+[mcp_servers.quiver]
 command = "python3"
 args = ["/absolute/path/.../mcp-server/src/server.py"]
 env = { CLOUD_SECURITY_MCP_ALLOWED_SKILLS = "ingest-cloudtrail-ocsf,ingest-vpc-flow-logs-ocsf,detect-lateral-movement,detect-privilege-escalation-k8s" }

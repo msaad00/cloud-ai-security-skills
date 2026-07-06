@@ -131,7 +131,7 @@ This repo ships a project-scoped MCP config at [`.mcp.json`](.mcp.json):
 ```json
 {
   "mcpServers": {
-    "cloud-ai-security-skills": {
+    "quiver": {
       "command": "python3",
       "args": ["mcp-server/src/server.py"]
     }

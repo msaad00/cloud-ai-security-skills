@@ -39,7 +39,7 @@ _log = get_logger(
 SKILL_NAME = "detect-databricks-unity-catalog-cross-workspace-share"
 OCSF_VERSION = "1.8.0"
 CANONICAL_VERSION = "2026-04"
-REPO_NAME = "cloud-ai-security-skills"
+REPO_NAME = "quiver"
 
 OUTPUT_FORMATS = ("ocsf", "native")
 
