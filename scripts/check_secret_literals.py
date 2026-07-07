@@ -102,9 +102,7 @@ def main() -> int:
         for finding in all_findings:
             print(finding, file=sys.stderr)
         return 1
-    print(
-        f"Secret literal check passed: {len(_iter_paths())} enforced path(s), no literals."
-    )
+    print(f"Secret literal check passed: {len(_iter_paths())} enforced path(s), no literals.")
     return 0
 
 
