@@ -60,6 +60,12 @@ portable across clones:
 
 Enable: **Cursor Settings → MCP → cloud-ai-security-skills → on**.
 
+Runnable offline example (harness profile + live `tools/list`):
+
+[`../examples/agents/cursor_mcp_security_agent.py`](../examples/agents/cursor_mcp_security_agent.py)
+
+Project config details: [`integrations/cursor.md`](integrations/cursor.md).
+
 ---
 
 ## Windsurf
@@ -115,6 +121,16 @@ Multi-step graph (ingest → detect → triage → remediate) with HITL approval
 nodes:
 
 [`../examples/agents/langgraph_security_graph.py`](../examples/agents/langgraph_security_graph.py)
+
+Native interrupt/resume at the analyst gate:
+
+[`../examples/agents/langgraph_hitl_interrupt_resume.py`](../examples/agents/langgraph_hitl_interrupt_resume.py)
+
+---
+
+## LangChain MCP (not LCEL wrappers)
+
+[`../examples/agents/langchain_mcp_security_agent.py`](../examples/agents/langchain_mcp_security_agent.py)
 
 ---
 
