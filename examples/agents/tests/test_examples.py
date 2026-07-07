@@ -1989,7 +1989,10 @@ class TestLangGraphHarnessSetup:
         schema = json.loads(self.PROFILE_SCHEMA.read_text(encoding="utf-8"))
         assert _schema_errors(schema, profile) == []
         assert profile["allowed_skills"] == shipped["allowed_skills"]
-        assert profile["caller_context"]["allowed_skills"] == shipped["caller_context"]["allowed_skills"]
+        assert (
+            profile["caller_context"]["allowed_skills"]
+            == shipped["caller_context"]["allowed_skills"]
+        )
         assert profile["cloud_identity_hints"] == shipped["cloud_identity_hints"]
         assert profile["runtime"]["mcp_execution"] == shipped["runtime"]["mcp_execution"]
         assert len(profile["agent_roster"]) == 1
