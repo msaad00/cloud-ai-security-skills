@@ -23,11 +23,11 @@ Remediation parity:
 
 - standalone remediation skills with a single `src/handler.py` entrypoint are
   exposed over MCP
+- `iam-departures-{aws,gcp,azure-entra}` are also exposed via top-level
+  `src/handler.py` shims (see #411) — one MCP tool per cloud, not one tool for
+  the full multi-Lambda orchestration
 - those tools stay dry-run/re-verify only at the wrapper boundary; the MCP
   wrapper rejects `--apply`
-- multi-handler orchestration workflows such as `iam-departures-*` are still
-  not exposed as one MCP tool because they do not have a single repo-owned
-  top-level entrypoint
 
 Audit behavior:
 

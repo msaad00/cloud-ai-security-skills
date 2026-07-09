@@ -8,7 +8,7 @@ If you are an AI agent loading a skill, these are the guarantees you can
 rely on. If you are a security team adopting one of these skills, this
 is the row you can take to your auditor.
 
-## The ten principles
+## The eleven principles
 
 | # | Principle | What it means in practice | How we verify it |
 |---|---|---|---|

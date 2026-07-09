@@ -67,6 +67,7 @@ jobs:
       - run: python scripts/validate_ocsf_metadata.py
       - run: python scripts/validate_skill_count_consistency.py
       - run: python scripts/validate_doc_counts.py
+      - run: python scripts/validate_doc_parity.py
       - run: python scripts/validate_deny_list_parity.py
       - run: python scripts/validate_captured_provenance.py
       - run: python scripts/add_skill_trust_frontmatter.py --check
@@ -199,7 +200,7 @@ jobs:
             google-cloud-iam google-cloud-resource-manager google-api-python-client
             azure-identity
             clickhouse-connect databricks-sql-connector httpx snowflake-connector-python
-      - run: pytest skills/remediation/iam-departures-aws/tests/ -v -o "testpaths=tests"
+      - run: pytest skills/remediation/ -v -o "testpaths=tests"
 
   test-detection-engineering:
     runs-on: ubuntu-latest
