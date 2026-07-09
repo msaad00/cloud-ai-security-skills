@@ -770,6 +770,20 @@ class TestCountDriftScan:
         assert pat.search("The repo ships 49 skills today.") is None
 
 
+class TestDocParityValidator:
+    def test_repo_passes_doc_parity_gate(self):
+        import subprocess
+
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS / "validate_doc_parity.py")],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=ROOT,
+        )
+        assert result.returncode == 0, result.stderr or result.stdout
+
+
 class TestSecretLiteralChecker:
     def test_repo_passes_secret_literal_gate(self):
         import subprocess

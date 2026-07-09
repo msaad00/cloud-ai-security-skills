@@ -10,7 +10,8 @@ Each row is a directory under [`skills/`](../skills/). The `SKILL.md` in each
 directory is the single source of truth for what the skill does, what it does
 not do, and what it talks to.
 
-> Counts are auto-validated by `scripts/validate_count_drift.sh`. If a row
+> Counts are auto-validated by `scripts/validate_doc_counts.py` and
+> `scripts/validate_doc_parity.py`. If a row
 > moves, the count check fails CI until this index is regenerated.
 
 ## By environment

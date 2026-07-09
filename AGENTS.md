@@ -154,7 +154,7 @@ Shipped:
 - Three reference event-driven runners under [`runners/`](runners/)
 
 Not yet:
-- Hosted HTTP/SSE transport for remote MCP deployments
+- **Hosted** remote HTTP/SSE MCP deployments (operator-managed reverse proxy + auth). Opt-in local SSE transport ships today — see [`docs/MCP_TRANSPORT.md`](docs/MCP_TRANSPORT.md) and `mcp-server/src/transports/sse.py`.
 - Tight per-skill input schemas derived from each CLI instead of the current conservative `input` + `args` wrapper
 - Full automatic parity between every possible local entrypoint shape and the MCP wrapper; check `mcp-server/README.md` for current wrapper behavior
 

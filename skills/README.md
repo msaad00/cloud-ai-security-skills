@@ -1,4 +1,9 @@
-# Skills Catalog
+# Skills Catalog (curated overview)
+
+> **Complete catalog:** [`docs/SKILL_INDEX.md`](../docs/SKILL_INDEX.md) is the
+> authoritative, CI-gated index of all **131** shipped skills (by environment,
+> purpose, and framework). This file is a curated layer overview — not every
+> detector or evaluation skill is listed here.
 
 Skills are grouped by **layered function**, not by vendor. Start with the problem you are solving, then pick the layer and skill that match it. If you want a guided entry point instead of a catalog, read [`docs/USE_CASES.md`](../docs/USE_CASES.md) first.
 
