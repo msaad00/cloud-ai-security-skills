@@ -9,8 +9,8 @@
         "ec2:DescribeSecurityGroups",
         "ec2:RevokeSecurityGroupIngress"
       ],
-      "Resource": "*",
-      "_comment": "EC2 SG APIs have no resource-level ARN boundary for these actions."
+      "_comment": "WILDCARD_OK: EC2 SG APIs have no resource-level ARN boundary for these actions.",
+      "Resource": "*"
     },
     {
       "Sid": "AuditDynamoDB",

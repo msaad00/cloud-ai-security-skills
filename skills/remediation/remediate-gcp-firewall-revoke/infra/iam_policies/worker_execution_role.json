@@ -9,8 +9,8 @@
         "compute.firewalls.update",
         "compute.firewalls.get"
       ],
-      "Resource": "*",
-      "_comment": "Bind to a dedicated GCP service account; scope to target project."
+      "_comment": "WILDCARD_OK: Bind to a dedicated GCP service account; scope to target project.",
+      "Resource": "*"
     }
   ]
 }

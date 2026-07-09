@@ -10,6 +10,7 @@
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
+      "_comment": "WILDCARD_OK: CloudWatch Logs group ARNs are created at runtime by Lambda.",
       "Resource": "*"
     },
     {
