@@ -1,0 +1,15 @@
+{
+  "Comment": "Service account IAM \u2014 remediate-entra-credential-revoke (reference stub)",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "GraphCredentialRevoke",
+      "Effect": "Allow",
+      "Action": [
+        "Microsoft Graph: DELETE /users/{id}/authentication/passwordMethods"
+      ],
+      "_comment": "WILDCARD_OK: Replace with Azure RBAC role assignment for the Function managed identity.",
+      "Resource": "*"
+    }
+  ]
+}
