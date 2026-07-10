@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cspm-azure-cis-benchmark MCP parameters",
+  "description": "Typed CLI parameters for the CIS Azure Foundations benchmark skill.",
+  "type": "object",
+  "properties": {
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID to assess.",
+      "minLength": 1,
+      "x-cli-flag": "--subscription-id"
+    },
+    "section": {
+      "type": "string",
+      "enum": [
+        "identity",
+        "defender",
+        "storage",
+        "database",
+        "logging",
+        "networking",
+        "compute",
+        "keyvault",
+        "appservice"
+      ],
+      "description": "Run a single CIS section instead of the full benchmark.",
+      "x-cli-flag": "--section"
+    },
+    "json_output": {
+      "type": "boolean",
+      "description": "Emit structured JSON findings instead of console output.",
+      "default": false,
+      "x-cli-flag": "--output",
+      "x-cli-style": "flag",
+      "x-cli-value": "json"
+    }
+  },
+  "examples": [
+    {
+      "subscription_id": "00000000-0000-0000-0000-000000000001",
+      "json_output": true,
+      "output_format": "native"
+    },
+    {
+      "subscription_id": "00000000-0000-0000-0000-000000000001",
+      "section": "identity"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ingest-entra-directory-audit-ocsf MCP parameters",
+  "description": "Typed CLI parameters for Entra directory audit JSON/JSONL to OCSF API Activity ingestion.",
+  "type": "object",
+  "properties": {
+    "input_path": {
+      "type": "string",
+      "description": "Path to raw Entra directoryAudit JSON or JSONL. Omit to read stdin via the input field.",
+      "minLength": 1,
+      "x-cli-style": "positional"
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Write OCSF JSONL to this path instead of stdout.",
+      "minLength": 1,
+      "x-cli-flag": "--output"
+    }
+  },
+  "examples": [
+    {
+      "input": "{\"value\":[{\"activityDisplayName\":\"Add member to role\",\"result\":\"success\"}]}\n",
+      "output_format": "ocsf"
+    },
+    {
+      "input_path": "/tmp/entra-audit.json",
+      "output_path": "/tmp/entra-audit.ocsf.jsonl"
+    }
+  ]
+}

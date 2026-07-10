@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ingest-okta-system-log-ocsf MCP parameters",
+  "description": "Typed CLI parameters for Okta System Log JSON/JSONL to OCSF IAM ingestion.",
+  "type": "object",
+  "properties": {
+    "input_path": {
+      "type": "string",
+      "description": "Path to raw Okta System Log JSON or JSONL. Omit to read stdin via the input field.",
+      "minLength": 1,
+      "x-cli-style": "positional"
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Write OCSF JSONL to this path instead of stdout.",
+      "minLength": 1,
+      "x-cli-flag": "--output"
+    }
+  },
+  "examples": [
+    {
+      "input": "{\"eventType\":\"user.session.start\",\"actor\":{\"alternateId\":\"alice@example.com\"}}\n",
+      "output_format": "ocsf"
+    },
+    {
+      "input_path": "/tmp/okta.jsonl",
+      "output_path": "/tmp/okta.ocsf.jsonl"
+    }
+  ]
+}

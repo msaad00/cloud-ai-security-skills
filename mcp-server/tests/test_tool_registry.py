@@ -335,6 +335,7 @@ class TestMinApproversParsing:
 class TestPerSkillMcpSchemas:
     TYPED_SCHEMA_SKILLS = (
         "cspm-aws-cis-benchmark",
+        "cspm-azure-cis-benchmark",
         "cspm-gcp-cis-benchmark",
         "convert-ocsf-to-mermaid-attack-flow",
         "convert-ocsf-to-sarif",
@@ -343,7 +344,10 @@ class TestPerSkillMcpSchemas:
         "detect-mcp-tool-drift",
         "detect-prompt-injection-mcp-proxy",
         "ingest-cloudtrail-ocsf",
+        "ingest-entra-directory-audit-ocsf",
+        "ingest-k8s-audit-ocsf",
         "ingest-mcp-proxy-ocsf",
+        "ingest-okta-system-log-ocsf",
     )
 
     def test_typed_schema_skills_ship_schema_files(self):
@@ -375,6 +379,19 @@ class TestPerSkillMcpSchemas:
         gcp = tool_definition(tool_map(REPO_ROOT)["cspm-gcp-cis-benchmark"])
         assert "project" in gcp["inputSchema"]["properties"]
 
+        azure = tool_definition(tool_map(REPO_ROOT)["cspm-azure-cis-benchmark"])
+        assert "subscription_id" in azure["inputSchema"]["properties"]
+        assert "section" in azure["inputSchema"]["properties"]
+
+        okta_ingest = tool_definition(tool_map(REPO_ROOT)["ingest-okta-system-log-ocsf"])
+        assert "input_path" in okta_ingest["inputSchema"]["properties"]
+
+        entra_ingest = tool_definition(tool_map(REPO_ROOT)["ingest-entra-directory-audit-ocsf"])
+        assert "input_path" in entra_ingest["inputSchema"]["properties"]
+
+        k8s_ingest = tool_definition(tool_map(REPO_ROOT)["ingest-k8s-audit-ocsf"])
+        assert "input_path" in k8s_ingest["inputSchema"]["properties"]
+
     def test_expand_skill_parameters_translate_flags(self):
         skill = tool_map(REPO_ROOT)["cspm-aws-cis-benchmark"]
         remaining, cli_args = expand_skill_parameters(
@@ -391,6 +408,27 @@ class TestPerSkillMcpSchemas:
             "eu-west-1",
             "--section",
             "iam",
+            "--output",
+            "json",
+        ]
+        assert remaining["args"] == ["--output-format", "native"]
+
+    def test_expand_skill_parameters_translate_azure_cis_flags(self):
+        skill = tool_map(REPO_ROOT)["cspm-azure-cis-benchmark"]
+        remaining, cli_args = expand_skill_parameters(
+            skill,
+            {
+                "subscription_id": "00000000-0000-0000-0000-000000000001",
+                "section": "logging",
+                "json_output": True,
+                "args": ["--output-format", "native"],
+            },
+        )
+        assert cli_args == [
+            "--subscription-id",
+            "00000000-0000-0000-0000-000000000001",
+            "--section",
+            "logging",
             "--output",
             "json",
         ]
