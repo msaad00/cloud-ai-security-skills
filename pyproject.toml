@@ -25,7 +25,7 @@ dev = [
   # SSE/webhook tests on the supported path without making it runtime deps.
   "httpx2>=2.4,<3",
   "moto>=5,<6",
-  "mypy>=1.11,<3",
+  "mypy>=2.2.0,<3",
   # Pin pip to the patched installer floor used by the generated
   # dependency-audit grade.
   "pip>=26.1.2",
