@@ -79,7 +79,7 @@ http-runtime = [
   "uvicorn[standard]>=0.50.0,<1",
 ]
 langgraph = [
-  "langgraph>=1.2,<2",
+  "langgraph>=1.2.9,<2",
 ]
 
 [tool.ruff]
