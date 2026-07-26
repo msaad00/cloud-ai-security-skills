@@ -25,18 +25,21 @@ bump the contract version.
 ## Fingerprint definition
 
 ```python
-fingerprint = "sha256:" + hashlib.sha256(
-    json.dumps(
-        {
-            "name":        tool.get("name", ""),
-            "description": tool.get("description", ""),
-            "inputSchema": tool.get("inputSchema", {}),
-            "annotations": tool.get("annotations", {}),
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode()
-).hexdigest()
+fingerprint = (
+    "sha256:"
+    + hashlib.sha256(
+        json.dumps(
+            {
+                "name": tool.get("name", ""),
+                "description": tool.get("description", ""),
+                "inputSchema": tool.get("inputSchema", {}),
+                "annotations": tool.get("annotations", {}),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+)
 ```
 
 This is the pivot point `detect-mcp-tool-drift` uses to spot the MCP tool-poisoning / rug-pull attack pattern (MITRE T1195.001).

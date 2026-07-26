@@ -103,12 +103,17 @@ Example:
 For every `tools/list` response entry and every `tools/call` request, the skill emits an OCSF event with a stable `mcp.tool.fingerprint`:
 
 ```python
-fingerprint = sha256(json.dumps({
-    "name":        tool["name"],
-    "description": tool.get("description", ""),
-    "inputSchema": tool.get("inputSchema", {}),
-    "annotations": tool.get("annotations", {}),
-}, sort_keys=True).encode()).hexdigest()
+fingerprint = sha256(
+    json.dumps(
+        {
+            "name": tool["name"],
+            "description": tool.get("description", ""),
+            "inputSchema": tool.get("inputSchema", {}),
+            "annotations": tool.get("annotations", {}),
+        },
+        sort_keys=True,
+    ).encode()
+).hexdigest()
 ```
 
 This is the pivot point for detection skills. Anything that makes the fingerprint change = tool drift.
