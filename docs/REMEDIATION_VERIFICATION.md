@@ -65,14 +65,18 @@ result = VerificationResult(
 
 # 3. Emit the native verification record (always).
 record = build_verification_record(
-    reference=ref, result=result, verifier_skill="verify-okta-session-kill",
+    reference=ref,
+    result=result,
+    verifier_skill="verify-okta-session-kill",
 )
 # ... emit to stdout / sink / etc.
 
 # 4. If status is DRIFT, ALSO emit the OCSF Detection Finding.
 if result.status == VerificationStatus.DRIFT:
     drift_finding = build_drift_finding(
-        reference=ref, result=result, verifier_skill="verify-okta-session-kill",
+        reference=ref,
+        result=result,
+        verifier_skill="verify-okta-session-kill",
     )
     # ... emit to the detection pipeline
 ```

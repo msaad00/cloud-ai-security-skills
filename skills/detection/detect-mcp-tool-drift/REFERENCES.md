@@ -28,12 +28,17 @@ transition to a different fingerprint emits one finding.
 The fingerprint is defined in `ingest-mcp-proxy-ocsf` as:
 
 ```python
-sha256(json.dumps({
-    "name":        tool["name"],
-    "description": tool.get("description", ""),
-    "inputSchema": tool.get("inputSchema", {}),
-    "annotations": tool.get("annotations", {}),
-}, sort_keys=True))
+sha256(
+    json.dumps(
+        {
+            "name": tool["name"],
+            "description": tool.get("description", ""),
+            "inputSchema": tool.get("inputSchema", {}),
+            "annotations": tool.get("annotations", {}),
+        },
+        sort_keys=True,
+    )
+)
 ```
 
 The detector does NOT recompute the fingerprint — it trusts the upstream
