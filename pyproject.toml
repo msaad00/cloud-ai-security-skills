@@ -40,7 +40,7 @@ mcp = [
   "pyyaml>=6,<7",
 ]
 aws = [
-  "boto3>=1.35,<2",
+  "boto3>=1.43.59,<2",
 ]
 gcp = [
   "google-cloud-compute>=1.50.0,<2",
@@ -52,7 +52,7 @@ azure = [
   "azure-identity>=1.17,<2",
   "azure-mgmt-network>=31.0.1,<32",
   "azure-mgmt-resource>=25,<27",
-  "azure-mgmt-storage>=21,<26",
+  "azure-mgmt-storage>=25.1.0,<26",
 ]
 iam_departures = [
   "clickhouse-connect>=1.4.2,<2",
@@ -62,7 +62,7 @@ iam_departures = [
   "snowflake-connector-python>=4.6.0,<5",
 ]
 webhook = [
-  "fastapi>=0.139.2,<1",
+  "fastapi>=0.141.1,<1",
 ]
 
 mcp-sse = [
