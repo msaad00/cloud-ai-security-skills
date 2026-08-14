@@ -1,0 +1,26 @@
+{
+  "protoPayload": {
+    "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+    "authenticationInfo": {
+      "principalEmail": "mallory@acme.example.com"
+    },
+    "requestMetadata": {
+      "callerIp": "198.51.100.44",
+      "callerSuppliedUserAgent": "python-storage/2.16.0"
+    },
+    "methodName": "storage.objects.get",
+    "resourceName": "projects/_/buckets/acme-ml-weights/objects/models/mistral-7b/model.safetensors",
+    "serviceName": "storage.googleapis.com",
+    "status": {}
+  },
+  "insertId": "gcp-gmad-1",
+  "resource": {
+    "type": "gcs_bucket",
+    "labels": {
+      "project_id": "acme-prod",
+      "location": "us-central1"
+    }
+  },
+  "timestamp": "2026-05-04T12:05:10.000Z",
+  "severity": "INFO"
+}
