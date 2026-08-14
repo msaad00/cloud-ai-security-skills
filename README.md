@@ -22,6 +22,7 @@
 | Wire an agent (MCP) | [`docs/AGENT_QUICKSTART.md`](docs/AGENT_QUICKSTART.md) |
 | Ship a SOC workflow | [`docs/HARNESS.md`](docs/HARNESS.md) |
 | Build a warehouse lake | [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md) · [`docs/SNOWFLAKE_DATA_LAKE.md`](docs/SNOWFLAKE_DATA_LAKE.md) |
+| Browse every doc | [`docs/README.md`](docs/README.md) |
 
 ## Quickstart
 
