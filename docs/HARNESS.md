@@ -362,7 +362,6 @@ CLOUD_SECURITY_*  env  >  caller_context  >  preset.json  >  SKILL.md frontmatte
 | Resource caps | `CLOUD_SECURITY_SKILL_MAX_BYTES` / `MAX_FILE_BYTES` / `MAX_PROCESSES` | RLIMIT enforcement |
 | OS sandbox (opt-in) | `CLOUD_SECURITY_MCP_SANDBOX=on` | wrap each skill subprocess under `bwrap` (Linux) / `sandbox-exec` (macOS); fs/pid/ipc isolation; network dropped only when `network_egress: []` declared; no-op fallback if wrapper binary absent |
 | Persistent worker pool (opt-in) | `CLOUD_SECURITY_MCP_WORKER_POOL=on` | keep one warm interpreter per evaluation skill (`cspm-{aws,gcp,azure}-cis-benchmark`, `k8s-security-benchmark`, `container-security`); JSON-RPC over stdin/stdout per call; idle-TTL killed via `CLOUD_SECURITY_MCP_WORKER_IDLE_SECONDS` (default 300s); hard-kill on stdout > `CLOUD_SECURITY_MCP_WORKER_MAX_BYTES` (default 10 MB); same env scrub + RLIMIT + sandbox wrap as the one-shot path; no cross-call state |
-| Retry policy | `CLOUD_SECURITY_RETRY_MAX_ATTEMPTS` / `BASE_SECONDS` / `CAP_SECONDS` / `TOTAL_BUDGET_SECONDS` | bounded by construction |
 | Webhook auth | `WEBHOOK_HMAC_SECRETS` / `WEBHOOK_HMAC_HEADER` / `WEBHOOK_BEARER_TOKEN` | per-skill HMAC + bearer |
 | Webhook routing | `WEBHOOK_ALLOWED_SKILLS` / `WEBHOOK_SINK_TARGETS` | default-deny |
 | Helm | [`runners/webhook-receiver/templates/helm/values.yaml`](../runners/webhook-receiver/templates/helm/values.yaml) | resource limits, security context, audit volume |
@@ -579,7 +578,6 @@ check against the platform's bar instead of re-deriving it.
 | **Lifecycle hooks for guardrails** | [Claude Code hooks](https://docs.claude.com/en/docs/claude-code/hooks) | ✓ matches the wrapper's `_call_tool` lifecycle: pre-call validation (allowlist + schema), pre-call gate (dry-run + HITL), post-call audit |
 | **Structured tool-output JSON** | tool-design guidance | ✓ every skill emits OCSF / native JSONL on stdout; errors use the `SkillError` envelope (#437) |
 | **MCP server runs sandboxed** | [Anthropic security guidance](https://www.anthropic.com/news/agent-capabilities-api) | ✓ #428 adds RLIMIT enforcement; #438 adds container hardening (non-root, read-only, cap-drop, seccomp) |
-| **Bounded retries — never infinite** | tool-design guidance | ✓ `skills/_shared/retry.py` is bounded by construction: floor 1, ceiling 10 attempts, ceiling 600 s wall-clock, permanent-error short-circuit, no recursive retries (#437) |
 | **Authentication delegated to the platform / cloud CLI** | [Claude Desktop config docs](https://docs.claude.com/en/docs/claude-code/mcp) | ✓ skills use the cloud SDK default credential chain. Repo never sees passwords or tokens |
 | **OAuth via MCP for vendor APIs** | MCP spec 2025-06-18 | ⏳ not yet — we delegate to the cloud CLI. A follow-up could orchestrate an MCP-side OAuth dance for SaaS APIs (Workday, Okta) where the cloud-CLI pattern doesn't fit |
 | **Plain-text agent file format (`AGENTS.md`)** | [Anthropic docs](https://docs.claude.com/en/docs/claude-code/memory) | ✓ shipped at repo root; tells the agent the repo's guardrails before any tool call |

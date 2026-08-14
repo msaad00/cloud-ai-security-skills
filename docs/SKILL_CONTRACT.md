@@ -252,33 +252,16 @@ CI currently validates:
 
 The contract will expand over time, but new CI rules should only be added when the current tree already satisfies them.
 
-## Throttling, errors, and logs
+## Errors and logs
 
-Every shipped skill follows a single shared contract for retries,
-errors, and structured logs. The three modules under
+Every shipped skill follows a single shared contract for errors and
+structured logs. The two modules under
 [`skills/_shared/`](../skills/_shared/) are the source of truth:
 
 | Concern | Module | Helper |
 |---|---|---|
-| Rate-limit / 5xx retries with bounded backoff | `skills/_shared/retry.py` | `@retry_on_throttle()` decorator + `retry_call()` functional API |
 | Structured error envelope | `skills/_shared/errors.py` | `SkillError` hierarchy + `emit_error()` |
 | Structured logs (one-line JSON on stderr) | `skills/_shared/logging.py` | `get_logger(__name__, skill=..., layer=...)` |
-
-### Retry rules — read before you tune
-
-The retry helper is **bounded by construction**:
-
-- Hard attempt cap: default 5, never below 1 or above 10.
-- Hard wall-clock budget: default 60s from the first call, ceiling 600s.
-- Bounded backoff: `min(base × 2^attempt, cap)` with full-jitter; cap defaults to 16s.
-- Permanent errors short-circuit — no budget burn.
-- A retry helper never calls another retry helper for the same function.
-  Tested explicitly so we cannot reintroduce the `attempts^2` loop.
-
-If a skill needs different limits, it sets the SKILL.md frontmatter
-fields `retry_max_attempts` / `retry_total_budget_seconds` and reads
-them in code via `RetryPolicy(...)` — the schema validator pins the
-ranges so a misconfigured skill cannot silently disable the cap.
 
 ### Error envelope
 
