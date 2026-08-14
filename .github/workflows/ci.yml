@@ -290,7 +290,7 @@ jobs:
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: boto3 moto pytest pytest-cov defusedxml pyyaml
+          packages: boto3 moto pytest pytest-cov defusedxml pyyaml httpx
       - run: pytest tests/integration/ tests/conformance/ mcp-server/tests/ -v -o "testpaths=tests"
 
   coverage:
