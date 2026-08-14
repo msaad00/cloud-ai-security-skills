@@ -142,7 +142,7 @@ flowchart TD
 
 - For AWS IAM cleanup — use [`iam-departures-aws`](../iam-departures-aws/).
 - For Azure Entra service-principal containment — use [`remediate-entra-credential-revoke`](../remediate-entra-credential-revoke/).
-- For Snowflake user offboarding (covered by the AWS skill's `clouds/snowflake_user.py` library module today; per-cloud GCP→Snowflake is out of scope).
+- Snowflake user offboarding is out of scope — no remediation skill ships for it today (Snowflake appears only as an HR *data source*, not a remediation target).
 - For Okta session containment — use [`remediate-okta-session-kill`](../remediate-okta-session-kill/).
 - To bypass the grace period or set it to 0 "to test" — the parser refuses.
 - To call the worker Cloud Function directly without the Workflow — bypasses the audit dual-write.

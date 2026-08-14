@@ -114,7 +114,7 @@ act parity is [`README.md`](README.md#closed-loop-coverage-at-a-glance) and
 | `skills/<layer>/<skill>/SKILL.md` | exact skill behavior and non-goals |
 | `skills/<layer>/<skill>/REFERENCES.md` | official APIs, schemas, and framework sources |
 
-The full layered architecture (Sources → Ingestion → Discovery / Enrich → Detection / Evaluation → View → Remediation) is documented in [`ARCHITECTURE.md`](ARCHITECTURE.md). The eleven-principle security contract is in [`SECURITY_BAR.md`](SECURITY_BAR.md). Per-skill official references and IAM policies live in each skill's `REFERENCES.md`.
+The full layered architecture (Sources → Ingestion → Discovery / Enrich → Detection / Evaluation → View → Remediation) is documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The eleven-principle security contract is in [`SECURITY_BAR.md`](SECURITY_BAR.md). Per-skill official references and IAM policies live in each skill's `REFERENCES.md`.
 The CSPM skills are read-only posture checks. The remediation skills write native
 action + audit records, and many of them re-verify their own post-action state.
 AWS IAM departures additionally ingest audit back into the source warehouse so
@@ -158,10 +158,9 @@ Patterns to remember:
 
 ### 3. Dry-run is supported everywhere
 
-- **Cross-cloud workers** (`lambda_worker/clouds/*`) all accept `dry_run=True`
-  which produces a `RemediationStatus.DRY_RUN` result with the full step list
-  but **no API calls**. Use this when an agent is exploring or composing the
-  workflow.
+- **Remediation workers** all accept `dry_run=True` which produces a
+  `RemediationStatus.DRY_RUN` result with the full step list but **no API
+  calls**. Use this when an agent is exploring or composing the workflow.
 - **CSPM checks** are inherently dry-run because they're read-only.
 - **Reconciler** has `--dry-run` flag that prints the diff without writing the
   S3 manifest, which means EventBridge never fires.

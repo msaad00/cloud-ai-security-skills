@@ -1,79 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
-  <title id="title">Optional agentic SOC orchestrator</title>
-  <desc id="desc">LangGraph owns workflow state. cloud-ai-security-skills owns deterministic skills and trust rails. LangChain is optional MCP or triage adapter glue.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="orch-title orch-desc">
+  <title id="orch-title">Optional agentic SOC orchestrator</title>
+  <desc id="orch-desc">LangGraph owns workflow state. cloud-ai-security-skills owns the deterministic skills and trust rails. LangChain is optional MCP or triage adapter glue. Example pipeline: ingest, enrich, triage, analyst review, dry-run remediate, audit, verify closure.</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#060b17"/>
-      <stop offset="100%" stop-color="#0d172a"/>
+      <stop offset="100%" stop-color="#0a1325"/>
     </linearGradient>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0 0L10 5L0 10z" fill="#60a5fa"/>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#7dd3fc"/>
     </marker>
-    <marker id="arrow-down" viewBox="0 0 10 10" refX="5" refY="9" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0 0L5 10L10 0z" fill="#60a5fa"/>
+    <marker id="arrow-down" viewBox="0 0 10 10" refX="5" refY="9" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L5 10L10 0z" fill="#7dd3fc"/>
     </marker>
+    <symbol id="ic-pkg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 2v20M3 7l9 5 9-5"/></symbol>
+    <symbol id="ic-graph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M7.3 11L15.7 6.9M7.3 13l8.4 4.1"/></symbol>
+    <symbol id="ic-chain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5l5-5M8 13l-2 2a3.5 3.5 0 004.9 4.9l2-2M16 11l2-2a3.5 3.5 0 00-4.9-4.9l-2 2"/></symbol>
   </defs>
 
-  <rect width="1200" height="480" fill="url(#bg)"/>
+  <rect width="1200" height="500" fill="url(#bg)"/>
 
   <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
-    <text x="48" y="48" font-size="28" font-weight="800" fill="#f8fafc">Agentic SOC orchestrator</text>
-    <text x="48" y="76" font-size="15" fill="#94a3b8">Compose LangGraph + skills — MCP-first, not either/or</text>
+    <text x="60" y="56" font-size="30" font-weight="800" fill="#f8fafc">Agentic SOC orchestrator</text>
+    <text x="60" y="86" font-size="15" fill="#94a3b8">Compose LangGraph + skills — MCP-first, not either/or. Skills own the facts; the graph owns the flow.</text>
 
     <!-- ownership stack -->
-    <g transform="translate(48,104)">
-      <rect x="0" y="0" width="1104" height="88" rx="16" fill="#112244" stroke="#60a5fa" stroke-width="2"/>
-      <text x="32" y="36" font-size="16" font-weight="800" fill="#dbeafe">cloud-ai-security-skills</text>
-      <text x="32" y="62" font-size="13" fill="#94a3b8">131 skills · OCSF wire · MCP · dry-run · audit · allowlists</text>
+    <g transform="translate(60,112)">
+      <rect x="0" y="0" width="1080" height="84" rx="16" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
+      <use href="#ic-pkg" x="28" y="18" width="26" height="26" color="#93c5fd"/>
+      <text x="66" y="36" font-size="16" font-weight="800" fill="#93c5fd">cloud-ai-security-skills</text>
+      <text x="66" y="62" font-size="13" fill="#94a3b8">131 skills · OCSF wire · MCP · dry-run · audit · allowlists — deterministic, versioned, testable</text>
 
-      <rect x="0" y="104" width="536" height="88" rx="16" fill="#0f2a3b" stroke="#22d3ee"/>
-      <text x="32" y="140" font-size="16" font-weight="800" fill="#67e8f9">LangGraph (recommended)</text>
-      <text x="32" y="166" font-size="13" fill="#94a3b8">workflow state · branches · checkpoints · HITL routing</text>
+      <rect x="0" y="100" width="524" height="84" rx="16" fill="#0f172a" stroke="#22d3ee"/>
+      <use href="#ic-graph" x="28" y="120" width="24" height="24" color="#67e8f9"/>
+      <text x="64" y="136" font-size="16" font-weight="800" fill="#67e8f9">LangGraph <tspan font-size="12" font-weight="600" fill="#64748b">recommended</tspan></text>
+      <text x="64" y="162" font-size="13" fill="#94a3b8">workflow state · branches · checkpoints · HITL routing</text>
 
-      <rect x="568" y="104" width="536" height="88" rx="16" fill="#172033" stroke="#475569"/>
-      <text x="600" y="140" font-size="16" font-weight="800" fill="#e2e8f0">LangChain (optional)</text>
-      <text x="600" y="166" font-size="13" fill="#94a3b8">MCP stdio wiring · bounded triage message adapter</text>
+      <rect x="556" y="100" width="524" height="84" rx="16" fill="#0f172a" stroke="#475569"/>
+      <use href="#ic-chain" x="584" y="120" width="24" height="24" color="#cbd5e1"/>
+      <text x="620" y="136" font-size="16" font-weight="800" fill="#e2e8f0">LangChain <tspan font-size="12" font-weight="600" fill="#64748b">optional</tspan></text>
+      <text x="620" y="162" font-size="13" fill="#94a3b8">MCP stdio wiring · bounded triage message adapter</text>
     </g>
 
-    <!-- pipeline grid -->
-    <g transform="translate(48,320)">
-      <rect x="0" y="0" width="1104" height="132" rx="16" fill="#052e2b" stroke="#0f766e"/>
-      <text x="28" y="32" font-size="11" font-weight="700" fill="#5eead4" letter-spacing="1.2">EXAMPLE PIPELINE</text>
-      <text x="900" y="32" font-size="12" fill="#64748b">harness_profiles/</text>
+    <!-- example pipeline -->
+    <g transform="translate(60,320)">
+      <rect x="0" y="0" width="1080" height="160" rx="16" fill="#0b1220" stroke="#334155"/>
+      <text x="28" y="34" font-size="11" font-weight="700" fill="#5eead4" letter-spacing="1.4">EXAMPLE PIPELINE</text>
+      <text x="1052" y="34" text-anchor="end" font-size="12" fill="#64748b">examples/agents/harness_profiles/</text>
 
-      <g font-size="13" font-weight="700" fill="#e2e8f0">
-        <!-- row 1 -->
-        <rect x="28" y="48" width="108" height="40" rx="12" fill="#0f172a" stroke="#34d399"/>
-        <text x="82" y="74" text-anchor="middle">ingest</text>
-        <path d="M144 68H168" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <g font-size="13" font-weight="700" fill="#e2e8f0" text-anchor="middle">
+        <!-- row 1: automated intake + analysis, ending at the human gate -->
+        <rect x="28" y="52" width="104" height="42" rx="12" fill="#0f172a" stroke="#34d399"/><text x="80" y="78">ingest</text>
+        <path d="M136 73H162" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <rect x="168" y="52" width="104" height="42" rx="12" fill="#0f172a" stroke="#34d399"/><text x="220" y="78">enrich</text>
+        <path d="M276 73H302" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <rect x="308" y="52" width="104" height="42" rx="12" fill="#0f172a" stroke="#34d399"/><text x="360" y="78">triage</text>
+        <path d="M416 73H442" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <rect x="448" y="52" width="140" height="42" rx="12" fill="#0f172a" stroke="#fbbf24"/><text x="518" y="78" fill="#fde68a">analyst review</text>
 
-        <rect x="176" y="48" width="108" height="40" rx="12" fill="#0f172a" stroke="#34d399"/>
-        <text x="230" y="74" text-anchor="middle">enrich</text>
-        <path d="M292 68H316" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <!-- bend down to the gated write path -->
+        <path d="M518 94V112" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow-down)"/>
 
-        <rect x="324" y="48" width="108" height="40" rx="12" fill="#0f172a" stroke="#34d399"/>
-        <text x="378" y="74" text-anchor="middle">triage</text>
-        <path d="M440 68H464" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow)"/>
-
-        <rect x="472" y="48" width="132" height="40" rx="12" fill="#0f172a" stroke="#fbbf24"/>
-        <text x="538" y="74" text-anchor="middle">analyst review</text>
-
-        <!-- bend -->
-        <path d="M538 96V112" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow-down)"/>
-
-        <!-- row 2 -->
-        <rect x="472" y="116" width="152" height="40" rx="12" fill="#0f172a" stroke="#fbbf24"/>
-        <text x="548" y="142" text-anchor="middle">dry-run remediate</text>
-        <path d="M632 136H656" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow)"/>
-
-        <rect x="664" y="116" width="108" height="40" rx="12" fill="#0f172a" stroke="#2dd4bf"/>
-        <text x="718" y="142" text-anchor="middle">audit</text>
-        <path d="M780 136H804" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrow)"/>
-
-        <rect x="812" y="116" width="140" height="40" rx="12" fill="#0f172a" stroke="#2dd4bf"/>
-        <text x="882" y="142" text-anchor="middle">verify closure</text>
+        <!-- row 2: HITL-gated write, then closed-loop audit -->
+        <rect x="448" y="116" width="140" height="42" rx="12" fill="#0f172a" stroke="#fbbf24"/><text x="518" y="142" fill="#fde68a">dry-run remediate</text>
+        <path d="M592 137H618" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <rect x="624" y="116" width="104" height="42" rx="12" fill="#0f172a" stroke="#2dd4bf"/><text x="676" y="142" fill="#99f6e4">audit</text>
+        <path d="M732 137H758" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <rect x="764" y="116" width="140" height="42" rx="12" fill="#0f172a" stroke="#2dd4bf"/><text x="834" y="142" fill="#99f6e4">verify closure</text>
       </g>
+
+      <text x="960" y="145" font-size="12" fill="#475569" font-style="italic">closed loop</text>
     </g>
   </g>
 </svg>
