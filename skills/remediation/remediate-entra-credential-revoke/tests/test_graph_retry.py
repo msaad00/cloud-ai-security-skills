@@ -93,10 +93,11 @@ def _client() -> MsGraphClient:
 
 
 def _patch_http(monkeypatch, factory, sleeps):
-    import handler as h
-
-    monkeypatch.setattr(h.http.client, "HTTPSConnection", factory)
-    monkeypatch.setattr(h.time, "sleep", lambda s: sleeps.append(s))
+    # Patch the stdlib modules directly (not `handler.http` / `handler.time`):
+    # multiple remediation skills ship a top-level `handler` module, so a
+    # `import handler` here can bind to the wrong skill under a full-suite run.
+    monkeypatch.setattr("http.client.HTTPSConnection", factory)
+    monkeypatch.setattr("time.sleep", lambda s: sleeps.append(s))
 
 
 URL = "https://graph.microsoft.com/v1.0/servicePrincipals/abc?$select=id"
@@ -222,9 +223,7 @@ def test_retry_delay_helper_units():
 def test_graph_http_request_is_credential_free(monkeypatch, sleeps):
     # The module-level helper needs no client/token at all.
     factory = _ConnFactory([_FakeResponse(200, body=b"{}")])
-    import handler as h
-
-    monkeypatch.setattr(h.http.client, "HTTPSConnection", factory)
+    monkeypatch.setattr("http.client.HTTPSConnection", factory)
 
     result = _graph_http_request(
         "graph.microsoft.com",
