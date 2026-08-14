@@ -60,9 +60,11 @@ import http.client
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Protocol
+from typing import Any, Callable, Iterable, Iterator, Protocol
 from urllib import parse as urllib_parse
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -122,6 +124,115 @@ STATUS_SKIPPED_NO_TARGET = "skipped_no_target_pointer"
 STATUS_SKIPPED_UNSUPPORTED_TYPE = "skipped_unsupported_target_type"
 
 SUPPORTED_TARGET_TYPES = frozenset({"ServicePrincipal", "Application"})
+
+
+# ── HTTP retry / Retry-After resilience ─────────────────────────────────────
+# Microsoft Graph throttles with 429 (+ 5xx transients) and advertises a
+# `Retry-After` header. The stdlib `http.client` path used below does not
+# retry or honor that header on its own. This inline helper (kept self-
+# contained so this skill needs no extra shared dependency) adds a bounded,
+# Retry-After-aware retry loop around a single credential-free send. It is the
+# `http.client` counterpart to `_shared/http.py`'s httpx-based transport.
+HTTP_MAX_ATTEMPTS_ENV = "CLOUD_SECURITY_HTTP_MAX_ATTEMPTS"
+DEFAULT_HTTP_MAX_ATTEMPTS = 8
+HTTP_BACKOFF_MAX_SECONDS = 60.0
+RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+
+
+@dataclasses.dataclass(frozen=True)
+class _HttpResult:
+    status: int
+    reason: str
+    retry_after: str | None
+    payload: bytes
+
+
+def _resolve_http_max_attempts() -> int:
+    raw = os.getenv(HTTP_MAX_ATTEMPTS_ENV, "")
+    try:
+        attempts = int(raw)
+    except (TypeError, ValueError):
+        attempts = DEFAULT_HTTP_MAX_ATTEMPTS
+    return max(1, attempts)
+
+
+def _retry_delay_seconds(retry_after: str | None, attempt: int) -> float:
+    """Seconds to wait before the next attempt (0-based ``attempt``).
+
+    Honors a server-supplied ``Retry-After`` (integer seconds or HTTP-date),
+    else exponential ``min(0.5 * 2**attempt, 60)``. Capped at 60s.
+    """
+    if retry_after is not None:
+        raw = retry_after.strip()
+        if raw:
+            if raw.isdigit():
+                return min(float(raw), HTTP_BACKOFF_MAX_SECONDS)
+            try:
+                parsed = parsedate_to_datetime(raw)
+            except (TypeError, ValueError):
+                parsed = None
+            if parsed is not None:
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                delta = (parsed - datetime.now(timezone.utc)).total_seconds()
+                return min(max(0.0, delta), HTTP_BACKOFF_MAX_SECONDS)
+    return min(0.5 * (2**attempt), HTTP_BACKOFF_MAX_SECONDS)
+
+
+def _graph_http_request(
+    netloc: str,
+    method: str,
+    path: str,
+    *,
+    body: bytes | None = None,
+    headers: dict[str, str],
+    max_attempts: int | None = None,
+    sleep: Callable[[float], None] | None = None,
+) -> _HttpResult:
+    """Send one Microsoft Graph request over ``http.client`` with retries.
+
+    Credential-free by design: the caller supplies the ready-made
+    ``Authorization`` header, so this loop is unit-testable by mocking
+    ``http.client.HTTPSConnection`` alone. Retries retryable statuses and
+    transient ``OSError`` up to the attempt budget, sleeping per
+    ``Retry-After`` / exponential backoff between tries.
+    """
+    attempts = max_attempts if max_attempts is not None else _resolve_http_max_attempts()
+    attempts = max(1, attempts)
+    sleep_fn = sleep if sleep is not None else time.sleep
+
+    def send_once() -> _HttpResult:
+        connection = http.client.HTTPSConnection(netloc)
+        try:
+            connection.request(method.upper(), path, body=body, headers=headers)
+            response = connection.getresponse()
+            payload = response.read()
+            retry_after = response.getheader("Retry-After")
+            return _HttpResult(
+                status=response.status,
+                reason=response.reason,
+                retry_after=retry_after,
+                payload=payload,
+            )
+        finally:
+            connection.close()
+
+    result: _HttpResult | None = None
+    for attempt in range(attempts):
+        last_attempt = attempt + 1 >= attempts
+        try:
+            result = send_once()
+        except OSError:
+            if last_attempt:
+                raise
+            sleep_fn(_retry_delay_seconds(None, attempt))
+            continue
+        if result.status in RETRYABLE_STATUS and not last_attempt:
+            sleep_fn(_retry_delay_seconds(result.retry_after, attempt))
+            continue
+        return result
+    assert result is not None  # loop body either returns, re-raises, or assigns
+    return result
 
 
 @dataclasses.dataclass(frozen=True)
@@ -209,23 +320,24 @@ class MsGraphClient:
         path = parsed.path or "/"
         if parsed.query:
             path = f"{path}?{parsed.query}"
-        connection = http.client.HTTPSConnection(parsed.netloc)
         try:
-            connection.request(method.upper(), path, body=body_bytes, headers=headers)
-            response = connection.getresponse()
-            payload = response.read()
+            result = _graph_http_request(
+                parsed.netloc,
+                method,
+                path,
+                body=body_bytes,
+                headers=headers,
+            )
         except OSError as exc:
             raise RuntimeError(f"Microsoft Graph connection failed: {exc}") from exc
-        finally:
-            connection.close()
-        if response.status >= 400:
-            if response.status == 404 and allow_not_found:
+        if result.status >= 400:
+            if result.status == 404 and allow_not_found:
                 return None
-            detail = payload.decode("utf-8", errors="replace")
-            raise RuntimeError(f"Microsoft Graph {response.status}: {detail or response.reason}")
-        if not payload:
+            detail = result.payload.decode("utf-8", errors="replace")
+            raise RuntimeError(f"Microsoft Graph {result.status}: {detail or result.reason}")
+        if not result.payload:
             return None
-        return json.loads(payload)
+        return json.loads(result.payload)
 
     def _collection(self, url: str) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
