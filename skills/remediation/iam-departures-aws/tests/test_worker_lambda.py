@@ -361,12 +361,12 @@ class TestAuditWriteFailure:
             "actions_taken": [],
         }
 
-    @patch("lambda_worker.handler.aws")
-    def test_write_audit_raises_when_all_stores_fail(self, mock_aws):
-        mock_aws.resource.return_value.Table.return_value.put_item.side_effect = RuntimeError(
+    @patch("lambda_worker.handler.boto3")
+    def test_write_audit_raises_when_all_stores_fail(self, mock_boto3):
+        mock_boto3.resource.return_value.Table.return_value.put_item.side_effect = RuntimeError(
             "ddb down"
         )
-        mock_aws.client.return_value.put_object.side_effect = RuntimeError("s3 down")
+        mock_boto3.client.return_value.put_object.side_effect = RuntimeError("s3 down")
 
         with (
             patch("lambda_worker.handler.AUDIT_TABLE", "t"),
@@ -379,13 +379,13 @@ class TestAuditWriteFailure:
         assert "dynamodb=" in msg and "s3=" in msg
         assert "jane" in msg and "123456789012" in msg
 
-    @patch("lambda_worker.handler.aws")
-    def test_write_audit_tolerates_one_store_failure(self, mock_aws):
+    @patch("lambda_worker.handler.boto3")
+    def test_write_audit_tolerates_one_store_failure(self, mock_boto3):
         """Dual-write redundancy: one store succeeding is still acceptable."""
-        mock_aws.resource.return_value.Table.return_value.put_item.side_effect = RuntimeError(
+        mock_boto3.resource.return_value.Table.return_value.put_item.side_effect = RuntimeError(
             "ddb down"
         )
-        mock_aws.client.return_value.put_object.return_value = {}
+        mock_boto3.client.return_value.put_object.return_value = {}
 
         with (
             patch("lambda_worker.handler.AUDIT_TABLE", "t"),
@@ -435,12 +435,12 @@ class TestAuditWriteFailure:
         },
     )
     @patch("lambda_worker.handler._remediation_steps", return_value=[])
-    @patch("lambda_worker.handler.aws")
+    @patch("lambda_worker.handler.boto3")
     @patch("lambda_worker.handler._get_iam_client")
     def test_get_iam_client_embeds_request_id_in_session_name(
         self,
         mock_get_iam,
-        _mock_aws,
+        _mock_boto3,
         _mock_steps,
         _mock_load,
         _mock_save,

@@ -634,6 +634,8 @@ resource "aws_lambda_function" "parser" {
       IAM_REMEDIATION_BUCKET = var.remediation_bucket
       IAM_GRACE_PERIOD_DAYS  = tostring(var.grace_period_days)
       IAM_CROSS_ACCOUNT_ROLE = var.cross_account_role_name
+      AWS_RETRY_MODE         = "adaptive"
+      AWS_MAX_ATTEMPTS       = "8"
     }
   }
 
@@ -674,6 +676,8 @@ resource "aws_lambda_function" "worker" {
       IAM_AUDIT_DYNAMODB_TABLE = var.audit_dynamodb_table
       IAM_CROSS_ACCOUNT_ROLE   = var.cross_account_role_name
       KMS_KEY_ARN              = var.kms_key_arn
+      AWS_RETRY_MODE           = "adaptive"
+      AWS_MAX_ATTEMPTS         = "8"
     }
   }
 

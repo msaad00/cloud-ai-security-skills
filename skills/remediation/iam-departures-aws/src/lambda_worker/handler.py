@@ -45,18 +45,12 @@ import json
 import logging
 import os
 import re
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[5]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+import boto3
 
-from skills._shared import aws  # noqa: E402
-
-from .protected_principals import ProtectedPrincipalError, assert_not_protected  # noqa: E402
+from .protected_principals import ProtectedPrincipalError, assert_not_protected
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -608,7 +602,7 @@ def _write_audit(record: dict) -> None:
     if AUDIT_TABLE:
         stores_configured += 1
         try:
-            dynamodb = aws.resource("dynamodb")
+            dynamodb = boto3.resource("dynamodb")
             table = dynamodb.Table(AUDIT_TABLE)
             table.put_item(
                 Item={
@@ -627,7 +621,7 @@ def _write_audit(record: dict) -> None:
     if AUDIT_BUCKET:
         stores_configured += 1
         try:
-            s3 = aws.client("s3")
+            s3 = boto3.client("s3")
             date_str = record["audit_timestamp"][:10]
             key = f"departures/audit/{date_str}/{record['iam_username']}.json"
             s3.put_object(
@@ -660,7 +654,7 @@ def _load_checkpoint(entry: dict[str, Any]) -> dict[str, Any]:
     if not AUDIT_TABLE:
         return checkpoint
     try:
-        dynamodb = aws.resource("dynamodb")
+        dynamodb = boto3.resource("dynamodb")
         table = dynamodb.Table(AUDIT_TABLE)
         response = table.get_item(
             Key={
@@ -706,7 +700,7 @@ def _save_checkpoint(
     if not AUDIT_TABLE:
         return
     try:
-        dynamodb = aws.resource("dynamodb")
+        dynamodb = boto3.resource("dynamodb")
         table = dynamodb.Table(AUDIT_TABLE)
         table.put_item(
             Item={
@@ -742,7 +736,7 @@ def _get_iam_client(account_id: str, request_id: str | None = None) -> Any:
     if not ACCOUNT_ID_RE.fullmatch(account_id):
         raise ValueError("Invalid AWS account ID")
 
-    sts = aws.client("sts")
+    sts = boto3.client("sts")
     role_arn = f"arn:aws:iam::{account_id}:role/{CROSS_ACCOUNT_ROLE}"
 
     session_name = "iam-departures-worker"
@@ -757,7 +751,7 @@ def _get_iam_client(account_id: str, request_id: str | None = None) -> Any:
         DurationSeconds=3600,  # 1 hour for full remediation
     )["Credentials"]
 
-    return aws.client(
+    return boto3.client(
         "iam",
         aws_access_key_id=credentials["AccessKeyId"],
         aws_secret_access_key=credentials["SecretAccessKey"],

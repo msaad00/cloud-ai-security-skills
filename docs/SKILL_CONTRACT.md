@@ -264,10 +264,13 @@ structured logs. The two modules under
 | Structured logs (one-line JSON on stderr) | `skills/_shared/logging.py` | `get_logger(__name__, skill=..., layer=...)` |
 | AWS client construction | `skills/_shared/aws.py` | `client()` / `resource()` / `session_client()` |
 
-AWS clients are built through `skills/_shared/aws.py`, which applies a bounded,
-throttle-aware adaptive retry policy (botocore `mode="adaptive"`, attempt budget
-from `CLOUD_SECURITY_AWS_MAX_ATTEMPTS`, default 8) so transient throttling is
-retried before it surfaces as a `TransientError`.
+In-repo AWS clients (CLI / MCP / library skills) are built through
+`skills/_shared/aws.py`, which applies a bounded, throttle-aware adaptive retry
+policy (botocore `mode="adaptive"`, attempt budget from
+`CLOUD_SECURITY_AWS_MAX_ATTEMPTS`, default 8). Self-contained deployed artifacts
+(the `iam-departures-aws` Lambdas and the `aws-s3-sqs-detect` runner) stay
+dependency-free and get the same policy from botocore's native
+`AWS_RETRY_MODE=adaptive` / `AWS_MAX_ATTEMPTS` env vars set in their infra.
 
 ### Error envelope
 

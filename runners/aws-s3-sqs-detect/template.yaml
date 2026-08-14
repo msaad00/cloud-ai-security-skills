@@ -129,6 +129,8 @@ Resources:
         Variables:
           INGEST_SKILL_CMD: !Ref IngestSkillCommand
           DETECT_QUEUE_URL: !Ref DetectQueue
+          AWS_RETRY_MODE: adaptive
+          AWS_MAX_ATTEMPTS: "8"
 
   DetectFunction:
     Type: AWS::Lambda::Function
@@ -146,6 +148,8 @@ Resources:
           DEDUPE_TABLE: !Ref DedupeTable
           DEDUPE_TTL_DAYS: !Ref DedupeTtlDays
           SNS_TOPIC_ARN: !Ref AlertsTopic
+          AWS_RETRY_MODE: adaptive
+          AWS_MAX_ATTEMPTS: "8"
 
   IngestInvokePermission:
     Type: AWS::Lambda::Permission

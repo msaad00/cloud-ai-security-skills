@@ -137,8 +137,8 @@ class TestParserHandler:
     """Test the full Lambda handler."""
 
     @patch("lambda_parser.handler._get_iam_client")
-    @patch("lambda_parser.handler.aws")
-    def test_handler_processes_manifest(self, mock_aws, mock_iam):
+    @patch("lambda_parser.handler.boto3")
+    def test_handler_processes_manifest(self, mock_boto3, mock_iam):
         """Handler reads S3 manifest and returns validated entries."""
         mock_iam.return_value = MagicMock()
 
@@ -153,7 +153,7 @@ class TestParserHandler:
         mock_s3.get_object.return_value = {
             "Body": MagicMock(read=MagicMock(return_value=json.dumps(manifest).encode()))
         }
-        mock_aws.client.return_value = mock_s3
+        mock_boto3.client.return_value = mock_s3
 
         result = handler(
             {"bucket": "test-bucket", "key": "departures/2026-03-01.json"},
@@ -166,11 +166,11 @@ class TestParserHandler:
         # 1 actionable (valid), 1 skipped (deleted)
         assert result["validation_summary"]["skipped_count"] >= 1
 
-    @patch("lambda_parser.handler.aws")
-    def test_handler_rejects_invalid_event_payload(self, mock_aws):
+    @patch("lambda_parser.handler.boto3")
+    def test_handler_rejects_invalid_event_payload(self, mock_boto3):
         result = handler({"bucket": "", "key": ""}, None)
 
         assert result["validated_entries"] == []
         assert result["validation_summary"]["error_count"] == 1
         assert "Invalid event payload" in result["validation_summary"]["errors"][0]["error"]
-        mock_aws.client.assert_not_called()
+        mock_boto3.client.assert_not_called()

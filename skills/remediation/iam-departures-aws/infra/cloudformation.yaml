@@ -496,6 +496,8 @@ Resources:
           IAM_REMEDIATION_BUCKET: !Ref RemediationBucket
           IAM_GRACE_PERIOD_DAYS: !Ref GracePeriodDays
           IAM_CROSS_ACCOUNT_ROLE: !Ref CrossAccountRoleName
+          AWS_RETRY_MODE: adaptive
+          AWS_MAX_ATTEMPTS: "8"
       TracingConfig:
         Mode: Active
       VpcConfig:
@@ -529,6 +531,8 @@ Resources:
           IAM_AUDIT_DYNAMODB_TABLE: !Ref AuditDynamoDBTable
           IAM_CROSS_ACCOUNT_ROLE: !Ref CrossAccountRoleName
           KMS_KEY_ARN: !Ref KmsKeyArn
+          AWS_RETRY_MODE: adaptive
+          AWS_MAX_ATTEMPTS: "8"
       TracingConfig:
         Mode: Active
       VpcConfig:
