@@ -47,4 +47,4 @@
 
 ## Related repo code
 
-- [`skills/remediation/iam-departures-aws/src/lambda_worker/clouds/azure_entra.py`](../iam-departures-aws/src/lambda_worker/clouds/azure_entra.py) — sibling Entra code path, but for HR-departure user-deletion (different workflow, different output contract). The Graph SDK setup pattern is the same; consider extracting an `_shared/azure_graph_client.py` helper in a future PR if a third Entra skill ships.
+- [`skills/remediation/iam-departures-azure-entra`](../iam-departures-azure-entra/) — sibling Entra skill, but for HR-departure user-deletion (different workflow, different output contract). The Graph SDK setup pattern is the same; consider extracting an `_shared/azure_graph_client.py` helper in a future PR if a third Entra skill ships.

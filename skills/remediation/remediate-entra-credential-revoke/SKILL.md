@@ -18,9 +18,8 @@ description: >-
   the user mentions "disable Entra service principal," "respond to Entra
   credential addition," "contain Entra role grant escalation," or "re-verify
   Entra SP containment." Do NOT use for full Entra user offboarding (that
-  is HR-departure-shaped, see iam-departures-aws/src/lambda_worker/clouds/
-  azure_entra.py for the cross-cloud HR worker), Okta containment, AWS IAM,
-  or GCP. Out of scope: targeted credential keyId revocation (the detector
+  is HR-departure-shaped, see [`iam-departures-azure-entra`](../iam-departures-azure-entra/)),
+  Okta containment, AWS IAM, or GCP. Out of scope: targeted credential keyId revocation (the detector
   does not carry the offending keyId; operator selects from the triage list)
   and tenant-wide policy changes.
 purpose: Contain a Microsoft Entra credential-addition or app-role-grant escalation by disabling the targeted service principal (accountEnabled=false) and emitting a triage payload that lists the SP's current keyCredentials, p...
@@ -150,7 +149,7 @@ Entra ID role: **Application Administrator** (or **Privileged Role Administrator
 
 - Targeted credential `keyId` revocation — the detector does not carry the offending keyId. Operator selects from the triage list and revokes via Graph manually (or via a future `remediate-entra-keycredential-revoke` skill if a detector emits the keyId).
 - Tenant-wide policy changes (Conditional Access, sign-in risk policies) — out of scope; this skill operates on one SP at a time.
-- HR-departure offboarding (delete user across all systems) — that is shaped by `iam-departures-aws/src/lambda_worker/clouds/azure_entra.py`. Different workflow, different audit destination.
+- HR-departure offboarding (delete user across all systems) — that is shaped by [`iam-departures-azure-entra`](../iam-departures-azure-entra/). Different workflow, different audit destination.
 
 ## See also
 

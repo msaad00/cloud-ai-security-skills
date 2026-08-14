@@ -21,6 +21,9 @@ env/
 *.swo
 *~
 
+# Local agent/tool config (personal, never shared)
+.codex/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,7 +1,7 @@
 # Reference — IAM Departures Remediation
 
-Detailed architecture, security model, IAM role definitions, framework mappings,
-and cross-cloud roadmap.
+Detailed architecture, security model, IAM role definitions, and framework
+mappings for the AWS IAM departures control plane.
 
 ---
 
@@ -583,60 +583,27 @@ Implementation: `skills/discovery/iam-departures-reconciler/src/reconciler/chang
 
 ---
 
-## Cross-Cloud Identity Remediation
+## Identity Remediation Scope
 
-All cloud workers live in `src/lambda_worker/clouds/` and share a common
-`RemediationResult` interface with per-step tracking.
+This skill remediates **AWS IAM** users and access keys only. Its worker Lambda
+runs a 13-step deletion (keys → login → groups → policies → MFA → certs → SSH →
+service creds → tag → delete) with per-step tracking on a shared
+`RemediationResult` interface.
 
-| Cloud | Identity Type | SDK | Deletion Steps | Status |
-|-------|--------------|-----|----------------|--------|
-| AWS | IAM Users + Access Keys | `boto3` | 13 steps (keys → login → groups → policies → MFA → certs → SSH → svc creds → tag → delete) | **Implemented** |
-| Azure | Entra ID Users | `msgraph-sdk` + `azure-identity` | 6 steps (revoke sessions → groups → app roles → OAuth grants → disable → delete) | **Implemented** |
-| GCP | Service Accounts + Workspace Users | `google-cloud-iam` + `google-api-python-client` | 4 steps SA (disable → delete keys → remove IAM bindings → delete) / 2 steps Workspace | **Implemented** |
-| Snowflake | Users + Roles | `snowflake-connector-python` | 6 steps (abort queries → disable → revoke roles → transfer ownership → drop → verify) | **Implemented** |
-| Databricks | SCIM Users + PATs | `databricks-sdk` | 4 steps (revoke PATs → deactivate workspace → deactivate account → delete account) | **Implemented** |
+Other identity providers are handled by their **own dedicated skills** — each
+using that provider's native services under the same guardrails and skill
+contract, rather than one orchestration stack pretending to fit every provider:
 
-### Cloud-Specific Gotchas
-
-| Cloud | Gotcha | Impact |
-|-------|--------|--------|
-| Azure | `/$ref` is critical when removing group members — without it, the user object gets deleted | Data loss |
-| Azure | Dynamic group members cannot be manually removed | Skip in loop |
-| Azure | Soft delete: 30-day recycle bin | User can be restored |
-| GCP | Deleting SA keys does NOT revoke already-issued short-lived tokens (1hr expiry) | Brief window of access |
-| GCP | IAM policy read-modify-write has race conditions — always use etag | Policy corruption |
-| GCP | IAM bindings can exist on projects, folders, org, AND individual resources | Must scan all |
-| Snowflake | PUBLIC role cannot be revoked — it's implicit | Skip in revocation loop |
-| Snowflake | DROP USER succeeds even with owned objects — they become orphaned | Transfer ownership FIRST |
-| Snowflake | Snowsight worksheets become permanently inaccessible after DROP | No recovery |
-| Databricks | SCIM provisioning from IdP may re-create deleted users on next sync | Deprovision from IdP first |
-| Databricks | Account-level deletion cascades to ALL workspaces | Intentional but verify scope |
-
-### Required Permissions per Cloud
-
-**Azure Entra ID** (Microsoft Graph API — Application permissions):
-- `User.ReadWrite.All`, `GroupMember.ReadWrite.All`
-- `AppRoleAssignment.ReadWrite.All`, `DelegatedPermissionGrant.ReadWrite.All`
-- `Directory.Read.All`
-- Entra ID role: User Administrator
-
-**GCP** (IAM roles):
-- `roles/iam.serviceAccountAdmin` (disable + delete SA)
-- `roles/iam.serviceAccountKeyAdmin` (delete SA keys)
-- `roles/resourcemanager.projectIamAdmin` (modify IAM policies)
-- Workspace: Super Admin or User Management Admin
-
-**Snowflake** (privileges):
-- `USERADMIN` or `SECURITYADMIN` role
-- `OWNERSHIP` on the user being remediated
-- `SECURITYADMIN` for `REVOKE ROLE`
-
-**Databricks** (admin roles):
-- Workspace admin (PAT management + workspace-level SCIM)
-- Account admin (account-level SCIM operations)
+| Identity provider | Skill |
+|-------------------|-------|
+| AWS IAM users + access keys | `iam-departures-aws` (this skill) |
+| GCP service accounts + Workspace users | `iam-departures-gcp` |
+| Azure Entra ID users | `iam-departures-azure-entra` |
 
 The reconciler's `HRSource` abstraction and `DepartureRecord` schema are
-cloud-agnostic. Only the worker modules need cloud-specific remediation logic.
+cloud-agnostic; each provider's worker carries its own remediation logic. (Note:
+Snowflake, Databricks, and ClickHouse appear elsewhere in this skill as HR
+*data sources* the reconciler reads from — not as remediation targets.)
 
 ---
 
