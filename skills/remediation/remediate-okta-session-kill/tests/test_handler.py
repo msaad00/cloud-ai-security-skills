@@ -25,6 +25,7 @@ from handler import (  # type: ignore[import-not-found]
     STATUS_SUCCESS,
     STEP_REVOKE_OAUTH_TOKENS,
     STEP_REVOKE_SESSIONS,
+    HttpxOktaClient,
     Target,
     apply_actions,
     check_apply_gate,
@@ -677,3 +678,18 @@ class TestReverify:
         assert fake_okta.calls == []
         assert len(records) == 1
         assert records[0]["status"] == STATUS_SKIPPED_DENY_LIST
+
+
+class TestHttpxClientThrottleResilience:
+    """The production Okta client is built with Retry-After / 429 resilience."""
+
+    def test_client_wraps_retry_transport(self):
+        pytest.importorskip("httpx")
+        from skills._shared import http as shared_http
+
+        okta = HttpxOktaClient(org_url="https://acme.okta.com", api_token="tok")
+        client = okta._client()
+        try:
+            assert isinstance(client._transport, shared_http.RetryTransport)
+        finally:
+            client.close()

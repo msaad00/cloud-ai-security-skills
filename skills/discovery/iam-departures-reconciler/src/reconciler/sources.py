@@ -26,6 +26,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from enum import Enum
 from typing import Any, TypeVar
 
@@ -35,6 +36,61 @@ _T = TypeVar("_T")
 
 SOURCE_FETCH_ATTEMPTS = int(os.environ.get("HR_SOURCE_FETCH_ATTEMPTS", "3"))
 SOURCE_FETCH_BASE_DELAY = float(os.environ.get("HR_SOURCE_FETCH_BASE_DELAY", "1.5"))
+
+# Retry-After-aware retry budget for the direct Workday RaaS HTTP path. This is
+# inlined (rather than pulled from the repo's shared HTTP helper) on purpose:
+# this skill's src tree has no shared-package coupling, and adding a cross-tree
+# import here would risk an ImportError anywhere the reconciler is packaged
+# without that shared tree. The DB-connector fetches keep the generic
+# `_with_retry` above; only the HTTP path needs to honor a `Retry-After` header.
+HTTP_MAX_ATTEMPTS = int(os.environ.get("CLOUD_SECURITY_HTTP_MAX_ATTEMPTS", "8"))
+_RETRYABLE_HTTP_STATUS = frozenset({429, 500, 502, 503, 504})
+_HTTP_BACKOFF_BASE = 0.5
+_HTTP_BACKOFF_MAX = 60.0
+
+
+def _http_retry_delay(response: Any, attempt: int) -> float:
+    """Seconds to wait before the next attempt.
+
+    Honors a server ``Retry-After`` header (integer seconds or HTTP-date),
+    otherwise exponential backoff. Capped so a hostile/oversized header can't
+    stall a reconciler run indefinitely.
+    """
+    raw = response.headers.get("Retry-After")
+    if raw:
+        raw = raw.strip()
+        if raw.isdigit():
+            return min(float(raw), _HTTP_BACKOFF_MAX)
+        try:
+            parsed = parsedate_to_datetime(raw)
+        except (TypeError, ValueError):
+            parsed = None
+        if parsed is not None:
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=UTC)
+            return max(0.0, min((parsed - datetime.now(UTC)).total_seconds(), _HTTP_BACKOFF_MAX))
+    return min(_HTTP_BACKOFF_BASE * (2 ** (attempt - 1)), _HTTP_BACKOFF_MAX)
+
+
+def _httpx_request_retrying(client: Any, method: str, url: str, **kwargs: Any) -> Any:
+    """Issue an httpx request, retrying throttle/transient status codes.
+
+    Retries ``429`` and ``5xx`` up to ``HTTP_MAX_ATTEMPTS`` total, honoring a
+    ``Retry-After`` header between attempts. The final response is returned
+    (fully read by httpx) so the caller can inspect status / body regardless of
+    outcome.
+    """
+    attempts = max(1, HTTP_MAX_ATTEMPTS)
+    response = client.request(method, url, **kwargs)
+    attempt = 1
+    while attempt < attempts and response.status_code in _RETRYABLE_HTTP_STATUS:
+        delay = _http_retry_delay(response, attempt)
+        response.close()
+        if delay > 0:
+            time.sleep(delay)
+        response = client.request(method, url, **kwargs)
+        attempt += 1
+    return response
 
 
 def _with_retry(fn: Callable[[], _T], what: str) -> _T:
@@ -567,20 +623,22 @@ class WorkdayAPISource(HRSource):
         import httpx
 
         try:
-            resp = httpx.post(
-                self.token_url,
-                data={"grant_type": "client_credentials"},
-                auth=(self.client_id, self.client_secret),
-                timeout=30,
-            )
+            with httpx.Client(timeout=30) as client:
+                resp = _httpx_request_retrying(
+                    client,
+                    "POST",
+                    self.token_url,
+                    data={"grant_type": "client_credentials"},
+                    auth=(self.client_id, self.client_secret),
+                )
+                if resp.status_code >= 400:
+                    # Do NOT include response text — potentially sensitive.
+                    raise RuntimeError(f"Workday token endpoint returned HTTP {resp.status_code}")
+                return resp.json()["access_token"]
         except httpx.HTTPError as exc:
             raise RuntimeError(
                 f"Workday token endpoint unreachable ({type(exc).__name__})"
             ) from None
-        if resp.status_code >= 400:
-            # Do NOT include response text — potentially sensitive.
-            raise RuntimeError(f"Workday token endpoint returned HTTP {resp.status_code}")
-        return resp.json()["access_token"]
 
     def fetch_departures(self) -> list[DepartureRecord]:
         return _with_retry(self._fetch_departures_once, "Workday.fetch_departures")
@@ -589,14 +647,16 @@ class WorkdayAPISource(HRSource):
         import httpx
 
         token = self._get_token()
-        resp = httpx.get(
-            self.api_url,
-            headers={"Authorization": f"Bearer {token}"},
-            params={"format": "json"},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        with httpx.Client(timeout=60) as client:
+            resp = _httpx_request_retrying(
+                client,
+                "GET",
+                self.api_url,
+                headers={"Authorization": f"Bearer {token}"},
+                params={"format": "json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
 
         records = []
         for entry in data.get("Report_Entry", []):

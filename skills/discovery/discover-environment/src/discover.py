@@ -30,6 +30,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared import aws  # noqa: E402
+from skills._shared.env import env_int  # noqa: E402
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 
 SUPPORTED_OUTPUT_FORMATS = ("native", "ocsf-cloud-resources-inventory")
@@ -599,7 +600,16 @@ def discover_azure(subscription_id: str) -> EnvironmentGraph:
     try:
         from azure.mgmt.resource import ResourceManagementClient
 
-        client = ResourceManagementClient(credential, subscription_id)
+        # azure.core already honors Retry-After on 429/503; make the attempt
+        # budget + backoff explicit and env-tunable rather than SDK-default.
+        client = ResourceManagementClient(
+            credential,
+            subscription_id,
+            retry_total=env_int(
+                "CLOUD_SECURITY_AZURE_RETRY_TOTAL", 8, skill_name="discover-environment"
+            ),
+            retry_backoff_factor=0.5,
+        )
         for rg in client.resource_groups.list():
             rg_name = rg.name
             if not rg_name:

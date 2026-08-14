@@ -317,7 +317,9 @@ def _install_fake_azure(monkeypatch, resource_raises=False, rgs=None, resources_
     resource_pkg = types.ModuleType("azure.mgmt.resource")
 
     class _Client:
-        def __init__(self, credential, subscription_id):
+        # **_retry_kwargs absorbs the explicit retry_total / retry_backoff_factor
+        # the real azure.core client accepts (see discover_azure).
+        def __init__(self, credential, subscription_id, **_retry_kwargs):
             self.resource_groups = MagicMock()
             self.resources = MagicMock()
             if resource_raises:

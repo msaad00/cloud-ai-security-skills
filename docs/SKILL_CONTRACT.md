@@ -263,14 +263,30 @@ structured logs. The two modules under
 | Structured error envelope | `skills/_shared/errors.py` | `SkillError` hierarchy + `emit_error()` |
 | Structured logs (one-line JSON on stderr) | `skills/_shared/logging.py` | `get_logger(__name__, skill=..., layer=...)` |
 | AWS client construction | `skills/_shared/aws.py` | `client()` / `resource()` / `session_client()` |
+| Raw-HTTP client construction | `skills/_shared/http.py` | `retrying_client()` |
 
-In-repo AWS clients (CLI / MCP / library skills) are built through
-`skills/_shared/aws.py`, which applies a bounded, throttle-aware adaptive retry
-policy (botocore `mode="adaptive"`, attempt budget from
-`CLOUD_SECURITY_AWS_MAX_ATTEMPTS`, default 8). Self-contained deployed artifacts
-(the `iam-departures-aws` Lambdas and the `aws-s3-sqs-detect` runner) stay
-dependency-free and get the same policy from botocore's native
-`AWS_RETRY_MODE=adaptive` / `AWS_MAX_ATTEMPTS` env vars set in their infra.
+Retry / throttle resilience spans the three call surfaces the repo uses:
+
+- **AWS.** In-repo AWS clients (CLI / MCP / library skills) are built through
+  `skills/_shared/aws.py`, which applies a bounded, throttle-aware adaptive retry
+  policy (botocore `mode="adaptive"`, attempt budget from
+  `CLOUD_SECURITY_AWS_MAX_ATTEMPTS`, default 8). Self-contained deployed
+  artifacts (the `iam-departures-aws` Lambdas and the `aws-s3-sqs-detect`
+  runner) stay dependency-free and get the same policy from botocore's native
+  `AWS_RETRY_MODE=adaptive` / `AWS_MAX_ATTEMPTS` env vars set in their infra.
+- **Raw-HTTP SaaS / warehouse.** `skills/_shared/http.py`'s `retrying_client()`
+  builds an `httpx.Client` whose transport honors a server `Retry-After` header
+  (seconds or HTTP-date) and retries `429` / `5xx` with bounded exponential
+  backoff, attempt budget from `CLOUD_SECURITY_HTTP_MAX_ATTEMPTS` (default 8).
+  It is wired into the Okta management client (`remediate-okta-session-kill`);
+  the `iam-departures-reconciler` Workday RaaS path applies the same policy
+  inline to stay free of a cross-tree import in its deployment package.
+- **Azure / GCP.** The `azure.core` `RetryPolicy` and `google-api-core` retries
+  already honor `Retry-After` on `429` / `503` by default, so no bespoke layer
+  is added. The in-repo `azure.mgmt` clients (`cspm-azure-cis-benchmark`,
+  `discover-environment`) additionally pass explicit `retry_total`
+  (`CLOUD_SECURITY_AZURE_RETRY_TOTAL`, default 8) + `retry_backoff_factor` so the
+  budget is deliberate rather than SDK-default.
 
 ### Error envelope
 

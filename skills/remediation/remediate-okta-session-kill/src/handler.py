@@ -126,9 +126,13 @@ class HttpxOktaClient:
     api_token: str
 
     def _client(self) -> Any:
-        import httpx  # local import: tests that never call apply don't need it
+        # Local import: tests that never call apply don't need httpx installed.
+        # `retrying_client` honors Okta's `Retry-After` header and retries the
+        # throttle/transient status codes — Okta rate-limits hard, so a bare
+        # client would surface the first 429 as a hard failure.
+        from skills._shared import http as shared_http
 
-        return httpx.Client(
+        return shared_http.retrying_client(
             base_url=self.org_url,
             headers={
                 "Authorization": f"SSWS {self.api_token}",

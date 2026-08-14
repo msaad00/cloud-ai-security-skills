@@ -24,9 +24,16 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared.env import env_int  # noqa: E402
 from skills._shared.evaluation_ocsf import findings_to_native, findings_to_ocsf  # noqa: E402
 
 SKILL_NAME = "cspm-azure-cis-benchmark"
+# Retry-After-aware throttle resilience for the azure.mgmt clients. azure.core's
+# RetryPolicy already honors `Retry-After` on 429/503; these kwargs make the
+# attempt budget and backoff explicit and env-tunable rather than SDK-default.
+AZURE_RETRY_TOTAL_ENV = "CLOUD_SECURITY_AZURE_RETRY_TOTAL"
+DEFAULT_AZURE_RETRY_TOTAL = 8
+AZURE_RETRY_BACKOFF_FACTOR = 0.5
 BENCHMARK_NAME = "CIS Azure Foundations Benchmark v2.1"
 PROVIDER_NAME = "Azure"
 OUTPUT_FORMATS = ("native", "ocsf")
@@ -1365,8 +1372,14 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
         sys.exit(1)
 
     credential = DefaultAzureCredential()
-    storage_client = StorageManagementClient(credential, subscription_id)
-    network_client = NetworkManagementClient(credential, subscription_id)
+    retry_kwargs = {
+        "retry_total": env_int(
+            AZURE_RETRY_TOTAL_ENV, DEFAULT_AZURE_RETRY_TOTAL, skill_name=SKILL_NAME
+        ),
+        "retry_backoff_factor": AZURE_RETRY_BACKOFF_FACTOR,
+    }
+    storage_client = StorageManagementClient(credential, subscription_id, **retry_kwargs)
+    network_client = NetworkManagementClient(credential, subscription_id, **retry_kwargs)
 
     def _opt(name: str, ctor):
         try:
@@ -1379,18 +1392,18 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
         "authorization",
         lambda: __import__(
             "azure.mgmt.authorization", fromlist=["AuthorizationManagementClient"]
-        ).AuthorizationManagementClient(credential, subscription_id),
+        ).AuthorizationManagementClient(credential, subscription_id, **retry_kwargs),
     )
     security_client = _opt(
         "security",
         lambda: __import__("azure.mgmt.security", fromlist=["SecurityCenter"]).SecurityCenter(
-            credential, subscription_id
+            credential, subscription_id, **retry_kwargs
         ),
     )
     sql_client = _opt(
         "sql",
         lambda: __import__("azure.mgmt.sql", fromlist=["SqlManagementClient"]).SqlManagementClient(
-            credential, subscription_id
+            credential, subscription_id, **retry_kwargs
         ),
     )
     postgres_client = _opt(
@@ -1398,31 +1411,31 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
         lambda: __import__(
             "azure.mgmt.rdbms.postgresql_flexibleservers",
             fromlist=["PostgreSQLManagementClient"],
-        ).PostgreSQLManagementClient(credential, subscription_id),
+        ).PostgreSQLManagementClient(credential, subscription_id, **retry_kwargs),
     )
     monitor_client = _opt(
         "monitor",
         lambda: __import__(
             "azure.mgmt.monitor", fromlist=["MonitorManagementClient"]
-        ).MonitorManagementClient(credential, subscription_id),
+        ).MonitorManagementClient(credential, subscription_id, **retry_kwargs),
     )
     compute_client = _opt(
         "compute",
         lambda: __import__(
             "azure.mgmt.compute", fromlist=["ComputeManagementClient"]
-        ).ComputeManagementClient(credential, subscription_id),
+        ).ComputeManagementClient(credential, subscription_id, **retry_kwargs),
     )
     keyvault_client = _opt(
         "keyvault",
         lambda: __import__(
             "azure.mgmt.keyvault", fromlist=["KeyVaultManagementClient"]
-        ).KeyVaultManagementClient(credential, subscription_id),
+        ).KeyVaultManagementClient(credential, subscription_id, **retry_kwargs),
     )
     web_client = _opt(
         "web",
         lambda: __import__(
             "azure.mgmt.web", fromlist=["WebSiteManagementClient"]
-        ).WebSiteManagementClient(credential, subscription_id),
+        ).WebSiteManagementClient(credential, subscription_id, **retry_kwargs),
     )
     graph_client = None  # Microsoft Graph SDK not pulled in by default.
 
