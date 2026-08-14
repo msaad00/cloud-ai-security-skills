@@ -31,6 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared import aws  # noqa: E402
 from skills._shared.evaluation_ocsf import findings_to_native, findings_to_ocsf  # noqa: E402
 
 SKILL_NAME = "cspm-aws-cis-benchmark"
@@ -136,7 +137,7 @@ class DualAuditWriter:
             "action_at": action_at,
         }
         body = json.dumps(envelope, separators=(",", ":")).encode("utf-8")
-        boto3.client("s3").put_object(
+        aws.client("s3").put_object(
             Bucket=self.s3_bucket,
             Key=evidence_key,
             Body=body,
@@ -144,7 +145,7 @@ class DualAuditWriter:
             SSEKMSKeyId=self.kms_key_arn,
             ContentType="application/json",
         )
-        boto3.client("dynamodb").put_item(
+        aws.client("dynamodb").put_item(
             TableName=self.dynamodb_table,
             Item={
                 "resource_id": {"S": target.resource_id},
@@ -2040,15 +2041,15 @@ SECTIONS: dict[str, list] = {
 def _get_clients(region: str) -> dict[str, Any]:
     session = boto3.Session(region_name=region)
     return {
-        "iam": session.client("iam"),
-        "s3": session.client("s3"),
-        "ct": session.client("cloudtrail"),
-        "cw": session.client("cloudwatch"),
-        "ec2": session.client("ec2"),
-        "gd": session.client("guardduty"),
-        "sh": session.client("securityhub"),
-        "sts": session.client("sts"),
-        "aa": session.client("accessanalyzer"),
+        "iam": aws.session_client(session, "iam"),
+        "s3": aws.session_client(session, "s3"),
+        "ct": aws.session_client(session, "cloudtrail"),
+        "cw": aws.session_client(session, "cloudwatch"),
+        "ec2": aws.session_client(session, "ec2"),
+        "gd": aws.session_client(session, "guardduty"),
+        "sh": aws.session_client(session, "securityhub"),
+        "sts": aws.session_client(session, "sts"),
+        "aa": aws.session_client(session, "accessanalyzer"),
     }
 
 

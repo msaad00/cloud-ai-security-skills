@@ -29,6 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared import aws  # noqa: E402
 from skills._shared.remediation_verifier import (  # noqa: E402
     DEFAULT_VERIFICATION_SLA_MS,
     RemediationReference,
@@ -312,7 +313,6 @@ class DualAuditWriter:
         action_mode: str,
         secondary_approver: str = "",
     ) -> dict[str, str]:
-        import boto3  # local import — tests inject a stub writer
 
         action_at = datetime.now(timezone.utc).isoformat()
         row_uid = _deterministic_uid(
@@ -350,7 +350,7 @@ class DualAuditWriter:
             envelope["secondary_approver"] = secondary_approver
         body = json.dumps(envelope, separators=(",", ":"))
 
-        boto3.client("s3").put_object(
+        aws.client("s3").put_object(
             Bucket=self.s3_bucket,
             Key=evidence_key,
             Body=body.encode("utf-8"),
@@ -379,7 +379,7 @@ class DualAuditWriter:
         }
         if secondary_approver:
             item["secondary_approver"] = {"S": secondary_approver}
-        boto3.client("dynamodb").put_item(TableName=self.dynamodb_table, Item=item)
+        aws.client("dynamodb").put_item(TableName=self.dynamodb_table, Item=item)
         return {"row_uid": row_uid, "s3_evidence_uri": evidence_uri}
 
 

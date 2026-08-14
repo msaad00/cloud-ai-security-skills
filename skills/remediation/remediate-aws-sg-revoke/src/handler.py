@@ -46,6 +46,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared import aws  # noqa: E402
 from skills._shared.remediation_verifier import (  # noqa: E402
     DEFAULT_VERIFICATION_SLA_MS,
     RemediationReference,
@@ -139,7 +140,7 @@ class Boto3EC2Client:
         import boto3
 
         session = boto3.Session(profile_name=self.profile or None)
-        return session.client("ec2", region_name=self.region or None)
+        return aws.session_client(session, "ec2", region_name=self.region or None)
 
     def describe_security_group(self, sg_id: str) -> dict[str, Any] | None:
         try:
@@ -191,8 +192,6 @@ class DualAuditWriter:
         incident_id: str,
         approver: str,
     ) -> dict[str, str]:
-        import boto3
-
         action_at = datetime.now(timezone.utc).isoformat()
         row_uid = _deterministic_uid(target.sg_id, step, action_at)
         evidence_key = (
@@ -226,7 +225,7 @@ class DualAuditWriter:
             "action_at": action_at,
         }
         body = json.dumps(envelope, separators=(",", ":"))
-        boto3.client("s3").put_object(
+        aws.client("s3").put_object(
             Bucket=self.s3_bucket,
             Key=evidence_key,
             Body=body.encode("utf-8"),
@@ -234,7 +233,7 @@ class DualAuditWriter:
             SSEKMSKeyId=self.kms_key_arn,
             ContentType="application/json",
         )
-        boto3.client("dynamodb").put_item(
+        aws.client("dynamodb").put_item(
             TableName=self.dynamodb_table,
             Item={
                 "sg_id": {"S": target.sg_id},
@@ -424,7 +423,7 @@ def _resolve_current_account_id(*, profile: str = "", region: str = "") -> str:
     import boto3
 
     session = boto3.Session(profile_name=profile or None)
-    client = session.client("sts", region_name=region or None)
+    client = aws.session_client(session, "sts", region_name=region or None)
     return str(client.get_caller_identity()["Account"])
 
 

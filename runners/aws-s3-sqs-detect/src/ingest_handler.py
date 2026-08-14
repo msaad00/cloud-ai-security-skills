@@ -3,25 +3,31 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+import sys
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 try:
-    import boto3
+    from skills._shared import aws
 except ImportError:  # pragma: no cover - exercised only in minimal local test envs
-    boto3 = None
+    aws = None  # type: ignore[assignment]
 
 
 def _s3_client():
-    if boto3 is None:
+    if aws is None:
         raise RuntimeError("boto3 is required for the AWS runner")
-    return boto3.client("s3")
+    return aws.client("s3")
 
 
 def _sqs_client():
-    if boto3 is None:
+    if aws is None:
         raise RuntimeError("boto3 is required for the AWS runner")
-    return boto3.client("sqs")
+    return aws.client("sqs")
 
 
 def _skill_command() -> list[str]:

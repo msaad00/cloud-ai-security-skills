@@ -29,6 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared import aws  # noqa: E402
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 
 SUPPORTED_OUTPUT_FORMATS = ("native", "ocsf-cloud-resources-inventory")
@@ -217,7 +218,7 @@ def discover_aws(region: str = "us-east-1", profile: str | None = None) -> Envir
     graph = EnvironmentGraph(provider="aws", region=region)
 
     # Account identity
-    sts = session.client("sts")
+    sts = aws.session_client(session, "sts")
     try:
         identity = sts.get_caller_identity()
         account_id = identity["Account"]
@@ -235,7 +236,7 @@ def discover_aws(region: str = "us-east-1", profile: str | None = None) -> Envir
         account_id = "unknown"
 
     # IAM Users
-    iam = session.client("iam")
+    iam = aws.session_client(session, "iam")
     try:
         users = iam.list_users().get("Users", [])
         for user in users:
@@ -328,7 +329,7 @@ def discover_aws(region: str = "us-east-1", profile: str | None = None) -> Envir
         print(f"Warning: IAM role discovery failed: {e}", file=sys.stderr)
 
     # S3 Buckets
-    s3 = session.client("s3")
+    s3 = aws.session_client(session, "s3")
     try:
         buckets = s3.list_buckets().get("Buckets", [])
         for bucket in buckets:
@@ -358,7 +359,7 @@ def discover_aws(region: str = "us-east-1", profile: str | None = None) -> Envir
         print(f"Warning: S3 discovery failed: {e}", file=sys.stderr)
 
     # Lambda Functions
-    lam = session.client("lambda")
+    lam = aws.session_client(session, "lambda")
     try:
         functions = lam.list_functions().get("Functions", [])
         for fn in functions:
@@ -410,7 +411,7 @@ def discover_aws(region: str = "us-east-1", profile: str | None = None) -> Envir
         print(f"Warning: Lambda discovery failed: {e}", file=sys.stderr)
 
     # VPCs
-    ec2 = session.client("ec2")
+    ec2 = aws.session_client(session, "ec2")
     try:
         vpcs = ec2.describe_vpcs().get("Vpcs", [])
         for vpc in vpcs:

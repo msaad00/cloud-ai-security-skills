@@ -27,9 +27,14 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
-import boto3
+REPO_ROOT = Path(__file__).resolve().parents[5]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared import aws  # noqa: E402
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -79,7 +84,7 @@ def handler(event: dict, context: Any) -> dict:
     logger.info("Parsing manifest: s3://%s/%s", bucket, key)
 
     # 1. Read manifest from S3
-    s3 = boto3.client("s3")
+    s3 = aws.client("s3")
     response = s3.get_object(Bucket=bucket, Key=key)
     manifest = json.loads(response["Body"].read().decode("utf-8"))
 
@@ -256,7 +261,7 @@ def _get_iam_client(account_id: str) -> Any:
     if not ACCOUNT_ID_RE.fullmatch(account_id):
         raise ValueError("Invalid AWS account ID")
 
-    sts = boto3.client("sts")
+    sts = aws.client("sts")
     role_arn = f"arn:aws:iam::{account_id}:role/{CROSS_ACCOUNT_ROLE}"
 
     credentials = sts.assume_role(
@@ -265,7 +270,7 @@ def _get_iam_client(account_id: str) -> Any:
         DurationSeconds=900,  # 15 min max for validation
     )["Credentials"]
 
-    return boto3.client(
+    return aws.client(
         "iam",
         aws_access_key_id=credentials["AccessKeyId"],
         aws_secret_access_key=credentials["SecretAccessKey"],

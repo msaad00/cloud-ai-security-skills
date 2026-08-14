@@ -119,7 +119,7 @@ def test_discover_aws_handles_sts_failure(monkeypatch):
         def __init__(self, **_):
             pass
 
-        def client(self, name):
+        def client(self, name, **_):
             c = MagicMock()
             if name == "sts":
                 c.get_caller_identity.side_effect = RuntimeError("denied")
@@ -147,7 +147,7 @@ def test_discover_aws_logs_warnings_on_service_errors(monkeypatch):
         def __init__(self, **_):
             pass
 
-        def client(self, name):
+        def client(self, name, **_):
             c = MagicMock()
             if name == "sts":
                 c.get_caller_identity.return_value = {

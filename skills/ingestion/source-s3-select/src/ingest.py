@@ -6,7 +6,14 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any, Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared import aws  # noqa: E402
 
 SKILL_NAME = "source-s3-select"
 ALLOWED_PREFIXES = ("SELECT",)
@@ -45,13 +52,11 @@ def _input_serialization(kind: str, compression_type: str) -> dict[str, Any]:
 
 
 def _client() -> Any:
-    import boto3
-
     region_name = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
     kwargs: dict[str, str] = {}
     if region_name:
         kwargs["region_name"] = region_name
-    return boto3.client("s3", **kwargs)
+    return aws.client("s3", **kwargs)
 
 
 def _iter_record_payloads(payload: Iterable[dict[str, Any]]) -> Iterable[str]:

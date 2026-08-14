@@ -4,35 +4,42 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 import time
 from datetime import UTC, datetime
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 _DEFAULT_DEDUPE_TTL_DAYS = 30
 _MAX_SNS_BATCH_SIZE = 10
 _SECONDS_PER_DAY = 86_400
 
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:  # pragma: no cover - exercised only in minimal local test envs
-    boto3 = None
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-    class ClientError(Exception):
+try:
+    from botocore.exceptions import ClientError
+
+    from skills._shared import aws
+except ImportError:  # pragma: no cover - exercised only in minimal local test envs
+    aws = None  # type: ignore[assignment]
+
+    class ClientError(Exception):  # type: ignore[no-redef]
         pass
 
 
 def _sns_client():
-    if boto3 is None:
+    if aws is None:
         raise RuntimeError("boto3 is required for the AWS runner")
-    return boto3.client("sns")
+    return aws.client("sns")
 
 
 def _dynamodb_resource():
-    if boto3 is None:
+    if aws is None:
         raise RuntimeError("boto3 is required for the AWS runner")
-    return boto3.resource("dynamodb")
+    return aws.resource("dynamodb")
 
 
 def _skill_command() -> list[str]:
