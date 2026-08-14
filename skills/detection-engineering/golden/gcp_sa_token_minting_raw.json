@@ -1,0 +1,30 @@
+{
+  "protoPayload": {
+    "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+    "authenticationInfo": {
+      "principalEmail": "mallory@acme.example.com"
+    },
+    "requestMetadata": {
+      "callerIp": "198.51.100.44",
+      "callerSuppliedUserAgent": "google-cloud-sdk"
+    },
+    "methodName": "google.iam.credentials.v1.GenerateAccessToken",
+    "resourceName": "projects/-/serviceAccounts/deploy-sa@acme-prod.iam.gserviceaccount.com",
+    "serviceName": "iamcredentials.googleapis.com",
+    "request": {
+      "@type": "type.googleapis.com/google.iam.credentials.v1.GenerateAccessTokenRequest",
+      "name": "projects/-/serviceAccounts/deploy-sa@acme-prod.iam.gserviceaccount.com",
+      "scope": ["https://www.googleapis.com/auth/cloud-platform"]
+    },
+    "status": {}
+  },
+  "insertId": "gcp-satm-1",
+  "resource": {
+    "type": "service_account",
+    "labels": {
+      "project_id": "acme-prod"
+    }
+  },
+  "timestamp": "2026-05-04T11:30:00.000Z",
+  "severity": "NOTICE"
+}
