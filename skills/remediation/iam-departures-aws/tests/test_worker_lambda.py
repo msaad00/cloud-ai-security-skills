@@ -349,19 +349,6 @@ class TestCheckpoints:
         assert _checkpoint_pk(_make_event()["entry"]) == "CHECKPOINT#123456789012#jane"
 
 
-class TestSnowflakeIdentifierSafety:
-    def test_embedded_quotes_are_escaped(self):
-        from lambda_worker.clouds.snowflake_user import _quote_identifier
-
-        assert _quote_identifier('jane"ops') == '"jane""ops"'
-
-    def test_newlines_are_rejected(self):
-        from lambda_worker.clouds.snowflake_user import _quote_identifier
-
-        with pytest.raises(ValueError, match="Invalid Snowflake identifier"):
-            _quote_identifier("bad\nuser")
-
-
 class TestAuditWriteFailure:
     """Audit writes must not be silently swallowed after a successful IAM delete."""
 

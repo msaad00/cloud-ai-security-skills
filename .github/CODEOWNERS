@@ -1,0 +1,20 @@
+# Code owners for cloud-ai-security-skills.
+# Order matters: the last matching pattern takes precedence.
+# See https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in the repo.
+*                                   @msaad00
+
+# Safety-critical surfaces — changes here need owner review.
+/skills/remediation/                @msaad00
+/skills/_shared/                    @msaad00
+/scripts/validate_safe_skill_bar.py @msaad00
+/docs/HITL_POLICY.md                @msaad00
+/docs/SECURITY_BAR.md               @msaad00
+/SECURITY_BAR.md                    @msaad00
+/SECURITY.md                        @msaad00
+
+# CI, release, and dependency wiring.
+/.github/                           @msaad00
+/pyproject.toml                     @msaad00
+/uv.lock                            @msaad00

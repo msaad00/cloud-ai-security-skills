@@ -242,12 +242,7 @@ skills/remediation/iam-departures-aws/
 │   ├── lambda_parser/
 │   │   └── handler.py          # Lambda 1: validate + filter
 │   └── lambda_worker/
-│       ├── handler.py          # Lambda 2: AWS 13-step cleanup
-│       └── clouds/             # Cross-cloud workers
-│           ├── azure_entra.py  # Entra ID: 6-step (msgraph-sdk)
-│           ├── gcp_iam.py      # GCP: SA 4-step + Workspace 2-step
-│           ├── snowflake_user.py # Snowflake: 6-step (SQL DDL)
-│           └── databricks_scim.py # Databricks: 4-step (SCIM API)
+│       └── handler.py          # Lambda 2: AWS 13-step cleanup
 ├── infra/
 │   ├── cloudformation.yaml     # Full stack (roles, Lambda, SFN, S3, DDB)
 │   ├── cross_account_stackset.yaml # Org-wide role via StackSets
