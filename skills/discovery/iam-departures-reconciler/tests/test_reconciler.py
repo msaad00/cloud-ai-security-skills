@@ -331,7 +331,10 @@ class TestWorkdayRedaction:
         leaky_response.status_code = 401
         leaky_response.text = "invalid_client: topsecret-password-9999"
 
-        with patch("httpx.post", return_value=leaky_response):
+        # The Workday path now issues requests through an httpx.Client so the
+        # inline Retry-After-aware retry can honor throttle headers; patch the
+        # client's request method rather than the module-level httpx.post.
+        with patch.object(httpx.Client, "request", return_value=leaky_response):
             with pytest.raises(RuntimeError) as excinfo:
                 source._get_token()
 
@@ -359,7 +362,7 @@ class TestWorkdayRedaction:
             pass
 
         leaky = _FakeConnectError("DNS lookup failed for secret-tenant.workday.com")
-        with patch("httpx.post", side_effect=leaky):
+        with patch.object(httpx.Client, "request", side_effect=leaky):
             with pytest.raises(RuntimeError) as excinfo:
                 source._get_token()
 
@@ -367,3 +370,65 @@ class TestWorkdayRedaction:
         assert "unreachable" in msg
         assert "secret-tenant" not in msg
         assert "DNS lookup" not in msg
+
+
+class TestWorkdayThrottleRetry:
+    """The direct Workday RaaS HTTP path retries throttled responses and
+    honors a server ``Retry-After`` header."""
+
+    def _source(self, sources):
+        with patch.dict(
+            os.environ,
+            {
+                "WORKDAY_API_URL": "https://example.com/report",
+                "WORKDAY_CLIENT_ID": "cid",
+                "WORKDAY_CLIENT_SECRET": "secret",
+                "WORKDAY_TOKEN_URL": "https://example.com/token",
+            },
+        ):
+            return sources.WorkdayAPISource()
+
+    def test_get_token_retries_on_429_and_honors_retry_after(self):
+        httpx = pytest.importorskip("httpx")
+        from reconciler import sources
+
+        source = self._source(sources)
+
+        throttled = MagicMock(spec=httpx.Response)
+        throttled.status_code = 429
+        throttled.headers = {"Retry-After": "2"}
+        ok = MagicMock(spec=httpx.Response)
+        ok.status_code = 200
+        ok.json.return_value = {"access_token": "tok-abc"}
+
+        sleeps: list[float] = []
+        with (
+            patch.object(httpx.Client, "request", side_effect=[throttled, ok]),
+            patch.object(sources.time, "sleep", side_effect=sleeps.append),
+        ):
+            token = source._get_token()
+
+        assert token == "tok-abc"
+        assert sleeps == [2.0]  # honored Retry-After, not the default backoff
+        assert throttled.close.called
+
+    def test_get_token_gives_up_after_budget_and_surfaces_status(self):
+        httpx = pytest.importorskip("httpx")
+        from reconciler import sources
+
+        source = self._source(sources)
+
+        throttled = MagicMock(spec=httpx.Response)
+        throttled.status_code = 503
+        throttled.headers = {}
+
+        with (
+            patch.object(sources, "HTTP_MAX_ATTEMPTS", 3),
+            patch.object(httpx.Client, "request", return_value=throttled) as req,
+            patch.object(sources.time, "sleep"),
+        ):
+            with pytest.raises(RuntimeError) as excinfo:
+                source._get_token()
+
+        assert req.call_count == 3  # exactly the attempt budget
+        assert "503" in str(excinfo.value)
