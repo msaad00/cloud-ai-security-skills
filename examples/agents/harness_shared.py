@@ -21,6 +21,7 @@ SCRIPTS = [
     EXAMPLES / "codex_mcp_security_agent.py",
     EXAMPLES / "zed_mcp_security_agent.py",
     EXAMPLES / "claude_desktop_mcp_security_agent.py",
+    EXAMPLES / "continue_mcp_security_agent.py",
     EXAMPLES / "langgraph_security_graph.py",
     EXAMPLES / "run_langgraph_harness.py",
 ]
