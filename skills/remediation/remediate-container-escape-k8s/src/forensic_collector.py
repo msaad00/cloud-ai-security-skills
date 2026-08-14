@@ -30,6 +30,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 SRC_DIR = Path(__file__).resolve().parent
 
+from skills._shared import aws  # noqa: E402
+
 if TYPE_CHECKING:
     from handler import ResolvedTarget, Target
 
@@ -280,9 +282,7 @@ class KmsS3Uploader:
         body: bytes,
         kms_key_arn: str,
     ) -> str:
-        import boto3  # local import
-
-        boto3.client("s3").put_object(
+        aws.client("s3").put_object(
             Bucket=bucket,
             Key=key,
             Body=body,

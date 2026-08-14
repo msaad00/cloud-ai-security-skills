@@ -11,7 +11,14 @@ import sys
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from skills._shared import aws  # noqa: E402
 
 SKILL_NAME = "sink-s3-jsonl"
 BUCKET_RE = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
@@ -117,13 +124,11 @@ def _body(rows: list[PreparedRow]) -> bytes:
 
 
 def _client() -> Any:
-    import boto3
-
     region_name = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
     kwargs: dict[str, str] = {}
     if region_name:
         kwargs["region_name"] = region_name
-    return boto3.client("s3", **kwargs)
+    return aws.client("s3", **kwargs)
 
 
 def _write_object(bucket: str, object_key: str, rows: list[PreparedRow]) -> int:
