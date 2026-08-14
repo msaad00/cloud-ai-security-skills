@@ -784,7 +784,6 @@ def _build_production_clients() -> tuple[OktaClient, AuditWriter]:
     if not secret_arn:
         raise RuntimeError("OKTA_API_TOKEN_SECRETSMANAGER_ARN must be set under --apply")
 
-
     secrets = aws.client("secretsmanager")
     value = secrets.get_secret_value(SecretId=secret_arn)
     api_token = value.get("SecretString") or ""
