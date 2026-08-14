@@ -59,6 +59,20 @@ def build_anthropic_mcp_config(profile: dict[str, Any]) -> dict[str, Any]:
     return build_claude_desktop_mcp_config(profile)
 
 
+def build_continue_mcp_config(profile: dict[str, Any]) -> dict[str, Any]:
+    """``~/.continue/config.yaml`` — YAML ``mcpServers`` list, absolute path required."""
+    return {
+        "mcpServers": [
+            {
+                "name": "cloud-ai-security-skills",
+                "command": mcp_stdio_command()[0],
+                "args": [str(MCP_SERVER_PATH)],
+                "env": mcp_policy_env(profile),
+            }
+        ]
+    }
+
+
 def build_openai_agents_mcp_server(profile: dict[str, Any]) -> dict[str, Any]:
     """Block passed to ``openai.agents.McpServer(...)`` in a live Agents-SDK loop."""
     command = mcp_stdio_command()

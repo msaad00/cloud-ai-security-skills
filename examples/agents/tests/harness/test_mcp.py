@@ -55,6 +55,7 @@ class TestIdeMcpBindings:
             "cloud-ai-security-skills"
         ]["env"]
         openai_env = ide_mcp_bindings.build_openai_agents_mcp_server(profile)["env"]
+        continue_env = ide_mcp_bindings.build_continue_mcp_config(profile)["mcpServers"][0]["env"]
 
         assert cursor_env == expected
         assert windsurf_env == expected
@@ -62,6 +63,7 @@ class TestIdeMcpBindings:
         assert langchain_env == expected
         assert anthropic_env == expected
         assert openai_env == expected
+        assert continue_env == expected
         assert expected["CLOUD_SECURITY_MCP_REQUIRE_CALLER_ALLOWED_SKILLS"] == "true"
         assert "cspm-aws-cis-benchmark" in expected["CLOUD_SECURITY_MCP_ALLOWED_SKILLS"]
 
@@ -105,6 +107,7 @@ class TestEmitMcpClientConfigs:
             "anthropic",
             "openai",
             "claude-desktop",
+            "continue",
         }
         assert "mcp_config" in payload["clients"]["cursor"]
         assert "mcp_toml" in payload["clients"]["codex"]
