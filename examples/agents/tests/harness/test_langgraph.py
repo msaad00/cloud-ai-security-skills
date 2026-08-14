@@ -1750,6 +1750,7 @@ class TestLangGraphHarnessSetup:
             "anthropic",
             "openai",
             "claude-desktop",
+            "continue",
         }
 
     def test_setup_generator_rejects_missing_preset(self, tmp_path: Path):
