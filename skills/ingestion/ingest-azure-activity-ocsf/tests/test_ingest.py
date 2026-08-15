@@ -241,6 +241,31 @@ class TestConvertEvent:
         assert len(e["resources"]) == 1
         assert e["resources"][0]["type"] == "storageaccounts"
 
+    def test_unmapped_preserves_properties_verbatim(self):
+        """detect-azure-open-nsg reads the NSG rule body from
+        unmapped.azure.properties; ingest must preserve the raw properties."""
+        props = {
+            "direction": "Inbound",
+            "access": "Allow",
+            "protocol": "Tcp",
+            "priority": 1000,
+            "sourceAddressPrefix": "*",
+            "destinationPortRange": "3389",
+        }
+        e = convert_event(
+            self._entry(
+                operationName="MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/SECURITYRULES/WRITE",
+                properties=props,
+            )
+        )
+        assert e["unmapped"]["azure"]["properties"] == props
+
+    def test_unmapped_absent_when_properties_missing(self):
+        entry = self._entry()
+        entry.pop("properties", None)
+        e = convert_event(entry)
+        assert "unmapped" not in e
+
     def test_failure_with_result_signature(self):
         e = convert_event(
             self._entry(resultType="Failure", resultSignature="Forbidden.AuthorizationFailed")
