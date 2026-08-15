@@ -237,6 +237,13 @@ def _build_canonical_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
             "insert_id": log_entry.get("insertId", ""),
         },
     }
+    # Preserve the raw protoPayload.request body under the OCSF-sanctioned
+    # `unmapped` slot so detectors (e.g. detect-gcp-open-firewall) can read the
+    # firewall rule body (direction/disabled/sourceRanges/allowed[].ports) that
+    # has no first-class OCSF field. Additive and namespaced.
+    request = proto.get("request")
+    if isinstance(request, dict) and request:
+        canonical["unmapped"] = {"gcp": {"request": request}}
     return canonical
 
 
@@ -269,6 +276,8 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
     }
     if canonical["status_detail"]:
         event["status_detail"] = canonical["status_detail"]
+    if canonical.get("unmapped"):
+        event["unmapped"] = canonical["unmapped"]
     return event
 
 

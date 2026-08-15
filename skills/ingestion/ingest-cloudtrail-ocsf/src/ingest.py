@@ -292,6 +292,13 @@ def _build_canonical_event(raw: dict[str, Any]) -> dict[str, Any]:
             "event_category": raw.get("eventCategory", ""),
         },
     }
+    # Preserve the raw request body under the OCSF-sanctioned `unmapped` bag so
+    # downstream detectors (e.g. detect-aws-open-security-group) can read fields
+    # like ipPermissions[] that don't have a first-class OCSF slot. Additive and
+    # namespaced; absent when the event carries no request parameters.
+    request_parameters = raw.get("requestParameters")
+    if isinstance(request_parameters, dict) and request_parameters:
+        canonical["unmapped"] = {"cloudtrail": {"request_parameters": request_parameters}}
     if error_code:
         canonical["status_detail"] = f"{error_code}: {raw.get('errorMessage', '')}".strip(
             ": "
@@ -343,6 +350,8 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
         cloud.pop("account")
     if canonical.get("status_detail"):
         event["status_detail"] = canonical["status_detail"]
+    if canonical.get("unmapped"):
+        event["unmapped"] = canonical["unmapped"]
 
     return event
 

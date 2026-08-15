@@ -231,6 +231,35 @@ INGEST_DETECT_PIPES = (
         expected_ocsf_count=1,
         expected_finding_count=1,
     ),
+    IngestDetectPipe(
+        name="aws_open_security_group",
+        ingest_skill="ingest-cloudtrail-ocsf",
+        detect_skill="detect-aws-open-security-group",
+        raw_fixture="aws_open_security_group_raw.jsonl",
+        expected_fixture="aws_open_security_group_pipe_findings.ocsf.jsonl",
+        expected_ocsf_count=1,
+        expected_finding_count=1,
+    ),
+    IngestDetectPipe(
+        name="azure_open_nsg",
+        ingest_skill="ingest-azure-activity-ocsf",
+        detect_skill="detect-azure-open-nsg",
+        raw_fixture="azure_open_nsg_raw.json",
+        expected_fixture="azure_open_nsg_pipe_findings.ocsf.jsonl",
+        raw_json_document=True,
+        expected_ocsf_count=1,
+        expected_finding_count=1,
+    ),
+    IngestDetectPipe(
+        name="gcp_open_firewall",
+        ingest_skill="ingest-gcp-audit-ocsf",
+        detect_skill="detect-gcp-open-firewall",
+        raw_fixture="gcp_open_firewall_raw.json",
+        expected_fixture="gcp_open_firewall_pipe_findings.ocsf.jsonl",
+        raw_json_document=True,
+        expected_ocsf_count=1,
+        expected_finding_count=1,
+    ),
 )
 
 

@@ -201,6 +201,30 @@ class TestConvertEvent:
         e = convert_event(self._entry())
         assert e["cloud"]["provider"] == "GCP"
         assert e["cloud"]["account"]["uid"] == "my-project"
+
+    def test_unmapped_preserves_request_verbatim(self):
+        """detect-gcp-open-firewall reads the firewall body from
+        unmapped.gcp.request; ingest must preserve protoPayload.request."""
+        request = {
+            "name": "allow-ssh-world",
+            "network": "projects/my-project/global/networks/default",
+            "direction": "INGRESS",
+            "disabled": False,
+            "sourceRanges": ["0.0.0.0/0"],
+            "allowed": [{"IPProtocol": "tcp", "ports": ["22"]}],
+        }
+        e = convert_event(
+            self._entry(
+                methodName="v1.compute.firewalls.insert",
+                serviceName="compute.googleapis.com",
+                request=request,
+            )
+        )
+        assert e["unmapped"]["gcp"]["request"] == request
+
+    def test_unmapped_absent_when_request_missing(self):
+        e = convert_event(self._entry())
+        assert "unmapped" not in e
         assert e["cloud"]["region"] == "us-central1"
 
     def test_resources(self):

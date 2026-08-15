@@ -232,7 +232,7 @@ def _build_canonical_event(entry: dict[str, Any]) -> dict[str, Any]:
     account_uid = ((cloud.get("account") or {}).get("uid")) or ""
     region = cloud.get("region") or ""
 
-    return {
+    canonical: dict[str, Any] = {
         "schema_mode": "canonical",
         "canonical_schema_version": CANONICAL_VERSION,
         "record_type": "api_activity",
@@ -262,6 +262,14 @@ def _build_canonical_event(entry: dict[str, Any]) -> dict[str, Any]:
             "correlation_id": entry.get("correlationId", ""),
         },
     }
+    # Preserve the raw activity-log `properties` bag under the OCSF-sanctioned
+    # `unmapped` slot so detectors (e.g. detect-azure-open-nsg) can read the NSG
+    # rule body (direction/access/sourceAddressPrefix/destinationPortRange) that
+    # has no first-class OCSF field. Additive and namespaced.
+    properties = entry.get("properties")
+    if isinstance(properties, dict) and properties:
+        canonical["unmapped"] = {"azure": {"properties": properties}}
+    return canonical
 
 
 def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
@@ -293,6 +301,8 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
     }
     if canonical["status_detail"]:
         event["status_detail"] = canonical["status_detail"]
+    if canonical.get("unmapped"):
+        event["unmapped"] = canonical["unmapped"]
     return event
 
 

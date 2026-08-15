@@ -237,6 +237,37 @@ class TestConvertEvent:
         assert "class_uid" not in e
         assert "metadata" not in e
 
+    def test_unmapped_preserves_request_parameters_verbatim(self):
+        """detect-aws-open-security-group reads the raw AuthorizeSecurityGroupIngress
+        body from unmapped.cloudtrail.request_parameters; ingest must preserve it."""
+        params = {
+            "groupId": "sg-0123456789abcdef0",
+            "ipPermissions": {
+                "items": [
+                    {
+                        "ipProtocol": "tcp",
+                        "fromPort": 22,
+                        "toPort": 22,
+                        "ipRanges": {"items": [{"cidrIp": "0.0.0.0/0"}]},
+                    }
+                ]
+            },
+        }
+        e = convert_event(
+            self._base_event(eventName="AuthorizeSecurityGroupIngress", requestParameters=params)
+        )
+        assert e["unmapped"]["cloudtrail"]["request_parameters"] == params
+
+    def test_unmapped_absent_when_request_parameters_null(self):
+        e = convert_event(self._base_event(requestParameters=None))
+        assert "unmapped" not in e
+
+    def test_unmapped_absent_when_request_parameters_missing(self):
+        base = self._base_event()
+        base.pop("requestParameters", None)
+        e = convert_event(base)
+        assert "unmapped" not in e
+
 
 # ── iter_raw_events: format auto-detect ─────────────────────────────────
 
