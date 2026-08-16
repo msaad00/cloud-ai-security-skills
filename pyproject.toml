@@ -55,7 +55,7 @@ azure = [
   "azure-mgmt-storage>=25.1.0,<26",
 ]
 iam_departures = [
-  "clickhouse-connect>=1.6.0,<2",
+  "clickhouse-connect>=1.7.1,<2",
   "databricks-sql-connector>=4.4.0,<5",
   "google-api-python-client>=2.198.0,<3",
   { include-group = "http-client" },
