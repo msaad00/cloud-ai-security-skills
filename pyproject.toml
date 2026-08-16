@@ -45,7 +45,7 @@ aws = [
 gcp = [
   "google-cloud-compute>=1.50.0,<2",
   "google-cloud-iam>=2.24.0,<3",
-  "google-cloud-resource-manager>=1.17.0,<2",
+  "google-cloud-resource-manager>=1.18.0,<2",
   "google-cloud-storage>=3.13.0,<4",
 ]
 azure = [
@@ -55,7 +55,7 @@ azure = [
   "azure-mgmt-storage>=25.1.0,<26",
 ]
 iam_departures = [
-  "clickhouse-connect>=1.6.0,<2",
+  "clickhouse-connect>=1.7.1,<2",
   "databricks-sql-connector>=4.4.0,<5",
   "google-api-python-client>=2.198.0,<3",
   { include-group = "http-client" },
@@ -76,7 +76,7 @@ mcp-sse = [
 #   uv sync --group dev --group webhook --group http-runtime
 #   uv sync --group dev --group mcp-sse --group http-runtime
 http-runtime = [
-  "uvicorn[standard]>=0.50.0,<1",
+  "uvicorn[standard]>=0.52.2,<1",
 ]
 langgraph = [
   "langgraph>=1.2.9,<2",
