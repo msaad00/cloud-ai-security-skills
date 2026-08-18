@@ -19,6 +19,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from detect import (  # type: ignore[import-not-found]
+    ATLAS_TACTIC_UID,
+    ATLAS_TECHNIQUE_UID,
     CANONICAL_VERSION,
     FINDING_CATEGORY_UID,
     FINDING_CLASS_UID,
@@ -200,9 +202,12 @@ class TestDetect:
         )
         assert "attacks" not in findings[0], "attacks[] must NOT be at event root in OCSF 1.8"
         attacks = findings[0]["finding_info"]["attacks"]
-        assert len(attacks) == 1
+        # Both the ATT&CK framing and the ATLAS AI-native framing are emitted.
+        assert len(attacks) == 2
         assert attacks[0]["tactic"]["uid"] == MITRE_TACTIC_UID
         assert attacks[0]["technique"]["uid"] == MITRE_TECHNIQUE_UID
+        assert attacks[1]["tactic"]["uid"] == ATLAS_TACTIC_UID
+        assert attacks[1]["technique"]["uid"] == ATLAS_TECHNIQUE_UID
 
     def test_cross_session_drift_does_not_fire(self):
         # Same tool, different sessions — MCP server was upgraded between

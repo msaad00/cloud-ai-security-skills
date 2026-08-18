@@ -47,6 +47,13 @@ MITRE_TACTIC_NAME = "Initial Access"
 MITRE_TECHNIQUE_UID = "T1195.001"
 MITRE_TECHNIQUE_NAME = "Supply Chain Compromise: Compromise Software Supply Chain"
 
+# MITRE ATLAS — the AI-native framing of an out-of-band tool-poisoning injection.
+ATLAS_VERSION = "current"
+ATLAS_TACTIC_UID = "AML.TA0006"
+ATLAS_TACTIC_NAME = "Persistence"
+ATLAS_TECHNIQUE_UID = "AML.T0110"
+ATLAS_TECHNIQUE_NAME = "AI Agent Tool Poisoning"
+
 
 def _safe_int(value: Any, default: int = 0) -> int:
     try:
@@ -262,7 +269,14 @@ def _build_native_finding(
                 "tactic_name": MITRE_TACTIC_NAME,
                 "technique_uid": MITRE_TECHNIQUE_UID,
                 "technique_name": MITRE_TECHNIQUE_NAME,
-            }
+            },
+            {
+                "version": ATLAS_VERSION,
+                "tactic_uid": ATLAS_TACTIC_UID,
+                "tactic_name": ATLAS_TACTIC_NAME,
+                "technique_uid": ATLAS_TECHNIQUE_UID,
+                "technique_name": ATLAS_TECHNIQUE_NAME,
+            },
         ],
         "observables": [
             {"name": "session.uid", "type": "Other", "value": session_uid},
@@ -286,7 +300,6 @@ def _build_native_finding(
 
 
 def _render_ocsf_finding(native: dict[str, Any]) -> dict[str, Any]:
-    attack = native["mitre_attacks"][0]
     return {
         "activity_id": FINDING_ACTIVITY_CREATE,
         "category_uid": FINDING_CATEGORY_UID,
@@ -320,6 +333,7 @@ def _render_ocsf_finding(native: dict[str, Any]) -> dict[str, Any]:
                     "tactic": {"uid": attack["tactic_uid"], "name": attack["tactic_name"]},
                     "technique": {"uid": attack["technique_uid"], "name": attack["technique_name"]},
                 }
+                for attack in native["mitre_attacks"]
             ],
         },
         "observables": native["observables"],

@@ -127,6 +127,7 @@
       ],
       "frameworks": [
         "ocsf-1.8",
+        "mitre-atlas",
         "owasp-mcp-top-10",
         "owasp-llm-top-10"
       ],
@@ -1200,6 +1201,7 @@
       ],
       "frameworks": [
         "ocsf-1.8",
+        "mitre-atlas",
         "owasp-llm-top-10",
         "owasp-mcp-top-10"
       ],
@@ -1225,6 +1227,7 @@
       "frameworks": [
         "ocsf-1.8",
         "mitre-attack-v14",
+        "mitre-atlas",
         "owasp-llm-top-10",
         "owasp-mcp-top-10"
       ],
@@ -1251,6 +1254,7 @@
       "frameworks": [
         "ocsf-1.8",
         "mitre-attack-v14",
+        "mitre-atlas",
         "owasp-mcp-top-10"
       ],
       "coverage_status": "validated",

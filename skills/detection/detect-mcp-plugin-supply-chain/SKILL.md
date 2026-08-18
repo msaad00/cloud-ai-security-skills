@@ -76,7 +76,8 @@ OCSF output populates:
 
 - `finding_info.types[] = ["mcp-plugin-supply-chain", "llm-supply-chain"]`
 - `finding_info.attacks[]` — MITRE ATT&CK `T1195.001` Compromise Software
-  Supply Chain (the tool's declaration is the software the agent ingests).
+  Supply Chain (the tool's declaration is the software the agent ingests) and
+  MITRE ATLAS `AML.T0010` AI Supply Chain Compromise (Initial Access).
 - deterministic `finding_info.uid`.
 - `observables[]` — session uid, tool name, host, source field (`$ref` /
   `default` / `description`).

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from detect import (  # type: ignore[import-not-found]
+    ATLAS_TECHNIQUE_UID,
     FINDING_CATEGORY_UID,
     FINDING_CLASS_UID,
     FINDING_TYPE_UID,
@@ -214,7 +215,11 @@ class TestDetect:
             )
         ]
         finding = list(detect(events, baseline=BASELINE))[0]
-        assert finding["finding_info"]["attacks"][0]["technique"]["uid"] == MITRE_TECHNIQUE_UID
+        attacks = finding["finding_info"]["attacks"]
+        # Both the ATT&CK and the ATLAS AI-native framing are emitted.
+        assert len(attacks) == 2
+        assert attacks[0]["technique"]["uid"] == MITRE_TECHNIQUE_UID
+        assert attacks[1]["technique"]["uid"] == ATLAS_TECHNIQUE_UID
 
     def test_wrong_class_ignored(self):
         events = [

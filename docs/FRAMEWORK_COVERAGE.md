@@ -12,7 +12,7 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 |---|---|---|---|
 | OCSF | 1.8.0 | **112** | — |
 | MITRE ATT&CK | v14 | **86** | 100% mapped coverage |
-| MITRE ATLAS | current | **17** | 100% mapped coverage |
+| MITRE ATLAS | current | **21** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **6** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **6** | — |
@@ -259,15 +259,19 @@ Shipped skills mapped: **86**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **17**
+Shipped skills mapped: **21**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
+| [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp) | detection | mcp, multi | agent-tools, tool-results, credentials |
 | [`detect-aws-model-artifact-download`](../skills/detection/detect-aws-model-artifact-download) | detection | aws | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-databricks-mlflow-model-exfil`](../skills/detection/detect-databricks-mlflow-model-exfil) | detection | databricks | warehouse, mlflow, ml-models |
 | [`detect-gcp-model-artifact-download`](../skills/detection/detect-gcp-model-artifact-download) | detection | gcp | object-storage, objects, model-artifacts, audit-logs |
 | [`detect-mcp-adversarial-input-corpus`](../skills/detection/detect-mcp-adversarial-input-corpus) | detection | mcp | prompts, tools |
 | [`detect-mcp-model-artifact-tampering`](../skills/detection/detect-mcp-model-artifact-tampering) | detection | mcp | model-artifacts, tools |
+| [`detect-mcp-plugin-supply-chain`](../skills/detection/detect-mcp-plugin-supply-chain) | detection | mcp | tools, supply-chain |
+| [`detect-mcp-shadow-tool-injection`](../skills/detection/detect-mcp-shadow-tool-injection) | detection | mcp | tools, tool-metadata, supply-chain |
+| [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
 | [`detect-mcp-unbounded-tool-output`](../skills/detection/detect-mcp-unbounded-tool-output) | detection | mcp | tools, rate-limits |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |

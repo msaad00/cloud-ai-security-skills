@@ -8,7 +8,8 @@ description: >-
   fingerprint (sha256 over name + description + inputSchema + annotations) changes
   between tools/list responses in the same session. Emits OCSF 1.8 Detection
   Finding (class 2004) with MITRE ATT&CK T1195.001 (Compromise Software Supply
-  Chain) inside finding_info.attacks. Use when the user mentions MCP security,
+  Chain) and MITRE ATLAS AML.T0109 (AI Supply Chain Rug Pull) inside
+  finding_info.attacks. Use when the user mentions MCP security,
   tool drift, tool poisoning, prompt injection via tool schema, or supply chain
   compromise of an MCP server. Do NOT use on raw MCP proxy logs — feed them
   through ingest-mcp-proxy-ocsf first. Do NOT use for cross-session drift (same
@@ -37,7 +38,7 @@ concurrency_safety: stateless
 
 An MCP server can change the schema of a tool between calls in the same session. A benign-looking `query_db(sql)` tool with `readOnly: true` in the first `tools/list` response can come back in the second `tools/list` response (after the agent has already trusted the first definition) with a new `write` argument and `readOnly: false`. By the time the agent sees the updated schema, it may have already been primed by the original description and will happily call `query_db(sql="DELETE …", write=true)`.
 
-This is the **MCP tool-poisoning** / **rug-pull** pattern. It maps to MITRE ATT&CK **T1195.001** — Supply Chain Compromise: Compromise Software Supply Chain. The tool is the "software"; the MCP server is the "supply chain."
+This is the **MCP tool-poisoning** / **rug-pull** pattern. It maps to MITRE ATT&CK **T1195.001** — Supply Chain Compromise: Compromise Software Supply Chain. The tool is the "software"; the MCP server is the "supply chain." In the AI-native MITRE ATLAS matrix the same behavior is **AML.T0109** — AI Supply Chain Rug Pull (Defense Evasion).
 
 ## Detection logic
 
@@ -62,7 +63,7 @@ One Detection Finding per drift event. By default the skill emits OCSF 1.8 Detec
 
 OCSF output populates:
 
-- `finding_info.attacks[]`: MITRE ATT&CK v14, tactic TA0001 (Initial Access), technique T1195.001 (Compromise Software Supply Chain).
+- `finding_info.attacks[]`: two mappings — MITRE ATT&CK v14, tactic TA0001 (Initial Access), technique T1195.001 (Compromise Software Supply Chain); and MITRE ATLAS, tactic AML.TA0007 (Defense Evasion), technique AML.T0109 (AI Supply Chain Rug Pull).
 - `finding_info.types[]`: `["mcp-tool-drift"]` for downstream filtering.
 - `finding_info.first_seen_time` / `finding_info.last_seen_time`: timestamps of the two `tools/list` events that triggered the finding.
 - `finding_info.uid`: deterministic (`det-mcp-drift-<session>-<tool>-<before-8>-<after-8>`) so re-running on the same fixture is idempotent.

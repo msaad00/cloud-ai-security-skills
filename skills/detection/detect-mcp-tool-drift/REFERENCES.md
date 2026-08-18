@@ -5,6 +5,9 @@
 - **MITRE ATT&CK** — T1195 Supply Chain Compromise, sub-technique T1195.001 Compromise Software Supply Chain
   https://attack.mitre.org/techniques/T1195/001/
 - **MITRE ATT&CK version pinned for this skill** — v14
+- **MITRE ATLAS** — AML.T0109 AI Supply Chain Rug Pull (Defense Evasion)
+  https://atlas.mitre.org/techniques/AML.T0109
+- **MITRE ATLAS fact sheet** — https://atlas.mitre.org/pdf-files/MITRE_ATLAS_Fact_Sheet.pdf
 - **OWASP MCP Top 10** — MCP-04 Supply Chain Vulnerabilities — https://genai.owasp.org/
 
 ## Input format
