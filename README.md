@@ -1,4 +1,4 @@
-![Cloud AI Security Skills — 131 deterministic security skills. OCSF on the wire. MCP-ready. HITL-gated writes.](docs/images/hero-banner.svg)
+![Cloud AI Security Skills — 132 deterministic security skills. OCSF on the wire. MCP-ready. HITL-gated writes.](docs/images/hero-banner.svg)
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -9,7 +9,7 @@
   <a href="docs/COVERAGE_SNAPSHOT.md"><img alt="Coverage gated" src="https://img.shields.io/badge/coverage-CI_gated-0f766e"></a>
 </p>
 
-<p align="center"><strong>131 deterministic security skills for cloud &amp; AI infrastructure.</strong> Ingest, detect, evaluate, remediate — one bundle on CLI, CI, MCP, webhook, library, and runners.</p>
+<p align="center"><strong>132 deterministic security skills for cloud &amp; AI infrastructure.</strong> Ingest, detect, evaluate, remediate — one bundle on CLI, CI, MCP, webhook, library, and runners.</p>
 
 ---
 
@@ -44,7 +44,7 @@ No clone required for the demo path: [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
 | Layer | Count | Output |
 |---|---:|---|
-| Ingest | 22 | OCSF 1.8 |
+| Ingest | 23 | OCSF 1.8 |
 | Discover | 5 | native / bridge JSON |
 | Detect | 71 | OCSF Detection Finding 2004 |
 | Evaluate | 12 | compliance result |
@@ -53,7 +53,7 @@ No clone required for the demo path: [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 | Output | 3 | S3 · Snowflake · ClickHouse |
 | Sources | 4 | warehouse query adapters |
 
-**131 shipped skills.** Live counts: [`docs/COVERAGE_SNAPSHOT.md`](docs/COVERAGE_SNAPSHOT.md). Vendor ingest matrix: [`docs/INGEST_COVERAGE.md`](docs/INGEST_COVERAGE.md). Why not roll your own: [`docs/WHY.md`](docs/WHY.md).
+**132 shipped skills.** Live counts: [`docs/COVERAGE_SNAPSHOT.md`](docs/COVERAGE_SNAPSHOT.md). Vendor ingest matrix: [`docs/INGEST_COVERAGE.md`](docs/INGEST_COVERAGE.md). Why not roll your own: [`docs/WHY.md`](docs/WHY.md).
 
 ## Architecture
 
@@ -71,7 +71,7 @@ You do not pick this repo **instead of** LangGraph or LangChain. You compose the
 
 | Layer | Owns | Shipped here | When to use |
 |---|---|---|---|
-| **This repo** | security skills, OCSF wire, HITL gates, allowlists, audit | 131 skill bundles + MCP wrapper | always — facts, mappings, and write authority stay here |
+| **This repo** | security skills, OCSF wire, HITL gates, allowlists, audit | 132 skill bundles + MCP wrapper | always — facts, mappings, and write authority stay here |
 | **LangGraph** | multi-step workflow state, branches, checkpoints, HITL routing | [`langgraph_security_graph.py`](examples/agents/langgraph_security_graph.py) + [`harness_profiles/`](examples/agents/harness_profiles/) | durable SOC DAGs, analyst review gates, checkpoint/replay |
 | **LangChain** | MCP stdio wiring or optional triage message adapter | [`langchain_mcp_security_agent.py`](examples/agents/langchain_mcp_security_agent.py) + [`harness_adapters.py`](examples/agents/harness_adapters.py) | MCP-first loops **or** bounded LLM drafting inside LangGraph triage |
 

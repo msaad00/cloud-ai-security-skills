@@ -70,7 +70,7 @@ skills/
 └── output/         ← L7 (sink-* skills: append-only persistence)
 ```
 
-The repo ships **131 skills** across these seven layers: 22 ingest skills plus 4 `source-*` adapters, 5 discover, 71 detect, 12 evaluate, 12 remediate, 2 view, and 3 output sinks. The authoritative per-skill registry is [`docs/framework-coverage.json`](docs/framework-coverage.json); `scripts/validate_doc_counts.py` gates this paragraph against it in CI.
+The repo ships **132 skills** across these seven layers: 23 ingest skills plus 4 `source-*` adapters, 5 discover, 71 detect, 12 evaluate, 12 remediate, 2 view, and 3 output sinks. The authoritative per-skill registry is [`docs/framework-coverage.json`](docs/framework-coverage.json); `scripts/validate_doc_counts.py` gates this paragraph against it in CI.
 
 `skills/detection-engineering/` holds the shared OCSF contract and frozen
 golden fixtures. Executable skills live only under the six layered

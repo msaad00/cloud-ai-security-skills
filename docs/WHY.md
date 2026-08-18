@@ -3,7 +3,7 @@
 **This repo is built for LLMs and agents to use.** MCP wrapper, Agent SDK
 hook, Python library shim, CLI pipes, webhook receiver, cloud runners — every
 surface exists so a Claude agent / Cursor session / GitHub Actions step / cron
-job can call one of these 131 skills the same way it would call any other tool.
+job can call one of these 132 skills the same way it would call any other tool.
 
 So the question isn't *"LLM versus this repo."* It's:
 
@@ -95,7 +95,7 @@ parts that matter:
   in production — or you don't. v0.10.0's
   [`scoring/`](../skills/detection-engineering/scoring/) is the loop.
 
-### C. *"My team will write all 131 skills from scratch."*
+### C. *"My team will write all 132 skills from scratch."*
 
 This works — at cost. The repo's
 [cost-framing table](#the-cost-framing--historical-v010-baseline) below
@@ -297,7 +297,7 @@ Reproducible, auditable, MCP-callable.
 
 **Subtotal: ~500 hours = ~12 engineer-weeks** to reach the historical
 v0.10.0 baseline before the first detector is written. The current shipped
-surface is larger: 131 skills across ingest, source, discover, detect,
+surface is larger: 132 skills across ingest, source, discover, detect,
 evaluate, remediate, view, and output. The repo represents substantial
 engineering already done, and the calibration loop (precision/recall,
 captured corpus, audit chain) is the part nobody else hands you.

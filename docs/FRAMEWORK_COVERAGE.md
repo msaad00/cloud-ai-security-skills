@@ -4,13 +4,13 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 
 - Registry version: `0.11.0`
 - Registry updated: `2026-05-17`
-- Total shipped skills in registry: **131**
+- Total shipped skills in registry: **132**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **110** | — |
+| OCSF | 1.8.0 | **111** | — |
 | MITRE ATT&CK | v14 | **86** | 100% mapped coverage |
 | MITRE ATLAS | current | **17** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **6** | — |
@@ -37,7 +37,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **110**
+Shipped skills mapped: **111**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -138,6 +138,7 @@ Shipped skills mapped: **110**
 | [`ingest-sap-audit-log-ocsf`](../skills/ingestion/ingest-sap-audit-log-ocsf) | ingestion | sap | erp-identities, erp-data, audit-logs |
 | [`ingest-security-hub-ocsf`](../skills/ingestion/ingest-security-hub-ocsf) | ingestion | aws | findings, security-posture |
 | [`ingest-slack-audit-ocsf`](../skills/ingestion/ingest-slack-audit-ocsf) | ingestion | slack | identities, channels, workspaces, oauth-apps, audit-logs |
+| [`ingest-snowflake-query-history-ocsf`](../skills/ingestion/ingest-snowflake-query-history-ocsf) | ingestion | snowflake | data-warehouse, identities, credentials, network, audit-logs |
 | [`ingest-vpc-flow-logs-gcp-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-gcp-ocsf) | ingestion | gcp | network, flow-logs |
 | [`ingest-vpc-flow-logs-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-ocsf) | ingestion | aws | network, flow-logs |
 | [`ingest-workday-audit-ocsf`](../skills/ingestion/ingest-workday-audit-ocsf) | ingestion | workday | identities, hr-events, offboarding, audit-logs |

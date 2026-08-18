@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="490" viewBox="0 0 1200 490" role="img" aria-labelledby="layers-title layers-desc">
   <title id="layers-title">Cloud AI Security Skills — architecture layers</title>
-  <desc id="layers-desc">Seven skill layers grouped by pipeline phase. L1 Ingest with 22 ingesters plus 4 source adapters. L2 Discover with 5 inventory skills. L3 Detect with 71 deterministic findings. L4 Evaluate with 12 benchmark families. L5 Remediate with 12 HITL write paths. L6 View with 2 OCSF-to-render converters. L7 Output with 3 append-only sinks. 131 skills across 7 layers.</desc>
+  <desc id="layers-desc">Seven skill layers grouped by pipeline phase. L1 Ingest with 23 ingesters plus 4 source adapters. L2 Discover with 5 inventory skills. L3 Detect with 71 deterministic findings. L4 Evaluate with 12 benchmark families. L5 Remediate with 12 HITL write paths. L6 View with 2 OCSF-to-render converters. L7 Output with 3 append-only sinks. 132 skills across 7 layers.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#060b17"/><stop offset="100%" stop-color="#0a1325"/></linearGradient>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7dd3fc"/></marker>
@@ -38,7 +38,7 @@
       <rect x="225" y="44" width="180" height="110" rx="16" fill="#0f172a" stroke="#60a5fa"/>
       <use href="#ic-ingest" x="303" y="60" width="24" height="24" color="#93c5fd"/>
       <text x="315" y="106" text-anchor="middle" font-size="14" font-weight="800" fill="#93c5fd">Ingest</text>
-      <text x="315" y="142" text-anchor="middle" font-size="30" font-weight="900" fill="#f8fafc">22<tspan font-size="18" fill="#64748b">+4</tspan></text>
+      <text x="315" y="142" text-anchor="middle" font-size="30" font-weight="900" fill="#f8fafc">23<tspan font-size="18" fill="#64748b">+4</tspan></text>
       <rect x="225" y="170" width="180" height="110" rx="16" fill="#0f172a" stroke="#60a5fa"/>
       <use href="#ic-discover" x="303" y="186" width="24" height="24" color="#93c5fd"/>
       <text x="315" y="232" text-anchor="middle" font-size="14" font-weight="800" fill="#93c5fd">Discover</text>
@@ -71,6 +71,6 @@
       <text x="990" y="246" text-anchor="middle" font-size="12" fill="#64748b">append-only sinks</text>
     </g>
     <rect x="60" y="416" width="1020" height="44" rx="12" fill="#0b1220" stroke="#334155"/>
-    <text x="80" y="444" font-size="13.5" fill="#cbd5e1"><tspan font-weight="800" fill="#f8fafc">7 layers · 131 skills</tspan><tspan fill="#475569">    |    </tspan>Wire: <tspan font-weight="700" fill="#5eead4">OCSF 1.8</tspan> ingest+detect · <tspan font-weight="700" fill="#fbbf24">native</tspan> discover+remediate · <tspan font-weight="700" fill="#a78bfa">SARIF/Mermaid</tspan> view · pass-through sinks</text>
+    <text x="80" y="444" font-size="13.5" fill="#cbd5e1"><tspan font-weight="800" fill="#f8fafc">7 layers · 132 skills</tspan><tspan fill="#475569">    |    </tspan>Wire: <tspan font-weight="700" fill="#5eead4">OCSF 1.8</tspan> ingest+detect · <tspan font-weight="700" fill="#fbbf24">native</tspan> discover+remediate · <tspan font-weight="700" fill="#a78bfa">SARIF/Mermaid</tspan> view · pass-through sinks</text>
   </g>
 </svg>
