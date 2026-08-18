@@ -25,12 +25,12 @@ dev = [
   # SSE/webhook tests on the supported path without making it runtime deps.
   "httpx2>=2.4,<3",
   "moto>=5.2.2,<6",
-  "mypy>=2.2.0,<3",
+  "mypy>=2.3.0,<3",
   # Pin pip to the patched installer floor used by the generated
   # dependency-audit grade.
   "pip>=26.2.1",
   "pip-audit>=2.10.1,<3",
-  "pre-commit>=3.8,<5",
+  "pre-commit>=4.6.2,<5",
   "pytest>=9.1.1,<10",
   "pytest-cov>=7.1.0,<8",
   "ruff>=0.6.9,<1",
@@ -45,7 +45,7 @@ aws = [
 gcp = [
   "google-cloud-compute>=1.50.0,<2",
   "google-cloud-iam>=2.24.0,<3",
-  "google-cloud-resource-manager>=1.17.0,<2",
+  "google-cloud-resource-manager>=1.18.0,<2",
   "google-cloud-storage>=3.13.0,<4",
 ]
 azure = [
@@ -55,7 +55,7 @@ azure = [
   "azure-mgmt-storage>=25.1.0,<26",
 ]
 iam_departures = [
-  "clickhouse-connect>=1.6.0,<2",
+  "clickhouse-connect>=1.7.1,<2",
   "databricks-sql-connector>=4.4.0,<5",
   "google-api-python-client>=2.198.0,<3",
   { include-group = "http-client" },
@@ -76,7 +76,7 @@ mcp-sse = [
 #   uv sync --group dev --group webhook --group http-runtime
 #   uv sync --group dev --group mcp-sse --group http-runtime
 http-runtime = [
-  "uvicorn[standard]>=0.50.0,<1",
+  "uvicorn[standard]>=0.52.2,<1",
 ]
 langgraph = [
   "langgraph>=1.2.9,<2",
