@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
   <title id="title">Cloud AI Security Skills</title>
-  <desc id="desc">Hero banner for cloud-ai-security-skills: 133 skills, title, value proposition, capability stats, and signal-source vendor marks from Simple Icons (CC0).</desc>
+  <desc id="desc">Hero banner for cloud-ai-security-skills: 134 skills, title, value proposition, capability stats, and signal-source vendor marks from Simple Icons (CC0).</desc>
 
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -26,7 +26,7 @@
     <g transform="translate(60,140)">
       <g>
         <rect x="0" y="0" width="156" height="38" rx="19" fill="#0f172a" stroke="#3b82f6"/>
-        <text x="78" y="25" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="700">133 skills</text>
+        <text x="78" y="25" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="700">134 skills</text>
       </g>
       <g transform="translate(168,0)">
         <rect x="0" y="0" width="124" height="38" rx="19" fill="#0f172a" stroke="#22d3ee"/>
