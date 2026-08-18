@@ -40,7 +40,7 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -283,7 +283,7 @@ def _read_gcs_object(bucket: str, name: str) -> dict:
     response = service.objects().get_media(bucket=bucket, object=name).execute()
     if isinstance(response, bytes):
         response = response.decode("utf-8")
-    return json.loads(response)
+    return cast("dict[Any, Any]", json.loads(response))
 
 
 def _principal_exists(*, principal_type: str, principal_id: str, project_ids: list[str]) -> bool:

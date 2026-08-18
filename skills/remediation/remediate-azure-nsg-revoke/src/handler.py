@@ -42,7 +42,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Protocol
+from typing import Any, Iterable, Iterator, Protocol, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -191,7 +191,7 @@ class AzureNetworkClient:
             return None
         if hasattr(obj, "as_dict"):
             try:
-                return obj.as_dict()
+                return cast("dict[str, Any]", obj.as_dict())
             except Exception:
                 return None
         if isinstance(obj, dict):

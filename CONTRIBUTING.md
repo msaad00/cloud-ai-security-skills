@@ -45,6 +45,14 @@ metadata:
 ## Code standards
 
 - Python 3.11+ with type hints
+- Strict typing for `skills/remediation/*/src`: every new or modified remediation
+  skill must pass `bash scripts/run_mypy.sh`, which type-checks the remediation
+  layer under `--disallow-untyped-defs --disallow-incomplete-defs
+  --warn-return-any`. Add real annotations and narrow `Any`/`Optional` at the
+  boundary; use `typing.cast` only for genuinely untyped third-party SDK returns
+  (boto3/azure/google/kubernetes). Blanket `# type: ignore` is not accepted — a
+  `# type: ignore[code]` is allowed only with a specific error code and a
+  one-line justification for a real third-party-stub gap.
 - No hardcoded credentials — use environment variables or AWS Secrets Manager
 - Least-privilege IAM — document every permission your skill needs
 - Tests use `pytest` with `moto` for AWS mocking
@@ -63,9 +71,10 @@ metadata:
 2. Add or modify skills following the structure above
 3. Ensure tests pass: `pytest skills/<layer>/your-skill/tests/ -v`
 4. Ensure linting passes: `ruff check .`
-5. Ensure shared validators pass: `make validate` runs the same validator set CI enforces (contract, integrity, runtime, structure, presets, dependency consistency, framework coverage, OCSF metadata, counts, deny-list parity, provenance, trust frontmatter, safe-skill bar, golden OCSF, and docs sync). If `validate_skill_structure.py` flags an empty subtree under `skills/detection-engineering/` (or anywhere else), it usually means stale `__pycache__` from an earlier on-disk layout — run `git clean -fdX skills/detection-engineering/` to drop ignored files only, then re-run the validator.
-6. Open a PR against `main` with a clear description
-7. If the PR is intended for a release cut, follow [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) before tagging
+5. Ensure type checking passes: `bash scripts/run_mypy.sh` (the same command CI's `type-check` job runs; the remediation layer is strict-typed — see Code standards)
+6. Ensure shared validators pass: `make validate` runs the same validator set CI enforces (contract, integrity, runtime, structure, presets, dependency consistency, framework coverage, OCSF metadata, counts, deny-list parity, provenance, trust frontmatter, safe-skill bar, golden OCSF, and docs sync). If `validate_skill_structure.py` flags an empty subtree under `skills/detection-engineering/` (or anywhere else), it usually means stale `__pycache__` from an earlier on-disk layout — run `git clean -fdX skills/detection-engineering/` to drop ignored files only, then re-run the validator.
+7. Open a PR against `main` with a clear description
+8. If the PR is intended for a release cut, follow [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) before tagging
 
 ## Security
 

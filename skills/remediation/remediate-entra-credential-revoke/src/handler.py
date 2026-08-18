@@ -64,7 +64,7 @@ import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Protocol
+from typing import Any, Callable, Iterable, Iterator, Protocol, cast
 from urllib import parse as urllib_parse
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -176,7 +176,7 @@ def _retry_delay_seconds(retry_after: str | None, attempt: int) -> float:
                     parsed = parsed.replace(tzinfo=timezone.utc)
                 delta = (parsed - datetime.now(timezone.utc)).total_seconds()
                 return min(max(0.0, delta), HTTP_BACKOFF_MAX_SECONDS)
-    return min(0.5 * (2**attempt), HTTP_BACKOFF_MAX_SECONDS)
+    return min(0.5 * (2.0**attempt), HTTP_BACKOFF_MAX_SECONDS)
 
 
 def _graph_http_request(
@@ -299,7 +299,7 @@ class MsGraphClient:
         )
 
     def _token(self) -> str:
-        return self._credential().get_token("https://graph.microsoft.com/.default").token
+        return cast(str, self._credential().get_token("https://graph.microsoft.com/.default").token)
 
     def _request_json(
         self,
