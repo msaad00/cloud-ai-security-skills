@@ -23,7 +23,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Protocol
+from typing import Any, Iterable, Iterator, Protocol, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -245,7 +245,7 @@ class KubernetesApiClient:
             return None
         from kubernetes import client
 
-        return client.ApiClient().sanitize_for_serialization(policy)
+        return cast("dict[str, Any]", client.ApiClient().sanitize_for_serialization(policy))
 
     def get_pod(self, namespace: str, pod_name: str) -> dict[str, Any] | None:
         core, _, _, _ = self._apis()
@@ -255,7 +255,7 @@ class KubernetesApiClient:
             return None
         from kubernetes import client
 
-        return client.ApiClient().sanitize_for_serialization(pod)
+        return cast("dict[str, Any]", client.ApiClient().sanitize_for_serialization(pod))
 
     def delete_pod(self, namespace: str, pod_name: str) -> None:
         core, _, _, _ = self._apis()
@@ -291,7 +291,7 @@ class KubernetesApiClient:
             return None
         from kubernetes import client
 
-        return client.ApiClient().sanitize_for_serialization(node)
+        return cast("dict[str, Any]", client.ApiClient().sanitize_for_serialization(node))
 
 
 @dataclasses.dataclass

@@ -140,7 +140,7 @@ def _retry_delay_seconds(retry_after: str | None, attempt: int) -> float:
                     parsed = parsed.replace(tzinfo=timezone.utc)
                 delta = (parsed - datetime.now(timezone.utc)).total_seconds()
                 return min(max(0.0, delta), HTTP_BACKOFF_MAX_SECONDS)
-    return min(0.5 * (2**attempt), HTTP_BACKOFF_MAX_SECONDS)
+    return min(0.5 * (2.0**attempt), HTTP_BACKOFF_MAX_SECONDS)
 
 
 def _graph_http_request(
@@ -475,7 +475,11 @@ class EntraRemediationClient:
         credential = ClientSecretCredential(
             tenant_id=self.tenant_id, client_id=self.client_id, client_secret=self.client_secret
         )
-        return credential.get_token("https://graph.microsoft.com/.default").token
+        # Annotated local keeps this env-agnostic: the azure.identity stubs may be
+        # absent in the type-check env (token typed Any) or present (typed str);
+        # either way the annotation yields a clean `str` return with no cast.
+        token: str = credential.get_token("https://graph.microsoft.com/.default").token
+        return token
 
     def _graph_request(self, method: str, path: str, *, body: dict[str, Any] | None = None) -> None:
         token = self._graph_token()
