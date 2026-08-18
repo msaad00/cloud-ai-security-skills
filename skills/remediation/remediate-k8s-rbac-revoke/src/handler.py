@@ -36,7 +36,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Protocol
+from typing import Any, Iterable, Iterator, Protocol, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -131,7 +131,7 @@ class KubernetesRbacClient:
     def _serialize(self, obj: Any) -> dict[str, Any]:
         from kubernetes import client
 
-        return client.ApiClient().sanitize_for_serialization(obj)
+        return cast("dict[str, Any]", client.ApiClient().sanitize_for_serialization(obj))
 
     def get_role_binding(self, namespace: str, name: str) -> dict[str, Any] | None:
         try:

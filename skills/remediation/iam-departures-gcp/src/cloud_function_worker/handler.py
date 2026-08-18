@@ -42,7 +42,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 if str(REPO_ROOT) not in sys.path:
@@ -593,8 +593,8 @@ def _load_manifest_for_cli(source: str) -> dict:
         body = service.objects().get_media(bucket=bucket, object=obj).execute()
         if isinstance(body, bytes):
             body = body.decode("utf-8")
-        return json.loads(body)
-    return json.loads(Path(source).read_text(encoding="utf-8"))
+        return cast("dict[Any, Any]", json.loads(body))
+    return cast("dict[Any, Any]", json.loads(Path(source).read_text(encoding="utf-8")))
 
 
 def _cli_reverify(entries: list) -> int:

@@ -32,7 +32,7 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -299,7 +299,7 @@ def _read_blob(*, storage_account: str, container: str, blob_name: str) -> str:
     )
     blob_client = service.get_blob_client(container=container, blob=blob_name)
     download = blob_client.download_blob()
-    return download.readall().decode("utf-8")
+    return cast(str, download.readall().decode("utf-8"))
 
 
 def _get_graph_client() -> Any | None:

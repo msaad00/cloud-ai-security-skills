@@ -40,7 +40,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Protocol
+from typing import Any, Iterable, Iterator, Protocol, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -136,7 +136,10 @@ class GoogleComputeClient:
 
     def get_firewall(self, project: str, rule_name: str) -> dict[str, Any] | None:
         try:
-            return self._client().firewalls().get(project=project, firewall=rule_name).execute()
+            return cast(
+                "dict[str, Any]",
+                self._client().firewalls().get(project=project, firewall=rule_name).execute(),
+            )
         except Exception:
             return None
 
