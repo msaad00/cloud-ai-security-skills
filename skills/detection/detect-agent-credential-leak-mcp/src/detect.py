@@ -44,6 +44,14 @@ FINDING_ACTIVITY_CREATE = 1
 FINDING_TYPE_UID = FINDING_CLASS_UID * 100 + FINDING_ACTIVITY_CREATE
 SEVERITY_HIGH = 4
 
+# MITRE ATLAS — a compromised/abusive MCP tool harvesting credentials from
+# the agent's tool responses.
+ATLAS_VERSION = "current"
+ATLAS_TACTIC_UID = "AML.TA0013"
+ATLAS_TACTIC_NAME = "Credential Access"
+ATLAS_TECHNIQUE_UID = "AML.T0098"
+ATLAS_TECHNIQUE_NAME = "AI Agent Tool Credential Harvesting"
+
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("aws-access-key-id", re.compile(r"\b(AKIA[0-9A-Z]{16})\b")),
     (
@@ -231,6 +239,15 @@ def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
         "finding_types": ["mcp-credential-exposure", "credential-exposure-in-tools"],
         "first_seen_time_ms": int(event.get("time_ms") or 0),
         "last_seen_time_ms": int(event.get("time_ms") or 0),
+        "mitre_attacks": [
+            {
+                "version": ATLAS_VERSION,
+                "tactic_uid": ATLAS_TACTIC_UID,
+                "tactic_name": ATLAS_TACTIC_NAME,
+                "technique_uid": ATLAS_TECHNIQUE_UID,
+                "technique_name": ATLAS_TECHNIQUE_NAME,
+            },
+        ],
         "session_uid": session_uid,
         "tool_name": tool_name,
         "tool_event_uid": event_uid,
@@ -286,6 +303,14 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
             "types": native_finding["finding_types"],
             "first_seen_time": native_finding["first_seen_time_ms"],
             "last_seen_time": native_finding["last_seen_time_ms"],
+            "attacks": [
+                {
+                    "version": attack["version"],
+                    "tactic": {"uid": attack["tactic_uid"], "name": attack["tactic_name"]},
+                    "technique": {"uid": attack["technique_uid"], "name": attack["technique_name"]},
+                }
+                for attack in native_finding["mitre_attacks"]
+            ],
         },
         "observables": native_finding["observables"],
         "evidence": {

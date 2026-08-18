@@ -7,6 +7,7 @@ from pathlib import Path
 
 import detect as detect_mod  # type: ignore[import-not-found]
 from detect import (  # type: ignore[import-not-found]
+    ATLAS_TECHNIQUE_UID,
     FINDING_CATEGORY_UID,
     FINDING_CLASS_UID,
     FINDING_TYPE_UID,
@@ -101,7 +102,11 @@ class TestDetect:
     def test_mitre_attack_populated(self):
         events = [_ev("s1", "t", {"$ref": "https://evil.example.com/x"})]
         finding = list(detect(events, allowlist=ALLOWLIST))[0]
-        assert finding["finding_info"]["attacks"][0]["technique"]["uid"] == MITRE_TECHNIQUE_UID
+        attacks = finding["finding_info"]["attacks"]
+        # Both the ATT&CK and the ATLAS AI-native framing are emitted.
+        assert len(attacks) == 2
+        assert attacks[0]["technique"]["uid"] == MITRE_TECHNIQUE_UID
+        assert attacks[1]["technique"]["uid"] == ATLAS_TECHNIQUE_UID
 
     def test_same_session_same_host_fires_once(self):
         # Two tools both reaching the same disallowed host → one finding.

@@ -47,7 +47,9 @@ hashes diverge from the baseline is a **shadow-tool injection**.
 
 This is the **OWASP MCP Top 10 Tool Poisoning** class and maps to MITRE
 ATT&CK `T1195.001` Compromise Software Supply Chain — the tool's
-declaration is the software the agent ingests.
+declaration is the software the agent ingests. In the AI-native MITRE
+ATLAS matrix the same behavior is **AML.T0110** — AI Agent Tool Poisoning
+(Persistence).
 
 ## Detection logic
 
@@ -110,7 +112,8 @@ OCSF output populates:
 
 - `finding_info.types[] = ["mcp-shadow-tool-injection", "mcp-tool-poisoning"]`
 - `finding_info.attacks[]` — MITRE ATT&CK `T1195.001` Compromise Software
-  Supply Chain (v14).
+  Supply Chain (v14) and MITRE ATLAS `AML.T0110` AI Agent Tool Poisoning
+  (Persistence).
 - deterministic `finding_info.uid`.
 - severity HIGH.
 - `observables[]` — session uid, tool name, baseline hashes, live hashes,

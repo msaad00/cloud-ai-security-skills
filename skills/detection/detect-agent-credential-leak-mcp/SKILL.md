@@ -5,7 +5,8 @@ description: >-
   the native/canonical application-activity projection from
   ingest-mcp-proxy-ocsf, scans `tools/call` response bodies for high-confidence
   token patterns (AWS access keys, GitHub tokens, OpenAI keys, Slack tokens),
-  and emits an OCSF Detection Finding (class 2004) without echoing the raw
+  and emits an OCSF Detection Finding (class 2004) mapped to MITRE ATLAS
+  AML.T0098 (AI Agent Tool Credential Harvesting) without echoing the raw
   secret back out. Use when the user mentions MCP credential exposure, leaked
   tool results, agent secret leakage, or OWASP MCP credential exposure in tool
   responses. Do NOT use on `tools/list` metadata, non-MCP logs, or as a
@@ -34,6 +35,7 @@ metadata:
   version: 0.1.0
   frameworks:
     - OCSF 1.8
+    - MITRE ATLAS
     - OWASP MCP Top 10
     - OWASP LLM Top 10
   cloud: mcp

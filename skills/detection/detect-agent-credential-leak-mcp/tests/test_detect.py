@@ -18,6 +18,8 @@ APPLICATION_ACTIVITY_UID = MODULE.APPLICATION_ACTIVITY_UID
 CANONICAL_VERSION = MODULE.CANONICAL_VERSION
 FINDING_CLASS_UID = MODULE.FINDING_CLASS_UID
 OUTPUT_FORMATS = MODULE.OUTPUT_FORMATS
+ATLAS_TACTIC_UID = MODULE.ATLAS_TACTIC_UID
+ATLAS_TECHNIQUE_UID = MODULE.ATLAS_TECHNIQUE_UID
 _matched_secrets = MODULE._matched_secrets
 _normalize_event = MODULE._normalize_event
 _credential_leak_event = MODULE._credential_leak_event
@@ -145,6 +147,26 @@ class TestDetect:
         finding = findings[0]
         assert finding["class_uid"] == FINDING_CLASS_UID
         assert "mcp-credential-exposure" in finding["finding_info"]["types"]
+
+    def test_atlas_mapping_populated_inside_finding_info(self):
+        findings = list(
+            detect(
+                [
+                    _ev(
+                        "s1",
+                        "tool",
+                        {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"},
+                        TEST_TIME_MS,
+                    )
+                ]
+            )
+        )
+        # attacks[] lives inside finding_info per OCSF 1.8, not at the event root.
+        assert "attacks" not in findings[0]
+        attacks = findings[0]["finding_info"]["attacks"]
+        assert len(attacks) == 1
+        assert attacks[0]["tactic"]["uid"] == ATLAS_TACTIC_UID
+        assert attacks[0]["technique"]["uid"] == ATLAS_TECHNIQUE_UID
 
     def test_deterministic_finding_uid(self):
         event = _ev(

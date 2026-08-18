@@ -7,6 +7,9 @@
 - **MITRE ATT&CK** — T1195.001 Compromise Software Supply Chain
   https://attack.mitre.org/techniques/T1195/001/
 - **MITRE ATT&CK version pinned for this skill** — v14
+- **MITRE ATLAS** — AML.T0010 AI Supply Chain Compromise (Initial Access)
+  https://atlas.mitre.org/techniques/AML.T0010
+- **MITRE ATLAS fact sheet** — https://atlas.mitre.org/pdf-files/MITRE_ATLAS_Fact_Sheet.pdf
 - **OWASP MCP Top 10** — Plugin / supply-chain class — https://genai.owasp.org/
 
 ## Input format

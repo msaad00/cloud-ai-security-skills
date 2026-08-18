@@ -45,8 +45,8 @@ Skills can carry multiple framework tags (e.g. a CIS check tagged with NIST CSF 
 | OWASP Top 10 | 27 | 20.3% |
 | SOC 2 TSC | 22 | 16.5% |
 | NIST CSF 2.0 | 22 | 16.5% |
+| MITRE ATLAS | 21 | 15.8% |
 | OWASP LLM Top 10 | 19 | 14.3% |
-| MITRE ATLAS | 17 | 12.8% |
 | OWASP MCP Top 10 | 11 | 8.3% |
 | NIST AI RMF | 8 | 6.0% |
 | CIS AWS v3 | 6 | 4.5% |
@@ -95,7 +95,7 @@ Per-track breadth toward the published target. The 'Today' column uses **per-con
 | Track | Tag | Issue | Target | Today |
 |---|---|---|---:|---:|
 | MITRE ATT&CK breadth | `mitre-attack-v14` | #253 | 50% | 65% |
-| MITRE ATLAS | `mitre-atlas` | #255 | 40% | 13% |
+| MITRE ATLAS | `mitre-atlas` | #255 | 40% | 16% |
 | OWASP LLM Top 10 | `owasp-llm-top-10` | #255 | 40% | 80% |
 | OWASP MCP Top 10 | `owasp-mcp-top-10` | #255 | 50% | 70% |
 | OWASP Top 10 (web) | `owasp-top-10` | TBD | 30% | 0% |

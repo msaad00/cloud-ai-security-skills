@@ -50,6 +50,13 @@ MITRE_TACTIC_NAME = "Initial Access"
 MITRE_TECHNIQUE_UID = "T1195.001"
 MITRE_TECHNIQUE_NAME = "Supply Chain Compromise: Compromise Software Supply Chain"
 
+# MITRE ATLAS — the AI-native framing of the same mid-session rug-pull.
+ATLAS_VERSION = "current"
+ATLAS_TACTIC_UID = "AML.TA0007"
+ATLAS_TACTIC_NAME = "Defense Evasion"
+ATLAS_TECHNIQUE_UID = "AML.T0109"
+ATLAS_TECHNIQUE_NAME = "AI Supply Chain Rug Pull"
+
 
 # ---------------------------------------------------------------------------
 # Input helpers
@@ -170,7 +177,14 @@ def _build_finding(
                 "tactic_name": MITRE_TACTIC_NAME,
                 "technique_uid": MITRE_TECHNIQUE_UID,
                 "technique_name": MITRE_TECHNIQUE_NAME,
-            }
+            },
+            {
+                "version": ATLAS_VERSION,
+                "tactic_uid": ATLAS_TACTIC_UID,
+                "tactic_name": ATLAS_TACTIC_NAME,
+                "technique_uid": ATLAS_TECHNIQUE_UID,
+                "technique_name": ATLAS_TECHNIQUE_NAME,
+            },
         ],
         "session_uid": session_uid,
         "tool_name": tool_name,
@@ -192,7 +206,6 @@ def _build_finding(
 
 
 def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
-    attack = native_finding["mitre_attacks"][0]
     return {
         "activity_id": FINDING_ACTIVITY_CREATE,
         "category_uid": FINDING_CATEGORY_UID,
@@ -226,6 +239,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
                     "tactic": {"name": attack["tactic_name"], "uid": attack["tactic_uid"]},
                     "technique": {"name": attack["technique_name"], "uid": attack["technique_uid"]},
                 }
+                for attack in native_finding["mitre_attacks"]
             ],
         },
         "observables": native_finding["observables"],

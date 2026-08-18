@@ -7,6 +7,9 @@
 - **MITRE ATT&CK** — T1195.001 Compromise Software Supply Chain (v14)
   https://attack.mitre.org/techniques/T1195/001/
 - **MITRE ATT&CK version pinned for this skill** — v14
+- **MITRE ATLAS** — AML.T0110 AI Agent Tool Poisoning (Persistence)
+  https://atlas.mitre.org/techniques/AML.T0110
+- **MITRE ATLAS fact sheet** — https://atlas.mitre.org/pdf-files/MITRE_ATLAS_Fact_Sheet.pdf
 - **OWASP LLM Top 10** — LLM05 Supply Chain (Plugins / Tools), secondary
   mapping
   https://genai.owasp.org/
