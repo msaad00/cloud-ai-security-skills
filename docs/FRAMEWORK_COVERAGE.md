@@ -3,14 +3,14 @@
 This file is **generated from [`framework-coverage.json`](framework-coverage.json)** by `scripts/generate_framework_coverage_doc.py`. Do not edit by hand — update the registry and regenerate.
 
 - Registry version: `0.11.0`
-- Registry updated: `2026-05-17`
-- Total shipped skills in registry: **132**
+- Registry updated: `2026-08-17`
+- Total shipped skills in registry: **133**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **111** | — |
+| OCSF | 1.8.0 | **112** | — |
 | MITRE ATT&CK | v14 | **86** | 100% mapped coverage |
 | MITRE ATLAS | current | **17** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **6** | — |
@@ -37,7 +37,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **111**
+Shipped skills mapped: **112**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -124,6 +124,7 @@ Shipped skills mapped: **111**
 | [`ingest-azure-activity-ocsf`](../skills/ingestion/ingest-azure-activity-ocsf) | ingestion | azure | api, audit-logs |
 | [`ingest-azure-defender-for-cloud-ocsf`](../skills/ingestion/ingest-azure-defender-for-cloud-ocsf) | ingestion | azure | findings, security-posture |
 | [`ingest-cloudtrail-ocsf`](../skills/ingestion/ingest-cloudtrail-ocsf) | ingestion | aws | iam, api, audit-logs |
+| [`ingest-databricks-audit-ocsf`](../skills/ingestion/ingest-databricks-audit-ocsf) | ingestion | databricks | data-warehouse, identities, credentials, ml-models, audit-logs |
 | [`ingest-entra-directory-audit-ocsf`](../skills/ingestion/ingest-entra-directory-audit-ocsf) | ingestion | azure, entra, microsoft-graph | identities, applications, service-principals, federated-credentials, audit-logs |
 | [`ingest-gcp-audit-ocsf`](../skills/ingestion/ingest-gcp-audit-ocsf) | ingestion | gcp | api, audit-logs |
 | [`ingest-gcp-scc-ocsf`](../skills/ingestion/ingest-gcp-scc-ocsf) | ingestion | gcp | findings, security-posture |

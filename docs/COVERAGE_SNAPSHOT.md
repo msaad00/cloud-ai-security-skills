@@ -6,7 +6,7 @@ Auto-generated from [`framework-coverage.json`](framework-coverage.json) by [`sc
 python scripts/coverage_summary.py --write
 ```
 
-**Total shipped skills:** 132
+**Total shipped skills:** 133
 
 ## By cloud / vendor
 
@@ -14,14 +14,14 @@ Skills overlap when a skill targets multiple providers (the `multi` row), so the
 
 | Cloud / vendor | Skills | % of repo |
 |---|---:|---:|
-| AWS | 26 | 19.7% |
-| Multi-cloud (vendor-neutral) | 21 | 15.9% |
-| Azure | 19 | 14.4% |
-| GCP | 18 | 13.6% |
-| MCP / AI runtime | 14 | 10.6% |
-| Snowflake | 14 | 10.6% |
+| AWS | 26 | 19.5% |
+| Multi-cloud (vendor-neutral) | 21 | 15.8% |
+| Azure | 19 | 14.3% |
+| GCP | 18 | 13.5% |
+| MCP / AI runtime | 14 | 10.5% |
+| Snowflake | 14 | 10.5% |
+| Databricks | 10 | 7.5% |
 | Kubernetes | 9 | 6.8% |
-| Databricks | 9 | 6.8% |
 | Google Workspace | 6 | 4.5% |
 | ClickHouse | 5 | 3.8% |
 | Okta | 4 | 3.0% |
@@ -40,15 +40,15 @@ Skills can carry multiple framework tags (e.g. a CIS check tagged with NIST CSF 
 
 | Framework | Skills | % of repo |
 |---|---:|---:|
-| OCSF 1.8 | 111 | 84.1% |
-| MITRE ATT&CK v14 | 86 | 65.2% |
-| OWASP Top 10 | 27 | 20.5% |
-| SOC 2 TSC | 22 | 16.7% |
-| NIST CSF 2.0 | 22 | 16.7% |
-| OWASP LLM Top 10 | 19 | 14.4% |
-| MITRE ATLAS | 17 | 12.9% |
+| OCSF 1.8 | 112 | 84.2% |
+| MITRE ATT&CK v14 | 86 | 64.7% |
+| OWASP Top 10 | 27 | 20.3% |
+| SOC 2 TSC | 22 | 16.5% |
+| NIST CSF 2.0 | 22 | 16.5% |
+| OWASP LLM Top 10 | 19 | 14.3% |
+| MITRE ATLAS | 17 | 12.8% |
 | OWASP MCP Top 10 | 11 | 8.3% |
-| NIST AI RMF | 8 | 6.1% |
+| NIST AI RMF | 8 | 6.0% |
 | CIS AWS v3 | 6 | 4.5% |
 | CIS Azure v2.1 | 6 | 4.5% |
 | CIS GCP v3 | 5 | 3.8% |
@@ -63,10 +63,10 @@ Skills can carry multiple framework tags (e.g. a CIS check tagged with NIST CSF 
 
 | Layer | Skills | % of repo |
 |---|---:|---:|
-| detection | 71 | 53.8% |
-| ingestion | 27 | 20.5% |
-| evaluation | 12 | 9.1% |
-| remediation | 12 | 9.1% |
+| detection | 71 | 53.4% |
+| ingestion | 28 | 21.1% |
+| evaluation | 12 | 9.0% |
+| remediation | 12 | 9.0% |
 | discovery | 5 | 3.8% |
 | output | 3 | 2.3% |
 | view | 2 | 1.5% |
