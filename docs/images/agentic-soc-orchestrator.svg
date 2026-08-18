@@ -29,7 +29,7 @@
       <rect x="0" y="0" width="1080" height="84" rx="16" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
       <use href="#ic-pkg" x="28" y="18" width="26" height="26" color="#93c5fd"/>
       <text x="66" y="36" font-size="16" font-weight="800" fill="#93c5fd">cloud-ai-security-skills</text>
-      <text x="66" y="62" font-size="13" fill="#94a3b8">133 skills · OCSF wire · MCP · dry-run · audit · allowlists — deterministic, versioned, testable</text>
+      <text x="66" y="62" font-size="13" fill="#94a3b8">134 skills · OCSF wire · MCP · dry-run · audit · allowlists — deterministic, versioned, testable</text>
 
       <rect x="0" y="100" width="524" height="84" rx="16" fill="#0f172a" stroke="#22d3ee"/>
       <use href="#ic-graph" x="28" y="120" width="24" height="24" color="#67e8f9"/>

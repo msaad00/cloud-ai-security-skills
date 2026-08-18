@@ -386,6 +386,15 @@ INGEST_DETECT_PIPES = (
         expected_ocsf_count=4,
         expected_finding_count=2,
     ),
+    IngestDetectPipe(
+        name="snowflake_failed_mfa_burst",
+        ingest_skill="ingest-snowflake-login-history-ocsf",
+        detect_skill="detect-snowflake-failed-mfa-burst",
+        raw_fixture="snowflake_failed_mfa_burst_raw.jsonl",
+        expected_fixture="snowflake_failed_mfa_burst_pipe_findings.ocsf.jsonl",
+        expected_ocsf_count=9,
+        expected_finding_count=1,
+    ),
 )
 
 

@@ -49,7 +49,7 @@ Detection Finding 2004 records.
 
 | Warehouse | Source | Adapter skill | Consuming detectors |
 |---|---|---|---|
-| Snowflake | `query_history`, audit views | [`source-snowflake-query`](../skills/ingestion/source-snowflake-query/) | `detect-snowflake-bulk-data-egress`, `detect-snowflake-share-creation`, `detect-snowflake-account-key-creation`, `detect-snowflake-warehouse-resize-burst`, `detect-snowflake-unauthorized-grant` |
+| Snowflake | `query_history`, `login_history`, audit views | [`source-snowflake-query`](../skills/ingestion/source-snowflake-query/), [`ingest-snowflake-query-history-ocsf`](../skills/ingestion/ingest-snowflake-query-history-ocsf/), [`ingest-snowflake-login-history-ocsf`](../skills/ingestion/ingest-snowflake-login-history-ocsf/) | `detect-snowflake-bulk-data-egress`, `detect-snowflake-share-creation`, `detect-snowflake-account-key-creation`, `detect-snowflake-warehouse-resize-burst`, `detect-snowflake-unauthorized-grant`, `detect-snowflake-failed-mfa-burst` |
 | Databricks | SQL Warehouse + audit | [`source-databricks-query`](../skills/ingestion/source-databricks-query/), [`ingest-databricks-audit-ocsf`](../skills/ingestion/ingest-databricks-audit-ocsf/) | `detect-databricks-token-creation`, `detect-databricks-secret-scope-read-burst`, `detect-databricks-mlflow-model-exfil`, `detect-databricks-unity-catalog-cross-workspace-share`, `detect-databricks-cluster-init-script-abuse`, `detect-databricks-workspace-admin-grant` |
 | AWS S3 | `s3 select` (Athena-style) | [`source-s3-select`](../skills/ingestion/source-s3-select/) | any detector reading historical CloudTrail / GuardDuty exports from S3 |
 

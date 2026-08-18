@@ -3,14 +3,14 @@
 This file is **generated from [`framework-coverage.json`](framework-coverage.json)** by `scripts/generate_framework_coverage_doc.py`. Do not edit by hand — update the registry and regenerate.
 
 - Registry version: `0.11.0`
-- Registry updated: `2026-08-17`
-- Total shipped skills in registry: **133**
+- Registry updated: `2026-08-18`
+- Total shipped skills in registry: **134**
 
 ## Roll-up
 
 | Framework | Version | Shipped skills mapped | Coverage target |
 |---|---|---|---|
-| OCSF | 1.8.0 | **112** | — |
+| OCSF | 1.8.0 | **113** | — |
 | MITRE ATT&CK | v14 | **86** | 100% mapped coverage |
 | MITRE ATLAS | current | **21** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **6** | — |
@@ -37,7 +37,7 @@ Shipped skills mapped counts the number of skills in the registry that declare t
 
 - Registry id: `ocsf-1.8`
 
-Shipped skills mapped: **112**
+Shipped skills mapped: **113**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -139,6 +139,7 @@ Shipped skills mapped: **112**
 | [`ingest-sap-audit-log-ocsf`](../skills/ingestion/ingest-sap-audit-log-ocsf) | ingestion | sap | erp-identities, erp-data, audit-logs |
 | [`ingest-security-hub-ocsf`](../skills/ingestion/ingest-security-hub-ocsf) | ingestion | aws | findings, security-posture |
 | [`ingest-slack-audit-ocsf`](../skills/ingestion/ingest-slack-audit-ocsf) | ingestion | slack | identities, channels, workspaces, oauth-apps, audit-logs |
+| [`ingest-snowflake-login-history-ocsf`](../skills/ingestion/ingest-snowflake-login-history-ocsf) | ingestion | snowflake | data-warehouse, identities, authentication, mfa, audit-logs |
 | [`ingest-snowflake-query-history-ocsf`](../skills/ingestion/ingest-snowflake-query-history-ocsf) | ingestion | snowflake | data-warehouse, identities, credentials, network, audit-logs |
 | [`ingest-vpc-flow-logs-gcp-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-gcp-ocsf) | ingestion | gcp | network, flow-logs |
 | [`ingest-vpc-flow-logs-ocsf`](../skills/ingestion/ingest-vpc-flow-logs-ocsf) | ingestion | aws | network, flow-logs |
