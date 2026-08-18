@@ -2728,6 +2728,30 @@
       ]
     },
     {
+      "path": "skills/ingestion/ingest-snowflake-query-history-ocsf",
+      "layer": "ingestion",
+      "providers": [
+        "snowflake"
+      ],
+      "asset_classes": [
+        "data-warehouse",
+        "identities",
+        "credentials",
+        "network",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
       "path": "skills/ingestion/ingest-security-hub-ocsf",
       "layer": "ingestion",
       "providers": [

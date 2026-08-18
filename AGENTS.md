@@ -26,7 +26,7 @@ Skills are organised into layered categories. See [`skills/README.md`](skills/RE
 
 Current shipped surface on `main`:
 
-- **`ingestion/`**: 22 ingest skills plus 4 source adapters
+- **`ingestion/`**: 23 ingest skills plus 4 source adapters
 - **`discovery/`**: 5 read-only skills including `iam-departures-reconciler`
 - **`detection/`**: 71 deterministic ATT&CK-tagged detectors
 - **`evaluation/`**: 12 posture / benchmark families

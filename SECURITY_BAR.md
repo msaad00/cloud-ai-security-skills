@@ -47,6 +47,7 @@ is the row you can take to your auditor.
 | `ingest-sap-audit-log-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `ingest-security-hub-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `ingest-slack-audit-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
+| `ingest-snowflake-query-history-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `ingest-vpc-flow-logs-gcp-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `ingest-vpc-flow-logs-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
 | `ingest-workday-audit-ocsf` | ingestion | ✅ | ✅ | ✅ | ✅ golden fixture | ✅ 1.8 | ✅ |
@@ -161,7 +162,7 @@ is the row you can take to your auditor.
 | `sink-s3-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 | `sink-snowflake-jsonl` | output | ⚠️ append-only sink | ✅ | ✅ | ✅ audit + re-verify | n/a | ✅ |
 
-_131 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
+_132 skills · generated from SKILL.md frontmatter + layer conventions. Run `python scripts/generate_security_bar_matrix.py` to refresh after adding a skill; CI enforces parity via `--check`._
 <!-- AUTO-GENERATED MATRIX END -->
 
 ## How to add a skill that satisfies the bar

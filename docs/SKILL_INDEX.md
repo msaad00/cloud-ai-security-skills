@@ -1,6 +1,6 @@
 # Skill index — find a skill fast
 
-The same 131 skill bundles, pivoted three ways:
+The same 132 skill bundles, pivoted three ways:
 
 1. **[By environment](#by-environment)** — pick a cloud or platform, see every skill that touches it.
 2. **[By purpose](#by-purpose)** — pick a layer (ingest / discover / detect / evaluate / remediate / view / output / source).
@@ -158,10 +158,11 @@ not do, and what it talks to.
 | Detect | [`detect-web-broken-access-control`](../skills/detection/detect-web-broken-access-control/) | OWASP A01 — IDOR / forced-browsing |
 | Detect | [`detect-web-injection`](../skills/detection/detect-web-injection/) | OWASP A03 — SQLi / shell / NoSQL / template injection |
 
-### Warehouse (Snowflake · Databricks · ClickHouse) — 16 skills
+### Warehouse (Snowflake · Databricks · ClickHouse) — 17 skills
 
 | Layer | Skill | What it does |
 |---|---|---|
+| Ingest | [`ingest-snowflake-query-history-ocsf`](../skills/ingestion/ingest-snowflake-query-history-ocsf/) | Snowflake ACCOUNT_USAGE.QUERY_HISTORY → OCSF 1.8 API Activity 6003 |
 | Detect | [`detect-snowflake-bulk-data-egress`](../skills/detection/detect-snowflake-bulk-data-egress/) | T1567 — bulk data egress across multiple Snowflake stages |
 | Detect | [`detect-snowflake-share-creation`](../skills/detection/detect-snowflake-share-creation/) | T1537 — Snowflake secure data share creation / external account add |
 | Detect | [`detect-snowflake-account-key-creation`](../skills/detection/detect-snowflake-account-key-creation/) | T1098.001 — Snowflake RSA public-key auth bound to a user |
@@ -202,7 +203,7 @@ not do, and what it talks to.
 
 | Layer | Count | Index |
 |---|---:|---|
-| Ingest | 21 | [`skills/ingestion/`](../skills/ingestion/) (excludes the 4 warehouse sources below) |
+| Ingest | 23 | [`skills/ingestion/`](../skills/ingestion/) (excludes the 4 warehouse sources below) |
 | Discover | 5 | [`skills/discovery/`](../skills/discovery/) |
 | Detect | 71 | [`skills/detection/`](../skills/detection/) |
 | Evaluate | 12 | [`skills/evaluation/`](../skills/evaluation/) |
@@ -211,7 +212,7 @@ not do, and what it talks to.
 | Output | 3 | [`skills/output/`](../skills/output/) |
 | Source | 4 | warehouse adapters: `source-clickhouse-query`, `source-databricks-query`, `source-s3-select`, `source-snowflake-query` (filed under `skills/ingestion/` on disk) |
 
-Total = 22 + 5 + 71 + 12 + 12 + 2 + 3 + 4 = **131**.
+Total = 23 + 5 + 71 + 12 + 12 + 2 + 3 + 4 = **132**.
 
 ## By framework
 
