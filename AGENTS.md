@@ -34,7 +34,7 @@ Current shipped surface on `main`:
 - **`remediation/`**: 12 HITL-gated write skills across AWS, GCP, Azure, Kubernetes, Okta, Workspace, Entra, and MCP
 - **`output/`**: 3 append-only sinks
 
-**Total shipped: 131 skill bundles.** Auto-generated per-framework rollup in [`docs/FRAMEWORK_COVERAGE.md`](docs/FRAMEWORK_COVERAGE.md); per-skill registry in [`docs/framework-coverage.json`](docs/framework-coverage.json).
+**Total shipped: 132 skill bundles.** Auto-generated per-framework rollup in [`docs/FRAMEWORK_COVERAGE.md`](docs/FRAMEWORK_COVERAGE.md); per-skill registry in [`docs/framework-coverage.json`](docs/framework-coverage.json).
 
 Notable current skills that older agent memory often misses:
 

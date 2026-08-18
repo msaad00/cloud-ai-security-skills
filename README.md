@@ -71,7 +71,7 @@ You do not pick this repo **instead of** LangGraph or LangChain. You compose the
 
 | Layer | Owns | Shipped here | When to use |
 |---|---|---|---|
-| **This repo** | security skills, OCSF wire, HITL gates, allowlists, audit | 131 skill bundles + MCP wrapper | always — facts, mappings, and write authority stay here |
+| **This repo** | security skills, OCSF wire, HITL gates, allowlists, audit | 132 skill bundles + MCP wrapper | always — facts, mappings, and write authority stay here |
 | **LangGraph** | multi-step workflow state, branches, checkpoints, HITL routing | [`langgraph_security_graph.py`](examples/agents/langgraph_security_graph.py) + [`harness_profiles/`](examples/agents/harness_profiles/) | durable SOC DAGs, analyst review gates, checkpoint/replay |
 | **LangChain** | MCP stdio wiring or optional triage message adapter | [`langchain_mcp_security_agent.py`](examples/agents/langchain_mcp_security_agent.py) + [`harness_adapters.py`](examples/agents/harness_adapters.py) | MCP-first loops **or** bounded LLM drafting inside LangGraph triage |
 
