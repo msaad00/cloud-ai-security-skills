@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "updated": "2026-05-17",
+  "updated": "2026-08-17",
   "repo_version": "0.11.0",
   "frameworks": [
     {
@@ -2714,6 +2714,30 @@
         "user-access",
         "groups",
         "applications",
+        "audit-logs"
+      ],
+      "frameworks": [
+        "ocsf-1.8"
+      ],
+      "coverage_status": "validated",
+      "execution_modes": [
+        "cli",
+        "ci",
+        "mcp",
+        "persistent"
+      ]
+    },
+    {
+      "path": "skills/ingestion/ingest-databricks-audit-ocsf",
+      "layer": "ingestion",
+      "providers": [
+        "databricks"
+      ],
+      "asset_classes": [
+        "data-warehouse",
+        "identities",
+        "credentials",
+        "ml-models",
         "audit-logs"
       ],
       "frameworks": [

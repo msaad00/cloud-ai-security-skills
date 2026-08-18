@@ -15,7 +15,7 @@ Skills are grouped into layered categories — not by cloud. The category answer
 
 ```
 skills/
-├── ingestion/                     # raw source → OCSF 1.8 (23 ingest-* + 4 source-*)
+├── ingestion/                     # raw source → OCSF 1.8 (24 ingest-* + 4 source-*)
 │   ├── ingest-cloudtrail-ocsf/
 │   ├── ingest-vpc-flow-logs-ocsf/
 │   ├── ingest-vpc-flow-logs-gcp-ocsf/
@@ -32,6 +32,7 @@ skills/
 │   ├── ingest-entra-directory-audit-ocsf/
 │   ├── ingest-google-workspace-login-ocsf/
 │   ├── ingest-snowflake-query-history-ocsf/
+│   ├── ingest-databricks-audit-ocsf/
 │   ├── source-s3-select/                # warehouse query adapter
 │   ├── source-snowflake-query/          # warehouse query adapter
 │   ├── source-databricks-query/         # warehouse query adapter

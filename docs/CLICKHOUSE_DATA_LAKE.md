@@ -21,7 +21,7 @@ visible because the shipped tables are append-only `MergeTree` tables.
    any cloud / SaaS / IdP / K8s / MCP signal
                          │
                          ▼
-                ingest-*  (23 skills)        ──── L1 normalize to OCSF 1.8
+                ingest-*  (24 skills)        ──── L1 normalize to OCSF 1.8
                          │
                          ▼
                 sink-clickhouse-jsonl --apply ──── L7 append-only insert
