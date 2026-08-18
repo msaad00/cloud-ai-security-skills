@@ -1378,10 +1378,8 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
         ),
         "retry_backoff_factor": AZURE_RETRY_BACKOFF_FACTOR,
     }
-    # azure.mgmt clients accept azure.core RetryPolicy kwargs (retry_total,
-    # retry_backoff_factor) via **kwargs at runtime; the generated stubs don't model them.
-    storage_client = StorageManagementClient(credential, subscription_id, **retry_kwargs)  # type: ignore[arg-type]
-    network_client = NetworkManagementClient(credential, subscription_id, **retry_kwargs)  # type: ignore[arg-type]
+    storage_client = StorageManagementClient(credential, subscription_id, **retry_kwargs)
+    network_client = NetworkManagementClient(credential, subscription_id, **retry_kwargs)
 
     def _opt(name: str, ctor):
         try:
