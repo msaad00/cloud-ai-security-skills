@@ -51,7 +51,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from typing import Any, Callable, Iterable, cast
+from typing import Any, Callable, Iterable
 from urllib import parse as urllib_parse
 
 # Steps live in a sibling module so they can be unit-tested without the
@@ -475,7 +475,7 @@ class EntraRemediationClient:
         credential = ClientSecretCredential(
             tenant_id=self.tenant_id, client_id=self.client_id, client_secret=self.client_secret
         )
-        return cast(str, credential.get_token("https://graph.microsoft.com/.default").token)
+        return credential.get_token("https://graph.microsoft.com/.default").token
 
     def _graph_request(self, method: str, path: str, *, body: dict[str, Any] | None = None) -> None:
         token = self._graph_token()
