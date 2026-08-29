@@ -22,7 +22,9 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared.errors import ContractError  # noqa: E402
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "detect-mcp-tool-drift"
 # Framework depth markers (coverage_summary.py)
@@ -263,7 +265,7 @@ def detect(
     """
     # (session_uid, tool_name) -> (last_fingerprint, last_event)
     if output_format not in OUTPUT_FORMATS:
-        raise ValueError(f"unsupported output_format `{output_format}`")
+        raise ContractError(f"unsupported output_format `{output_format}`")
 
     state: dict[tuple[str, str], tuple[str, dict[str, Any]]] = {}
 
@@ -309,12 +311,14 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as e:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
+            emit_stderr_event(SKILL_NAME, level="warning", event="json_parse_failed",
+                              message=f"skipping line {lineno}: json parse failed: {e}", line=lineno)
             continue
         if isinstance(obj, dict):
             yield obj
         else:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
+            emit_stderr_event(SKILL_NAME, level="warning", event="invalid_json_shape",
+                              message=f"skipping line {lineno}: not a JSON object", line=lineno)
 
 
 def main(argv: list[str] | None = None) -> int:

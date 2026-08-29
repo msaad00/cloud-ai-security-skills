@@ -1,7 +1,7 @@
 # Skills Catalog (curated overview)
 
 > **Complete catalog:** [`docs/SKILL_INDEX.md`](../docs/SKILL_INDEX.md) is the
-> authoritative, CI-gated index of all **131** shipped skills (by environment,
+> authoritative, CI-gated index of all **134** shipped skills (by environment,
 > purpose, and framework). This file is a curated layer overview — not every
 > detector or evaluation skill is listed here.
 

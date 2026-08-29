@@ -160,33 +160,61 @@ class HttpxOktaClient:
     def list_active_sessions(self, user_id: str) -> list[dict[str, Any]]:
         # Okta provides GET /api/v1/users/{id}/sessions per
         # https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/#tag/User/operation/listUserSessions
+        # The endpoint paginates via Link: <url>; rel="next" headers.
         # The endpoint returns 200 with a list (possibly empty) when the user
         # exists; 404 if the user is gone (we treat as no sessions).
+        results: list[dict[str, Any]] = []
+        url: str | None = f"/api/v1/users/{user_id}/sessions"
         with self._client() as c:
-            response = c.get(f"/api/v1/users/{user_id}/sessions")
-            if response.status_code == 404:
-                return []
-            if response.status_code != 200:
-                raise RuntimeError(
-                    f"Okta list_active_sessions returned {response.status_code}: {response.text[:200]}"
-                )
-            data = response.json()
-            return list(data) if isinstance(data, list) else []
+            while url:
+                response = c.get(url)
+                if response.status_code == 404:
+                    return []
+                if response.status_code != 200:
+                    raise RuntimeError(
+                        f"Okta list_active_sessions returned {response.status_code}: {response.text[:200]}"
+                    )
+                data = response.json()
+                if isinstance(data, list):
+                    results.extend(data)
+                link = response.headers.get("Link", "")
+                next_url = None
+                for part in link.split(","):
+                    part = part.strip()
+                    if 'rel="next"' in part:
+                        next_url = part.split(";")[0].strip().strip("<>")
+                        break
+                url = next_url
+        return results
 
     def list_active_oauth_tokens(self, user_id: str) -> list[dict[str, Any]]:
         # Okta GET /api/v1/users/{id}/oauth/tokens (refresh tokens for
         # OAuth/OIDC apps) per
         # https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/#tag/User/operation/listRefreshTokensForUser
+        # The endpoint paginates via Link: <url>; rel="next" headers.
+        results: list[dict[str, Any]] = []
+        url: str | None = f"/api/v1/users/{user_id}/oauth/tokens"
         with self._client() as c:
-            response = c.get(f"/api/v1/users/{user_id}/oauth/tokens")
-            if response.status_code == 404:
-                return []
-            if response.status_code != 200:
-                raise RuntimeError(
-                    f"Okta list_active_oauth_tokens returned {response.status_code}: {response.text[:200]}"
-                )
-            data = response.json()
-            return list(data) if isinstance(data, list) else []
+            while url:
+                response = c.get(url)
+                if response.status_code == 404:
+                    return []
+                if response.status_code != 200:
+                    raise RuntimeError(
+                        f"Okta list_active_oauth_tokens returned {response.status_code}: {response.text[:200]}"
+                    )
+                data = response.json()
+                if isinstance(data, list):
+                    results.extend(data)
+                link = response.headers.get("Link", "")
+                next_url = None
+                for part in link.split(","):
+                    part = part.strip()
+                    if 'rel="next"' in part:
+                        next_url = part.split(";")[0].strip().strip("<>")
+                        break
+                url = next_url
+        return results
 
 
 # -- Audit writer protocol (injectable for tests) ----------------------------

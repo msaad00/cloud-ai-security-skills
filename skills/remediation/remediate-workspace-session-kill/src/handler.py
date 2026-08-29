@@ -177,18 +177,23 @@ class GoogleAdminSDKClient:
     ) -> list[dict[str, Any]]:
         client = self._client("https://www.googleapis.com/auth/admin.reports.audit.readonly")
         start = datetime.fromtimestamp(since_ms / 1000, tz=timezone.utc).isoformat()
-        response = (
-            client.activities()
-            .list(
+        results: list[dict[str, Any]] = []
+        page_token: str | None = None
+        while True:
+            request = client.activities().list(
                 userKey=user_key,
                 applicationName="login",
                 startTime=start,
                 eventName="login_success",
+                **({"pageToken": page_token} if page_token else {}),
             )
-            .execute()
-        )
-        items = response.get("items") or []
-        return [item for item in items if isinstance(item, dict)]
+            response = request.execute()
+            items = response.get("items") or []
+            results.extend(item for item in items if isinstance(item, dict))
+            page_token = response.get("nextPageToken")
+            if not page_token:
+                break
+        return results
 
 
 @dataclasses.dataclass

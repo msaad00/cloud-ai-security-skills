@@ -39,7 +39,7 @@ metadata:
 9. Document accepted input modes (`raw`, `canonical`, `ocsf`) and supported output modes (`native`, `ocsf`, `bridge`) when they apply
 10. Document whether the mapping is lossless or lossy, and which source-native identifiers must survive normalization
 11. Add tests for malformed input, provider quirks, and any deprecated API shape you are intentionally supporting during migration
-12. Add your skill to the catalog in `README.md` and `skills/README.md`
+12. Regenerate `docs/SKILL_INDEX.md` (the CI `validate-docs` gate will fail if it drifts), update `docs/framework-coverage.json` with your skill's framework and provider tags, and bump counts in `skills/README.md`
 13. Add or update the skill entry in `docs/framework-coverage.json` when the change affects framework, provider, or asset coverage
 
 ## Code standards

@@ -471,9 +471,16 @@ def test_run_reverify_reports_drift_when_binding_still_present():
             reverify=True,
         )
     )
+    # On DRIFT the skill emits two records: native verification + OCSF drift finding
+    assert len(records) == 2
     rec = records[0]
     assert rec["status"] == STATUS_DRIFT
     assert "still present" in rec["status_detail"]
+    drift_finding = records[1]
+    assert drift_finding["class_uid"] == 2004
+    assert drift_finding["severity_id"] == 4
+    assert "remediation-drift" in drift_finding["finding_info"]["types"]
+    assert drift_finding["evidence"]["expected_state"] == "binding deleted"
 
 
 def test_run_reverify_handles_cluster_binding():
