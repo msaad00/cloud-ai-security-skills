@@ -7,7 +7,7 @@ job can call one of these 134 skills the same way it would call any other tool.
 
 So the question isn't *"LLM versus this repo."* It's:
 
-> *Your agent needs skills to invoke. Should it use these 131 — or should it
+> *Your agent needs skills to invoke. Should it use these 134 — or should it
 > generate ad-hoc Python on the fly, or have you commit LLM-written skills,
 > or have your team write the same catalog from scratch?*
 
@@ -101,7 +101,7 @@ This works — at cost. The repo's
 [cost-framing table](#the-cost-framing--historical-v010-baseline) below
 estimates **~500 engineer-hours / ~12 weeks** to reach feature parity
 with the v0.10.0-era harness before the first detector is written. That's
-the historical lower-bound harness cost, before the current 131-skill
+the historical lower-bound harness cost, before the current 134-skill
 catalog. Detector content is on top of that — the v0.10 baseline alone was
 six hours per detector × 39 detectors = another **~240 hours**, plus the
 calibration work, captured-fixture corpus, and framework-mapping research.

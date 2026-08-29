@@ -24,7 +24,9 @@ SKILL_NAME = "detect-prompt-injection-mcp-proxy"
 OCSF_VERSION = "1.8.0"
 CANONICAL_VERSION = "2026-04"
 REPO_NAME = "cloud-ai-security-skills"
+from skills._shared.errors import ContractError  # noqa: E402
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 OUTPUT_FORMATS = ("ocsf", "native")
 
@@ -67,8 +69,8 @@ SUSPICIOUS_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "guardrail-bypass",
         re.compile(
-            r"\b(bypass|disable|ignore)\b.{0,24}\b("
-            r"safety|guardrails?|restrictions?|policy|policies"
+            r"\b(bypass|disable|ignore)\b.{0,16}\b("
+            r"safety|guardrails?|policy|policies"
             r")\b",
             re.IGNORECASE | re.DOTALL,
         ),
@@ -306,7 +308,7 @@ def detect(
     events: Iterable[dict[str, Any]], output_format: str = "ocsf"
 ) -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
-        raise ValueError(f"unsupported output_format `{output_format}`")
+        raise ContractError(f"unsupported output_format `{output_format}`")
 
     seen_findings: set[str] = set()
     listed: list[dict[str, Any]] = []
@@ -345,12 +347,12 @@ def load_jsonl(path: str | None) -> list[dict[str, Any]]:
         try:
             loaded = json.loads(stripped)
         except json.JSONDecodeError as exc:
-            print(
-                f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {exc}", file=sys.stderr
-            )
+            emit_stderr_event(SKILL_NAME, level="warning", event="json_parse_failed",
+                              message=f"skipping line {lineno}: json parse failed: {exc}", line=lineno)
             continue
         if not isinstance(loaded, dict):
-            print(f"[{SKILL_NAME}] skipping line {lineno}: expected JSON object", file=sys.stderr)
+            emit_stderr_event(SKILL_NAME, level="warning", event="invalid_json_shape",
+                              message=f"skipping line {lineno}: expected JSON object", line=lineno)
             continue
         records.append(loaded)
     return records

@@ -8,7 +8,7 @@ get OCSF out the other side?"** The rows below are the canonical answer at
 HEAD; the not-yet-shipped rows below distinguish active tracking issues from
 explicit follow-on gaps.
 
-## Currently shipped — 22 ingest skills
+## Currently shipped — 25 ingest skills
 
 | Vendor | Source signal | OCSF 1.8 class | Skill |
 |---|---|---|---|

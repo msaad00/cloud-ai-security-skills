@@ -60,8 +60,8 @@ def test_ocsf_envelope_shape():
     )
     assert event["class_uid"] == API_ACTIVITY_CLASS_UID
     assert event["category_uid"] == 6
-    assert event["type_uid"] == 600301
-    assert event["activity_id"] == 1
+    assert event["type_uid"] == 600302  # Read (secrets.getSecret is a read operation)
+    assert event["activity_id"] == 2
     assert event["metadata"]["version"] == "1.8.0"
     assert event["metadata"]["uid"] == "req-1"
     assert event["metadata"]["product"]["feature"]["name"] == SKILL_NAME

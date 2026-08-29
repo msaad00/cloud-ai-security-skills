@@ -296,7 +296,7 @@ class TestDetect:
     def test_rejects_unsupported_output_format(self):
         try:
             list(detect([], output_format="bridge"))
-        except ValueError as exc:
+        except Exception as exc:
             assert "unsupported output_format" in str(exc)
         else:
             raise AssertionError("expected unsupported output_format to raise")
