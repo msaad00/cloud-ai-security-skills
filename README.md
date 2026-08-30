@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.11.0-0ea5e9"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.12.0--dev-0ea5e9"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache_2.0-blue"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue"></a>
   <a href="https://schema.ocsf.io/1.8.0"><img alt="OCSF 1.8" src="https://img.shields.io/badge/OCSF-1.8-22d3ee"></a>
@@ -10,6 +10,12 @@
 </p>
 
 <p align="center"><strong>134 deterministic security skills for cloud &amp; AI infrastructure.</strong> Ingest, detect, evaluate, remediate — one bundle on CLI, CI, MCP, webhook, library, and runners.</p>
+
+<p align="center">
+  <strong>Security engineer?</strong> Start at <a href="docs/QUICKSTART.md"><code>docs/QUICKSTART.md</code></a> — first finding in 30 seconds, no cloud creds required. &nbsp;|&nbsp;
+  <strong>AI / agent developer?</strong> Wire MCP in <a href="docs/AGENT_QUICKSTART.md"><code>docs/AGENT_QUICKSTART.md</code></a>. &nbsp;|&nbsp;
+  <strong>Framework / compliance?</strong> See <a href="docs/FRAMEWORK_COVERAGE.md"><code>docs/FRAMEWORK_COVERAGE.md</code></a> for MITRE ATT&amp;CK, CIS, and NIST coverage.
+</p>
 
 ---
 
@@ -27,8 +33,9 @@
 ## Quickstart
 
 ```bash
-git clone --branch v0.11.0 https://github.com/msaad00/cloud-ai-security-skills.git
+git clone https://github.com/msaad00/cloud-ai-security-skills.git
 cd cloud-ai-security-skills
+# Install uv if needed: curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync --group dev --group aws   # see docs/INSTALL.md for other groups
 
 python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \

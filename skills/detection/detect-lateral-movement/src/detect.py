@@ -28,6 +28,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.env import env_int  # noqa: E402
+from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 
 SKILL_NAME = "detect-lateral-movement"
@@ -70,7 +71,9 @@ NET_ACTIVITY_ACCEPT = 6
 # Correlation window: 15 minutes post-anchor
 CORRELATION_WINDOW_MS = 15 * 60 * 1000
 
-# Byte threshold — filter out scan probes / 3-way handshake noise
+# Byte threshold — filter out scan probes / 3-way handshake noise.
+# Default of 1024 is intentionally low; noisy environments should raise via env-var:
+#   DETECT_LATERAL_MOVEMENT_MIN_BYTES=10240
 MIN_BYTES = 1024
 OUTPUT_FORMATS = ("ocsf", "native")
 WINDOW_ENV = "DETECT_LATERAL_MOVEMENT_WINDOW_MS"
@@ -654,6 +657,7 @@ def detect(
             candidate_flows.append(ev)
 
     identity_anchors.sort(key=lambda event: int(event["time_ms"]))
+    candidate_flows.sort(key=lambda e: int(e["time_ms"]))
     indexed_flows = _index_candidate_flows(candidate_flows)
 
     seen: set[str] = set()
@@ -786,6 +790,16 @@ def main(argv: list[str] | None = None) -> int:
         events = list(load_jsonl(in_stream))
         for finding in detect(events, output_format=args.output_format):
             out_stream.write(json.dumps(finding, separators=(",", ":")) + "\n")
+    except SkillError as exc:
+        return emit_error(SKILL_NAME, exc)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return emit_error(
+            SKILL_NAME,
+            ContractError(
+                f"input is not JSONL: {exc}",
+                hint="ensure each input line is a valid JSON object from ingest-vpc-flow-logs-ocsf or ingest-cloudtrail-ocsf",
+            ),
+        )
     finally:
         if args.input:
             in_stream.close()

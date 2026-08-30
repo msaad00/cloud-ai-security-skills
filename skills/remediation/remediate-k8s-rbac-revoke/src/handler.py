@@ -527,21 +527,86 @@ def revoke_binding(
     return record
 
 
-def reverify_revocation(target: Target, *, kube_client: KubernetesClient) -> dict[str, Any]:
+def _build_drift_ocsf_finding(target: Target, *, checked_at_ms: int) -> dict[str, Any]:
+    """Emit an OCSF 1.8 Detection Finding (2004) when RBAC drift is detected on re-verify.
+
+    This is the same envelope shape as build_drift_finding() in _shared/remediation_verifier.py
+    but constructed locally to avoid threading RemediationReference through the k8s skill's
+    native Target pattern.
+    """
+    target_id = f"{target.binding_type}/{target.binding_name}"
+    finding_uid = (
+        "drift-"
+        + hashlib.sha256(f"{SKILL_NAME}|{target.finding_uid}|{target_id}".encode()).hexdigest()[:16]
+    )
+    return {
+        "activity_id": 1,
+        "category_uid": 2,
+        "category_name": "Findings",
+        "class_uid": 2004,
+        "class_name": "Detection Finding",
+        "type_uid": 200401,
+        "severity_id": 4,
+        "status_id": 1,
+        "time": checked_at_ms,
+        "metadata": {
+            "version": "1.8.0",
+            "uid": finding_uid,
+            "product": {
+                "name": "cloud-ai-security-skills",
+                "vendor_name": "msaad00/cloud-ai-security-skills",
+                "feature": {"name": SKILL_NAME},
+            },
+            "labels": ["remediation", "drift", "verification"],
+        },
+        "finding_info": {
+            "uid": finding_uid,
+            "title": f"Remediation drift: Kubernetes {target_id} still present after revocation",
+            "desc": (
+                f"{SKILL_NAME} previously deleted {target_id} for actor {target.actor!r}. "
+                f"Re-verification at {checked_at_ms} found the binding still present. "
+                "Either the deletion did not land, it was re-created out of band, or the "
+                "audit trail is ahead of the Kubernetes API."
+            ),
+            "types": ["remediation-drift"],
+            "first_seen_time": checked_at_ms,
+            "last_seen_time": checked_at_ms,
+        },
+        "observables": [
+            {"name": "remediation.skill", "type": "Other", "value": SKILL_NAME},
+            {"name": "target.provider", "type": "Other", "value": "Kubernetes"},
+            {"name": "target.identifier", "type": "Other", "value": target_id},
+            {"name": "original.finding_uid", "type": "Other", "value": target.finding_uid},
+            {"name": "target.actor", "type": "Other", "value": target.actor},
+        ],
+        "evidence": {
+            "expected_state": "binding deleted",
+            "actual_state": f"{target_id} still present",
+            "rule": target.rule,
+        },
+    }
+
+
+def reverify_revocation(target: Target, *, kube_client: KubernetesClient) -> list[dict[str, Any]]:
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+
     if target.binding_type == "clusterrolebindings":
         existing = kube_client.get_cluster_role_binding(target.binding_name)
     else:
         existing = kube_client.get_role_binding(target.namespace, target.binding_name)
 
     if existing is None:
-        return _verification_record(
-            target, status=STATUS_VERIFIED, detail="binding no longer present"
-        )
-    return _verification_record(
+        return [
+            _verification_record(target, status=STATUS_VERIFIED, detail="binding no longer present")
+        ]
+
+    verification = _verification_record(
         target,
         status=STATUS_DRIFT,
         detail=f"{target.binding_type}/{target.binding_name} still present after revocation",
     )
+    drift_finding = _build_drift_ocsf_finding(target, checked_at_ms=now_ms)
+    return [verification, drift_finding]
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
@@ -651,7 +716,7 @@ def run(
             continue
 
         if reverify:
-            yield reverify_revocation(target, kube_client=kube_client)
+            yield from reverify_revocation(target, kube_client=kube_client)
             continue
 
         if not apply:

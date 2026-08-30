@@ -52,7 +52,8 @@ API_ACTIVITY_CLASS_NAME = "API Activity"
 API_ACTIVITY_CATEGORY_UID = 6
 API_ACTIVITY_CATEGORY_NAME = "Application Activity"
 API_ACTIVITY_CREATE = 1
-API_ACTIVITY_TYPE_UID = API_ACTIVITY_CLASS_UID * 100 + API_ACTIVITY_CREATE
+API_ACTIVITY_READ = 2
+API_ACTIVITY_UPDATE = 3
 
 SEVERITY_INFORMATIONAL = 1
 STATUS_SUCCESS = 1
@@ -321,60 +322,91 @@ def _group_block(rp: dict[str, Any], rr: dict[str, Any], ws: str) -> dict[str, A
 
 
 class OperationSpec:
-    __slots__ = ("operation", "service_name", "builder")
+    __slots__ = ("operation", "service_name", "builder", "activity_id")
 
-    def __init__(self, operation: str, service_name: str, builder: BlockBuilder) -> None:
+    def __init__(
+        self,
+        operation: str,
+        service_name: str,
+        builder: BlockBuilder,
+        activity_id: int = API_ACTIVITY_CREATE,
+    ) -> None:
         self.operation = operation
         self.service_name = service_name
         self.builder = builder
+        self.activity_id = activity_id
 
 
 OPERATION_REGISTRY: dict[tuple[str, str], OperationSpec] = {
-    ("clusters", "create"): OperationSpec("clusters.create", "databricks.clusters", _cluster_block),
-    ("clusters", "edit"): OperationSpec("clusters.edit", "databricks.clusters", _cluster_block),
+    ("clusters", "create"): OperationSpec(
+        "clusters.create", "databricks.clusters", _cluster_block, API_ACTIVITY_CREATE
+    ),
+    ("clusters", "edit"): OperationSpec(
+        "clusters.edit", "databricks.clusters", _cluster_block, API_ACTIVITY_UPDATE
+    ),
     ("secrets", "getsecret"): OperationSpec(
-        "secrets.getSecret", "databricks.secrets", _secret_block
+        "secrets.getSecret", "databricks.secrets", _secret_block, API_ACTIVITY_READ
     ),
     ("mlflowmodelregistry", "getmodelversiondownloaduri"): OperationSpec(
-        "mlflow.getModelVersionDownloadUri", "databricks.mlflow", _mlflow_download_block
+        "mlflow.getModelVersionDownloadUri",
+        "databricks.mlflow",
+        _mlflow_download_block,
+        API_ACTIVITY_READ,
     ),
     ("mlflow", "getmodelversiondownloaduri"): OperationSpec(
-        "mlflow.getModelVersionDownloadUri", "databricks.mlflow", _mlflow_download_block
+        "mlflow.getModelVersionDownloadUri",
+        "databricks.mlflow",
+        _mlflow_download_block,
+        API_ACTIVITY_READ,
     ),
     ("mlflowmodelregistry", "transitionmodelversionstage"): OperationSpec(
-        "mlflow.transitionModelVersionStage", "databricks.mlflow", _mlflow_transition_block
+        "mlflow.transitionModelVersionStage",
+        "databricks.mlflow",
+        _mlflow_transition_block,
+        API_ACTIVITY_UPDATE,
     ),
     ("mlflow", "transitionmodelversionstage"): OperationSpec(
-        "mlflow.transitionModelVersionStage", "databricks.mlflow", _mlflow_transition_block
+        "mlflow.transitionModelVersionStage",
+        "databricks.mlflow",
+        _mlflow_transition_block,
+        API_ACTIVITY_UPDATE,
     ),
     ("accounts", "generatedbtoken"): OperationSpec(
-        "tokens/create", "databricks.token-management", _token_block
+        "tokens/create", "databricks.token-management", _token_block, API_ACTIVITY_CREATE
     ),
     ("tokenmanagement", "createtoken"): OperationSpec(
-        "tokens/create", "databricks.token-management", _token_block
+        "tokens/create", "databricks.token-management", _token_block, API_ACTIVITY_CREATE
     ),
     ("unitycatalog", "createrecipient"): OperationSpec(
-        "unityCatalog.CreateRecipient", "databricks.unity-catalog", _recipient_block
+        "unityCatalog.CreateRecipient",
+        "databricks.unity-catalog",
+        _recipient_block,
+        API_ACTIVITY_CREATE,
     ),
     ("unitycatalog", "updaterecipient"): OperationSpec(
-        "unityCatalog.UpdateRecipient", "databricks.unity-catalog", _recipient_block
+        "unityCatalog.UpdateRecipient",
+        "databricks.unity-catalog",
+        _recipient_block,
+        API_ACTIVITY_UPDATE,
     ),
     ("unitycatalog", "createshare"): OperationSpec(
-        "unityCatalog.CreateShare", "databricks.unity-catalog", _share_block
+        "unityCatalog.CreateShare", "databricks.unity-catalog", _share_block, API_ACTIVITY_CREATE
     ),
     ("unitycatalog", "updateshare"): OperationSpec(
-        "unityCatalog.UpdateShare", "databricks.unity-catalog", _share_block
+        "unityCatalog.UpdateShare", "databricks.unity-catalog", _share_block, API_ACTIVITY_UPDATE
     ),
     ("accounts", "setadmin"): OperationSpec(
-        "accounts.setAdmin", "databricks.iam", _set_admin_block
+        "accounts.setAdmin", "databricks.iam", _set_admin_block, API_ACTIVITY_UPDATE
     ),
     ("accounts", "addusertogroup"): OperationSpec(
-        "iam.addUserToGroup", "databricks.iam", _group_block
+        "iam.addUserToGroup", "databricks.iam", _group_block, API_ACTIVITY_CREATE
     ),
     ("accounts", "addprincipaltogroup"): OperationSpec(
-        "iam.addUserToGroup", "databricks.iam", _group_block
+        "iam.addUserToGroup", "databricks.iam", _group_block, API_ACTIVITY_CREATE
     ),
-    ("iam", "addusertogroup"): OperationSpec("iam.addUserToGroup", "databricks.iam", _group_block),
+    ("iam", "addusertogroup"): OperationSpec(
+        "iam.addUserToGroup", "databricks.iam", _group_block, API_ACTIVITY_CREATE
+    ),
 }
 
 
@@ -454,12 +486,12 @@ def _build_ocsf(
 ) -> dict[str, Any]:
     uid = _record_uid(record)
     event: dict[str, Any] = {
-        "activity_id": API_ACTIVITY_CREATE,
+        "activity_id": spec.activity_id,
         "category_uid": API_ACTIVITY_CATEGORY_UID,
         "category_name": API_ACTIVITY_CATEGORY_NAME,
         "class_uid": API_ACTIVITY_CLASS_UID,
         "class_name": API_ACTIVITY_CLASS_NAME,
-        "type_uid": API_ACTIVITY_TYPE_UID,
+        "type_uid": API_ACTIVITY_CLASS_UID * 100 + spec.activity_id,
         "severity_id": SEVERITY_INFORMATIONAL,
         "status_id": _status_from_record(record),
         "time": parse_ts_ms(_get(record, "timestamp")),
