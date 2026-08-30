@@ -537,9 +537,7 @@ def _build_drift_ocsf_finding(target: Target, *, checked_at_ms: int) -> dict[str
     target_id = f"{target.binding_type}/{target.binding_name}"
     finding_uid = (
         "drift-"
-        + hashlib.sha256(
-            f"{SKILL_NAME}|{target.finding_uid}|{target_id}".encode()
-        ).hexdigest()[:16]
+        + hashlib.sha256(f"{SKILL_NAME}|{target.finding_uid}|{target_id}".encode()).hexdigest()[:16]
     )
     return {
         "activity_id": 1,
@@ -589,9 +587,7 @@ def _build_drift_ocsf_finding(target: Target, *, checked_at_ms: int) -> dict[str
     }
 
 
-def reverify_revocation(
-    target: Target, *, kube_client: KubernetesClient
-) -> list[dict[str, Any]]:
+def reverify_revocation(target: Target, *, kube_client: KubernetesClient) -> list[dict[str, Any]]:
     now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
 
     if target.binding_type == "clusterrolebindings":
@@ -600,7 +596,9 @@ def reverify_revocation(
         existing = kube_client.get_role_binding(target.namespace, target.binding_name)
 
     if existing is None:
-        return [_verification_record(target, status=STATUS_VERIFIED, detail="binding no longer present")]
+        return [
+            _verification_record(target, status=STATUS_VERIFIED, detail="binding no longer present")
+        ]
 
     verification = _verification_record(
         target,

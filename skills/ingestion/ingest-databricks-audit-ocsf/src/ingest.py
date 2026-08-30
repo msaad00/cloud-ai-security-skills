@@ -325,7 +325,11 @@ class OperationSpec:
     __slots__ = ("operation", "service_name", "builder", "activity_id")
 
     def __init__(
-        self, operation: str, service_name: str, builder: BlockBuilder, activity_id: int = API_ACTIVITY_CREATE
+        self,
+        operation: str,
+        service_name: str,
+        builder: BlockBuilder,
+        activity_id: int = API_ACTIVITY_CREATE,
     ) -> None:
         self.operation = operation
         self.service_name = service_name
@@ -334,22 +338,38 @@ class OperationSpec:
 
 
 OPERATION_REGISTRY: dict[tuple[str, str], OperationSpec] = {
-    ("clusters", "create"): OperationSpec("clusters.create", "databricks.clusters", _cluster_block, API_ACTIVITY_CREATE),
-    ("clusters", "edit"): OperationSpec("clusters.edit", "databricks.clusters", _cluster_block, API_ACTIVITY_UPDATE),
+    ("clusters", "create"): OperationSpec(
+        "clusters.create", "databricks.clusters", _cluster_block, API_ACTIVITY_CREATE
+    ),
+    ("clusters", "edit"): OperationSpec(
+        "clusters.edit", "databricks.clusters", _cluster_block, API_ACTIVITY_UPDATE
+    ),
     ("secrets", "getsecret"): OperationSpec(
         "secrets.getSecret", "databricks.secrets", _secret_block, API_ACTIVITY_READ
     ),
     ("mlflowmodelregistry", "getmodelversiondownloaduri"): OperationSpec(
-        "mlflow.getModelVersionDownloadUri", "databricks.mlflow", _mlflow_download_block, API_ACTIVITY_READ
+        "mlflow.getModelVersionDownloadUri",
+        "databricks.mlflow",
+        _mlflow_download_block,
+        API_ACTIVITY_READ,
     ),
     ("mlflow", "getmodelversiondownloaduri"): OperationSpec(
-        "mlflow.getModelVersionDownloadUri", "databricks.mlflow", _mlflow_download_block, API_ACTIVITY_READ
+        "mlflow.getModelVersionDownloadUri",
+        "databricks.mlflow",
+        _mlflow_download_block,
+        API_ACTIVITY_READ,
     ),
     ("mlflowmodelregistry", "transitionmodelversionstage"): OperationSpec(
-        "mlflow.transitionModelVersionStage", "databricks.mlflow", _mlflow_transition_block, API_ACTIVITY_UPDATE
+        "mlflow.transitionModelVersionStage",
+        "databricks.mlflow",
+        _mlflow_transition_block,
+        API_ACTIVITY_UPDATE,
     ),
     ("mlflow", "transitionmodelversionstage"): OperationSpec(
-        "mlflow.transitionModelVersionStage", "databricks.mlflow", _mlflow_transition_block, API_ACTIVITY_UPDATE
+        "mlflow.transitionModelVersionStage",
+        "databricks.mlflow",
+        _mlflow_transition_block,
+        API_ACTIVITY_UPDATE,
     ),
     ("accounts", "generatedbtoken"): OperationSpec(
         "tokens/create", "databricks.token-management", _token_block, API_ACTIVITY_CREATE
@@ -358,10 +378,16 @@ OPERATION_REGISTRY: dict[tuple[str, str], OperationSpec] = {
         "tokens/create", "databricks.token-management", _token_block, API_ACTIVITY_CREATE
     ),
     ("unitycatalog", "createrecipient"): OperationSpec(
-        "unityCatalog.CreateRecipient", "databricks.unity-catalog", _recipient_block, API_ACTIVITY_CREATE
+        "unityCatalog.CreateRecipient",
+        "databricks.unity-catalog",
+        _recipient_block,
+        API_ACTIVITY_CREATE,
     ),
     ("unitycatalog", "updaterecipient"): OperationSpec(
-        "unityCatalog.UpdateRecipient", "databricks.unity-catalog", _recipient_block, API_ACTIVITY_UPDATE
+        "unityCatalog.UpdateRecipient",
+        "databricks.unity-catalog",
+        _recipient_block,
+        API_ACTIVITY_UPDATE,
     ),
     ("unitycatalog", "createshare"): OperationSpec(
         "unityCatalog.CreateShare", "databricks.unity-catalog", _share_block, API_ACTIVITY_CREATE
@@ -378,7 +404,9 @@ OPERATION_REGISTRY: dict[tuple[str, str], OperationSpec] = {
     ("accounts", "addprincipaltogroup"): OperationSpec(
         "iam.addUserToGroup", "databricks.iam", _group_block, API_ACTIVITY_CREATE
     ),
-    ("iam", "addusertogroup"): OperationSpec("iam.addUserToGroup", "databricks.iam", _group_block, API_ACTIVITY_CREATE),
+    ("iam", "addusertogroup"): OperationSpec(
+        "iam.addUserToGroup", "databricks.iam", _group_block, API_ACTIVITY_CREATE
+    ),
 }
 
 

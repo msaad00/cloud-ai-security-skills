@@ -347,12 +347,22 @@ def load_jsonl(path: str | None) -> list[dict[str, Any]]:
         try:
             loaded = json.loads(stripped)
         except json.JSONDecodeError as exc:
-            emit_stderr_event(SKILL_NAME, level="warning", event="json_parse_failed",
-                              message=f"skipping line {lineno}: json parse failed: {exc}", line=lineno)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="json_parse_failed",
+                message=f"skipping line {lineno}: json parse failed: {exc}",
+                line=lineno,
+            )
             continue
         if not isinstance(loaded, dict):
-            emit_stderr_event(SKILL_NAME, level="warning", event="invalid_json_shape",
-                              message=f"skipping line {lineno}: expected JSON object", line=lineno)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="invalid_json_shape",
+                message=f"skipping line {lineno}: expected JSON object",
+                line=lineno,
+            )
             continue
         records.append(loaded)
     return records

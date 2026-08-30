@@ -311,14 +311,24 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as e:
-            emit_stderr_event(SKILL_NAME, level="warning", event="json_parse_failed",
-                              message=f"skipping line {lineno}: json parse failed: {e}", line=lineno)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="json_parse_failed",
+                message=f"skipping line {lineno}: json parse failed: {e}",
+                line=lineno,
+            )
             continue
         if isinstance(obj, dict):
             yield obj
         else:
-            emit_stderr_event(SKILL_NAME, level="warning", event="invalid_json_shape",
-                              message=f"skipping line {lineno}: not a JSON object", line=lineno)
+            emit_stderr_event(
+                SKILL_NAME,
+                level="warning",
+                event="invalid_json_shape",
+                message=f"skipping line {lineno}: not a JSON object",
+                line=lineno,
+            )
 
 
 def main(argv: list[str] | None = None) -> int:
