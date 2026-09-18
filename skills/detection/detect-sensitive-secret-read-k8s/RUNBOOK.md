@@ -82,5 +82,5 @@ Or, for permanent additions, edit `SENSITIVE_NAME_PATTERNS` directly and re-run 
 ## Related
 
 - [`detect-privilege-escalation-k8s`](../detect-privilege-escalation-k8s/) — Rule 1 catches enumeration-then-read; this skill catches targeted reads
-- [`ingest-k8s-audit-ocsf`](../ingest-k8s-audit-ocsf/) — the upstream producer
+- [`ingest-k8s-audit-ocsf`](../../ingestion/ingest-k8s-audit-ocsf/) — the upstream producer
 - [Kubernetes Secrets best practices](https://kubernetes.io/docs/concepts/configuration/secret/#best-practices) — why mounting as files is the intended pattern

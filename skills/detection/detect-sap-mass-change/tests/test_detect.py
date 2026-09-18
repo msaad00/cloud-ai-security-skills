@@ -48,6 +48,31 @@ def test_detects_mass_change_in_window(monkeypatch) -> None:
     assert findings[0]["mitre_attacks"][0]["technique_uid"] == "T1565"
 
 
+def test_finding_uid_deterministic_when_event_time_missing(monkeypatch) -> None:
+    """Regression: events with no `time` field must bucket deterministically.
+
+    detect() used to fall back to wall-clock `_now_ms()` when an event's
+    time was missing, and that value fed straight into the window bucket
+    key (and therefore into `finding_uid`). Replaying the exact same input
+    at two different wall-clock times must produce byte-identical findings
+    so SIEM dedupe/replay is safe.
+    """
+    monkeypatch.setenv("SAP_MASS_CHANGE_EVENT_THRESHOLD", "20")
+    event = _event(30)
+    del event["time"]
+    stream = json.dumps(event) + "\n"
+
+    monkeypatch.setattr(detect_mod, "_now_ms", lambda: 1_000_000_000_000)
+    findings_a = detect_mod.detect(StringIO(stream), output_format="native")
+
+    monkeypatch.setattr(detect_mod, "_now_ms", lambda: 2_000_000_000_000)
+    findings_b = detect_mod.detect(StringIO(stream), output_format="native")
+
+    assert len(findings_a) == 1
+    assert findings_a == findings_b
+    assert findings_a[0]["finding_uid"] == findings_b[0]["finding_uid"]
+
+
 def test_ignores_non_sensitive_transaction(monkeypatch) -> None:
     monkeypatch.setenv("SAP_MASS_CHANGE_EVENT_THRESHOLD", "1")
 

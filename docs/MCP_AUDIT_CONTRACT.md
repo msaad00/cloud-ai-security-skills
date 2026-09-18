@@ -108,16 +108,24 @@ Required top-level fields:
 | `caller_skill_scope_count` | integer | number of distinct non-empty skills in the caller scope |
 | `caller_skill_scope_hash` | string | SHA-256 of the sorted caller skill scope, or empty string when absent |
 | `approval_context_provided` | boolean | whether `_approval_context` was supplied |
+| `approval_count` | integer | number of distinct approvers resolved from `_approval_context` (`approver_ids` / `approver_emails`, falling back to the single `approver_id` / `approver_email` fields) |
 | `caller_id` | string | `user_id` from `_caller_context`, or empty string |
 | `caller_session_id` | string | `session_id` from `_caller_context`, or empty string |
 | `approval_ticket` | string | `ticket_id` from `_approval_context`, or empty string |
 | `result` | string | `pending`, `success`, or `error` |
 | `duration_ms` | integer | wall-clock duration of the wrapper invocation |
 
-Conditionally present fields:
+Conditionally present fields. The first four are set once the wrapper's
+write-mode / approval gates pass and it starts preparing the subprocess
+(absent when a gating check raises first); the event is always emitted
+from the `finally` block with whatever fields were populated so far:
 
 | Field | Present when | Meaning |
 |---|---|---|
+| `timeout_seconds` | gates passed | resolved subprocess timeout — the default, a per-skill `mcp_timeout_seconds`, or the `CLOUD_SECURITY_MCP_TIMEOUT_SECONDS` env override, per [server README](../mcp-server/README.md#L59) |
+| `resource_limits` | gates passed | object with `max_bytes`, `max_file_bytes`, `max_processes`, `cpu_seconds` — the resolved `RLIMIT_*` caps for this call (see [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)) |
+| `sandboxed` | gates passed | boolean — whether the resolved command was actually wrapped in `bwrap` / `sandbox-exec` (Layer 2 of [RUNTIME_ISOLATION.md](RUNTIME_ISOLATION.md)) |
+| `worker_mode_used` | gates passed | boolean — whether the call ran on the warm worker-pool path instead of a fresh one-shot subprocess (see [PERFORMANCE.md](PERFORMANCE.md)) |
 | `exit_code` | the subprocess completed and returned a code | wrapped skill exit status |
 | `error_type` | an exception was raised before the wrapper could finish normally | Python exception class name |
 | `error_message` | an exception was raised before the wrapper could finish normally | stringified exception message |
@@ -271,7 +279,7 @@ spec meaning.
 | `-32001` | `ERROR_TOOL_TIMEOUT` | skill subprocess exceeded the resolved timeout |
 | `-32002` | `ERROR_TOOL_NOT_ALLOWED` | reserved for future explicit allowlist denials |
 | `-32003` | `ERROR_APPROVAL_REQUIRED` | reserved for future approval-context errors |
-| `-32004` | `ERROR_TOOL_CRASHED` | reserved for future non-timeout subprocess failures |
+| `-32004` | `ERROR_TOOL_CRASHED` | any non-timeout failure raised while dispatching a tool call (failed subprocess/worker spawn, worker-pool shutdown race, or any other unexpected exception) — a catch-all so one bad call always returns a clean JSON-RPC error instead of crashing the transport loop |
 
 Constants live in `mcp-server/src/server.py`. Update this table whenever a new
 code is reserved or a placeholder is wired in.

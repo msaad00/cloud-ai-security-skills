@@ -87,4 +87,4 @@ python src/ingest.py --output-format native /var/log/k8s-audit.log > k8s-audit.n
 
 ## Tests
 
-Golden fixture parity against [`../golden/k8s_audit_raw_sample.jsonl`](../golden/k8s_audit_raw_sample.jsonl) → [`../golden/k8s_audit_sample.ocsf.jsonl`](../golden/k8s_audit_sample.ocsf.jsonl).
+Golden fixture parity against [`../../detection-engineering/golden/k8s_audit_raw_sample.jsonl`](../../detection-engineering/golden/k8s_audit_raw_sample.jsonl) → [`../../detection-engineering/golden/k8s_audit_sample.ocsf.jsonl`](../../detection-engineering/golden/k8s_audit_sample.ocsf.jsonl).

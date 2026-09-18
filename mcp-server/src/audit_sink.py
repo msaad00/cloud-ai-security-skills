@@ -120,6 +120,35 @@ class AuditSink:
             os.close(fd)
 
 
+_LAST_LINE_MAX_SCAN_BYTES = 8 * 1024 * 1024  # hard cap so a corrupt file can't hang the scan
+
+
+def _read_last_line(path: Path) -> bytes:
+    """Read the last newline-terminated line of `path`.
+
+    Walks backwards in growing chunks until a newline is found (or the
+    whole file / `_LAST_LINE_MAX_SCAN_BYTES` is exhausted) instead of
+    assuming any fixed line length — a single audit event can exceed a
+    small fixed lookback (e.g. a large `caller_skill_scope` allowlist),
+    and truncating it would silently look like "no previous event" and
+    restart the HMAC chain from genesis.
+    """
+    with path.open("rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        if size == 0:
+            return b""
+        chunk_size = 4096
+        while True:
+            read_size = min(chunk_size, size, _LAST_LINE_MAX_SCAN_BYTES)
+            fh.seek(size - read_size, os.SEEK_SET)
+            tail = fh.read(read_size)
+            lines = tail.splitlines()
+            if len(lines) > 1 or read_size >= size or read_size >= _LAST_LINE_MAX_SCAN_BYTES:
+                return lines[-1] if lines else b""
+            chunk_size *= 2
+
+
 def _read_last_chain_hash(path: Path) -> str | None:
     """Read the last line of `path`, parse it, and return its `chain_hash`.
 
@@ -128,17 +157,7 @@ def _read_last_chain_hash(path: Path) -> str | None:
     server restarts so verifiers see one continuous chain.
     """
     try:
-        with path.open("rb") as fh:
-            fh.seek(0, os.SEEK_END)
-            size = fh.tell()
-            if size == 0:
-                return None
-            # Walk backwards until we find a newline preceded by content.
-            # 4KB lookback covers our 1-2KB events comfortably.
-            chunk_size = min(size, 4096)
-            fh.seek(size - chunk_size, os.SEEK_SET)
-            tail = fh.read(chunk_size)
-        last_line = tail.splitlines()[-1] if tail else b""
+        last_line = _read_last_line(path)
         if not last_line:
             return None
         record = json.loads(last_line.decode("utf-8"))

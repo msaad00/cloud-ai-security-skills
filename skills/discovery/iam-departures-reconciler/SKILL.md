@@ -4,8 +4,9 @@ description: >-
   Build a deterministic IAM departures manifest from HR termination sources
   before any cloud-specific remediation runs. Reconciles Workday, Snowflake,
   Databricks, or ClickHouse termination data into one canonical departure
-  record shape, applies rehire and grace-window filters, and emits the exact
-  manifest body consumed by the IAM departures write paths. Use when the user
+  record shape, applies rehire filters, and emits the exact manifest body
+  consumed by the IAM departures write paths — grace-window enforcement is a
+  gate in those downstream write paths, not in this manifest step. Use when the user
   mentions identify departures, build an offboarding manifest, or reconcile
   HR terminations against IAM before cleanup. Do NOT use this skill to delete
   users, revoke credentials, or execute cloud remediation — use the
@@ -41,9 +42,12 @@ metadata:
 # iam-departures-reconciler
 
 Read-only planner for IAM departures. It normalizes HR termination records,
-applies the shipped rehire and grace-window rules, performs deterministic
-change detection, and emits the manifest JSON consumed by the cloud-specific
-IAM departures write paths.
+applies the shipped rehire rules, performs deterministic change detection,
+and emits the manifest JSON consumed by the cloud-specific IAM departures
+write paths. Grace-window enforcement (the human-in-the-loop delay before
+any mutation) is applied downstream by those write paths, not by this
+manifest step — see each `iam-departures-*` remediation skill's own
+`SKILL.md` for its grace-period gate.
 
 ## Use when
 

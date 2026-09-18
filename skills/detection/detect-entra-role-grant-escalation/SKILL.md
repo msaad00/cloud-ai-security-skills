@@ -89,11 +89,11 @@ OCSF output includes:
 ## Usage
 
 ```bash
-python ../ingest-entra-directory-audit-ocsf/src/ingest.py entra-directory-audit.json \
+python ../../ingestion/ingest-entra-directory-audit-ocsf/src/ingest.py entra-directory-audit.json \
   | python src/detect.py \
   > entra-role-grant-findings.ocsf.jsonl
 
-python ../ingest-entra-directory-audit-ocsf/src/ingest.py entra-directory-audit.json --output-format native \
+python ../../ingestion/ingest-entra-directory-audit-ocsf/src/ingest.py entra-directory-audit.json --output-format native \
   | python src/detect.py --output-format native \
   > entra-role-grant-findings.native.jsonl
 ```

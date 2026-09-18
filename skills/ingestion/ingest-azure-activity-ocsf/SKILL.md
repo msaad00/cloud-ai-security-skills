@@ -143,4 +143,4 @@ az monitor activity-log list --offset 1h --output json \
 
 ## Tests
 
-Golden fixture parity against [`../golden/azure_activity_raw_sample.jsonl`](../golden/azure_activity_raw_sample.jsonl) → [`../golden/azure_activity_sample.ocsf.jsonl`](../golden/azure_activity_sample.ocsf.jsonl).
+Golden fixture parity against [`../../detection-engineering/golden/azure_activity_raw_sample.jsonl`](../../detection-engineering/golden/azure_activity_raw_sample.jsonl) → [`../../detection-engineering/golden/azure_activity_sample.ocsf.jsonl`](../../detection-engineering/golden/azure_activity_sample.ocsf.jsonl).

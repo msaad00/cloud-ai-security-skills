@@ -112,23 +112,23 @@ One OCSF Detection Finding (class `2004`) per `(actor, namespace, secret_name)` 
 
 ```bash
 # Piped from ingest-k8s-audit-ocsf
-python ../ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
   | python src/detect.py \
   > findings.ocsf.jsonl
 
 # Native end-to-end path
-python ../ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
   | python src/detect.py --output-format native \
   > findings.native.jsonl
 
 # With custom patterns
-python ../ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
   | python src/detect.py --sensitive-pattern "stripe-*" --sensitive-pattern "*-mfa-seed"
 ```
 
 ## Tests
 
-Golden fixture parity against [`../golden/k8s_sensitive_secret_read_sample.ocsf.jsonl`](../golden/k8s_sensitive_secret_read_sample.ocsf.jsonl) → [`../golden/k8s_sensitive_secret_read_findings.ocsf.jsonl`](../golden/k8s_sensitive_secret_read_findings.ocsf.jsonl). Plus unit tests for each pattern category (credential / token / API key / cloud creds / TLS / root CA), the `watch`-verb negative control, non-sensitive-name negative controls, custom pattern injection, and deterministic finding UIDs.
+Golden fixture parity against [`../../detection-engineering/golden/k8s_sensitive_secret_read_sample.ocsf.jsonl`](../../detection-engineering/golden/k8s_sensitive_secret_read_sample.ocsf.jsonl) → [`../../detection-engineering/golden/k8s_sensitive_secret_read_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_sensitive_secret_read_findings.ocsf.jsonl). Plus unit tests for each pattern category (credential / token / API key / cloud creds / TLS / root CA), the `watch`-verb negative control, non-sensitive-name negative controls, custom pattern injection, and deterministic finding UIDs.
 
 ## See also
 

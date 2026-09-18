@@ -93,4 +93,4 @@ Or via the GitHub Action `github/codeql-action/upload-sarif@v3` in CI — same p
 
 ## Tests
 
-Golden fixture parity: runs the K8s priv-esc golden findings (`../golden/k8s_priv_esc_findings.ocsf.jsonl`) through the converter and asserts the output matches a frozen SARIF golden (`../golden/k8s_priv_esc_findings.sarif`). Plus unit tests for severity mapping, MITRE rule deduplication, multi-finding handling, and edge cases (missing attacks, missing observables, empty input).
+Golden fixture parity: runs the K8s priv-esc golden findings (`../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl`) through the converter and asserts the output matches a frozen SARIF golden (`../../detection-engineering/golden/k8s_priv_esc_findings.sarif`). Plus unit tests for severity mapping, MITRE rule deduplication, multi-finding handling, and edge cases (missing attacks, missing observables, empty input).

@@ -93,11 +93,11 @@ OCSF output includes:
 ## Usage
 
 ```bash
-python ../ingest-okta-system-log-ocsf/src/ingest.py okta-system-log.json \
+python ../../ingestion/ingest-okta-system-log-ocsf/src/ingest.py okta-system-log.json \
   | python src/detect.py \
   > okta-mfa-fatigue-findings.ocsf.jsonl
 
-python ../ingest-okta-system-log-ocsf/src/ingest.py okta-system-log.json --output-format native \
+python ../../ingestion/ingest-okta-system-log-ocsf/src/ingest.py okta-system-log.json --output-format native \
   | python src/detect.py --output-format native \
   > okta-mfa-fatigue-findings.native.jsonl
 ```

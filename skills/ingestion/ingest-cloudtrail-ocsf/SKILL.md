@@ -40,7 +40,7 @@ Reads either of the two CloudTrail layouts that are emitted by the AWS service:
 
 The skill auto-detects which shape it's looking at and unwraps `Records` if present.
 
-By default it writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning that every OCSF event matches.
+By default it writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid: 6`). See [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) for the field-level pinning that every OCSF event matches.
 
 When `--output-format native` is selected, it emits the same event in the repo's native enriched shape with stable `event_uid`, normalized provider/account/operation/status fields, and preserved actor/session/source context, but without the OCSF envelope fields.
 
@@ -63,4 +63,4 @@ aws s3 cp s3://my-cloudtrail-bucket/AWSLogs/.../recent.json.gz - | gunzip | pyth
 
 ## Tests
 
-`tests/test_ingest.py` runs the ingester against [`../golden/cloudtrail_raw_sample.jsonl`](../golden/cloudtrail_raw_sample.jsonl) and asserts deep-equality against [`../golden/cloudtrail_sample.ocsf.jsonl`](../golden/cloudtrail_sample.ocsf.jsonl) with volatile fields scrubbed. Plus unit tests for the activity_id mapping table, status_id detection, and Records-wrapper auto-detection.
+`tests/test_ingest.py` runs the ingester against [`../../detection-engineering/golden/cloudtrail_raw_sample.jsonl`](../../detection-engineering/golden/cloudtrail_raw_sample.jsonl) and asserts deep-equality against [`../../detection-engineering/golden/cloudtrail_sample.ocsf.jsonl`](../../detection-engineering/golden/cloudtrail_sample.ocsf.jsonl) with volatile fields scrubbed. Plus unit tests for the activity_id mapping table, status_id detection, and Records-wrapper auto-detection.

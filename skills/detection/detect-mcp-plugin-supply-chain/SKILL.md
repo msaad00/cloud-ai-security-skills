@@ -86,7 +86,7 @@ OCSF output populates:
 
 ```bash
 MCP_PLUGIN_ALLOWED_HOSTS="schema.openai.com,registry.modelcontextprotocol.io" \
-  python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+  python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
   | python src/detect.py \
   > plugin-supply-chain-findings.ocsf.jsonl
 ```

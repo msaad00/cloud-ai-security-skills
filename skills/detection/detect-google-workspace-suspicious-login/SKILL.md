@@ -85,11 +85,11 @@ OCSF output includes:
 ## Usage
 
 ```bash
-python ../ingest-google-workspace-login-ocsf/src/ingest.py workspace-login.json \
+python ../../ingestion/ingest-google-workspace-login-ocsf/src/ingest.py workspace-login.json \
   | python src/detect.py \
   > workspace-suspicious-login-findings.ocsf.jsonl
 
-python ../ingest-google-workspace-login-ocsf/src/ingest.py workspace-login.json --output-format native \
+python ../../ingestion/ingest-google-workspace-login-ocsf/src/ingest.py workspace-login.json --output-format native \
   | python src/detect.py --output-format native \
   > workspace-suspicious-login-findings.native.jsonl
 ```

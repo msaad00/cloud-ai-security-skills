@@ -192,7 +192,7 @@ GitHub vendor story.
 
 ## See also
 
-- [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) — shared OCSF wire contract
+- [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) — shared OCSF wire contract
   and version pinning
 - [`../ingest-okta-system-log-ocsf/SKILL.md`](../ingest-okta-system-log-ocsf/SKILL.md)
   — canonical multi-class IAM ingester template this skill mirrors

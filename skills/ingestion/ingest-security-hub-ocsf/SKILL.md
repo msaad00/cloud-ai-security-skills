@@ -36,7 +36,7 @@ Reads any of the three shapes Security Hub emits:
 2. **BatchImportFindings / GetFindings wrapper** — top-level `{"Findings": [...]}` (the format from `aws securityhub get-findings` or from `BatchImportFindings` request bodies)
 3. **EventBridge event envelope** — top-level `{"detail-type": "Security Hub Findings - Imported", "detail": {"findings": [...]}, ...}`; the skill auto-unwraps `detail.findings`.
 
-Writes OCSF 1.8 **Detection Finding** (`class_uid: 2004`, `category_uid: 2`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning every event matches.
+Writes OCSF 1.8 **Detection Finding** (`class_uid: 2004`, `category_uid: 2`). See [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) for the field-level pinning every event matches.
 
 When `--output-format native` is selected, it emits the same finding in the repo's native enriched shape with stable `event_uid`, normalized provider/account/severity fields, MITRE ATT&CK annotations, preserved compliance/resource context, and no OCSF envelope fields.
 
@@ -57,9 +57,9 @@ python src/ingest.py asff.json --output-format native > asff.native.jsonl
 aws securityhub get-findings --max-results 100 | python src/ingest.py
 
 # Piped downstream to SARIF
-python src/ingest.py asff.json | python ../convert-ocsf-to-sarif/src/convert.py > asff.sarif
+python src/ingest.py asff.json | python ../../view/convert-ocsf-to-sarif/src/convert.py > asff.sarif
 ```
 
 ## Tests
 
-`tests/test_ingest.py` runs the ingester against [`../golden/security_hub_raw_sample.json`](../golden/security_hub_raw_sample.json) and asserts deep-equality against [`../golden/security_hub_sample.ocsf.jsonl`](../golden/security_hub_sample.ocsf.jsonl). Plus unit tests for ASFF validation (every required field), Label vs Normalized severity precedence, Types[] MITRE extraction, ProductFields MITRE extraction, BatchImport wrapper unwrapping, and EventBridge envelope unwrapping.
+`tests/test_ingest.py` runs the ingester against [`../../detection-engineering/golden/security_hub_raw_sample.json`](../../detection-engineering/golden/security_hub_raw_sample.json) and asserts deep-equality against [`../../detection-engineering/golden/security_hub_sample.ocsf.jsonl`](../../detection-engineering/golden/security_hub_sample.ocsf.jsonl). Plus unit tests for ASFF validation (every required field), Label vs Normalized severity precedence, Types[] MITRE extraction, ProductFields MITRE extraction, BatchImport wrapper unwrapping, and EventBridge envelope unwrapping.

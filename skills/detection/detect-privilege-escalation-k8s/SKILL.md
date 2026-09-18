@@ -69,7 +69,7 @@ A service account calling `create` on the `tokenrequests` or `tokenreviews` subr
 
 ## Output contract
 
-Each finding is a full OCSF 1.8 Detection Finding matching [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) by default. Deterministic `finding_info.uid` of the form `det-k8s-<rule>-<actor-hash>-<target-hash>` so re-running on the same input is idempotent.
+Each finding is a full OCSF 1.8 Detection Finding matching [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) by default. Deterministic `finding_info.uid` of the form `det-k8s-<rule>-<actor-hash>-<target-hash>` so re-running on the same input is idempotent.
 
 `finding_info.attacks[]` always carries:
 - `version: "v14"`
@@ -116,19 +116,19 @@ Rule 1 uses a time window because it requires two events to correlate. The windo
 
 ```bash
 # Piped from the ingest skill (default OCSF output)
-python ../ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
   | python src/detect.py \
   > findings.ocsf.jsonl
 
 # Native end-to-end path
-python ../ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
   | python src/detect.py --output-format native \
   > findings.native.jsonl
 
 # Standalone OCSF file
-python src/detect.py ../golden/k8s_audit_sample.ocsf.jsonl
+python src/detect.py ../../detection-engineering/golden/k8s_audit_sample.ocsf.jsonl
 ```
 
 ## Tests
 
-Golden fixture parity: the same OCSF fixture used by `ingest-k8s-audit-ocsf` ([`../golden/k8s_audit_sample.ocsf.jsonl`](../golden/k8s_audit_sample.ocsf.jsonl)) is piped through this detector. Expected findings are frozen in [`../golden/k8s_priv_esc_findings.ocsf.jsonl`](../golden/k8s_priv_esc_findings.ocsf.jsonl). Plus unit tests for each rule's trigger logic, windowing, deterministic-uid generation, and negative controls (admin user, allowed workload, stale events outside the window).
+Golden fixture parity: the same OCSF fixture used by `ingest-k8s-audit-ocsf` ([`../../detection-engineering/golden/k8s_audit_sample.ocsf.jsonl`](../../detection-engineering/golden/k8s_audit_sample.ocsf.jsonl)) is piped through this detector. Expected findings are frozen in [`../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl). Plus unit tests for each rule's trigger logic, windowing, deterministic-uid generation, and negative controls (admin user, allowed workload, stale events outside the window).

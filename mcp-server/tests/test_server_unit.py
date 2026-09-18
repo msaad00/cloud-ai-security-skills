@@ -605,6 +605,54 @@ def test_handle_request_returns_distinct_timeout_error_code(monkeypatch):
     assert "timed out" in response["error"]["message"]
 
 
+def test_handle_request_survives_unexpected_dispatch_exception(monkeypatch):
+    """A non-timeout failure while dispatching a tool call (e.g. a failed
+    subprocess/worker spawn raising OSError, or any other unexpected
+    exception type) must still return a clean JSON-RPC error response.
+
+    Before this guard, only KeyError/ValueError/TimeoutExpired were caught
+    in `_handle_request`'s `tools/call` branch, so any other exception raised
+    by `_call_tool` (e.g. `subprocess.run`/worker-pool spawn failing with
+    OSError) propagated out of `_handle_request` uncaught — which crashes the
+    whole stdio `serve()` loop for the entire session over a single bad call.
+    """
+    monkeypatch.setattr(MODULE, "tool_map", lambda: {"fake-skill": _FakeSkill(read_only=True)})
+    monkeypatch.setattr(
+        MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"]
+    )
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: None)
+
+    def _raise_oserror(*args, **kwargs):
+        raise OSError("fork: Resource temporarily unavailable")
+
+    monkeypatch.setattr(MODULE.subprocess, "run", _raise_oserror)
+
+    response = MODULE._handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/call",
+            "params": {"name": "fake-skill", "arguments": {"args": []}},
+        }
+    )
+
+    assert response is not None
+    assert response["error"]["code"] == MODULE.ERROR_TOOL_CRASHED
+    assert response["error"]["code"] == -32004
+    assert "OSError" in response["error"]["message"]
+
+
+def test_handle_tools_call_rejects_non_object_params():
+    """A malformed `params` (e.g. a list or string) must return a JSON-RPC
+    error, not crash the request loop with an unhandled AttributeError."""
+    for bad_params in ([1, 2, 3], "not-an-object", 42):
+        response = MODULE._handle_request(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": bad_params}
+        )
+        assert response["error"]["code"] == -32602
+        assert "must be an object" in response["error"]["message"]
+
+
 def test_runtime_telemetry_includes_env_correlation_id(monkeypatch, capsys):
     monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
     monkeypatch.setenv("SKILL_CORRELATION_ID", "corr-123")

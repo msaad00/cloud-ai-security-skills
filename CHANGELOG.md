@@ -11,6 +11,48 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-09-17 — Repo-wide audit: MCP hardening, detector determinism, guardrail parity
+
+Full-repo correctness and security audit across ingestion, detection,
+remediation, and the MCP wrapper. No wire-format, contract, or approval-model
+changes — all fixes are PATCH-level in isolation, bundled here with the
+already-staged MINOR work below.
+
+- **MCP server hardening** (`mcp-server/`): `tools/call` no longer crashes the
+  whole stdio session on a malformed (non-object) `params` payload or on any
+  non-timeout dispatch exception (failed subprocess/worker spawn, etc.) — both
+  now return a clean JSON-RPC error (`-32602`, `-32004`) instead of taking the
+  server down. The tamper-evident audit chain's restart-continuity check used
+  a fixed 4KB tail read to find the previous event; an audit event over 4KB
+  silently restarted the HMAC chain from genesis on restart — replaced with a
+  bounded backward scan. Warm worker-pool subprocesses were not receiving
+  `preexec_fn`, so `RLIMIT_AS`/`FSIZE`/`NPROC`/`CPU` caps silently did not
+  apply on that path, contradicting `docs/RUNTIME_ISOLATION.md` — fixed.
+  `docs/MCP_AUDIT_CONTRACT.md` updated to document `approval_count` and the
+  now-wired `ERROR_TOOL_CRASHED` code, both of which existed in code but were
+  undocumented.
+- **Detector replay determinism**: `detect-api-anomaly-salesforce`,
+  `detect-mass-termination-anomaly`, and `detect-sap-mass-change` fell back to
+  wall-clock time for window-bucket assignment (and therefore `finding_uid`)
+  whenever an event's own timestamp was missing or zero, making replayed
+  findings non-deterministic and breaking SIEM dedupe. Fixed all three call
+  sites, including a second occurrence in `detect-sap-mass-change`'s
+  finding-builder that the first pass missed.
+- **IAM departures grace period**: `docs/HITL_POLICY.md` requires the grace
+  period be "configurable per environment but never zero." The AWS parser
+  read `IAM_GRACE_PERIOD_DAYS` with no floor (GCP's already clamped); the
+  Azure Entra parser had the same gap. Both now clamp to a 1-day minimum,
+  matching GCP, with regression tests.
+- **`iam-departures-reconciler`** SKILL.md and an internal docstring claimed
+  it applies grace-window filtering — it doesn't; that gate lives downstream
+  in each cloud's remediation write path. Corrected the claim.
+- **Docs**: fixed ~50 broken relative links and matching broken example
+  commands across 22 `SKILL.md`/`REFERENCES.md`/`RUNBOOK.md` files (mostly
+  `../OCSF_CONTRACT.md` / `../golden/...` / cross-layer sibling paths missing
+  a directory level). `pyproject.toml`/`uv.lock` version was still `0.11.0`
+  while README/`framework-coverage.json` already claimed `0.12.0-dev` —
+  synced.
+
 ### Revert Quiver repo slug and finish name cleanup
 
 - Renamed the GitHub repository back to **`msaad00/cloud-ai-security-skills`**

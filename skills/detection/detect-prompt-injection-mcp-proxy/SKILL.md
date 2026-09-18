@@ -109,11 +109,11 @@ OCSF output populates:
 ## Usage
 
 ```bash
-python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
   | python src/detect.py \
   > prompt-injection-findings.ocsf.jsonl
 
-python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl --output-format native \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl --output-format native \
   | python src/detect.py --output-format native \
   > prompt-injection-findings.native.jsonl
 ```

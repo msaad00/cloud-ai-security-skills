@@ -40,7 +40,7 @@ Reads any of the three shapes the GuardDuty service emits:
 2. **API `ListFindings` / `GetFindings` wrapper** — top-level `{"Findings": [...]}` (the format returned by `aws guardduty get-findings`)
 3. **EventBridge event envelope** — top-level `{"detail": {...}, "detail-type": "GuardDuty Finding", ...}`; the skill auto-unwraps `detail`.
 
-Writes OCSF 1.8 **Detection Finding** (`class_uid: 2004`, `category_uid: 2`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning that every event matches.
+Writes OCSF 1.8 **Detection Finding** (`class_uid: 2004`, `category_uid: 2`). See [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) for the field-level pinning that every event matches.
 
 When `--output-format native` is selected, it emits the same finding in the repo's native enriched shape with stable `event_uid`, normalized provider/account/severity fields, MITRE ATT&CK annotations, and preserved evidence/resource context, but without the OCSF envelope fields.
 
@@ -61,9 +61,9 @@ python src/ingest.py guardduty.json --output-format native > guardduty.native.js
 aws guardduty get-findings --detector-id abc --finding-ids f1 f2 | python src/ingest.py
 
 # Piped downstream
-python src/ingest.py gd.json | python ../convert-ocsf-to-sarif/src/convert.py > gd.sarif
+python src/ingest.py gd.json | python ../../view/convert-ocsf-to-sarif/src/convert.py > gd.sarif
 ```
 
 ## Tests
 
-`tests/test_ingest.py` runs the ingester against [`../golden/guardduty_raw_sample.json`](../golden/guardduty_raw_sample.json) and asserts deep-equality against [`../golden/guardduty_sample.ocsf.jsonl`](../golden/guardduty_sample.ocsf.jsonl). Plus unit tests for the Type → MITRE table, the severity scale, Findings-wrapper unwrapping, and EventBridge detail unwrapping.
+`tests/test_ingest.py` runs the ingester against [`../../detection-engineering/golden/guardduty_raw_sample.json`](../../detection-engineering/golden/guardduty_raw_sample.json) and asserts deep-equality against [`../../detection-engineering/golden/guardduty_sample.ocsf.jsonl`](../../detection-engineering/golden/guardduty_sample.ocsf.jsonl). Plus unit tests for the Type → MITRE table, the severity scale, Findings-wrapper unwrapping, and EventBridge detail unwrapping.

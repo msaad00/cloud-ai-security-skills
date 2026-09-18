@@ -90,6 +90,22 @@ class TestValidateEntry:
         assert result["action"] == "skip"
         assert "grace period" in result["reason"]
 
+    def test_grace_period_env_var_zero_is_clamped_to_one_day(self, monkeypatch):
+        """docs/HITL_POLICY.md: grace period is "configurable per environment
+        but never zero". A misconfigured `IAM_GRACE_PERIOD_DAYS=0` must not
+        remove the HR-correction window entirely."""
+        import importlib
+
+        import lambda_parser.handler as handler_mod
+
+        monkeypatch.setenv("IAM_GRACE_PERIOD_DAYS", "0")
+        try:
+            importlib.reload(handler_mod)
+            assert handler_mod.GRACE_PERIOD_DAYS == 1
+        finally:
+            monkeypatch.delenv("IAM_GRACE_PERIOD_DAYS", raising=False)
+            importlib.reload(handler_mod)
+
     @patch("lambda_parser.handler._get_iam_client")
     def test_rehire_same_iam_in_use_skipped(self, mock_iam):
         """Rehired employee using same IAM → skip."""
