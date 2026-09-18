@@ -224,7 +224,7 @@ def _build_native_finding(
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "SAP",
-        "time_ms": last_seen or _now_ms(),
+        "time_ms": last_seen,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -338,7 +338,10 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
             continue
         if not _is_relevant(event, sensitive_tx):
             continue
-        time_ms = _event_time(event) or _now_ms()
+        # Bucket assignment must be deterministic for replay-safe dedup: never
+        # fall back to wall-clock time here (that would make window_start,
+        # and therefore finding_uid, depend on when detect() happens to run).
+        time_ms = _event_time(event)
         key = (actor, _client(event), _transaction(event), _window_start(time_ms, window_minutes))
         buckets[key].append(event)
         actor_names[key] = _actor_name(event)

@@ -55,6 +55,34 @@ def test_detects_client_outside_baseline(monkeypatch) -> None:
     assert findings[0]["mitre_attacks"][0]["technique_uid"] == "T1078.004"
 
 
+def test_finding_uid_deterministic_when_event_time_missing(monkeypatch) -> None:
+    """Regression: events with no `time` field must bucket deterministically.
+
+    detect() used to fall back to wall-clock `_now_ms()` when an event's
+    time was missing, and that value fed straight into the window bucket
+    key (and therefore into `finding_uid`). Replaying the exact same input
+    at two different wall-clock times must produce byte-identical findings
+    so SIEM dedupe/replay is safe.
+    """
+    baseline = {
+        "005svc": {"client_names": ["ApprovedClient"], "ips": ["203.0.113.88"], "max_events": 100}
+    }
+    monkeypatch.setenv("SALESFORCE_API_BASELINE_JSON", json.dumps(baseline))
+    event = _event(1, client="UnknownClient")
+    del event["time"]
+    stream = json.dumps(event) + "\n"
+
+    monkeypatch.setattr(detect_mod, "_now_ms", lambda: 1_000_000_000_000)
+    findings_a = detect_mod.detect(StringIO(stream), output_format="native")
+
+    monkeypatch.setattr(detect_mod, "_now_ms", lambda: 2_000_000_000_000)
+    findings_b = detect_mod.detect(StringIO(stream), output_format="native")
+
+    assert len(findings_a) == 1
+    assert findings_a == findings_b
+    assert findings_a[0]["finding_uid"] == findings_b[0]["finding_uid"]
+
+
 def test_ignores_activity_inside_baseline(monkeypatch) -> None:
     baseline = {
         "005svc": {"client_names": ["ApprovedClient"], "ips": ["203.0.113.88"], "max_events": 100}

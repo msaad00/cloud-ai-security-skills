@@ -336,7 +336,10 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
         batch_id = _batch_id(event)
         if batch_id and batch_id in approved_batch_ids:
             continue
-        event_time = _event_time(event) or _now_ms()
+        # Bucket assignment must be deterministic for replay-safe dedup: never
+        # fall back to wall-clock time here (that would make window_start_ms,
+        # and therefore finding_uid, depend on when detect() happens to run).
+        event_time = _event_time(event)
         buckets[_window_start(event_time, window_minutes)].append(event)
 
     findings: list[dict[str, Any]] = []
