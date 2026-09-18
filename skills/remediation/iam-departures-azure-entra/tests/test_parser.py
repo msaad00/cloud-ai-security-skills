@@ -69,6 +69,22 @@ def test_skips_within_grace_period():
     assert any("grace period" in r for r in reasons)
 
 
+def test_grace_period_env_var_zero_is_clamped_to_one_day(monkeypatch):
+    """docs/HITL_POLICY.md: grace period is "configurable per environment but
+    never zero". A misconfigured
+    `IAM_DEPARTURES_AZURE_GRACE_PERIOD_DAYS=0` must not remove the
+    HR-correction window entirely."""
+    import importlib
+
+    monkeypatch.setenv("IAM_DEPARTURES_AZURE_GRACE_PERIOD_DAYS", "0")
+    try:
+        importlib.reload(parser_handler)
+        assert parser_handler.GRACE_PERIOD_DAYS == 1
+    finally:
+        monkeypatch.delenv("IAM_DEPARTURES_AZURE_GRACE_PERIOD_DAYS", raising=False)
+        importlib.reload(parser_handler)
+
+
 def test_skips_already_deleted():
     out = parser_handler._validate_entries(
         [_entry(user_deleted=True)],

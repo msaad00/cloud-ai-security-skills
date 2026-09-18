@@ -202,7 +202,10 @@ class DepartureRecord:
         2. Rehired + different IAM created after rehire → REMEDIATE old IAM
         3. Rehired + old IAM not used after rehire_date → REMEDIATE old IAM
         4. IAM already deleted → SKIP
-        5. Within grace period → SKIP (HR correction window)
+
+        Grace-window enforcement (the HR-correction delay before any mutation)
+        is applied downstream by the cloud-specific write paths, not here —
+        see each `iam-departures-*` remediation skill's own grace-period gate.
 
         Returns:
             True if remediation should proceed for this record.

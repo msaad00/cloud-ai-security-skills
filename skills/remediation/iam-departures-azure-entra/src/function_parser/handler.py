@@ -37,8 +37,11 @@ from typing import Any, cast
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Configuration from environment.
-GRACE_PERIOD_DAYS = int(os.environ.get("IAM_DEPARTURES_AZURE_GRACE_PERIOD_DAYS", "7"))
+# Configuration from environment. Clamped to a 1-day floor — never zero,
+# per docs/HITL_POLICY.md ("Grace period is configurable per environment but
+# never zero") — so a misconfigured `0` can never remove the HR-correction
+# window entirely. Mirrors the same fail-safe in the AWS and GCP siblings.
+GRACE_PERIOD_DAYS = max(int(os.environ.get("IAM_DEPARTURES_AZURE_GRACE_PERIOD_DAYS", "7")), 1)
 
 # UPN: liberal RFC 5322-style local-part + domain. We only enforce shape here;
 # Microsoft Graph is the authority on whether a UPN actually exists.
