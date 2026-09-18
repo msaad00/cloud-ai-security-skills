@@ -345,6 +345,48 @@ def test_pool_uses_provided_spawn_command(tmp_path, monkeypatch):
     pool.shutdown()
 
 
+@pytest.mark.skipif(os.name != "posix", reason="preexec_fn is POSIX-only")
+def test_invoke_forwards_preexec_fn_to_popen(tmp_path, monkeypatch):
+    """RLIMIT enforcement must apply to worker-mode subprocesses exactly
+    like the one-shot `subprocess.run` path in server.py.
+
+    docs/RUNTIME_ISOLATION.md documents RLIMIT_* as "always on, POSIX"
+    (Layer 3) and docs/PERFORMANCE.md says worker-pool calls keep the
+    same "trust envelope... RLIMIT_AS / FSIZE / NPROC / CPU still
+    apply". Before this test, `WorkerPool._spawn` never passed
+    `preexec_fn` to `subprocess.Popen`, so a warm worker ran with no
+    RLIMIT caps at all, contradicting both docs.
+    """
+    script = _stub_worker_script(tmp_path)
+    skill = _FakeSkill(name="stub-preexec", entrypoint=script)
+    pool = _make_pool()
+
+    captured: dict[str, Any] = {}
+    real_popen = subprocess.Popen
+
+    def _spy_popen(cmd, *args, **kwargs):
+        captured["preexec_fn"] = kwargs.get("preexec_fn")
+        return real_popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(WP.subprocess, "Popen", _spy_popen)
+
+    def _sentinel_preexec() -> None:  # pragma: no cover - runs in forked child
+        pass
+
+    spawn_command = [sys.executable, str(script), "--worker"]
+    pool.invoke(
+        skill,
+        ["--echo", "z"],
+        "",
+        os.environ.copy(),
+        5,
+        spawn_command=spawn_command,
+        preexec_fn=_sentinel_preexec,
+    )
+    assert captured["preexec_fn"] is _sentinel_preexec
+    pool.shutdown()
+
+
 # ----------------------------------------------------------------------
 # atexit cleanup
 

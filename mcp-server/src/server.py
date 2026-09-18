@@ -571,6 +571,7 @@ def _call_tool(
                 env,
                 timeout_seconds,
                 spawn_command=spawn_command,
+                preexec_fn=_make_preexec(limits) if os.name == "posix" else None,
             )
         else:
             completed = subprocess.run(
@@ -656,6 +657,10 @@ def _handle_request(
 
     if method == "tools/call":
         params = message.get("params") or {}
+        if not isinstance(params, dict):
+            return _error_response(
+                request_id, -32602, "`tools/call` params must be an object when present"
+            )
         name = params.get("name")
         if not isinstance(name, str):
             return _error_response(request_id, -32602, "`tools/call` requires a string `name`")
@@ -671,6 +676,17 @@ def _handle_request(
         except subprocess.TimeoutExpired as exc:
             return _error_response(
                 request_id, ERROR_TOOL_TIMEOUT, f"tool timed out after {exc.timeout}s"
+            )
+        except Exception as exc:
+            # Anything else — a failed subprocess spawn (OSError), a worker
+            # pool shutdown race (RuntimeError), or any other unexpected
+            # failure in `_call_tool` — must still surface as one clean
+            # JSON-RPC error response. Without this, a single bad tool call
+            # propagates out of `_handle_request` and kills the whole stdio
+            # `serve()` loop (or the calling event-loop task on the SSE
+            # transport), taking every other in-flight session down with it.
+            return _error_response(
+                request_id, ERROR_TOOL_CRASHED, f"tool crashed: {type(exc).__name__}: {exc}"
             )
 
     return _error_response(request_id, -32601, f"method not found: {method}")

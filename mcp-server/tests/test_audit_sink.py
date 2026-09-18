@@ -73,6 +73,26 @@ def test_chain_extends_across_restart(tmp_path):
     assert e2["prev_hash"] == e1["chain_hash"]
 
 
+def test_chain_extends_across_restart_when_last_line_exceeds_lookback_window(tmp_path):
+    """A single audit line (e.g. one with a large caller_skill_scope hash/list)
+    can exceed a small fixed lookback buffer. The restart must still find the
+    real last `chain_hash` instead of silently restarting the chain from
+    genesis."""
+    log = tmp_path / "audit.jsonl"
+    s1 = MODULE.AuditSink(log_path=log, hmac_key=b"secret")
+    big_event = _make_event(1)
+    big_event["caller_skill_scope_hash"] = "x" * 10_000  # forces a >4KB line
+    e1 = s1.annotate(big_event)
+    s1.write_file(e1)
+    assert len(json.dumps(e1, sort_keys=True, separators=(",", ":"))) > 4096
+
+    s2 = MODULE.AuditSink(log_path=log, hmac_key=b"secret")
+    e2 = s2.annotate(_make_event(2))
+    s2.write_file(e2)
+
+    assert e2["prev_hash"] == e1["chain_hash"]
+
+
 def test_verifier_passes_for_valid_chain(tmp_path):
     log = tmp_path / "audit.jsonl"
     sink = MODULE.AuditSink(log_path=log, hmac_key=b"secret")

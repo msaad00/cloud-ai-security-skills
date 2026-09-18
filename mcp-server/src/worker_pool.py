@@ -39,6 +39,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -190,11 +191,19 @@ class WorkerPool:
         timeout: int,
         *,
         spawn_command: list[str] | None = None,
+        preexec_fn: Callable[[], None] | None = None,
     ) -> CompletedProcessShape:
         """Send one call to the warm worker for `skill.name`, spawning
-        one if absent."""
+        one if absent.
+
+        `preexec_fn`, when given, is applied only at spawn time (POSIX
+        only) so the worker process gets the same RLIMIT_AS / FSIZE /
+        NPROC / CPU trust envelope as the one-shot `subprocess.run`
+        path — see docs/RUNTIME_ISOLATION.md Layer 3 and
+        docs/PERFORMANCE.md, both of which document RLIMIT as applying
+        unchanged to worker-mode calls."""
         self._reap_idle()
-        worker = self._get_or_spawn(skill, env, spawn_command=spawn_command)
+        worker = self._get_or_spawn(skill, env, spawn_command=spawn_command, preexec_fn=preexec_fn)
         # Per-worker serialisation: a second concurrent `invoke()` for
         # the same skill name queues behind this one. One worker per
         # name is the contract.
@@ -248,6 +257,7 @@ class WorkerPool:
         env: dict[str, str],
         *,
         spawn_command: list[str] | None,
+        preexec_fn: Callable[[], None] | None = None,
     ) -> _Worker:
         with self._pool_lock:
             if self._closed:
@@ -257,7 +267,7 @@ class WorkerPool:
                 return existing
             if existing is not None:
                 self._workers.pop(skill.name, None)
-            worker = self._spawn(skill, env, spawn_command=spawn_command)
+            worker = self._spawn(skill, env, spawn_command=spawn_command, preexec_fn=preexec_fn)
             self._workers[skill.name] = worker
             return worker
 
@@ -267,12 +277,15 @@ class WorkerPool:
         env: dict[str, str],
         *,
         spawn_command: list[str] | None,
+        preexec_fn: Callable[[], None] | None = None,
     ) -> _Worker:
         if spawn_command is None:
             entrypoint = skill.entrypoint
             if entrypoint is None:
                 raise ValueError(f"skill {skill.name} has no entrypoint")
             spawn_command = [sys.executable, str(entrypoint), "--worker"]
+        # `preexec_fn` is POSIX-only, same restriction `subprocess.run`
+        # imposes on the one-shot path in server.py.
         process = subprocess.Popen(
             spawn_command,
             stdin=subprocess.PIPE,
@@ -280,6 +293,7 @@ class WorkerPool:
             stderr=subprocess.PIPE,
             env=env,
             cwd=str(_repo_root()),
+            preexec_fn=preexec_fn if os.name == "posix" else None,
         )
         return _Worker(skill_name=skill.name, process=process)
 
