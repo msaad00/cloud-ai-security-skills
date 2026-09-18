@@ -92,4 +92,4 @@ python src/convert.py < findings.ocsf.jsonl
 
 ## Tests
 
-Golden fixture parity against [`../golden/k8s_priv_esc_findings.ocsf.jsonl`](../golden/k8s_priv_esc_findings.ocsf.jsonl) → [`../golden/k8s_priv_esc_attack_flow.mmd`](../golden/k8s_priv_esc_attack_flow.mmd). Plus unit tests for severity → class mapping, multi-actor handling, edge deduplication, MITRE label formatting, and node ID safety (Mermaid IDs cannot contain spaces or special chars).
+Golden fixture parity against [`../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl) → [`../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd`](../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd). Plus unit tests for severity → class mapping, multi-actor handling, edge deduplication, MITRE label formatting, and node ID safety (Mermaid IDs cannot contain spaces or special chars).

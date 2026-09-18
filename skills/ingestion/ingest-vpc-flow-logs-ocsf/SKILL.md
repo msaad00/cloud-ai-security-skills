@@ -43,7 +43,7 @@ version account-id interface-id srcaddr dstaddr srcport dstport protocol packets
 
 The skill also understands the v5 extended fields if they are declared in the header: `vpc-id subnet-id instance-id tcp-flags type pkt-srcaddr pkt-dstaddr region az-id sublocation-type sublocation-id pkt-src-aws-service pkt-dst-aws-service flow-direction traffic-path`.
 
-By default it writes OCSF 1.8 **Network Activity** (`class_uid: 4001`, `category_uid: 4`). See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md).
+By default it writes OCSF 1.8 **Network Activity** (`class_uid: 4001`, `category_uid: 4`). See [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md).
 
 When `--output-format native` is selected, it emits the same flow in the repo's native enriched shape with stable `event_uid`, normalized source/destination, byte counters, protocol/direction, and AWS scope fields, but without the OCSF envelope.
 
@@ -163,4 +163,4 @@ aws logs start-query --log-group-name "/aws/vpc/flow" ... \
 
 ## Tests
 
-Golden fixture parity against [`../golden/vpc_flow_logs_raw_sample.log`](../golden/vpc_flow_logs_raw_sample.log) → [`../golden/vpc_flow_logs_sample.ocsf.jsonl`](../golden/vpc_flow_logs_sample.ocsf.jsonl). Plus unit tests for every field mapping, the `tcp-flags` bitmask decoder, the protocol-number table, ACCEPT vs REJECT activity mapping, header-driven vs default field order, and `NODATA` / `SKIPDATA` skipping.
+Golden fixture parity against [`../../detection-engineering/golden/vpc_flow_logs_raw_sample.log`](../../detection-engineering/golden/vpc_flow_logs_raw_sample.log) → [`../../detection-engineering/golden/vpc_flow_logs_sample.ocsf.jsonl`](../../detection-engineering/golden/vpc_flow_logs_sample.ocsf.jsonl). Plus unit tests for every field mapping, the `tcp-flags` bitmask decoder, the protocol-number table, ACCEPT vs REJECT activity mapping, header-driven vs default field order, and `NODATA` / `SKIPDATA` skipping.

@@ -179,7 +179,7 @@ When `--output-format native` is selected, the skill emits:
 
 ## See also
 
-- [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) — shared OCSF wire contract and version pinning
+- [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) — shared OCSF wire contract and version pinning
 - [`../ingest-okta-system-log-ocsf/SKILL.md`](../ingest-okta-system-log-ocsf/SKILL.md) — Okta identity audit equivalent
 - [`../../detection/detect-slack-external-channel-add/SKILL.md`](../../detection/detect-slack-external-channel-add/SKILL.md) — downstream external-channel-add detector
 - [`../../detection/detect-slack-oauth-app-install-broad-scope/SKILL.md`](../../detection/detect-slack-oauth-app-install-broad-scope/SKILL.md) — downstream OAuth-app install detector

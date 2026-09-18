@@ -82,23 +82,23 @@ OCSF output populates:
 - `observables[]`: session uid, tool name, before/after fingerprints.
 - `evidence`: event counts and pointers to the raw `tools/list` records.
 
-See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the full Detection Finding contract.
+See [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) for the full Detection Finding contract.
 
 ## Usage
 
 ```bash
 # Piped from the ingest skill
-python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
   | python src/detect.py \
   > drift-findings.ocsf.jsonl
 
 # Native input and native output
-python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl --output-format native \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl --output-format native \
   | python src/detect.py --output-format native \
   > drift-findings.native.jsonl
 
 # Standalone file
-python src/detect.py ../golden/mcp_proxy_sample.ocsf.jsonl
+python src/detect.py ../../detection-engineering/golden/mcp_proxy_sample.ocsf.jsonl
 ```
 
 ## Native output format
@@ -135,4 +135,4 @@ Example:
 
 ## Tests
 
-Golden-fixture parity: runs against [`../golden/mcp_proxy_sample.ocsf.jsonl`](../golden/mcp_proxy_sample.ocsf.jsonl) and asserts the output matches [`../golden/tool_drift_finding.ocsf.json`](../golden/tool_drift_finding.ocsf.json) exactly (with volatile fields scrubbed).
+Golden-fixture parity: runs against [`../../detection-engineering/golden/mcp_proxy_sample.ocsf.jsonl`](../../detection-engineering/golden/mcp_proxy_sample.ocsf.jsonl) and asserts the output matches [`../../detection-engineering/golden/tool_drift_finding.ocsf.jsonl`](../../detection-engineering/golden/tool_drift_finding.ocsf.jsonl) exactly (with volatile fields scrubbed).

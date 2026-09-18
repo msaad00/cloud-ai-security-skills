@@ -82,7 +82,7 @@ OCSF output populates:
 ## Usage
 
 ```bash
-python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
   | python src/detect.py \
   > token-flood-findings.ocsf.jsonl
 

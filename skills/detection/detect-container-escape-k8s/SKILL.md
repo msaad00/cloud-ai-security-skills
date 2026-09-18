@@ -176,17 +176,17 @@ with:
 
 ```bash
 # Piped from ingest-k8s-audit-ocsf (default OCSF output)
-python ../ingest-k8s-audit-ocsf/src/ingest.py audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
   | python src/detect.py \
   > findings.ocsf.jsonl
 
 # Native end-to-end path
-python ../ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
+python ../../ingestion/ingest-k8s-audit-ocsf/src/ingest.py --output-format native audit.log \
   | python src/detect.py --output-format native \
   > findings.native.jsonl
 
 # Standalone OCSF file
-python src/detect.py ../golden/k8s_container_escape_sample.ocsf.jsonl
+python src/detect.py ../../detection-engineering/golden/k8s_container_escape_sample.ocsf.jsonl
 
 # Allow a break-glass operator principal to exec without firing rule 4
 python src/detect.py mixed-input.jsonl \
@@ -197,13 +197,13 @@ python src/detect.py mixed-input.jsonl \
 ## Tests
 
 Golden fixture parity against
-[`../golden/k8s_container_escape_sample.ocsf.jsonl`](../golden/k8s_container_escape_sample.ocsf.jsonl)
+[`../../detection-engineering/golden/k8s_container_escape_sample.ocsf.jsonl`](../../detection-engineering/golden/k8s_container_escape_sample.ocsf.jsonl)
 →
-[`../golden/k8s_container_escape_findings.ocsf.jsonl`](../golden/k8s_container_escape_findings.ocsf.jsonl).
+[`../../detection-engineering/golden/k8s_container_escape_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_container_escape_findings.ocsf.jsonl).
 Follow-up golden parity covers mixed audit + runtime input at
-[`../golden/k8s_container_escape_followup_input.jsonl`](../golden/k8s_container_escape_followup_input.jsonl)
+[`../../detection-engineering/golden/k8s_container_escape_followup_input.jsonl`](../../detection-engineering/golden/k8s_container_escape_followup_input.jsonl)
 →
-[`../golden/k8s_container_escape_followup_findings.ocsf.jsonl`](../golden/k8s_container_escape_followup_findings.ocsf.jsonl).
+[`../../detection-engineering/golden/k8s_container_escape_followup_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_container_escape_followup_findings.ocsf.jsonl).
 Plus unit tests for risky-setting extraction, `hostPath` path filtering, JSON
 Patch handling, ephemeral container name extraction, unexpected-exec
 correlation, runtime fusion, native input, OCSF class pinning, and

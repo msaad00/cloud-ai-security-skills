@@ -107,6 +107,6 @@ projection with:
 
 ## See also
 
-- [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) — shared OCSF wire contract and version pinning
+- [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) — shared OCSF wire contract and version pinning
 - [`../ingest-gcp-audit-ocsf/SKILL.md`](../ingest-gcp-audit-ocsf/SKILL.md) — Google Cloud API audit equivalent
 - [`../ingest-okta-system-log-ocsf/SKILL.md`](../ingest-okta-system-log-ocsf/SKILL.md) — external identity-vendor ingestion peer

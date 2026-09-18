@@ -14,7 +14,7 @@
 
 OCSF 1.8 Application Activity (class 6002) with the `cloud_security_mcp`
 custom profile, as produced by `ingest-mcp-proxy-ocsf`. See sibling
-[`ingest-mcp-proxy-ocsf/REFERENCES.md`](../ingest-mcp-proxy-ocsf/REFERENCES.md).
+[`ingest-mcp-proxy-ocsf/REFERENCES.md`](../../ingestion/ingest-mcp-proxy-ocsf/REFERENCES.md).
 
 ## Output format
 

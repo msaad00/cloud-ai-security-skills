@@ -44,7 +44,7 @@ Reads the format emitted by the `agent-bom proxy` command:
 }
 ```
 
-Writes OCSF 1.8 Application Activity (class 6002) with the `cloud_security_mcp` custom profile. See [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) for the field-level pinning.
+Writes OCSF 1.8 Application Activity (class 6002) with the `cloud_security_mcp` custom profile. See [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) for the field-level pinning.
 
 ## Usage
 
@@ -58,7 +58,7 @@ python src/ingest.py mcp-proxy.jsonl --output-format native > mcp-proxy.native.j
 # Piped from a running proxy
 agent-bom proxy "<server cmd>" --log-format jsonl \
   | python src/ingest.py \
-  | python ../detect-mcp-tool-drift/src/detect.py \
+  | python ../../detection/detect-mcp-tool-drift/src/detect.py \
   > findings.ocsf.jsonl
 ```
 
@@ -127,4 +127,4 @@ This is the pivot point for detection skills. Anything that makes the fingerprin
 
 ## Tests
 
-`tests/test_ingest.py` runs the skill against [`../golden/mcp_proxy_raw_sample.jsonl`](../golden/mcp_proxy_raw_sample.jsonl) and asserts the output matches [`../golden/mcp_proxy_sample.ocsf.jsonl`](../golden/mcp_proxy_sample.ocsf.jsonl) with volatile fields scrubbed.
+`tests/test_ingest.py` runs the skill against [`../../detection-engineering/golden/mcp_proxy_raw_sample.jsonl`](../../detection-engineering/golden/mcp_proxy_raw_sample.jsonl) and asserts the output matches [`../../detection-engineering/golden/mcp_proxy_sample.ocsf.jsonl`](../../detection-engineering/golden/mcp_proxy_sample.ocsf.jsonl) with volatile fields scrubbed.

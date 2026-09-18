@@ -150,4 +150,4 @@ the sanitized `protoPayload.response.name` resource identifier into
 
 ## Tests
 
-Golden fixture parity against [`../golden/gcp_audit_raw_sample.jsonl`](../golden/gcp_audit_raw_sample.jsonl) → [`../golden/gcp_audit_sample.ocsf.jsonl`](../golden/gcp_audit_sample.ocsf.jsonl).
+Golden fixture parity against [`../../detection-engineering/golden/gcp_audit_raw_sample.jsonl`](../../detection-engineering/golden/gcp_audit_raw_sample.jsonl) → [`../../detection-engineering/golden/gcp_audit_sample.ocsf.jsonl`](../../detection-engineering/golden/gcp_audit_sample.ocsf.jsonl).

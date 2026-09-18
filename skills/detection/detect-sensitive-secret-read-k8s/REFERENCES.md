@@ -33,7 +33,7 @@ This skill is **complementary** to [`detect-privilege-escalation-k8s`](../detect
 
 None at runtime. Reads OCSF JSONL from stdin.
 
-Upstream `ingest-k8s-audit-ocsf` needs read access to kube-apiserver audit logs (file backend, webhook backend, or managed-cluster forwarding). See [`../ingest-k8s-audit-ocsf/REFERENCES.md`](../ingest-k8s-audit-ocsf/REFERENCES.md).
+Upstream `ingest-k8s-audit-ocsf` needs read access to kube-apiserver audit logs (file backend, webhook backend, or managed-cluster forwarding). See [`../../ingestion/ingest-k8s-audit-ocsf/REFERENCES.md`](../../ingestion/ingest-k8s-audit-ocsf/REFERENCES.md).
 
 ## Default sensitive-name patterns
 
@@ -70,8 +70,8 @@ Pattern matching is **case-insensitive** `fnmatch`-style glob. Users can add pat
 
 ## See also
 
-- [`OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) — the wire contract this skill conforms to
+- [`OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) — the wire contract this skill conforms to
 - [`detect-privilege-escalation-k8s`](../detect-privilege-escalation-k8s/) — complementary enumeration-style detector
-- [`ingest-k8s-audit-ocsf`](../ingest-k8s-audit-ocsf/) — upstream producer
+- [`ingest-k8s-audit-ocsf`](../../ingestion/ingest-k8s-audit-ocsf/) — upstream producer
 - Kubernetes Secrets best practices — https://kubernetes.io/docs/concepts/configuration/secret/#best-practices
 - Falco equivalent rules (the closest open-source comparison) — https://github.com/falcosecurity/rules

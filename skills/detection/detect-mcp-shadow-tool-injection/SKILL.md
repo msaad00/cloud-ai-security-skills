@@ -124,7 +124,7 @@ OCSF output populates:
 ```bash
 # Baseline written by the MCP server on startup
 MCP_TOOL_BASELINE_PATH=/var/lib/mcp/tool-baseline.json \
-  python ../ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+  python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
   | python src/detect.py \
   > shadow-tool-findings.ocsf.jsonl
 ```

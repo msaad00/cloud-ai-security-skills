@@ -202,6 +202,6 @@ When `--output-format native` is selected, the skill emits:
 
 ## See also
 
-- [`../OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) — shared OCSF wire contract and version pinning
+- [`../../detection-engineering/OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) — shared OCSF wire contract and version pinning
 - [`../ingest-azure-activity-ocsf/SKILL.md`](../ingest-azure-activity-ocsf/SKILL.md) — Azure control-plane audit equivalent
 - [`../../detection/detect-lateral-movement/SKILL.md`](../../detection/detect-lateral-movement/SKILL.md) — downstream identity pivot detection

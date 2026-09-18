@@ -188,8 +188,8 @@ The output includes:
 ```bash
 # Merge cloud audit + flow OCSF streams, then pipe through the detector
 {
-  python ../ingest-cloudtrail-ocsf/src/ingest.py cloudtrail.json
-  python ../ingest-vpc-flow-logs-ocsf/src/ingest.py vpc-flow.log
+  python ../../ingestion/ingest-cloudtrail-ocsf/src/ingest.py cloudtrail.json
+  python ../../ingestion/ingest-vpc-flow-logs-ocsf/src/ingest.py vpc-flow.log
 } > merged.ocsf.jsonl
 
 python src/detect.py < merged.ocsf.jsonl > findings.ocsf.jsonl
@@ -200,7 +200,7 @@ python src/detect.py --output-format native < merged.native.jsonl > findings.nat
 # Or, run the whole pipe and feed into the SARIF converter
 cat merged.ocsf.jsonl \
   | python src/detect.py \
-  | python ../convert-ocsf-to-sarif/src/convert.py \
+  | python ../../view/convert-ocsf-to-sarif/src/convert.py \
   > lateral-movement.sarif
 ```
 
@@ -215,12 +215,12 @@ cat merged.ocsf.jsonl \
 
 ## Tests
 
-Golden fixture parity: `../golden/lateral_movement_input.ocsf.jsonl` → `../golden/lateral_movement_findings.ocsf.jsonl`. Plus unit tests for the RFC1918 detector, the window logic, provider/account correlation, byte-threshold filtering, and negative controls (egress dst, REJECT flow, no preceding anchor, stale correlation outside the window).
+Golden fixture parity: `../../detection-engineering/golden/lateral_movement_input.ocsf.jsonl` → `../../detection-engineering/golden/lateral_movement_findings.ocsf.jsonl`. Plus unit tests for the RFC1918 detector, the window logic, provider/account correlation, byte-threshold filtering, and negative controls (egress dst, REJECT flow, no preceding anchor, stale correlation outside the window).
 
 ## See also
 
-- [`ingest-cloudtrail-ocsf/REFERENCES.md`](../ingest-cloudtrail-ocsf/REFERENCES.md) — CloudTrail source format
-- [`ingest-vpc-flow-logs-ocsf/REFERENCES.md`](../ingest-vpc-flow-logs-ocsf/REFERENCES.md) — VPC Flow Logs v5 source format
-- [`OCSF_CONTRACT.md`](../OCSF_CONTRACT.md) — the wire contract both upstream ingest skills honour
+- [`ingest-cloudtrail-ocsf/REFERENCES.md`](../../ingestion/ingest-cloudtrail-ocsf/REFERENCES.md) — CloudTrail source format
+- [`ingest-vpc-flow-logs-ocsf/REFERENCES.md`](../../ingestion/ingest-vpc-flow-logs-ocsf/REFERENCES.md) — VPC Flow Logs v5 source format
+- [`OCSF_CONTRACT.md`](../../detection-engineering/OCSF_CONTRACT.md) — the wire contract both upstream ingest skills honour
 - `convert-ocsf-to-sarif` — downstream view layer
 - `RUNBOOK.md` (this skill) — triage flow when a finding fires
