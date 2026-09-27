@@ -50,7 +50,7 @@ gcp = [
 ]
 azure = [
   "azure-identity>=1.17,<2",
-  "azure-mgmt-network>=31.0.1,<32",
+  "azure-mgmt-network>=31.0.1,<34",
   "azure-mgmt-resource>=25,<27",
   "azure-mgmt-storage>=25.1.0,<26",
 ]
