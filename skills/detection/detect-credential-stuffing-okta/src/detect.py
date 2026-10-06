@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import sys
+from collections import Counter, deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -367,28 +368,44 @@ def detect(
 
     # Per-user rolling window of recent failures. On a success, if the window
     # holds enough failures from enough distinct IPs, emit one finding.
-    failures_by_user: dict[str, list[dict[str, Any]]] = {}
-    fired_for_user: set[str] = set()
+    # `relevant` is sorted by user then time, so only the current user's
+    # window is live: a deque evicts from the left and a Counter tracks the
+    # distinct source IPs inside it.
+    current_user: str | None = None
+    failures: deque[dict[str, Any]] = deque()
+    failure_ips: Counter[str] = Counter()
+    fired = False
 
     for item in relevant:
         user_uid = item["user_uid"]
         current_time = item["time_ms"]
-        failures = failures_by_user.setdefault(user_uid, [])
+        if user_uid != current_user:
+            current_user = user_uid
+            failures.clear()
+            failure_ips.clear()
+            fired = False
 
         # Trim failures outside the window, measured back from current event.
         cutoff = current_time - window_ms
-        failures[:] = [entry for entry in failures if entry["time_ms"] >= cutoff]
+        while failures and failures[0]["time_ms"] < cutoff:
+            ip = _source_ip(failures.popleft())
+            if ip:
+                failure_ips[ip] -= 1
+                if not failure_ips[ip]:
+                    del failure_ips[ip]
 
         if item["kind"] == "failure":
             failures.append(item)
+            ip = _source_ip(item)
+            if ip:
+                failure_ips[ip] += 1
             continue
 
         # Success event. Only evaluate firing if the user isn't already flagged.
-        if user_uid in fired_for_user:
+        if fired:
             continue
 
-        unique_ips = {_source_ip(f) for f in failures if _source_ip(f)}
-        if len(failures) >= min_failures and len(unique_ips) >= min_unique_ips:
+        if len(failures) >= min_failures and len(failure_ips) >= min_unique_ips:
             native_finding = _build_native_finding(
                 user_uid, item["user_name"], list(failures), item
             )
@@ -396,9 +413,10 @@ def detect(
                 yield native_finding
             else:
                 yield _render_ocsf_finding(native_finding)
-            fired_for_user.add(user_uid)
+            fired = True
             # Reset the failure buffer so a second burst after cooldown can fire again.
             failures.clear()
+            failure_ips.clear()
 
 
 def _env_int(name: str, default: int) -> int:
