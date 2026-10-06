@@ -5,36 +5,42 @@ agent. One page. Copy-paste.
 
 ---
 
-## 1 · See a finding in 30 seconds (no cloud creds, no clone for the demo)
-
-If you have the repo already:
-
-```bash
-make demo
-```
-
-That runs the three-stage pipeline (`ingest-cloudtrail-ocsf →
-detect-aws-access-key-creation → convert-ocsf-to-sarif`) against a captured
-fixture, writes `/tmp/cloud-security-demo.sarif`, and prints the finding.
-
-If you don't have the repo, the same pipeline is a `python | python |
-python` one-liner once you check out a tagged release:
+## 1 · See a finding in 30 seconds (no cloud creds)
 
 ```bash
 git clone https://github.com/msaad00/cloud-ai-security-skills.git
 cd cloud-ai-security-skills
+uv sync                      # install uv first: https://docs.astral.sh/uv/
+uv run make demo
+```
 
-python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
+`make demo` runs the three-stage pipeline (`ingest-cloudtrail-ocsf →
+detect-aws-access-key-creation → convert-ocsf-to-sarif`) against a captured
+CloudTrail fixture, writes `/tmp/cloud-security-demo.sarif`, and prints the
+findings. Structured JSON logs go to stderr; the tail of the output is:
+
+```text
+Findings written to /tmp/cloud-security-demo.sarif
+1 finding(s) emitted
+  - <rule id>: AWS IAM access key created
+```
+
+The same pipeline spelled out, one skill per stage joined by Unix pipes:
+
+```bash
+uv run python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
-  | python skills/detection/detect-aws-access-key-creation/src/detect.py \
-  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
+  | uv run python skills/detection/detect-aws-access-key-creation/src/detect.py \
+  | uv run python skills/view/convert-ocsf-to-sarif/src/convert.py \
   > findings.sarif
 ```
 
-No `uv sync` is needed for this demo path — every skill in the pipeline runs
-on a stdlib-only Python 3.11+. Cloud-specific skills (anything that talks to
-AWS / GCP / Azure / K8s / Snowflake / Databricks / ClickHouse) need their
-group installed first: `uv sync --group dev --group <cloud>`.
+Drop the last stage to see the raw OCSF 1.8 Detection Finding (`class_uid`
+2004) on stdout. These three skills are stdlib-only, so a plain Python 3.11+
+interpreter also works; `uv run` just keeps you inside the project
+environment. Cloud-specific skills (anything that talks to AWS / GCP / Azure /
+K8s / Snowflake / Databricks / ClickHouse) need their group installed first:
+`uv sync --group dev --group <cloud>` — see [`INSTALL.md`](INSTALL.md).
 
 > No top-level CLI is shipped today (the repo is structured as 134
 > independent skill bundles, not a single binary). A `uvx`-installable entry

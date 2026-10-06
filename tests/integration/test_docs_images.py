@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 IMAGES = ROOT / "docs" / "images"
 SVGS = sorted(p for p in IMAGES.glob("*.svg"))
 SVG_NS = "{http://www.w3.org/2000/svg}"
+README_IMAGE_RE = re.compile(r"!\[[^\]]*\]\((docs/images/[^)]+\.svg)\)")
 
 
 def test_images_dir_has_svgs():
@@ -30,3 +32,12 @@ def test_svg_is_well_formed_with_title(svg: Path):
     title = root.find(f"{SVG_NS}title")
     assert title is not None and (title.text or "").strip(), f"{svg.name} needs a <title>"
 
+
+def test_readme_embedded_svgs_exist_and_parse():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    embedded = README_IMAGE_RE.findall(readme)
+    assert "docs/images/closed-loop-flow.svg" in embedded
+    for rel in embedded:
+        path = ROOT / rel
+        assert path.is_file(), f"README embeds missing image {rel}"
+        ET.parse(path)
