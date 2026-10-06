@@ -16,19 +16,21 @@ except ModuleNotFoundError:  # pragma: no cover - exercised when dev deps not in
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_XML = ROOT / "coverage.xml"
-OVERALL_FLOOR = 80.0
-# Per-layer floors set ~5pp below observed coverage on 2026-04-28 so honest
-# refactors have headroom without leaking real regressions. Bump these as
-# coverage climbs; never lower without an issue documenting why.
+# Floors are the measured coverage of shipped code (test modules excluded via
+# `[tool.coverage.run] omit` in pyproject.toml) on 2026-10-06, rounded down to
+# a whole percent. Earlier floors were calibrated against reports that also
+# counted test files. Bump these as coverage climbs; never lower without an
+# issue documenting why.
+OVERALL_FLOOR = 79.0
 LAYER_FLOORS = {
-    "_shared": 90.0,
-    "detection": 80.0,
-    "discovery": 80.0,
-    "evaluation": 80.0,
-    "ingestion": 80.0,
-    "output": 80.0,
+    "_shared": 94.0,
+    "detection": 79.0,
+    "discovery": 81.0,
+    "evaluation": 84.0,
+    "ingestion": 79.0,
+    "output": 85.0,
     "remediation": 70.0,
-    "view": 80.0,
+    "view": 83.0,
 }
 
 
@@ -58,6 +60,13 @@ def _collect_layer_stats(root: ET.Element) -> dict[str, tuple[int, int]]:
     return {layer: (stats[0], stats[1]) for layer, stats in by_layer.items()}
 
 
+def _measured_test_files(root: ET.Element) -> list[str]:
+    files = (cls.get("filename", "") for cls in root.findall(".//class"))
+    return sorted(
+        f for f in files if "/tests/" in f or f.startswith("tests/") or f.endswith("conftest.py")
+    )
+
+
 def _coverage_percent(hit: int, total: int) -> float:
     return (100.0 * hit / total) if total else 0.0
 
@@ -69,6 +78,12 @@ def main(argv: list[str] | None = None) -> int:
     root = _read_coverage_xml(xml_path)
     line_rate = float(root.get("line-rate", "0.0")) * 100.0
     errors: list[str] = []
+    test_files = _measured_test_files(root)
+    if test_files:
+        errors.append(
+            f"report measures {len(test_files)} test file(s) (e.g. {test_files[0]}); "
+            "coverage must exclude tests — check `[tool.coverage.run] omit` in pyproject.toml"
+        )
     if line_rate < OVERALL_FLOOR:
         errors.append(
             f"overall coverage {line_rate:.2f}% is below required floor {OVERALL_FLOOR:.0f}%"
