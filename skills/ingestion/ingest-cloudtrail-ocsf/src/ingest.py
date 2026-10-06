@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,6 +23,12 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    parse_ts_ms,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-cloudtrail-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -127,28 +132,6 @@ def infer_activity_id(event_name: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Time
-# ---------------------------------------------------------------------------
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    """Parse an ISO-8601 timestamp to Unix epoch milliseconds (UTC).
-
-    Falls back to 'now' if missing or unparseable.
-    """
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-# ---------------------------------------------------------------------------
 # Resource projection
 # ---------------------------------------------------------------------------
 
@@ -197,8 +180,9 @@ def _build_actor(user_identity: dict[str, Any]) -> dict[str, Any]:
         session["uid"] = user_identity["accessKeyId"]
     session_ctx = user_identity.get("sessionContext") or {}
     attrs = session_ctx.get("attributes") or {}
-    if "creationDate" in attrs:
-        session["created_time"] = parse_ts_ms(attrs["creationDate"])
+    created_time = parse_ts_ms(attrs.get("creationDate"))
+    if created_time is not None:
+        session["created_time"] = created_time
     if "mfaAuthenticated" in attrs:
         session["mfa"] = attrs["mfaAuthenticated"] == "true"
     if session:
@@ -272,7 +256,7 @@ def _build_canonical_event(raw: dict[str, Any]) -> dict[str, Any]:
         "provider": "AWS",
         "account_uid": raw.get("recipientAccountId", ""),
         "region": raw.get("awsRegion", ""),
-        "time_ms": parse_ts_ms(raw.get("eventTime")),
+        "time_ms": require_ts_ms(raw.get("eventTime")),
         "event_name": event_name,
         "operation": event_name,
         "service_name": raw.get("eventSource", ""),
@@ -455,13 +439,16 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
-    for raw in iter_raw_events(stream):
+    for record_no, raw in enumerate(iter_raw_events(stream), start=1):
         try:
             canonical = _build_canonical_event(raw)
             if output_format == "native":
                 yield _render_native_event(canonical)
             else:
                 yield _render_ocsf_event(canonical)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as e:  # defence-in-depth — never crash the pipeline
             emit_stderr_event(
                 SKILL_NAME,

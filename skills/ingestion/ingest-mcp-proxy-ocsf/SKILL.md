@@ -121,7 +121,7 @@ This is the pivot point for detection skills. Anything that makes the fingerprin
 ## Behaviour on malformed input
 
 - One bad line → warning to stderr, skipped, pipeline continues.
-- Missing `timestamp` → current time.
+- Missing or unparseable `timestamp` → line skipped with a `timestamp_unparseable` stderr warning (never stamped with the current time).
 - Missing `session_id` → `"sess-unknown"` (detected by downstream detection skills).
 - Empty file → zero output lines, exit 0.
 

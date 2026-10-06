@@ -27,8 +27,9 @@ from ingest import (  # type: ignore[import-not-found]
     convert_event_native,
     infer_activity_id,
     ingest,
-    parse_ts_ms,
 )
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"
@@ -131,8 +132,8 @@ class TestParseTs:
         # GCP can emit 9-digit fractional seconds; we truncate to 6
         assert parse_ts_ms("2026-04-10T05:00:00.123456789Z") == 1775797200123
 
-    def test_garbage_falls_to_now(self):
-        assert parse_ts_ms("not-a-date") > 1_700_000_000_000
+    def test_garbage_is_none(self):
+        assert parse_ts_ms("not-a-date") is None
 
 
 # ── convert_event ─────────────────────────────────────────────────────

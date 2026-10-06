@@ -24,6 +24,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    parse_ts_ms,
+)
 
 SKILL_NAME = "ingest-vpc-flow-logs-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -141,21 +146,6 @@ def activity_id_for_action(action: str) -> int:
     if a == "REJECT":
         return ACTIVITY_DENIED
     return ACTIVITY_UNKNOWN
-
-
-# ---------------------------------------------------------------------------
-# Time helpers — VPC Flow uses epoch seconds; OCSF uses epoch milliseconds
-# ---------------------------------------------------------------------------
-
-
-def sec_to_ms(value: str | int | None) -> int | None:
-    """Convert seconds-epoch to ms-epoch, or None if unparseable / missing."""
-    if value is None or value == "-" or value == "":
-        return None
-    try:
-        return int(value) * 1000
-    except (TypeError, ValueError):
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -314,11 +304,13 @@ def _build_canonical_record(record: dict[str, str]) -> dict[str, Any] | None:
         ).encode("utf-8")
     ).hexdigest()
 
-    start_ms = sec_to_ms(record.get("start"))
-    end_ms = sec_to_ms(record.get("end"))
+    start_ms = parse_ts_ms(record.get("start"))
+    end_ms = parse_ts_ms(record.get("end"))
     # OCSF `time` is the event's effective time; for a flow, the end-time is
     # the most useful because it's when the accumulated counters were flushed.
-    event_time = end_ms or start_ms or 0
+    event_time = end_ms or start_ms
+    if event_time is None:
+        raise TimestampUnparseable("flow record has no start or end time")
 
     canonical: dict[str, Any] = {
         "schema_mode": "canonical",
@@ -456,6 +448,9 @@ def ingest(lines: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[s
 
         try:
             canonical = _build_canonical_record(record)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=lineno, line=lineno)
+            continue
         except Exception as e:
             print(f"[{SKILL_NAME}] skipping line {lineno}: convert error: {e}", file=sys.stderr)
             continue

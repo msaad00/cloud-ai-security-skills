@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -15,6 +14,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    parse_ts_ms,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-vpc-flow-logs-gcp-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -60,30 +65,6 @@ def activity_id_for_disposition(disposition: str | None) -> int:
     if value in {"DENIED", "REJECT", "DROPPED"}:
         return ACTIVITY_DENIED
     return ACTIVITY_UNKNOWN
-
-
-def parse_ts_ms(value: str | int | float | None) -> int | None:
-    if value is None or value == "":
-        return None
-    if isinstance(value, (int, float)) or (isinstance(value, str) and value.isdigit()):
-        raw = int(value)
-        return raw if raw > 10_000_000_000 else raw * 1000
-    try:
-        cleaned = str(value).replace("Z", "+00:00")
-        if "." in cleaned:
-            head, _, tail = cleaned.partition(".")
-            frac, sep, tz = tail.partition("+")
-            if not sep:
-                frac, sep, tz = tail.partition("-")
-            if frac and len(frac) > 6:
-                frac = frac[:6]
-            cleaned = head + "." + frac + (sep + tz if sep else "")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return None
 
 
 def _payload(entry: dict[str, Any]) -> dict[str, Any]:
@@ -199,12 +180,7 @@ def _build_canonical_record(entry: dict[str, Any]) -> dict[str, Any] | None:
     activity_id = activity_id_for_disposition(payload.get("disposition"))
     start_ms = parse_ts_ms(payload.get("start_time"))
     end_ms = parse_ts_ms(payload.get("end_time"))
-    event_time = (
-        end_ms
-        or start_ms
-        or parse_ts_ms(entry.get("timestamp"))
-        or int(datetime.now(timezone.utc).timestamp() * 1000)
-    )
+    event_time = end_ms or start_ms or require_ts_ms(entry.get("timestamp"))
     event_uid = hashlib.sha256(
         json.dumps(
             {
@@ -352,8 +328,12 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
-    for entry in iter_raw_entries(stream):
-        canonical = _build_canonical_record(entry)
+    for record_no, entry in enumerate(iter_raw_entries(stream), start=1):
+        try:
+            canonical = _build_canonical_record(entry)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         if canonical is not None:
             if output_format == "native":
                 yield _render_native_record(canonical)

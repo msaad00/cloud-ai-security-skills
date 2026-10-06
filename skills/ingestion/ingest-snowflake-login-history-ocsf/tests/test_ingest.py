@@ -16,12 +16,13 @@ _SPEC.loader.exec_module(_INGEST)
 
 ingest = _INGEST.ingest
 iter_raw_rows = _INGEST.iter_raw_rows
-parse_ts_ms = _INGEST.parse_ts_ms
 SKILL_NAME = _INGEST.SKILL_NAME
 AUTH_CLASS_UID = _INGEST.AUTH_CLASS_UID
 AUTH_TYPE_UID = _INGEST.AUTH_TYPE_UID
 STATUS_SUCCESS = _INGEST.STATUS_SUCCESS
 STATUS_FAILURE = _INGEST.STATUS_FAILURE
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 
 def _row(**overrides):

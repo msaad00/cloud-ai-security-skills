@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -37,6 +36,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-snowflake-login-history-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -63,33 +67,6 @@ STATUS_FAILURE = 2
 
 # IS_SUCCESS is a VARCHAR ('YES' / 'NO') per the Snowflake LOGIN_HISTORY view.
 _TRUE_TOKENS = frozenset({"YES", "TRUE", "1", "Y", "T"})
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-def parse_ts_ms(value: Any) -> int:
-    """Parse EVENT_TIMESTAMP (ISO-8601 string or epoch seconds/ms) to epoch ms."""
-    if value is None or value == "":
-        return _now_ms()
-    if isinstance(value, (int, float)):
-        # Heuristic: values >= 1e12 are already milliseconds.
-        return int(value) if value >= 1_000_000_000_000 else int(value * 1000)
-    text = str(value).strip()
-    if not text:
-        return _now_ms()
-    if text.isdigit():
-        num = int(text)
-        return num if num >= 1_000_000_000_000 else num * 1000
-    try:
-        cleaned = text.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return _now_ms()
 
 
 def _get(row: dict[str, Any], *names: str) -> Any:
@@ -208,7 +185,7 @@ def _build_ocsf(row: dict[str, Any]) -> dict[str, Any]:
         "type_uid": AUTH_TYPE_UID,
         "severity_id": severity_id,
         "status_id": status_id,
-        "time": parse_ts_ms(_get(row, "EVENT_TIMESTAMP")),
+        "time": require_ts_ms(_get(row, "EVENT_TIMESTAMP")),
         "metadata": {
             "version": OCSF_VERSION,
             "uid": event_uid,
@@ -238,7 +215,7 @@ def _build_native(row: dict[str, Any]) -> dict[str, Any]:
         "output_format": "native",
         "provider": "Snowflake",
         "event_uid": event_uid,
-        "time_ms": parse_ts_ms(_get(row, "EVENT_TIMESTAMP")),
+        "time_ms": require_ts_ms(_get(row, "EVENT_TIMESTAMP")),
         "status_id": status_id,
         "status": "success" if status_id == STATUS_SUCCESS else "failure",
         "actor": _actor(row),
@@ -315,7 +292,7 @@ def ingest(
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
 
-    for row in iter_raw_rows(stream):
+    for record_no, row in enumerate(iter_raw_rows(stream), start=1):
         if not isinstance(row, dict):
             continue
         try:
@@ -328,6 +305,9 @@ def ingest(
                 yield _build_native(row)
             else:
                 yield _build_ocsf(row)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:  # defensive: never crash on one bad row
             emit_stderr_event(
                 SKILL_NAME,

@@ -26,7 +26,6 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -36,6 +35,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-snowflake-query-history-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -97,33 +101,6 @@ _SIZE_ALIASES: dict[str, str] = {
 # Snowflake CREATE WAREHOUSE defaults to XSMALL; used as the prior size for the
 # first observed resize of a warehouse within a QUERY_HISTORY stream.
 DEFAULT_WAREHOUSE_SIZE = "XSMALL"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-def parse_ts_ms(value: Any) -> int:
-    """Parse START_TIME (ISO-8601 string or epoch seconds/ms) to epoch ms."""
-    if value is None or value == "":
-        return _now_ms()
-    if isinstance(value, (int, float)):
-        # Heuristic: values >= 1e12 are already milliseconds.
-        return int(value) if value >= 1_000_000_000_000 else int(value * 1000)
-    text = str(value).strip()
-    if not text:
-        return _now_ms()
-    if text.isdigit():
-        num = int(text)
-        return num if num >= 1_000_000_000_000 else num * 1000
-    try:
-        cleaned = text.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return _now_ms()
 
 
 def _get(row: dict[str, Any], *names: str) -> Any:
@@ -476,7 +453,7 @@ def _build_ocsf(
         "type_uid": API_ACTIVITY_TYPE_UID,
         "severity_id": SEVERITY_INFORMATIONAL,
         "status_id": status_id,
-        "time": parse_ts_ms(_get(row, "START_TIME")),
+        "time": require_ts_ms(_get(row, "START_TIME")),
         "metadata": {
             "version": OCSF_VERSION,
             "uid": query_id,
@@ -512,7 +489,7 @@ def _build_native(
         "output_format": "native",
         "provider": "Snowflake",
         "event_uid": query_id,
-        "time_ms": parse_ts_ms(_get(row, "START_TIME")),
+        "time_ms": require_ts_ms(_get(row, "START_TIME")),
         "status_id": status_id,
         "status": "success" if status_id == STATUS_SUCCESS else "failure",
         "operation": operation,
@@ -591,7 +568,7 @@ def ingest(
         raise ValueError(f"unsupported output_format `{output_format}`")
 
     size_state: dict[str, str] = {}
-    for row in iter_raw_rows(stream):
+    for record_no, row in enumerate(iter_raw_rows(stream), start=1):
         if not isinstance(row, dict):
             continue
         try:
@@ -612,10 +589,16 @@ def ingest(
                 skipped_counts[query_type] = skipped_counts.get(query_type, 0) + 1
             continue
         operation, snowflake_block = derived
-        if output_format == "native":
-            yield _build_native(row, operation, snowflake_block)
-        else:
-            yield _build_ocsf(row, operation, snowflake_block)
+        try:
+            event = (
+                _build_native(row, operation, snowflake_block)
+                if output_format == "native"
+                else _build_ocsf(row, operation, snowflake_block)
+            )
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
+        yield event
 
 
 def main(argv: list[str] | None = None) -> int:

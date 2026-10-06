@@ -20,7 +20,8 @@ OUTPUT_FORMATS = _INGEST.OUTPUT_FORMATS
 convert_message = _INGEST.convert_message
 ingest = _INGEST.ingest
 iter_raw_messages = _INGEST.iter_raw_messages
-parse_ts_ms = _INGEST.parse_ts_ms
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"

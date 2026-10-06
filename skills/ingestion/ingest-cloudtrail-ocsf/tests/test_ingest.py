@@ -101,13 +101,27 @@ class TestParseTs:
         # 2026-04-10T05:00:00Z == 1775797200000 ms
         assert parse_ts_ms("2026-04-10T05:00:00Z") == 1775797200000
 
-    def test_missing_falls_to_now(self):
-        ms = parse_ts_ms(None)
-        assert isinstance(ms, int) and ms > 1_700_000_000_000
+    def test_missing_is_none(self):
+        assert parse_ts_ms(None) is None
 
-    def test_garbage_falls_to_now(self):
-        ms = parse_ts_ms("not-a-date")
-        assert isinstance(ms, int) and ms > 1_700_000_000_000
+    def test_garbage_is_none(self):
+        assert parse_ts_ms("not-a-date") is None
+
+    def test_event_without_time_is_skipped_not_stamped_now(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        raw = json.loads(RAW_FIXTURE.read_text().splitlines()[0])
+        raw["eventTime"] = "not-a-date"
+        assert list(ingest([json.dumps(raw)])) == []
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["event"] == "timestamp_unparseable"
+        assert payload["record"] == 1
+        assert "not-a-date" not in payload["message"]
+
+    def test_unparseable_session_creation_date_is_omitted(self):
+        raw = json.loads(RAW_FIXTURE.read_text().splitlines()[0])
+        raw["userIdentity"]["sessionContext"] = {"attributes": {"creationDate": "bad"}}
+        event = convert_event(raw)
+        assert "created_time" not in event["actor"].get("session", {})
 
 
 # ── convert_event ──────────────────────────────────────────────────────

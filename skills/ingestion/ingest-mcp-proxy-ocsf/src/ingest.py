@@ -13,7 +13,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -22,6 +21,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-mcp-proxy-ocsf"
 # Framework depth markers (coverage_summary.py)
@@ -74,29 +78,6 @@ def input_schema_fingerprint(tool: dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Time
-# ---------------------------------------------------------------------------
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    """Parse an ISO-8601 timestamp to Unix epoch milliseconds.
-
-    Falls back to 'now' if missing or unparseable. Always returns UTC.
-    """
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        # Handle trailing Z
-        cleaned = ts.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-# ---------------------------------------------------------------------------
 # OCSF event builder
 # ---------------------------------------------------------------------------
 
@@ -140,7 +121,7 @@ def _build_canonical_event(raw: dict[str, Any], activity_id: int) -> dict[str, A
         "source_skill": SKILL_NAME,
         "event_uid": event_uid,
         "provider": "MCP",
-        "time_ms": parse_ts_ms(raw.get("timestamp")),
+        "time_ms": require_ts_ms(raw.get("timestamp")),
         "activity_id": activity_id,
         "activity_name": _activity_name(activity_id),
         "severity": "informational",
@@ -285,6 +266,9 @@ def ingest(lines: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[s
             continue
         try:
             yield from convert_event(raw, output_format=output_format)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=lineno, line=lineno)
+            continue
         except Exception as e:  # defence-in-depth — never crash the pipeline
             print(f"[{SKILL_NAME}] skipping line {lineno}: convert error: {e}", file=sys.stderr)
             continue
