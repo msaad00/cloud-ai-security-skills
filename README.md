@@ -35,12 +35,14 @@ uv sync                      # install uv first: https://docs.astral.sh/uv/
 uv run make demo             # ingest -> detect -> SARIF, then prints the findings
 ```
 
-Expected tail of the output (structured JSON logs go to stderr above it):
+Expected stdout tail (structured JSON logs go to stderr; `<rule id>` is the SARIF rule):
 
 ```text
 Findings written to /tmp/cloud-security-demo.sarif
 1 finding(s) emitted
   - <rule id>: AWS IAM access key created
+
+Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `bob` in account `123456789012` (us-east-1). Source IP: 203.0.113.42. This creates additional AWS credential material for a valid cloud account.
 ```
 
 The same pipeline, spelled out — each stage is a standalone skill joined by a Unix pipe:

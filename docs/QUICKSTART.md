@@ -23,6 +23,8 @@ findings. Structured JSON logs go to stderr; the tail of the output is:
 Findings written to /tmp/cloud-security-demo.sarif
 1 finding(s) emitted
   - <rule id>: AWS IAM access key created
+
+Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `bob` in account `123456789012` (us-east-1). Source IP: 203.0.113.42. This creates additional AWS credential material for a valid cloud account.
 ```
 
 The same pipeline spelled out, one skill per stage joined by Unix pipes:
