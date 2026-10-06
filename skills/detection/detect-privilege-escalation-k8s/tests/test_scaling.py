@@ -14,7 +14,7 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from detect import detect  # type: ignore[import-not-found]  # noqa: E402
+from detect import RULE1_WINDOW_MS, detect  # type: ignore[import-not-found]  # noqa: E402
 
 BASE_MS = 1775797200000
 PARITY_EVENTS = 3000
@@ -92,8 +92,6 @@ def test_rule1_window_edges_match_original_semantics():
         event = _event(0, actor, operation, "secrets", name, "ns0")
         event["time"] = BASE_MS + ms
         return event
-
-    from detect import RULE1_WINDOW_MS  # type: ignore[import-not-found]
 
     exactly_window = [at(0, "list"), at(RULE1_WINDOW_MS, "get", "s1")]
     just_outside = [at(0, "list"), at(RULE1_WINDOW_MS + 1, "get", "s2")]
