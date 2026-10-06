@@ -624,8 +624,7 @@ def main(argv: list[str] | None = None) -> int:
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        events = list(load_jsonl(in_stream))
-        for finding in detect(events, output_format=args.output_format):
+        for finding in detect(load_jsonl(in_stream), output_format=args.output_format):
             out_stream.write(json.dumps(finding, separators=(",", ":")) + "\n")
     finally:
         if args.input:
