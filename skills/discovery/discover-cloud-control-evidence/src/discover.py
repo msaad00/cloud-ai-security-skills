@@ -1116,7 +1116,7 @@ def to_ocsf_live_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("input", nargs="?", help="JSON file path. Reads stdin when omitted.")
     parser.add_argument(
         "--framework",

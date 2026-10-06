@@ -846,7 +846,8 @@ def main(argv: list[str] | None = None) -> int:
         description=(
             "Contain an Okta account takeover by revoking sessions and OAuth tokens. "
             "Dry-run by default; --apply requires a declared incident window."
-        )
+        ),
+        allow_abbrev=False,
     )
     parser.add_argument("input", nargs="?", help="OCSF finding JSONL input (default: stdin)")
     parser.add_argument("--output", "-o", help="Record JSONL output (default: stdout)")

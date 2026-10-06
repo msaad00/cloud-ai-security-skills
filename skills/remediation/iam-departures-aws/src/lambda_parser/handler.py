@@ -326,7 +326,8 @@ def main(argv: list[str] | None = None) -> int:
             "departed-employee entries against the runner's pre-flight "
             "policy checks. Read-only at this layer; --apply has no "
             "effect because deletion happens only in the deployed runner."
-        )
+        ),
+        allow_abbrev=False,
     )
     parser.add_argument(
         "--manifest",

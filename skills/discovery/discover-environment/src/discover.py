@@ -911,7 +911,8 @@ def to_ocsf_cloud_resources_inventory(graph: EnvironmentGraph) -> dict[str, Any]
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Cloud Environment Discovery — map infrastructure to security graph"
+        description="Cloud Environment Discovery — map infrastructure to security graph",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "provider",

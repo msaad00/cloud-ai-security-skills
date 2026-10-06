@@ -53,6 +53,7 @@ if str(_MCP_SRC) not in sys.path:
     sys.path.insert(0, str(_MCP_SRC))
 
 import sandbox as _sandbox  # noqa: E402
+from arg_policy import is_apply_flag, is_wrapper_only_env  # noqa: E402
 from resource_limits import from_env as _resource_limits_from_env  # noqa: E402
 from resource_limits import make_preexec as _make_preexec  # noqa: E402
 from tool_registry import (  # noqa: E402
@@ -215,18 +216,20 @@ class SkillsClient:
     def _is_safe_write(self, skill: SkillSpec, args: list[str]) -> bool:
         if skill.read_only:
             return True
+        if any(is_apply_flag(arg) for arg in args):
+            return False
         if (
             skill.category == "remediation"
             and skill.entrypoint
             and skill.entrypoint.name == "handler.py"
         ):
-            return "--apply" not in args
+            return True
         if (
             skill.category == "evaluation"
             and skill.entrypoint
             and skill.entrypoint.name == "checks.py"
         ):
-            return "--apply" not in args
+            return True
         return "--dry-run" in args
 
     def _needs_approval(self, skill: SkillSpec, args: list[str]) -> bool:
@@ -237,7 +240,7 @@ class SkillsClient:
             and skill.entrypoint
             and skill.entrypoint.name == "checks.py"
         ):
-            return "--apply" in args
+            return any(is_apply_flag(arg) for arg in args)
         return True
 
     def _build_child_env(
@@ -251,7 +254,7 @@ class SkillsClient:
             if value:
                 env[key] = value
         for key, raw_value in os.environ.items():
-            if not key.startswith("CLOUD_SECURITY_"):
+            if not key.startswith("CLOUD_SECURITY_") or is_wrapper_only_env(key):
                 continue
             value = raw_value.strip()
             if value:

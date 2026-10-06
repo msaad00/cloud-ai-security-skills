@@ -234,7 +234,10 @@ class TestMcpServer:
                     "method": "tools/call",
                     "params": {
                         "name": "model-serving-security",
-                        "arguments": {"args": [str(config_path), "--output", "json"]},
+                        "arguments": {
+                            "input": config_path.read_text(),
+                            "args": ["--output", "json"],
+                        },
                     },
                 },
             )

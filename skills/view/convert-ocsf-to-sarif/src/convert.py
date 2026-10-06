@@ -304,7 +304,9 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Convert OCSF Detection Findings to SARIF 2.1.0.")
+    parser = argparse.ArgumentParser(
+        description="Convert OCSF Detection Findings to SARIF 2.1.0.", allow_abbrev=False
+    )
     parser.add_argument("input", nargs="?", help="OCSF JSONL input. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="SARIF output file. Defaults to stdout.")
     args = parser.parse_args(argv)

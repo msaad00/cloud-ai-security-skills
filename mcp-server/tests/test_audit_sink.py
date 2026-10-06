@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SINK_PATH = REPO_ROOT / "mcp-server" / "src" / "audit_sink.py"
 SPEC = importlib.util.spec_from_file_location("cloud_security_audit_sink_test", SINK_PATH)
@@ -180,3 +182,32 @@ def test_file_sink_chmod_0600(tmp_path):
     # On macOS / linux umask is typically 022 so a fresh 0600 open survives.
     # Whatever umask strips, owner-read+write must remain.
     assert mode & 0o600 == 0o600
+
+
+def test_sink_from_env_accepts_strong_key(tmp_path):
+    sink = MODULE.sink_from_env({MODULE.AUDIT_HMAC_KEY_ENV: "a" * 64})
+    assert sink.chain_enabled
+
+
+def test_sink_from_env_without_key_keeps_chain_off():
+    assert not MODULE.sink_from_env({}).chain_enabled
+
+
+@pytest.mark.parametrize("key", ["please-set-me", "short", "x" * 31, "please-set-me" * 3])
+def test_sink_from_env_rejects_weak_or_placeholder_key(key):
+    with pytest.raises(ValueError, match=MODULE.AUDIT_HMAC_KEY_ENV):
+        MODULE.sink_from_env({MODULE.AUDIT_HMAC_KEY_ENV: key})
+
+
+def test_server_refuses_to_start_with_weak_key(tmp_path):
+    env = {**os.environ, MODULE.AUDIT_HMAC_KEY_ENV: "please-set-me"}
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "mcp-server" / "src" / "server.py")],
+        env=env,
+        input=b"",
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+    assert result.returncode == 2
+    assert MODULE.AUDIT_HMAC_KEY_ENV.encode() in result.stderr

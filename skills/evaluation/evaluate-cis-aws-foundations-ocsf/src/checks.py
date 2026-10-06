@@ -789,7 +789,7 @@ def print_summary(findings: list[Finding]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=f"{BENCHMARK_NAME} evaluator")
+    parser = argparse.ArgumentParser(description=f"{BENCHMARK_NAME} evaluator", allow_abbrev=False)
     parser.add_argument("input", nargs="?", help="OCSF/native JSON or JSONL. Defaults to stdin.")
     parser.add_argument("--control", help="Run one CIS control ID, e.g. 2.1.")
     parser.add_argument("--output", choices=["console", "json"], default="console")

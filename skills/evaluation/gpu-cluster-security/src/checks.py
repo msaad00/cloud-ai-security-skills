@@ -580,8 +580,20 @@ def print_summary(findings: list[Finding]) -> None:
     print(f"  Pass rate: {passed / max(total - skipped, 1) * 100:.0f}%\n")
 
 
+def _load_stdin_config() -> dict:
+    content = sys.stdin.read()
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        import yaml
+
+        return yaml.safe_load(content) or {}
+
+
 def load_config(path: str) -> dict:
     """Load cluster config from JSON or YAML."""
+    if path == "-":
+        return _load_stdin_config()
     p = Path(path)
     if not p.exists():
         print(f"Error: Config file not found: {path}", file=sys.stderr)
@@ -599,8 +611,15 @@ def load_config(path: str) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="GPU Cluster Security Benchmark")
-    parser.add_argument("config", help="Path to cluster config file (JSON/YAML)")
+    parser = argparse.ArgumentParser(
+        description="GPU Cluster Security Benchmark", allow_abbrev=False
+    )
+    parser.add_argument(
+        "config",
+        nargs="?",
+        default="-",
+        help="Path to cluster config file (JSON/YAML); `-` or omitted reads stdin",
+    )
     parser.add_argument(
         "--section", choices=list(ALL_CHECKS.keys()), help="Run specific section only"
     )

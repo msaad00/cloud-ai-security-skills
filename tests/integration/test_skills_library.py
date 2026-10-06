@@ -174,3 +174,22 @@ def test_approval_count_helper_dedupes():
 def test_approval_count_helper_falls_back_to_singular():
     assert LIB._approval_count({"approver_email": "a@x.com"}) == 1
     assert LIB._approval_count({"approver_id": "a-1"}) == 1
+
+
+@pytest.mark.parametrize("token", ["--appl", "--app", "--apply=1"])
+def test_invoke_refuses_abbreviated_apply(token):
+    client = LIB.SkillsClient(allowed_skills=("remediate-mcp-tool-quarantine",))
+    approval = {"approver_ids": ["a-1", "a-2"], "ticket_id": "SEC-1"}
+    with pytest.raises(LIB.SkillCallRefused, match="write-capable"):
+        client.invoke("remediate-mcp-tool-quarantine", args=[token], approval_context=approval)
+
+
+def test_child_env_excludes_wrapper_secrets(monkeypatch):
+    monkeypatch.setenv("CLOUD_SECURITY_AUDIT_HMAC_KEY", "k" * 40)
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_AUDIT_LOG", "/tmp/audit.jsonl")
+    monkeypatch.setenv("CLOUD_SECURITY_HTTP_MAX_ATTEMPTS", "3")
+    client = LIB.SkillsClient(allowed_skills=("ingest-cloudtrail-ocsf",))
+    env = client._build_child_env("corr-1", None)
+    assert "CLOUD_SECURITY_AUDIT_HMAC_KEY" not in env
+    assert "CLOUD_SECURITY_MCP_AUDIT_LOG" not in env
+    assert env["CLOUD_SECURITY_HTTP_MAX_ATTEMPTS"] == "3"

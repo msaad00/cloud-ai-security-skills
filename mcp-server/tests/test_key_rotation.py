@@ -299,7 +299,9 @@ class TestSseTransportRotation:
         monkeypatch.delenv("MCP_SSE_BEARER_KEYS", raising=False)
         monkeypatch.delenv("MCP_SSE_ALLOW_PUBLIC_BIND", raising=False)
         monkeypatch.setenv("CLOUD_SECURITY_MCP_AUDIT_LOG", str(log_path))
-        monkeypatch.setenv("CLOUD_SECURITY_AUDIT_HMAC_KEY", "rot-chain-key")
+        monkeypatch.setenv(
+            "CLOUD_SECURITY_AUDIT_HMAC_KEY", "rot-chain-key-0123456789abcdef0123456789abcdef"
+        )
         SERVER._reset_audit_sink_for_tests()
         app = TRANSPORT.create_app(bind="127.0.0.1")
         return app, log_path
