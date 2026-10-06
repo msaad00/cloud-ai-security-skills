@@ -115,7 +115,7 @@ class RetryTransport(httpx.BaseTransport):
 
     def _backoff_delay(self, attempt: int) -> float:
         # attempt is 1-based; first backoff uses backoff_factor * 2**0.
-        return min(self._backoff_factor * (2 ** (attempt - 1)), BACKOFF_MAX_SECONDS)
+        return min(self._backoff_factor * (2.0 ** (attempt - 1)), BACKOFF_MAX_SECONDS)
 
     def _delay_for(self, response: httpx.Response, attempt: int) -> float:
         if self._respect_retry_after:
