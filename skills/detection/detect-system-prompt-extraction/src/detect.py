@@ -294,7 +294,14 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
             "types": native_finding["finding_types"],
             "first_seen_time": native_finding["first_seen_time_ms"],
             "last_seen_time": native_finding["last_seen_time_ms"],
-            "attacks": native_finding["mitre_attacks"],
+            "attacks": [
+                {
+                    "version": attack["version"],
+                    "tactic": {"uid": attack["tactic_uid"], "name": attack["tactic_name"]},
+                    "technique": {"uid": attack["technique_uid"], "name": attack["technique_name"]},
+                }
+                for attack in native_finding["mitre_attacks"]
+            ],
         },
         "observables": native_finding["observables"],
         "evidence": {

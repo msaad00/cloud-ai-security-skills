@@ -74,7 +74,7 @@ def test_fires_on_idor_user_id_mismatch():
     f = findings[0]
     assert f["class_uid"] == 2004
     assert f["severity_id"] == 4
-    assert f["finding_info"]["attacks"][0]["technique_uid"] == "T1212"
+    assert f["finding_info"]["attacks"][0]["technique"]["uid"] == "T1212"
     assert any(o["name"] == "rule" and o["value"] == "idor" for o in f["observables"])
     assert any(o["name"] == "target.uid" and o["value"] == "42" for o in f["observables"])
 

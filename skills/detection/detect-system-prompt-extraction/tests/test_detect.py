@@ -50,7 +50,7 @@ def test_fires_on_explicit_system_prompt_marker():
     finding = findings[0]
     assert finding["class_uid"] == 2004
     assert finding["finding_info"]["title"] == "MCP tool response leaked system-prompt material"
-    technique_uids = {attack["technique_uid"] for attack in finding["finding_info"]["attacks"]}
+    technique_uids = {attack["technique"]["uid"] for attack in finding["finding_info"]["attacks"]}
     assert {"AML.T0004", "AML.T0041"} <= technique_uids
 
 

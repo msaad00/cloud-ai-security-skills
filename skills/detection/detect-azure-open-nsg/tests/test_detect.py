@@ -112,7 +112,7 @@ def test_fires_on_rdp_open_to_star():
     f = findings[0]
     assert f["class_uid"] == 2004
     assert f["severity_id"] == 4
-    assert f["finding_info"]["attacks"][0]["technique_uid"] == "T1190"
+    assert f["finding_info"]["attacks"][0]["technique"]["uid"] == "T1190"
     assert any(
         obs["name"] == "target.uid" and obs["value"].endswith("/securityRules/open-rule")
         for obs in f["observables"]

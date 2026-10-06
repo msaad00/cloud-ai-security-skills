@@ -77,8 +77,8 @@ A finding fires on every `AuthorizeSecurityGroupIngress` event from `ingest-clou
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 
-- `finding_info.attacks[].tactic_uid = TA0001` (Initial Access)
-- `finding_info.attacks[].technique_uid = T1190` (Exploit Public-Facing Application)
+- `finding_info.attacks[].tactic.uid = TA0001` (Initial Access)
+- `finding_info.attacks[].technique.uid = T1190` (Exploit Public-Facing Application)
 - `observables[]` includes `target.uid` (the SG id), `target.name`, `target.type=SecurityGroup`, `account.uid`, `region`, plus per-CIDR and per-port observables for the remediator to consume
 
 The native projection (`--output-format native`) carries `permission` (the raw IpPermission item) for forensic context.

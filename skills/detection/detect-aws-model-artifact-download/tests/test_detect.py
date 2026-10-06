@@ -65,8 +65,8 @@ def test_fires_on_model_safetensors_get_object():
     finding = findings[0]
     assert finding["finding_info"]["title"] == "AWS model artifact downloaded from S3"
     attacks = finding["finding_info"]["attacks"]
-    assert any(item["technique_uid"] == "T1530" for item in attacks)
-    assert any(item["technique_uid"] == "AML.T0035" for item in attacks)
+    assert any(item["technique"]["uid"] == "T1530" for item in attacks)
+    assert any(item["technique"]["uid"] == "AML.T0035" for item in attacks)
     assert any(
         obs["name"] == "object.key" and obs["value"].endswith("model.safetensors")
         for obs in finding["observables"]

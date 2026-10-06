@@ -105,7 +105,7 @@ def test_fires_on_ssh_open_to_world():
     f = findings[0]
     assert f["class_uid"] == 2004
     assert f["severity_id"] == 4
-    assert f["finding_info"]["attacks"][0]["technique_uid"] == "T1190"
+    assert f["finding_info"]["attacks"][0]["technique"]["uid"] == "T1190"
     assert any(
         obs["name"] == "target.uid" and obs["value"] == "allow-ssh-world"
         for obs in f["observables"]

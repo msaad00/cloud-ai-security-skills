@@ -186,6 +186,13 @@ All detection skills in this category produce **Detection Finding** (class `2004
 }
 ```
 
+Every `attacks[]` entry uses nested OCSF objects: `technique: {uid, name}`
+(required), `tactic: {uid, name}`, and `sub_technique: {uid, name}` when a
+sub-technique applies. Flat keys such as `technique_uid` or `tactic_uid` are
+not part of the OCSF wire format; they may appear only in a skill's native
+projection. `tests/conformance/test_ocsf_attack_shape.py` enforces this for
+every detector and every golden Detection Finding.
+
 The point: **a downstream tool (ClickHouse, Splunk OCSF app, Grafana) can pivot on `finding_info.attacks[].technique.uid` without ever reading the rule code**. That is the whole benefit of keeping MITRE inside OCSF instead of as a sidecar mapping.
 
 `metadata.uid` is the event-level companion to `finding_info.uid`. Use it for replay-safe SIEM dedupe and index merges; use `finding_info.uid` for finding lifecycle and sink-side upserts.

@@ -81,8 +81,8 @@ A finding fires on every `Microsoft.Network/networkSecurityGroups/securityRules/
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 
-- `finding_info.attacks[].tactic_uid = TA0001` (Initial Access)
-- `finding_info.attacks[].technique_uid = T1190` (Exploit Public-Facing Application)
+- `finding_info.attacks[].tactic.uid = TA0001` (Initial Access)
+- `finding_info.attacks[].technique.uid = T1190` (Exploit Public-Facing Application)
 - `observables[]` includes `target.uid` (the rule's fully-qualified Azure Resource Manager id), `target.name` (rule name), `target.type=NetworkSecurityRule`, `account.uid` (subscription id), `region`, plus per-source-prefix and per-port observables for the remediator to consume
 
 The native projection (`--output-format native`) carries the full `rule` body for forensic context.

@@ -277,10 +277,8 @@ def _to_ocsf(native: dict[str, Any]) -> dict[str, Any]:
             "attacks": [
                 {
                     "version": MITRE_VERSION,
-                    "tactic_uid": TACTIC_UID,
-                    "tactic_name": TACTIC_NAME,
-                    "technique_uid": native["technique_uid"],
-                    "technique_name": native["technique_name"],
+                    "tactic": {"uid": TACTIC_UID, "name": TACTIC_NAME},
+                    "technique": {"uid": native["technique_uid"], "name": native["technique_name"]},
                 }
             ],
         },
