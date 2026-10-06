@@ -38,7 +38,7 @@ uv run make demo             # ingest -> detect -> SARIF, then prints the findin
 Expected stdout tail (structured JSON logs go to stderr; `<rule id>` is the SARIF rule):
 
 ```text
-Findings written to /tmp/cloud-security-demo.sarif
+Findings written to $TMPDIR/cloud-security-demo.sarif
 1 finding(s) emitted
   - <rule id>: AWS IAM access key created
 

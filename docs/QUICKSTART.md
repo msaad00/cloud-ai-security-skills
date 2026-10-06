@@ -20,7 +20,7 @@ CloudTrail fixture, writes `/tmp/cloud-security-demo.sarif`, and prints the
 findings. Structured JSON logs go to stderr; the tail of the output is:
 
 ```text
-Findings written to /tmp/cloud-security-demo.sarif
+Findings written to $TMPDIR/cloud-security-demo.sarif
 1 finding(s) emitted
   - <rule id>: AWS IAM access key created
 
