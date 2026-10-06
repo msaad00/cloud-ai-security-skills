@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import sys
+from bisect import bisect_left
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -298,8 +299,11 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
 
 def rule1_secret_enumeration(events: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     """list(secrets) → get(secrets) in the same namespace, same SA, within window."""
-    normalized = _normalized_events(events)
-    list_events: dict[tuple[str, str], list[tuple[int, dict[str, Any]]]] = {}
+    return _rule1(_normalized_events(events))
+
+
+def _rule1(normalized: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
+    list_times: dict[tuple[str, str], list[int]] = {}
 
     for event in normalized:
         if not _actor_is_service_account(event):
@@ -309,7 +313,7 @@ def rule1_secret_enumeration(events: list[dict[str, Any]]) -> Iterable[dict[str,
         if event["resource_type"] != "secrets":
             continue
         list_key = (event["actor_name"], event["namespace"])
-        list_events.setdefault(list_key, []).append((event["time_ms"], event))
+        list_times.setdefault(list_key, []).append(event["time_ms"])
 
     seen_findings: set[str] = set()
     for event in normalized:
@@ -325,19 +329,20 @@ def rule1_secret_enumeration(events: list[dict[str, Any]]) -> Iterable[dict[str,
         get_time = event["time_ms"]
         secret_name = event["resource_name"]
 
-        candidates = list_events.get((actor, namespace), [])
-        matching = [
-            (time_ms, item)
-            for time_ms, item in candidates
-            if 0 < get_time - time_ms <= RULE1_WINDOW_MS
-        ]
-        if not matching:
-            continue
-
-        first_list_time = min(time_ms for time_ms, _ in matching)
         key = f"r1|{actor}|{namespace}|{secret_name}"
         if key in seen_findings:
             continue
+
+        # list_times is time-sorted (normalized events are), so the window
+        # [get_time - RULE1_WINDOW_MS, get_time) is one contiguous slice.
+        times = list_times.get((actor, namespace), [])
+        lo = bisect_left(times, get_time - RULE1_WINDOW_MS)
+        hi = bisect_left(times, get_time)
+        if lo >= hi:
+            continue
+
+        first_list_time = times[lo]
+        matching_count = hi - lo
         seen_findings.add(key)
 
         target = f"{namespace}/{secret_name}"
@@ -369,13 +374,16 @@ def rule1_secret_enumeration(events: list[dict[str, Any]]) -> Iterable[dict[str,
                 {"name": "secret.name", "type": "Other", "value": secret_name},
                 {"name": "rule", "type": "Other", "value": "r1-secret-enum"},
             ],
-            evidence_count=len(matching) + 1,
+            evidence_count=matching_count + 1,
         )
 
 
 def rule2_pod_exec(events: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     """create on pods/exec by a service account."""
-    normalized = _normalized_events(events)
+    return _rule2(_normalized_events(events))
+
+
+def _rule2(normalized: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     seen: set[str] = set()
     for event in normalized:
         if not _actor_is_service_account(event):
@@ -436,7 +444,10 @@ def _is_admin(event: dict[str, Any]) -> bool:
 
 def rule3_rbac_self_grant(events: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     """create on rolebindings or clusterrolebindings by a non-admin."""
-    normalized = _normalized_events(events)
+    return _rule3(_normalized_events(events))
+
+
+def _rule3(normalized: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     seen: set[str] = set()
     for event in normalized:
         if event["operation"] != "create":
@@ -491,7 +502,10 @@ def rule3_rbac_self_grant(events: list[dict[str, Any]]) -> Iterable[dict[str, An
 
 def rule4_token_self_grant(events: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     """create on serviceaccounts/token(request) or tokenreviews by a service account."""
-    normalized = _normalized_events(events)
+    return _rule4(_normalized_events(events))
+
+
+def _rule4(normalized: list[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     seen: set[str] = set()
     for event in normalized:
         if not _actor_is_service_account(event):
@@ -549,12 +563,12 @@ def detect(
     events: Iterable[dict[str, Any]], output_format: str = "ocsf"
 ) -> Iterable[dict[str, Any]]:
     """Run all four rules over an event stream and yield all findings."""
-    events_list = list(events)
+    normalized = _normalized_events(events)
     native_findings: list[dict[str, Any]] = []
-    native_findings.extend(rule1_secret_enumeration(events_list))
-    native_findings.extend(rule2_pod_exec(events_list))
-    native_findings.extend(rule3_rbac_self_grant(events_list))
-    native_findings.extend(rule4_token_self_grant(events_list))
+    native_findings.extend(_rule1(normalized))
+    native_findings.extend(_rule2(normalized))
+    native_findings.extend(_rule3(normalized))
+    native_findings.extend(_rule4(normalized))
 
     native_findings.sort(key=lambda finding: finding["time_ms"])
     for native_finding in native_findings:
