@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Iterable
@@ -20,7 +21,9 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared.env import env_int  # noqa: E402
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 from skills._shared.timestamps import (  # noqa: E402
     TimestampUnparseable,
     emit_timestamp_unparseable,
@@ -45,6 +48,19 @@ CATEGORY_NAME = "Application Activity"
 ACTIVITY_CREATE = 1  # a new record (e.g. tools/list response)
 ACTIVITY_READ = 2  # a read-style call (e.g. tools/call request)
 ACTIVITY_UNKNOWN = 0
+
+# Opt-in content preservation. Off by default: tool schemas, sampling
+# prompts, and message text can carry sensitive data, so the default output
+# keeps only fingerprints. When on, only the fields the MCP content detectors
+# read are kept, each capped at MAX_CHARS characters.
+PRESERVE_CONTENT_ENV = "MCP_PRESERVE_CONTENT"
+MAX_CHARS_ENV = "MCP_PRESERVE_CONTENT_MAX_CHARS"
+DEFAULT_MAX_CHARS = 16384
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def preserve_content_from_env() -> bool:
+    return os.environ.get(PRESERVE_CONTENT_ENV, "").strip().lower() in _TRUTHY
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +153,72 @@ def _build_canonical_event(raw: dict[str, Any], activity_id: int) -> dict[str, A
     }
 
 
+# ---------------------------------------------------------------------------
+# Opt-in content preservation
+# ---------------------------------------------------------------------------
+
+
+def _max_chars() -> int:
+    return max(1, env_int(MAX_CHARS_ENV, DEFAULT_MAX_CHARS, skill_name=SKILL_NAME))
+
+
+def _text_of(content: Any) -> str | None:
+    """Flatten MCP sampling content to text; image/audio blocks are dropped."""
+    if isinstance(content, str):
+        return content
+    blocks = content if isinstance(content, list) else [content]
+    texts = [
+        b["text"]
+        for b in blocks
+        if isinstance(b, dict) and b.get("type") == "text" and isinstance(b.get("text"), str)
+    ]
+    return "\n".join(texts) if texts else None
+
+
+def _preserved_unmapped(raw: dict[str, Any]) -> dict[str, Any] | None:
+    """Build `unmapped.mcp` with the prompt + message text a request carries."""
+    params = raw.get("params")
+    if not isinstance(params, dict):
+        return None
+    cap = _max_chars()
+    truncated: list[str] = []
+
+    def _capped(value: str, label: str) -> str:
+        if len(value) > cap:
+            truncated.append(label)
+            return value[:cap]
+        return value
+
+    mcp: dict[str, Any] = {}
+    system_prompt = params.get("systemPrompt")
+    if isinstance(system_prompt, str) and system_prompt:
+        mcp["prompt"] = _capped(system_prompt, "prompt")
+    messages = params.get("messages")
+    if isinstance(messages, list):
+        kept: list[dict[str, str]] = []
+        for i, msg in enumerate(messages):
+            text = _text_of(msg.get("content")) if isinstance(msg, dict) else None
+            label = f"request.params.messages[{i}].content"
+            kept.append({"content": _capped(text, label)} if text else {})
+        if any(kept):
+            mcp["request"] = {"params": {"messages": kept}}
+    if not mcp:
+        return None
+    if truncated:
+        mcp["truncated_fields"] = truncated
+    return {"mcp": mcp}
+
+
+def _preserve_input_schema(tool_out: dict[str, Any], tool: dict[str, Any]) -> None:
+    schema = tool.get("inputSchema")
+    if not isinstance(schema, dict):
+        return
+    if len(json.dumps(schema, separators=(",", ":"))) > _max_chars():
+        tool_out["input_schema_omitted"] = "size_cap"
+    else:
+        tool_out["input_schema"] = schema
+
+
 def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
     """Project the canonical activity shape into the pinned OCSF envelope."""
     event = {
@@ -168,6 +250,8 @@ def _render_ocsf_event(canonical: dict[str, Any]) -> dict[str, Any]:
     }
     if canonical.get("tool"):
         event["mcp"]["tool"] = dict(canonical["tool"])
+    if canonical.get("unmapped"):
+        event["unmapped"] = canonical["unmapped"]
     return event
 
 
@@ -178,7 +262,9 @@ def _render_native_event(canonical: dict[str, Any]) -> dict[str, Any]:
     return native
 
 
-def _with_tool(canonical: dict[str, Any], tool: dict[str, Any]) -> dict[str, Any]:
+def _with_tool(
+    canonical: dict[str, Any], tool: dict[str, Any], preserve_mcp_content: bool = False
+) -> dict[str, Any]:
     event = dict(canonical)
     event["tool"] = {
         "name": tool.get("name", ""),
@@ -186,10 +272,17 @@ def _with_tool(canonical: dict[str, Any], tool: dict[str, Any]) -> dict[str, Any
         "input_schema_sha256": input_schema_fingerprint(tool),
         "fingerprint": tool_fingerprint(tool),
     }
+    if preserve_mcp_content:
+        _preserve_input_schema(event["tool"], tool)
     return event
 
 
-def convert_event(raw: dict[str, Any], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+def convert_event(
+    raw: dict[str, Any],
+    output_format: str = "ocsf",
+    *,
+    preserve_mcp_content: bool = False,
+) -> Iterable[dict[str, Any]]:
     """Convert one raw proxy line into zero or more application activity events.
 
     - tools/list response -> one OCSF event per tool in the response (Create)
@@ -197,6 +290,11 @@ def convert_event(raw: dict[str, Any], output_format: str = "ocsf") -> Iterable[
       name so a detector can cross-reference the last known fingerprint for
       that tool in the same session.
     - Other methods/directions -> one OCSF event with no tool payload.
+
+    With ``preserve_mcp_content`` (opt-in), tools/list events also carry
+    ``mcp.tool.input_schema`` and requests carrying ``params.systemPrompt`` /
+    ``params.messages`` (e.g. sampling/createMessage) carry their text under
+    ``unmapped.mcp``. tools/call arguments are never preserved.
     """
     method = raw.get("method", "")
     direction = raw.get("direction", "")
@@ -212,7 +310,9 @@ def convert_event(raw: dict[str, Any], output_format: str = "ocsf") -> Iterable[
             )
             return
         for tool in tools:
-            canonical = _with_tool(_build_canonical_event(raw, ACTIVITY_CREATE), tool)
+            canonical = _with_tool(
+                _build_canonical_event(raw, ACTIVITY_CREATE), tool, preserve_mcp_content
+            )
             yield (
                 _render_native_event(canonical)
                 if output_format == "native"
@@ -236,6 +336,10 @@ def convert_event(raw: dict[str, Any], output_format: str = "ocsf") -> Iterable[
     # Anything else — emit a base event so the downstream pipeline stays
     # aware of activity on the session.
     canonical = _build_canonical_event(raw, ACTIVITY_UNKNOWN)
+    if preserve_mcp_content:
+        unmapped = _preserved_unmapped(raw)
+        if unmapped:
+            canonical["unmapped"] = unmapped
     yield (
         _render_native_event(canonical)
         if output_format == "native"
@@ -248,7 +352,12 @@ def convert_event(raw: dict[str, Any], output_format: str = "ocsf") -> Iterable[
 # ---------------------------------------------------------------------------
 
 
-def ingest(lines: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+def ingest(
+    lines: Iterable[str],
+    output_format: str = "ocsf",
+    *,
+    preserve_mcp_content: bool = False,
+) -> Iterable[dict[str, Any]]:
     """Yield activity records for a stream of raw JSONL lines."""
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
@@ -265,7 +374,9 @@ def ingest(lines: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[s
             print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
             continue
         try:
-            yield from convert_event(raw, output_format=output_format)
+            yield from convert_event(
+                raw, output_format=output_format, preserve_mcp_content=preserve_mcp_content
+            )
         except TimestampUnparseable:
             emit_timestamp_unparseable(SKILL_NAME, record=lineno, line=lineno)
             continue
@@ -286,13 +397,36 @@ def main(argv: list[str] | None = None) -> int:
         default="ocsf",
         help="Render OCSF Application Activity (default) or the native canonical projection.",
     )
+    parser.add_argument(
+        "--preserve-mcp-content",
+        action="store_true",
+        help=(
+            "Opt in to keeping tool inputSchema, sampling systemPrompt, and message text "
+            f"(capped per field) so content detectors can fire. Also enabled by "
+            f"{PRESERVE_CONTENT_ENV}=1. Off by default."
+        ),
+    )
     args = parser.parse_args(argv)
+    preserve = args.preserve_mcp_content or preserve_content_from_env()
+    if preserve:
+        emit_stderr_event(
+            SKILL_NAME,
+            level="info",
+            event="mcp_content_preserved",
+            message=(
+                "MCP content preservation is ON: tool schemas, sampling prompts, and "
+                "message text are retained in output (capped per field)."
+            ),
+            max_chars=_max_chars(),
+        )
 
     in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
     out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
 
     try:
-        for event in ingest(in_stream, output_format=args.output_format):
+        for event in ingest(
+            in_stream, output_format=args.output_format, preserve_mcp_content=preserve
+        ):
             out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
     finally:
         if args.input:
