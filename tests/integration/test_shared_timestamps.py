@@ -76,7 +76,6 @@ def test_parse_ts_ms_accepts_supported_shapes(value, expected):
         "2026-13-40T99:00:00Z",
         "not-a-date 12:00",
         "-1775797200",
-        "1e9",
         True,
         False,
         0,
@@ -98,6 +97,59 @@ def test_parse_ts_ms_accepts_supported_shapes(value, expected):
     ],
 )
 def test_parse_ts_ms_returns_none_for_missing_or_unparseable(value):
+    assert TS.parse_ts_ms(value) is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Exponent strings parse exactly like the equivalent float.
+        ("1.7e12", 1_700_000_000_000),
+        ("1.7E12", 1_700_000_000_000),
+        ("1e9", 1_000_000_000_000),
+        ("1.775797200e9", BASE_MS),
+        # Leap second clamps to the last representable millisecond of the minute.
+        ("2016-12-31T23:59:60Z", 1483228799999),
+        ("2016-12-31T23:59:60.5Z", 1483228799999),
+        ("2016-12-31 23:59:60", 1483228799999),
+        ("2017-01-01T01:59:60+02:00", 1483228799999),
+        # Smallest accepted numeric value: 1e8 (1973-03-03T09:46:40Z in seconds).
+        ("100000000", 100_000_000_000),
+        (100_000_000, 100_000_000_000),
+        # ISO dates after the epoch but before the numeric floor stay valid.
+        ("1970-01-01T00:00:00.001Z", 1),
+    ],
+)
+def test_parse_ts_ms_edge_cases_accepted(value, expected):
+    assert TS.parse_ts_ms(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        # Short numerics (years, counters) are not epoch values.
+        "2026",
+        2026,
+        "99999999",
+        99_999_999,
+        "1e3",
+        12.5,
+        # Pre-epoch and epoch-zero times are rejected for ISO and epoch alike.
+        "1969-12-31T23:59:59Z",
+        "1960-01-01T00:00:00Z",
+        "1970-01-01T00:00:00Z",
+        "-1.7e12",
+        -1_700_000_000_000,
+        # Non-ASCII digits are never accepted.
+        "\u0661\u0667\u0667\u0665\u0667\u0669\u0667\u0662\u0660\u0660",
+        "2026-04-1\u0660T05:00:00Z",
+        "\uff11\uff17\uff17\uff15\uff17\uff19\uff17\uff12\uff10\uff10",
+        # A minute or hour of 60 is not a leap second.
+        "2016-12-31T23:60:00Z",
+        "2016-12-31T24:59:60Z",
+    ],
+)
+def test_parse_ts_ms_edge_cases_rejected(value):
     assert TS.parse_ts_ms(value) is None
 
 

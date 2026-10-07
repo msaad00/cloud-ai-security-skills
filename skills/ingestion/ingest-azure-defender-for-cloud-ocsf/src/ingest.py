@@ -269,7 +269,7 @@ def convert_alert_native(alert: dict[str, Any]) -> dict[str, Any]:
 
 
 def iter_raw_alerts(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    text = "".join(stream).strip()
+    text = "".join(stream).removeprefix("\ufeff").strip()
     if not text:
         return
     try:

@@ -203,7 +203,7 @@ def convert_finding_native(finding: dict[str, Any]) -> dict[str, Any]:
 
 
 def iter_raw_findings(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    text = "".join(stream).strip()
+    text = "".join(stream).removeprefix("\ufeff").strip()
     if not text:
         return
     try:

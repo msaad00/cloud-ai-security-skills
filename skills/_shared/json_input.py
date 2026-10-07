@@ -7,6 +7,13 @@ a complete JSON value, the input is one document only when every later line is
 blank; otherwise the stream is replayed line by line as it is read. Only input
 whose first line is not a complete value (a multi-line document, or a
 malformed first record) is buffered, to attempt the whole-document parse.
+
+A leading UTF-8 byte-order mark is stripped once (stdin and `open(...,
+encoding="utf-8")` keep it). When the first line is a JSON array and NDJSON
+lines follow, the array's elements are replayed one per line ahead of the
+rest, so they reach the ingester like any other NDJSON record instead of
+being rejected as a non-object line. Line numbers in later per-line
+diagnostics then count the expanded elements.
 """
 
 from __future__ import annotations
@@ -25,7 +32,7 @@ def split_json_document(stream: Iterable[str]) -> tuple[Any, Iterator[str]]:
     input). `lines` replays every input line in order for line-by-line
     parsing, and is empty when the input is blank.
     """
-    it = iter(stream)
+    it = _strip_leading_bom(iter(stream))
     head: list[str] = []
     for line in it:
         head.append(line)
@@ -44,8 +51,18 @@ def split_json_document(stream: Iterable[str]) -> tuple[Any, Iterator[str]]:
         except json.JSONDecodeError:
             return None, iter(buf)
 
+    first_index = len(head) - 1
     for line in it:
         head.append(line)
         if line.strip():
+            if isinstance(first, list):
+                head[first_index : first_index + 1] = [json.dumps(v) + "\n" for v in first]
             return None, itertools.chain(head, it)
     return first, iter(head)
+
+
+def _strip_leading_bom(lines: Iterator[str]) -> Iterator[str]:
+    for line in lines:
+        yield line.removeprefix("\ufeff")
+        break
+    yield from lines
