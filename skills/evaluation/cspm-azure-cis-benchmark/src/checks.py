@@ -19,6 +19,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypedDict
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
@@ -34,6 +35,13 @@ SKILL_NAME = "cspm-azure-cis-benchmark"
 AZURE_RETRY_TOTAL_ENV = "CLOUD_SECURITY_AZURE_RETRY_TOTAL"
 DEFAULT_AZURE_RETRY_TOTAL = 8
 AZURE_RETRY_BACKOFF_FACTOR = 0.5
+
+
+class _AzureRetryKwargs(TypedDict):
+    retry_total: int
+    retry_backoff_factor: float
+
+
 BENCHMARK_NAME = "CIS Azure Foundations Benchmark v2.1"
 PROVIDER_NAME = "Azure"
 OUTPUT_FORMATS = ("native", "ocsf")
@@ -1372,7 +1380,7 @@ def run_assessment(subscription_id: str, section: str | None = None) -> list[Fin
         sys.exit(1)
 
     credential = DefaultAzureCredential()
-    retry_kwargs = {
+    retry_kwargs: _AzureRetryKwargs = {
         "retry_total": env_int(
             AZURE_RETRY_TOTAL_ENV, DEFAULT_AZURE_RETRY_TOTAL, skill_name=SKILL_NAME
         ),

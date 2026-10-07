@@ -152,13 +152,13 @@ def _before_visibility(event: dict[str, Any]) -> str:
     return str(_github_block(event).get("before_visibility") or "").strip().lower()
 
 
-def _selected_repos(event: dict[str, Any]) -> list:
+def _selected_repos(event: dict[str, Any]) -> list[Any]:
     block = _github_block(event)
     repos = block.get("selected_repositories") or block.get("selected_repository_ids") or []
     return list(repos) if isinstance(repos, list) else []
 
 
-def _before_selected_repos(event: dict[str, Any]) -> list:
+def _before_selected_repos(event: dict[str, Any]) -> list[Any]:
     block = _github_block(event)
     repos = (
         block.get("before_selected_repositories")

@@ -123,12 +123,37 @@ omit = ["*/tests/*", "*/conftest.py"]
 python_version = "3.11"
 explicit_package_bases = true
 namespace_packages = true
-ignore_missing_imports = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 check_untyped_defs = true
 exclude = "(^|/)(tests|infra)/"
 
+# Missing imports fail by default. Exempt only optional third-party packages
+# that are absent from the dev-only type-check env or ship without stubs.
 [[tool.mypy.overrides]]
-module = ["yaml"]
+module = [
+  "azure.*",
+  "boto3.*",
+  "botocore.*",
+  "clickhouse_connect.*",
+  "databricks.*",
+  "defusedxml.*",
+  "fastapi.*",
+  "google.cloud.*",
+  "google.oauth2.*",
+  "googleapiclient.*",
+  "kubernetes.*",
+  "msgraph.*",
+  "snowflake.*",
+  "sse_starlette.*",
+  "starlette.*",
+  "uvicorn.*",
+  "yaml.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The GCP and Entra departure workers fall back to a bare sibling `steps`
+# import when loaded as a flat Cloud Function / Azure Function bundle.
+module = ["steps"]
 ignore_missing_imports = true
