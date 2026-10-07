@@ -13,7 +13,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -23,6 +22,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-workspace-admin-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -109,22 +113,6 @@ ADMIN_ROLE_GRANT_EVENTS = {
     "ROLE_ASSIGNED",
     "USER_GRANTED_ADMIN_PRIVILEGE",
 }
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        if ts.isdigit():
-            value = int(ts)
-            return value if value > 10_000_000_000 else value * 1000
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _param_value(param: dict[str, Any]) -> Any:
@@ -393,7 +381,7 @@ def _build_canonical_event(activity: dict[str, Any], event: dict[str, Any]) -> d
         "severity": _severity_name(severity_id),
         "status_id": status_id,
         "status": _status_name(status_id),
-        "time_ms": parse_ts_ms(identity.get("time")),
+        "time_ms": require_ts_ms(identity.get("time")),
         "application_name": application,
         "customer_id": identity.get("customerId"),
         "event_type": event.get("type"),
@@ -546,7 +534,7 @@ def iter_raw_activities(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
-    for activity in iter_raw_activities(stream):
+    for record_no, activity in enumerate(iter_raw_activities(stream), start=1):
         ok, reason = validate_activity(activity)
         if not ok:
             emit_stderr_event(
@@ -561,6 +549,9 @@ def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[
         for event in _supported_events(activity):
             try:
                 yield convert_activity_event(activity, event, output_format=output_format)
+            except TimestampUnparseable:
+                emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+                break
             except Exception as exc:
                 emit_stderr_event(
                     SKILL_NAME,

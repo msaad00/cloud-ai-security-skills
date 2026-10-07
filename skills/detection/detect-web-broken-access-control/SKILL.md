@@ -105,7 +105,7 @@ authenticated user. The detector emits T1212 by default.
 OCSF 1.8 Detection Finding (class 2004), severity HIGH
 (`severity_id=4`), with:
 
-- `finding_info.attacks[].technique_uid = T1212`
+- `finding_info.attacks[].technique.uid = T1212`
 - `observables[]` includes `actor.user.uid`, `target.uid` (the
   resource id from the path or the path itself for the auth-swap
   variant), `src.ip`, `http_request.url.path`,

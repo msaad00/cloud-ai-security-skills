@@ -11,7 +11,6 @@ import csv
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -21,6 +20,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-salesforce-event-mon-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -62,34 +66,6 @@ def _first(record: dict[str, Any], *keys: str) -> Any:
         if value not in (None, ""):
             return value
     return None
-
-
-def parse_ts_ms(value: Any) -> int:
-    if value in (None, ""):
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    if isinstance(value, (int, float)):
-        raw = int(value)
-        return raw if raw > 10_000_000_000 else raw * 1000
-    text = str(value).strip()
-    if text.isdigit():
-        raw = int(text)
-        return raw if raw > 10_000_000_000 else raw * 1000
-    for fmt in ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d %H:%M:%S"):
-        try:
-            cleaned = text.replace("Z", "+0000")
-            dt = datetime.strptime(cleaned, fmt)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return int(dt.timestamp() * 1000)
-        except ValueError:
-            pass
-    try:
-        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_type(record: dict[str, Any]) -> str:
@@ -308,7 +284,7 @@ def _build_canonical_event(raw: dict[str, Any]) -> dict[str, Any]:
     family = _event_family(record)
     status_id = _status_id(record)
     severity_id = _severity_id(family, status_id)
-    time_ms = parse_ts_ms(
+    time_ms = require_ts_ms(
         _first(record, "timestamp", "time", "date", "event_date", "login_time", "logout_time")
     )
     activity_id = _activity_id(family, record)
@@ -455,7 +431,7 @@ def iter_raw_records(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
-    for record in iter_raw_records(stream):
+    for record_no, record in enumerate(iter_raw_records(stream), start=1):
         ok, reason = validate_record(record)
         if not ok:
             emit_stderr_event(
@@ -468,6 +444,9 @@ def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[
             continue
         try:
             yield convert_record(record, output_format=output_format)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:
             emit_stderr_event(
                 SKILL_NAME,

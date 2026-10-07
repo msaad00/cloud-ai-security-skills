@@ -17,11 +17,12 @@ _SPEC.loader.exec_module(_INGEST)
 ingest = _INGEST.ingest
 derive_operation = _INGEST.derive_operation
 iter_raw_rows = _INGEST.iter_raw_rows
-parse_ts_ms = _INGEST.parse_ts_ms
 SKILL_NAME = _INGEST.SKILL_NAME
 API_ACTIVITY_CLASS_UID = _INGEST.API_ACTIVITY_CLASS_UID
 STATUS_SUCCESS = _INGEST.STATUS_SUCCESS
 STATUS_FAILURE = _INGEST.STATUS_FAILURE
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 
 def _row(query_text: str, **overrides):

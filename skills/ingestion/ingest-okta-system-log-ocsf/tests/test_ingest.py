@@ -36,10 +36,11 @@ _classify_event = _INGEST._classify_event
 convert_event = _INGEST.convert_event
 ingest = _INGEST.ingest
 iter_raw_events = _INGEST.iter_raw_events
-parse_ts_ms = _INGEST.parse_ts_ms
 severity_to_id = _INGEST.severity_to_id
 status_from_outcome = _INGEST.status_from_outcome
 validate_event = _INGEST.validate_event
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"
@@ -94,9 +95,8 @@ class TestParseTs:
     def test_iso_z(self):
         assert parse_ts_ms("2026-04-13T02:15:00.000Z") == 1776046500000
 
-    def test_missing_falls_to_now(self):
-        ms = parse_ts_ms(None)
-        assert isinstance(ms, int) and ms > 1_700_000_000_000
+    def test_missing_is_none(self):
+        assert parse_ts_ms(None) is None
 
 
 class TestSeverityAndStatus:

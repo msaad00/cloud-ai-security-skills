@@ -70,8 +70,8 @@ A finding fires on every successful CloudTrail event from `ingest-cloudtrail-ocs
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 
-- `finding_info.attacks[].tactic_uid = TA0010` (Exfiltration)
-- `finding_info.attacks[].technique_uid = T1537` (Transfer Data to Cloud Account)
+- `finding_info.attacks[].tactic.uid = TA0010` (Exfiltration)
+- `finding_info.attacks[].technique.uid = T1537` (Transfer Data to Cloud Account)
 - `observables[]` including actor, actor account, target account, destination bucket/key, and source copy path
 
 The native projection (`--output-format native`) keeps the same copy summary in

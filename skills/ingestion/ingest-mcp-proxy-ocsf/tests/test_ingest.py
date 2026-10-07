@@ -1,8 +1,7 @@
 """Tests for ingest-mcp-proxy-ocsf.
 
 Runs the ingester against the frozen golden fixture and asserts the output
-matches the frozen OCSF fixture exactly, after scrubbing the volatile `time`
-field (which comes from the ingester's parse_ts_ms clock).
+matches the frozen OCSF fixture exactly.
 """
 
 from __future__ import annotations
@@ -26,9 +25,10 @@ from ingest import (  # type: ignore[import-not-found]
     convert_event,
     ingest,
     input_schema_fingerprint,
-    parse_ts_ms,
     tool_fingerprint,
 )
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"
@@ -40,9 +40,8 @@ def _scrub_volatile(events: list[dict]) -> list[dict]:
     """Remove timestamp-derived fields that the ingester sets from input.
 
     We DO pin `time` because it comes from the fixture's `timestamp` field,
-    not from the wall clock — so it is reproducible. This helper exists for
-    the one case where the fixture omits timestamp and the ingester falls
-    back to now().
+    not from the wall clock — so it is reproducible. Records without a
+    parseable timestamp are skipped, never stamped with now().
     """
     return events
 
@@ -124,13 +123,11 @@ class TestParseTs:
         ms = parse_ts_ms("2026-04-10T05:00:00.000+00:00")
         assert ms == 1775797200000
 
-    def test_missing_falls_back_to_now(self):
-        ms = parse_ts_ms(None)
-        assert isinstance(ms, int) and ms > 1_700_000_000_000
+    def test_missing_is_none(self):
+        assert parse_ts_ms(None) is None
 
-    def test_garbage_falls_back_to_now(self):
-        ms = parse_ts_ms("not-a-date")
-        assert isinstance(ms, int) and ms > 1_700_000_000_000
+    def test_garbage_is_none(self):
+        assert parse_ts_ms("not-a-date") is None
 
 
 # ── convert_event ──────────────────────────────────────────────────────

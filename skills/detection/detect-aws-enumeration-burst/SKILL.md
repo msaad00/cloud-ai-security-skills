@@ -79,8 +79,8 @@ Today the allow-list covers high-signal AWS discovery APIs such as:
 
 OCSF 1.8 Detection Finding (class 2004), severity MEDIUM (`severity_id=3`), with:
 
-- `finding_info.attacks[].tactic_uid = TA0007` (Discovery)
-- `finding_info.attacks[].technique_uid = T1526` (Cloud Service Discovery)
+- `finding_info.attacks[].tactic.uid = TA0007` (Discovery)
+- `finding_info.attacks[].technique.uid = T1526` (Cloud Service Discovery)
 - `observables[]` including actor, account, region, source IP, total event count, distinct API count, and the concrete API set seen in the burst
 
 The native projection (`--output-format native`) keeps the same burst summary in

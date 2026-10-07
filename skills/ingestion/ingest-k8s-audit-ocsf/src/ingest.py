@@ -15,7 +15,6 @@ import copy
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,6 +24,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-k8s-audit-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -84,32 +88,6 @@ def infer_activity_id(verb: str) -> int:
     99
     """
     return _VERB_MAP.get((verb or "").lower(), ACTIVITY_OTHER)
-
-
-# ---------------------------------------------------------------------------
-# Time
-# ---------------------------------------------------------------------------
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        if "." in cleaned:
-            head, _, tail = cleaned.partition(".")
-            frac, sep, tz = tail.partition("+")
-            if not sep:
-                frac, sep, tz = tail.partition("-")
-            if frac and len(frac) > 6:
-                frac = frac[:6]
-            cleaned = head + "." + frac + (sep + tz if sep else "")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +299,7 @@ def _build_canonical_event(entry: dict[str, Any]) -> dict[str, Any] | None:
         "provider": "Kubernetes",
         "account_uid": "",
         "region": "",
-        "time_ms": parse_ts_ms(entry.get("requestReceivedTimestamp")),
+        "time_ms": require_ts_ms(entry.get("requestReceivedTimestamp")),
         "activity_id": activity_id,
         "activity_name": _activity_name(activity_id),
         "status_id": status_id,
@@ -478,9 +456,12 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
-    for raw in iter_raw_entries(stream):
+    for record_no, raw in enumerate(iter_raw_entries(stream), start=1):
         try:
             canonical = _build_canonical_event(raw)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as e:
             emit_stderr_event(
                 SKILL_NAME,

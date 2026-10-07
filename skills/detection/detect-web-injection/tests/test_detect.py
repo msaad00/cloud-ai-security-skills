@@ -68,7 +68,7 @@ def test_fires_on_sql_union_select_in_query():
     assert findings
     f = findings[0]
     assert f["class_uid"] == 2004
-    assert f["finding_info"]["attacks"][0]["technique_uid"] == "T1190"
+    assert f["finding_info"]["attacks"][0]["technique"]["uid"] == "T1190"
     assert any(o["name"] == "injection.family" and o["value"] == "sql" for o in f["observables"])
 
 

@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -26,6 +25,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-okta-system-log-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -104,19 +108,6 @@ _USER_ACCESS_EVENT_MAP: dict[str, int] = {
     "user.account.privilege.grant": USER_ACCESS_ASSIGN,
     "user.account.privilege.revoke": USER_ACCESS_REVOKE,
 }
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def severity_to_id(severity: str | None) -> int:
@@ -530,7 +521,7 @@ def _build_canonical_event(
         "severity": _severity_name(severity_id),
         "status_id": status_id,
         "status": _status_name(status_id),
-        "time_ms": parse_ts_ms(event.get("published")),
+        "time_ms": require_ts_ms(event.get("published")),
         "message": str(
             event.get("displayMessage") or event.get("eventType") or _record_type(class_uid)
         ),
@@ -761,7 +752,7 @@ def ingest(
 ) -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
-    for raw in iter_raw_events(stream):
+    for record_no, raw in enumerate(iter_raw_events(stream), start=1):
         ok, reason = validate_event(raw)
         if not ok:
             event_type = str(raw.get("eventType") or "")
@@ -789,6 +780,9 @@ def ingest(
             continue
         try:
             yield convert_event(raw, output_format=output_format)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:
             emit_stderr_event(
                 SKILL_NAME,

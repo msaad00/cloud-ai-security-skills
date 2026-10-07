@@ -18,7 +18,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -28,6 +27,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-github-audit-log-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -129,26 +133,6 @@ _API_ACTIVITY_EVENT_MAP: dict[str, int] = {
     "members.invite": API_ACTIVITY_OTHER,
     "members.uninvite": API_ACTIVITY_OTHER,
 }
-
-
-def parse_ts_ms(ts: str | int | None) -> int:
-    """Accept RFC3339 strings or millisecond integers (GitHub `created_at`)."""
-    if ts is None:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    if isinstance(ts, (int, float)):
-        # GitHub `@timestamp` is epoch ms; tolerate seconds for safety.
-        value = int(ts)
-        if value < 10_000_000_000:  # seconds
-            value *= 1000
-        return value
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except (ValueError, AttributeError):
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def severity_for_action(action: str) -> int:
@@ -384,7 +368,7 @@ def _build_canonical_event(
         "severity": _severity_name(severity_id),
         "status_id": status_id,
         "status": _status_name(status_id),
-        "time_ms": parse_ts_ms(event.get("@timestamp") or event.get("created_at")),
+        "time_ms": require_ts_ms(event.get("@timestamp") or event.get("created_at")),
         "message": str(event.get("action") or _record_type(class_uid)),
         "actor": _actor(event),
         "src_endpoint": _src_endpoint(event),
@@ -555,7 +539,7 @@ def ingest(
 ) -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
-    for raw in iter_raw_events(stream):
+    for record_no, raw in enumerate(iter_raw_events(stream), start=1):
         ok, reason = validate_event(raw)
         if not ok:
             action = str(raw.get("action") or "")
@@ -583,6 +567,9 @@ def ingest(
             continue
         try:
             yield convert_event(raw, output_format=output_format)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:  # noqa: BLE001 — telemetry, then continue
             emit_stderr_event(
                 SKILL_NAME,

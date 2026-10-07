@@ -31,8 +31,9 @@ _classify = _INGEST._classify
 convert_activity_event = _INGEST.convert_activity_event
 ingest = _INGEST.ingest
 iter_raw_activities = _INGEST.iter_raw_activities
-parse_ts_ms = _INGEST.parse_ts_ms
 validate_activity = _INGEST.validate_activity
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"
@@ -80,9 +81,8 @@ class TestParseTs:
     def test_iso_z(self):
         assert parse_ts_ms("2026-04-13T06:00:00.000Z") == 1776060000000
 
-    def test_missing_falls_to_now(self):
-        ms = parse_ts_ms(None)
-        assert isinstance(ms, int) and ms > 1_700_000_000_000
+    def test_missing_is_none(self):
+        assert parse_ts_ms(None) is None
 
 
 class TestClassification:

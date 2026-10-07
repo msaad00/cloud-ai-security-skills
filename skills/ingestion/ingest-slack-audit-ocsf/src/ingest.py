@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -26,6 +25,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-slack-audit-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -93,17 +97,6 @@ _API_ACTIVITY_ACTION_MAP: dict[str, int] = {
     "channel_created": API_ACTIVITY_CREATE,
     "private_channel_created": API_ACTIVITY_CREATE,
 }
-
-
-def parse_ts_ms(value: Any) -> int:
-    """Slack `date_create` is UNIX seconds. Accept int / float / numeric string."""
-    if value is None or value == "":
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        seconds = float(value)
-    except (TypeError, ValueError):
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    return int(seconds * 1000)
 
 
 def _classify_action(action: str) -> tuple[int, str, int] | None:
@@ -376,7 +369,7 @@ def _build_canonical_event(
         "severity": "informational",
         "status_id": STATUS_SUCCESS,
         "status": "success",
-        "time_ms": parse_ts_ms(event.get("date_create")),
+        "time_ms": require_ts_ms(event.get("date_create")),
         "message": str(event.get("action") or _record_type(class_uid)),
         "actor": _actor(event),
         "src_endpoint": _src_endpoint(event),
@@ -537,7 +530,7 @@ def ingest(
 ) -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
-    for raw in iter_raw_events(stream):
+    for record_no, raw in enumerate(iter_raw_events(stream), start=1):
         ok, reason = validate_event(raw)
         if not ok:
             action = str(raw.get("action") or "")
@@ -565,6 +558,9 @@ def ingest(
             continue
         try:
             yield convert_event(raw, output_format=output_format)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:
             emit_stderr_event(
                 SKILL_NAME,

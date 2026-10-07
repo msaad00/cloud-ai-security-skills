@@ -22,7 +22,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -31,6 +30,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    parse_ts_ms,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-security-hub-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -246,24 +251,6 @@ def extract_attacks(finding: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Time parsing
-# ---------------------------------------------------------------------------
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-# ---------------------------------------------------------------------------
 # Resource projection
 # ---------------------------------------------------------------------------
 
@@ -335,6 +322,10 @@ def _build_canonical_finding(raw: dict[str, Any]) -> dict[str, Any]:
         str((r or {}).get("ReasonCode", "")) for r in compliance_reasons_list if isinstance(r, dict)
     )
 
+    time_ms = require_ts_ms(updated)
+    first_seen_ms = parse_ts_ms(first_seen) or time_ms
+    last_seen_ms = parse_ts_ms(last_seen) or time_ms
+
     return {
         "schema_mode": "canonical",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -344,7 +335,7 @@ def _build_canonical_finding(raw: dict[str, Any]) -> dict[str, Any]:
         "provider": "AWS",
         "account_uid": account_id,
         "region": region,
-        "time_ms": parse_ts_ms(updated),
+        "time_ms": time_ms,
         "severity_id": severity_to_id(severity),
         "status_id": STATUS_SUCCESS,
         "status": "success",
@@ -353,8 +344,8 @@ def _build_canonical_finding(raw: dict[str, Any]) -> dict[str, Any]:
         "title": title,
         "description": desc,
         "finding_types": types,
-        "first_seen_time_ms": parse_ts_ms(first_seen),
-        "last_seen_time_ms": parse_ts_ms(last_seen),
+        "first_seen_time_ms": first_seen_ms,
+        "last_seen_time_ms": last_seen_ms,
         "attacks": attacks,
         "resources": resources_out,
         "cloud": {
@@ -375,8 +366,8 @@ def _build_canonical_finding(raw: dict[str, Any]) -> dict[str, Any]:
         },
         "evidence": {
             "events_observed": 1,
-            "first_seen_time": parse_ts_ms(first_seen),
-            "last_seen_time": parse_ts_ms(last_seen),
+            "first_seen_time": first_seen_ms,
+            "last_seen_time": last_seen_ms,
             "raw_events": [
                 {
                     "uid": asff_id,
@@ -563,7 +554,7 @@ def iter_raw_findings(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
-    for raw in iter_raw_findings(stream):
+    for record_no, raw in enumerate(iter_raw_findings(stream), start=1):
         valid, reason = validate_asff(raw)
         if not valid:
             print(
@@ -577,6 +568,9 @@ def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[
                 yield _render_native_finding(canonical)
             else:
                 yield _render_ocsf_finding(canonical)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as e:
             print(f"[{SKILL_NAME}] skipping finding: convert error: {e}", file=sys.stderr)
             continue

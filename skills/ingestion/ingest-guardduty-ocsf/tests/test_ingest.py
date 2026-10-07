@@ -7,6 +7,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from ingest import (  # type: ignore[import-not-found]
@@ -302,10 +304,20 @@ class TestConvertFinding:
         assert ev["evidence"]["first_seen_time"] == 1775797200000
 
     def test_missing_optional_fields_do_not_crash(self):
-        minimal = {"Id": "F", "Type": "UnauthorizedAccess:IAMUser/Foo.A", "Severity": 5.0}
+        minimal = {
+            "Id": "F",
+            "Type": "UnauthorizedAccess:IAMUser/Foo.A",
+            "Severity": 5.0,
+            "CreatedAt": "2026-04-10T05:00:00Z",
+        }
         ev = convert_finding(minimal)
         assert ev["severity_id"] == SEVERITY_MEDIUM
         assert ev["finding_info"]["uid"].startswith("det-gd-")
+        assert ev["time"] == ev["finding_info"]["first_seen_time"] == 1775797200000
+
+    def test_finding_without_any_timestamp_is_rejected(self):
+        with pytest.raises(ValueError):
+            convert_finding({"Id": "F", "Type": "UnauthorizedAccess:IAMUser/Foo.A"})
 
     def test_native_output_has_no_ocsf_envelope(self):
         native = convert_finding_native(_minimal_finding())
@@ -388,6 +400,21 @@ class TestIterRawFindings:
 
 
 class TestIngestEndToEnd:
+    def test_unparseable_updated_at_is_skipped_not_stamped_now(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        bad = _minimal_finding(gd_id="E1", updated="not-a-date")
+        out = list(ingest([json.dumps({"Findings": [bad, _minimal_finding(gd_id="E2")]})]))
+        assert len(out) == 1
+        payload = json.loads(capsys.readouterr().err.strip())
+        assert payload["event"] == "timestamp_unparseable"
+        assert payload["record"] == 1
+
+    def test_unparseable_seen_times_fall_back_to_finding_time(self):
+        raw = _minimal_finding(first_seen="bad", last_seen="bad")
+        out = list(ingest([json.dumps({"Findings": [raw]})]))
+        info = out[0]["finding_info"]
+        assert info["first_seen_time"] == info["last_seen_time"] == out[0]["time"]
+
     def test_emits_finding_per_input(self):
         lines = [
             json.dumps({"Findings": [_minimal_finding(gd_id="E1"), _minimal_finding(gd_id="E2")]}),

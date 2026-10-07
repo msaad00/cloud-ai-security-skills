@@ -75,9 +75,9 @@ A finding fires on every successful Cloud Audit event from
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 
-- `finding_info.attacks[].tactic_uid = TA0003` (Persistence)
-- `finding_info.attacks[].technique_uid = T1098` (Account Manipulation)
-- `finding_info.attacks[].sub_technique_uid = T1098.001` (Additional Cloud Credentials)
+- `finding_info.attacks[].tactic.uid = TA0003` (Persistence)
+- `finding_info.attacks[].technique.uid = T1098` (Account Manipulation)
+- `finding_info.attacks[].sub_technique.uid = T1098.001` (Additional Cloud Credentials)
 - `observables[]` including `target.name`, `project.uid`, `actor.name`, and `api.operation`
 
 The native projection (`--output-format native`) keeps the target service

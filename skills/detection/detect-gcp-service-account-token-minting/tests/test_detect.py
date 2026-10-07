@@ -73,7 +73,7 @@ def test_fires_on_generate_access_token():
     assert finding["finding_info"]["title"] == "GCP service account token minted"
     assert finding["evidence"]["token_type"] == "access_token"
     attack = finding["finding_info"]["attacks"][0]
-    assert attack["sub_technique_uid"] == "T1098.001"
+    assert attack["sub_technique"]["uid"] == "T1098.001"
 
 
 def test_fires_on_generate_id_token():

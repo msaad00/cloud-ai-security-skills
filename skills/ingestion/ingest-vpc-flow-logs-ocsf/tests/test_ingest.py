@@ -27,7 +27,8 @@ ingest = _INGEST.ingest
 parse_header = _INGEST.parse_header
 parse_record = _INGEST.parse_record
 protocol_name = _INGEST.protocol_name
-sec_to_ms = _INGEST.sec_to_ms
+
+from skills._shared.timestamps import parse_ts_ms  # noqa: E402
 
 THIS = Path(__file__).resolve().parent
 GOLDEN = THIS.parents[2] / "detection-engineering" / "golden"
@@ -117,22 +118,22 @@ class TestActivityId:
 
 class TestSecToMs:
     def test_numeric_string(self):
-        assert sec_to_ms("1775797200") == 1775797200000
+        assert parse_ts_ms("1775797200") == 1775797200000
 
     def test_int(self):
-        assert sec_to_ms(1775797200) == 1775797200000
+        assert parse_ts_ms(1775797200) == 1775797200000
 
     def test_dash(self):
-        assert sec_to_ms("-") is None
+        assert parse_ts_ms("-") is None
 
     def test_empty(self):
-        assert sec_to_ms("") is None
+        assert parse_ts_ms("") is None
 
     def test_none(self):
-        assert sec_to_ms(None) is None
+        assert parse_ts_ms(None) is None
 
     def test_garbage(self):
-        assert sec_to_ms("foo") is None
+        assert parse_ts_ms("foo") is None
 
 
 # ── Header parser ────────────────────────────────────────────────

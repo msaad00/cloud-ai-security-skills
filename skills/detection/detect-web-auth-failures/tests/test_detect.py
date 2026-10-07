@@ -66,7 +66,7 @@ def test_fires_on_brute_force_burst():
     ]
     assert len(bursts) == 1
     f = bursts[0]
-    assert f["finding_info"]["attacks"][0]["technique_uid"] == "T1110"
+    assert f["finding_info"]["attacks"][0]["technique"]["uid"] == "T1110"
     # 5 unique users seen
     assert any(o["name"] == "auth.unique_users" and o["value"] == "5" for o in f["observables"])
 
@@ -115,7 +115,7 @@ def test_fires_on_oauth_password_grant_weak_login():
         if any(o["name"] == "rule" and o["value"] == "weak-login" for o in f["observables"])
     ]
     assert len(weak) == 1
-    assert weak[0]["finding_info"]["attacks"][0]["technique_uid"] == "T1078"
+    assert weak[0]["finding_info"]["attacks"][0]["technique"]["uid"] == "T1078"
     assert any(
         o["name"] == "auth.reason" and o["value"] == "oauth-password-grant"
         for o in weak[0]["observables"]

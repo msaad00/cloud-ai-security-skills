@@ -89,8 +89,8 @@ event from `ingest-gcp-audit-ocsf` that:
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`),
 with:
 
-- `finding_info.attacks[].tactic_uid = TA0001` (Initial Access)
-- `finding_info.attacks[].technique_uid = T1190` (Exploit Public-Facing Application)
+- `finding_info.attacks[].tactic.uid = TA0001` (Initial Access)
+- `finding_info.attacks[].technique.uid = T1190` (Exploit Public-Facing Application)
 - `observables[]` includes `target.uid` (firewall rule name), `target.name`,
   `target.type=GcpFirewallRule`, `account.uid` (project id), plus per-CIDR
   and per-port observables for the remediator to consume

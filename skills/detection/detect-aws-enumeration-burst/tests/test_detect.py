@@ -114,7 +114,7 @@ def test_fires_on_short_window_enumeration_burst():
     finding = findings[0]
     assert finding["class_uid"] == 2004
     assert finding["finding_info"]["title"] == "AWS discovery API burst"
-    assert finding["finding_info"]["attacks"][0]["technique_uid"] == TECHNIQUE_UID
+    assert finding["finding_info"]["attacks"][0]["technique"]["uid"] == TECHNIQUE_UID
     assert any(
         obs["name"] == "calls.distinct" and obs["value"] == "6" for obs in finding["observables"]
     )

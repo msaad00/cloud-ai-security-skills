@@ -30,7 +30,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -40,6 +39,12 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    parse_ts_ms,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-databricks-audit-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -62,33 +67,6 @@ STATUS_FAILURE = 2
 # Databricks HTTP status codes < 400 are successes; the audit log records the
 # API response's status code verbatim.
 _SUCCESS_MAX_STATUS = 400
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-def parse_ts_ms(value: Any) -> int:
-    """Parse ``timestamp`` (epoch ms/seconds or ISO-8601 string) to epoch ms."""
-    if value is None or value == "":
-        return _now_ms()
-    if isinstance(value, (int, float)):
-        # Heuristic: values >= 1e12 are already milliseconds.
-        return int(value) if value >= 1_000_000_000_000 else int(value * 1000)
-    text = str(value).strip()
-    if not text:
-        return _now_ms()
-    if text.isdigit():
-        num = int(text)
-        return num if num >= 1_000_000_000_000 else num * 1000
-    try:
-        cleaned = text.replace("Z", "+00:00")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return _now_ms()
 
 
 def _get(record: dict[str, Any], *names: str) -> Any:
@@ -494,7 +472,7 @@ def _build_ocsf(
         "type_uid": API_ACTIVITY_CLASS_UID * 100 + spec.activity_id,
         "severity_id": SEVERITY_INFORMATIONAL,
         "status_id": _status_from_record(record),
-        "time": parse_ts_ms(_get(record, "timestamp")),
+        "time": require_ts_ms(_get(record, "timestamp")),
         "metadata": {
             "version": OCSF_VERSION,
             "uid": uid,
@@ -527,7 +505,7 @@ def _build_native(
         "output_format": "native",
         "provider": "Databricks",
         "event_uid": uid,
-        "time_ms": parse_ts_ms(_get(record, "timestamp")),
+        "time_ms": require_ts_ms(_get(record, "timestamp")),
         "status_id": status_id,
         "status": "success" if status_id == STATUS_SUCCESS else "failure",
         "operation": spec.operation,
@@ -606,7 +584,7 @@ def ingest(
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
 
-    for record in iter_raw_rows(stream):
+    for record_no, record in enumerate(iter_raw_rows(stream), start=1):
         if not isinstance(record, dict):
             continue
         try:
@@ -628,10 +606,16 @@ def ingest(
                 skipped_counts[key] = skipped_counts.get(key, 0) + 1
             continue
         spec, block = derived
-        if output_format == "native":
-            yield _build_native(record, spec, block)
-        else:
-            yield _build_ocsf(record, spec, block)
+        try:
+            event = (
+                _build_native(record, spec, block)
+                if output_format == "native"
+                else _build_ocsf(record, spec, block)
+            )
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
+        yield event
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -11,7 +11,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -20,6 +19,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-gcp-scc-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -41,27 +45,6 @@ SEVERITY_HIGH = 4
 SEVERITY_CRITICAL = 5
 
 _PROJECT_RE = re.compile(r"/projects/([^/]+)")
-
-
-def parse_ts_ms(value: str | None) -> int:
-    if not value:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = value.replace("Z", "+00:00")
-        if "." in cleaned:
-            head, _, tail = cleaned.partition(".")
-            frac, sep, tz = tail.partition("+")
-            if not sep:
-                frac, sep, tz = tail.partition("-")
-            if frac and len(frac) > 6:
-                frac = frac[:6]
-            cleaned = head + "." + frac + (sep + tz if sep else "")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def severity_to_id(value: str | None) -> int:
@@ -96,7 +79,7 @@ def _project_id(finding: dict[str, Any]) -> str:
 
 def _build_canonical_finding(finding: dict[str, Any]) -> dict[str, Any]:
     project = _project_id(finding)
-    event_time = parse_ts_ms(finding.get("eventTime") or finding.get("createTime"))
+    event_time = require_ts_ms(finding.get("eventTime") or finding.get("createTime"))
     finding_uid = f"det-scc-{hashlib.sha256(str(finding.get('name', '')).encode()).hexdigest()[:8]}"
     resource_name = str(finding.get("resourceName") or "")
     category = str(finding.get("category") or "Security Command Center finding")
@@ -263,12 +246,16 @@ def iter_raw_findings(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
-    for finding in iter_raw_findings(stream):
+    for record_no, finding in enumerate(iter_raw_findings(stream), start=1):
         valid, reason = validate_finding(finding)
         if not valid:
             print(f"[{SKILL_NAME}] skipping finding: {reason}", file=sys.stderr)
             continue
-        canonical = _build_canonical_finding(finding)
+        try:
+            canonical = _build_canonical_finding(finding)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         if output_format == "native":
             yield _render_native_finding(canonical)
         else:

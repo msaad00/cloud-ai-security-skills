@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -15,6 +14,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-aws-config-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -45,20 +49,6 @@ _CONFIG_MESSAGE_TYPES = {
     "ConfigurationSnapshotDeliveryCompleted",
     "ConfigurationHistoryDeliveryCompleted",
 }
-
-
-def parse_ts_ms(ts: str | int | float | None) -> int:
-    if isinstance(ts, (int, float)) and not isinstance(ts, bool):
-        return int(ts if ts > 1_000_000_000_000 else ts * 1000)
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _short(*parts: str) -> str:
@@ -203,7 +193,7 @@ def _canonical_config_item(message: dict[str, Any], item: dict[str, Any]) -> dic
         "message_type": message_type,
         "activity_id": activity_id,
         "activity_name": _activity_name(activity_id),
-        "time_ms": parse_ts_ms(capture_time),
+        "time_ms": require_ts_ms(capture_time),
         "account_uid": account_id,
         "region": region,
         "resource": _resource(item),
@@ -279,7 +269,7 @@ def _canonical_compliance(message: dict[str, Any]) -> dict[str, Any]:
         "event_uid": event_uid,
         "finding_uid": event_uid,
         "message_type": str(message.get("messageType") or "ComplianceChangeNotification"),
-        "time_ms": parse_ts_ms(recorded_time),
+        "time_ms": require_ts_ms(recorded_time),
         "severity_id": SEVERITY_HIGH
         if status == "FAIL"
         else (SEVERITY_LOW if status == "NOT_APPLICABLE" else SEVERITY_INFORMATIONAL),
@@ -520,9 +510,12 @@ def iter_raw_messages(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format: {output_format}")
-    for message in iter_raw_messages(stream):
+    for record_no, message in enumerate(iter_raw_messages(stream), start=1):
         try:
             yield from convert_message(message, output_format=output_format)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:
             marker = message.get("messageType") or message.get("resourceId") or "?"
             print(

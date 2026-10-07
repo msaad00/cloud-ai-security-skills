@@ -311,7 +311,14 @@ def _to_ocsf(native: dict[str, Any]) -> dict[str, Any]:
             "types": ["aws-model-artifact-download"],
             "first_seen_time": native["first_seen_time_ms"],
             "last_seen_time": native["last_seen_time_ms"],
-            "attacks": native["mitre_attacks"],
+            "attacks": [
+                {
+                    "version": attack["version"],
+                    "tactic": {"uid": attack["tactic_uid"], "name": attack["tactic_name"]},
+                    "technique": {"uid": attack["technique_uid"], "name": attack["technique_name"]},
+                }
+                for attack in native["mitre_attacks"]
+            ],
         },
         "observables": observables,
         "evidence": {

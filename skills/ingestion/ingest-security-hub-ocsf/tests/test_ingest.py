@@ -401,6 +401,15 @@ class TestIngestEndToEnd:
         assert out[0]["finding_info"]["uid"].startswith("det-shub-")
         assert "asff invalid" in capsys.readouterr().err
 
+    def test_unparseable_updated_at_is_skipped_not_stamped_now(self, capsys, monkeypatch):
+        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+        bad = _minimal_asff(asff_id="F0", updated="not-a-date")
+        payload = json.dumps({"Findings": [bad, _minimal_asff(asff_id="F1")]})
+        assert len(list(ingest([payload]))) == 1
+        event = json.loads(capsys.readouterr().err.strip())
+        assert event["event"] == "timestamp_unparseable"
+        assert event["record"] == 1
+
     def test_all_valid_findings_converted(self):
         payload = json.dumps({"Findings": [_minimal_asff(asff_id=f"F{i}") for i in range(5)]})
         out = list(ingest([payload]))

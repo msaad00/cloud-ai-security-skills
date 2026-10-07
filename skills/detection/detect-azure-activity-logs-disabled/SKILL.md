@@ -70,8 +70,8 @@ A finding fires on every successful Azure Activity event from `ingest-azure-acti
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 
-- `finding_info.attacks[].tactic_uid = TA0005` (Defense Evasion)
-- `finding_info.attacks[].technique_uid = T1562.001` (Disable or Modify Tools)
+- `finding_info.attacks[].tactic.uid = TA0005` (Defense Evasion)
+- `finding_info.attacks[].technique.uid = T1562.001` (Disable or Modify Tools)
 - `observables[]` including `target.uid`, `target.name`, `account.uid`, `actor.name`, and `api.operation`
 
 The native projection (`--output-format native`) keeps the target resource id and actor/account context in a flatter shape.

@@ -80,7 +80,7 @@ def test_fires_on_successful_cross_account_copy():
     finding = findings[0]
     assert finding["class_uid"] == 2004
     assert finding["finding_info"]["title"] == "S3 cross-account copy detected"
-    assert finding["finding_info"]["attacks"][0]["technique_uid"] == TECHNIQUE_UID
+    assert finding["finding_info"]["attacks"][0]["technique"]["uid"] == TECHNIQUE_UID
     assert any(
         obs["name"] == "destination.bucket" and obs["value"] == "target-bucket"
         for obs in finding["observables"]

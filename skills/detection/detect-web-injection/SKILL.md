@@ -98,7 +98,7 @@ Application)** under tactic **TA0001 (Initial Access)**.
 OCSF 1.8 Detection Finding (class 2004), severity HIGH
 (`severity_id=4`), with:
 
-- `finding_info.attacks[].technique_uid = T1190`
+- `finding_info.attacks[].technique.uid = T1190`
 - `observables[]` includes `actor.user.uid`, `src.ip`,
   `http_request.url.path`, `http_request.http_method`, the matched
   `injection.family` and `injection.signature_label`, and a

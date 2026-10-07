@@ -105,7 +105,7 @@ The first two map to **T1110 (Brute Force)**. The third maps to
 OCSF 1.8 Detection Finding (class 2004), severity HIGH
 (`severity_id=4`), with:
 
-- `finding_info.attacks[].technique_uid` set to `T1110` for
+- `finding_info.attacks[].technique.uid` set to `T1110` for
   brute-force / stuffing variants and `T1078` for the weak-login
   variant.
 - `observables[]` includes `actor.user.uid` (when present),

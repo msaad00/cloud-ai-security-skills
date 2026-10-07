@@ -15,6 +15,7 @@ import argparse
 import hashlib
 import json
 import sys
+from collections import Counter, deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -367,8 +368,6 @@ def detect(
             hint=f"choose one of: {', '.join(OUTPUT_FORMATS)}",
         )
     dedupe: set[str] = set()
-    states: dict[str, list[dict[str, Any]]] = {}
-    active_bursts: set[str] = set()
 
     relevant: list[dict[str, Any]] = []
     for event in events:
@@ -393,35 +392,52 @@ def detect(
 
     relevant.sort(key=lambda item: (item["user_uid"], item["time_ms"], item["event_uid"]))
 
+    window_ms = _window_ms()
+    min_relevant = _min_relevant_events()
+    min_challenges = _min_challenges()
+    min_denials = _min_denials()
+
+    # `relevant` is sorted by user then time, so only the current user's burst
+    # is live: a deque evicts expired events from the left and a Counter keeps
+    # the per-kind totals for the events inside the window.
+    current_user: str | None = None
+    burst: deque[dict[str, Any]] = deque()
+    kinds: Counter[str] = Counter()
+    active = False
+
     for item in relevant:
         user_uid = item["user_uid"]
         current_time = item["time_ms"]
-        burst = states.setdefault(user_uid, [])
-        window_ms = _window_ms()
+        if user_uid != current_user:
+            current_user = user_uid
+            burst.clear()
+            kinds.clear()
+            active = False
 
         if burst and current_time - burst[-1]["time_ms"] > window_ms:
             burst.clear()
-            active_bursts.discard(user_uid)
+            kinds.clear()
+            active = False
 
         cutoff = current_time - window_ms
-        burst[:] = [entry for entry in burst if entry["time_ms"] >= cutoff]
+        while burst and burst[0]["time_ms"] < cutoff:
+            kinds[burst.popleft()["kind"]] -= 1
         burst.append(item)
+        kinds[item["kind"]] += 1
 
-        challenge_count = sum(1 for entry in burst if entry["kind"] == "challenge")
-        denial_count = sum(1 for entry in burst if entry["kind"] == "deny")
-        if user_uid in active_bursts:
+        if active:
             continue
         if (
-            len(burst) >= _min_relevant_events()
-            and challenge_count >= _min_challenges()
-            and denial_count >= _min_denials()
+            len(burst) >= min_relevant
+            and kinds["challenge"] >= min_challenges
+            and kinds["deny"] >= min_denials
         ):
-            native_finding = _build_native_finding(user_uid, item["user_name"], burst)
+            native_finding = _build_native_finding(user_uid, item["user_name"], list(burst))
             if output_format == "native":
                 yield native_finding
             else:
                 yield _render_ocsf_finding(native_finding)
-            active_bursts.add(user_uid)
+            active = True
 
 
 def _env_int(name: str, default: int) -> int:

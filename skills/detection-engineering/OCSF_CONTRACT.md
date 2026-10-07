@@ -98,6 +98,32 @@ Every event a skill emits MUST populate these fields at minimum. Fields marked `
 | `metadata.product.vendor_name` | string [pin] | `"msaad00/cloud-ai-security-skills"` |
 | `metadata.product.feature.name` | string [pin] | Name of the emitting skill (e.g. `"detect-mcp-tool-drift"`) |
 
+### Event time
+
+`time` always comes from the source record, never from the wall clock.
+Every ingest skill parses vendor timestamps with
+`skills/_shared/timestamps.py` (`parse_ts_ms`), which accepts ISO-8601
+(`Z`, numeric offsets, any fractional precision; naive values are UTC) and
+positive epoch numbers or numeric strings in seconds, milliseconds,
+microseconds, or nanoseconds (unit inferred from magnitude).
+
+When a record's primary event time is missing or unparseable, the ingester
+**skips the record** and writes one structured stderr warning, the same way
+it skips unparseable JSON:
+
+- `event`: `timestamp_unparseable`, `level`: `warning`
+- `record`: 1-based position of the raw record in the input stream; line-
+  oriented ingesters (MCP proxy, AWS VPC Flow Logs) use the input line number
+  and also set `line`
+- never the raw value or payload
+
+Substituting "now" is forbidden: it makes `metadata.uid` / `finding_info.uid`
+differ between replays of the same input and fakes event times inside
+windowed detectors. Secondary times (for example `first_seen_time`, session
+creation time) fall back to the record's primary event time or are omitted.
+`tests/conformance/test_ingest_timestamps.py` enforces this for every
+ingester.
+
 ## OCSF class usage
 
 ### Ingest skills
@@ -185,6 +211,13 @@ All detection skills in this category produce **Detection Finding** (class `2004
   }
 }
 ```
+
+Every `attacks[]` entry uses nested OCSF objects: `technique: {uid, name}`
+(required), `tactic: {uid, name}`, and `sub_technique: {uid, name}` when a
+sub-technique applies. Flat keys such as `technique_uid` or `tactic_uid` are
+not part of the OCSF wire format; they may appear only in a skill's native
+projection. `tests/conformance/test_ocsf_attack_shape.py` enforces this for
+every detector and every golden Detection Finding.
 
 The point: **a downstream tool (ClickHouse, Splunk OCSF app, Grafana) can pivot on `finding_info.attacks[].technique.uid` without ever reading the rule code**. That is the whole benefit of keeping MITRE inside OCSF instead of as a sidecar mapping.
 

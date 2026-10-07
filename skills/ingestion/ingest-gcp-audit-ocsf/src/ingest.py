@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -15,6 +14,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    TimestampUnparseable,
+    emit_timestamp_unparseable,
+    require_ts_ms,
+)
 
 SKILL_NAME = "ingest-gcp-audit-ocsf"
 OCSF_VERSION = "1.8.0"
@@ -78,27 +82,6 @@ def infer_activity_id(method_name: str) -> int:
             if last.startswith(prefix):
                 return activity
     return ACTIVITY_OTHER
-
-
-def parse_ts_ms(ts: str | None) -> int:
-    if not ts:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
-    try:
-        cleaned = ts.replace("Z", "+00:00")
-        if "." in cleaned:
-            head, _, tail = cleaned.partition(".")
-            frac, sep, tz = tail.partition("+")
-            if not sep:
-                frac, sep, tz = tail.partition("-")
-            if frac and len(frac) > 6:
-                frac = frac[:6]
-            cleaned = head + "." + frac + (sep + tz if sep else "")
-        dt = datetime.fromisoformat(cleaned)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return int(dt.timestamp() * 1000)
-    except ValueError:
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _status_id_and_detail(proto_status: dict[str, Any] | None) -> tuple[int, str | None]:
@@ -215,7 +198,7 @@ def _build_canonical_event(log_entry: dict[str, Any]) -> dict[str, Any] | None:
         "provider": "GCP",
         "account_uid": account_uid,
         "region": region,
-        "time_ms": parse_ts_ms(log_entry.get("timestamp")),
+        "time_ms": require_ts_ms(log_entry.get("timestamp")),
         "event_name": method_name,
         "operation": method_name,
         "service_name": proto.get("serviceName", ""),
@@ -344,9 +327,12 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
 
 
 def ingest(stream: Iterable[str], *, output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
-    for raw in iter_raw_entries(stream):
+    for record_no, raw in enumerate(iter_raw_entries(stream), start=1):
         try:
             event = convert_event_native(raw) if output_format == "native" else convert_event(raw)
+        except TimestampUnparseable:
+            emit_timestamp_unparseable(SKILL_NAME, record=record_no)
+            continue
         except Exception as exc:
             print(f"[{SKILL_NAME}] skipping entry: convert error: {exc}", file=sys.stderr)
             continue

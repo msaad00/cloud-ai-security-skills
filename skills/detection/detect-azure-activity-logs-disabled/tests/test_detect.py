@@ -71,7 +71,7 @@ def test_fires_on_diagnostic_settings_delete():
     assert len(findings) == 1
     finding = findings[0]
     assert finding["class_uid"] == 2004
-    assert finding["finding_info"]["attacks"][0]["technique_uid"] == TECHNIQUE_UID
+    assert finding["finding_info"]["attacks"][0]["technique"]["uid"] == TECHNIQUE_UID
     assert any(
         obs["name"] == "target.name" and obs["value"] == "activity-export"
         for obs in finding["observables"]
