@@ -71,8 +71,15 @@ def test_dense_output_matches_pre_rewrite_digest():
 
 
 def test_single_user_dense_window_scales_near_linearly():
+    # Retry the whole measurement: a load spike on a shared runner can skew one
+    # attempt, but a quadratic regression exceeds the bound on every attempt.
     _best_time(1000)  # warm-up
-    small = _best_time(5000)
-    large = _best_time(20000)
+    ratios = []
+    for _ in range(3):
+        small = _best_time(5000)
+        large = _best_time(20000)
+        ratios.append(large / small)
+        if ratios[-1] <= 8:
+            break
     # 4x the events; quadratic behaviour shows up as ~16x. Bound is generous for CI noise.
-    assert large / small <= 8, f"5k={small:.3f}s 20k={large:.3f}s"
+    assert min(ratios) <= 8, f"5k->20k ratios across attempts: {ratios}"
