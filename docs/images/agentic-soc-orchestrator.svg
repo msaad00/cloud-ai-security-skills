@@ -10,9 +10,6 @@
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M0 0L10 5L0 10z" fill="#7dd3fc"/>
     </marker>
-    <marker id="arrow-down" viewBox="0 0 10 10" refX="5" refY="9" markerWidth="7" markerHeight="7" orient="auto">
-      <path d="M0 0L5 10L10 0z" fill="#7dd3fc"/>
-    </marker>
     <symbol id="ic-pkg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 2v20M3 7l9 5 9-5"/></symbol>
     <symbol id="ic-graph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M7.3 11L15.7 6.9M7.3 13l8.4 4.1"/></symbol>
     <symbol id="ic-chain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5l5-5M8 13l-2 2a3.5 3.5 0 004.9 4.9l2-2M16 11l2-2a3.5 3.5 0 00-4.9-4.9l-2 2"/></symbol>
@@ -59,7 +56,7 @@
         <rect x="448" y="52" width="140" height="42" rx="12" fill="#0f172a" stroke="#fbbf24"/><text x="518" y="78" fill="#fde68a">analyst review</text>
 
         <!-- bend down to the gated write path -->
-        <path d="M518 94V112" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow-down)"/>
+        <path d="M518 94V110" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#arrow)"/>
 
         <!-- row 2: HITL-gated write, then closed-loop audit -->
         <rect x="448" y="116" width="140" height="42" rx="12" fill="#0f172a" stroke="#fbbf24"/><text x="518" y="142" fill="#fde68a">dry-run remediate</text>
