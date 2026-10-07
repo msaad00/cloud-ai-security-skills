@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -26,6 +25,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-snowflake-unauthorized-grant", layer="detection")
 
@@ -68,10 +68,6 @@ MITRE_TECHNIQUE_UID = "T1098.003"
 MITRE_TECHNIQUE_NAME = "Additional Cloud Roles"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A01"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -176,14 +172,17 @@ def _finding_uid(granter: str, granted_role: str, grantee: str, time_ms: int) ->
     return f"det-snowflake-unauthorized-grant-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any], allowlist_mode: str) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any], allowlist_mode: str) -> dict[str, Any] | None:
     granter = _actor_uid(event)
     granter_name = _actor_name(event)
     granted_role = _granted_role(event)
     grantee_user = _grantee_user(event)
     grantee_role = _grantee_role(event)
     grantee = grantee_user or grantee_role
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(granter, granted_role, grantee, time_ms)
 
@@ -355,10 +354,11 @@ def detect(
         if allowlist_mode == "enforced" and _is_authorized(granter, allowlist):
             continue
         native_finding = _build_native_finding(event, allowlist_mode)
-        if output_format == "native":
-            yield native_finding
-        else:
-            yield _render_ocsf_finding(native_finding)
+        if native_finding is not None:
+            if output_format == "native":
+                yield native_finding
+            else:
+                yield _render_ocsf_finding(native_finding)
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:

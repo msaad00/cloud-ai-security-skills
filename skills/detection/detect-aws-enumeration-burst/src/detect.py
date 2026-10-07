@@ -13,7 +13,6 @@ import hashlib
 import json
 import sys
 from collections import defaultdict, deque
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -30,6 +29,7 @@ CANONICAL_VERSION = "2026-04"
 OCSF_VERSION = "1.8.0"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill=SKILL_NAME, layer="detection")
 
@@ -132,8 +132,8 @@ def _event_uid(event: dict[str, Any]) -> str:
     return str(metadata.get("uid") or "")
 
 
-def _time_ms(event: dict[str, Any]) -> int:
-    return int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+def _time_ms(event: dict[str, Any]) -> int | None:
+    return finding_time_ms(event.get("time"))
 
 
 def _call_label(service: str, operation: str) -> str:
@@ -322,13 +322,17 @@ def detect(
                 message="skipping discovery event with no actor or session identifier",
             )
             continue
+        time_ms = _time_ms(event)
+        if time_ms is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
         account_uid = _account(event)
         region = _region(event)
         key = (account_uid, region, principal_key)
         grouped[key].append(
             {
                 "event_uid": _event_uid(event),
-                "time_ms": _time_ms(event),
+                "time_ms": time_ms,
                 "actor_name": actor_name,
                 "actor_session_uid": actor_session_uid,
                 "account_uid": account_uid,

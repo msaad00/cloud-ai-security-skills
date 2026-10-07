@@ -8,7 +8,6 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -20,6 +19,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-sap-mass-change"
 OCSF_VERSION = "1.8.0"
@@ -70,10 +70,6 @@ MITRE_TACTIC_NAME = "Impact"
 MITRE_TECHNIQUE_UID = "T1565"
 MITRE_TECHNIQUE_NAME = "Data Manipulation"
 OWASP_FINDING_TYPE = "OWASP-Top-10-A04"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _parse_positive_int_env(name: str, default: int) -> int:
@@ -338,10 +334,13 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
             continue
         if not _is_relevant(event, sensitive_tx):
             continue
-        # Bucket assignment must be deterministic for replay-safe dedup: never
-        # fall back to wall-clock time here (that would make window_start,
-        # and therefore finding_uid, depend on when detect() happens to run).
-        time_ms = _event_time(event)
+        # Bucket assignment must be deterministic for replay-safe dedup: an
+        # event with no source time cannot be placed in a window, so it is
+        # skipped rather than given the wall clock or epoch zero.
+        time_ms = finding_time_ms(_event_time(event))
+        if time_ms is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
         key = (actor, _client(event), _transaction(event), _window_start(time_ms, window_minutes))
         buckets[key].append(event)
         actor_names[key] = _actor_name(event)

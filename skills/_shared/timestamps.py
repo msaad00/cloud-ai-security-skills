@@ -140,3 +140,34 @@ def emit_timestamp_unparseable(skill_name: str, *, record: int, line: int | None
         record=record,
         line=line,
     )
+
+
+def finding_time_ms(*event_times: Any) -> int | None:
+    """A finding's `time`: the first usable epoch-ms among its triggering events.
+
+    Detectors pass already-normalised event times in their preference order
+    (for example the last event of a burst). None, booleans, non-numeric,
+    non-positive, and post-year-9999 values are skipped. Returns None when no
+    candidate is usable; the detector then skips the finding and calls
+    `emit_finding_time_missing` instead of substituting the current time.
+    """
+    for value in event_times:
+        if value is None or isinstance(value, bool):
+            continue
+        try:
+            ms = int(value)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if 0 < ms <= MAX_TS_MS:
+            return ms
+    return None
+
+
+def emit_finding_time_missing(skill_name: str) -> None:
+    """Structured skip warning for a finding none of whose events has a time."""
+    emit_stderr_event(
+        skill_name,
+        level="warning",
+        event="finding_time_missing",
+        message="skipping finding: no triggering event has a usable source time",
+    )

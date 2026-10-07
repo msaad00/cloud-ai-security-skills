@@ -29,7 +29,6 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -41,6 +40,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-azure-private-endpoint-to-external-sub"
 CANONICAL_VERSION = "2026-04"
@@ -179,8 +179,11 @@ def _build_native_finding(
     target_subscription: str,
     private_link_service_id: str,
     allowlist_mode: str,
-) -> dict[str, Any]:
-    time_ms = int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(event.get("time"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = str((event.get("metadata") or {}).get("uid") or "")
     finding_uid = _finding_uid(
         resource_uid=resource_uid,
@@ -414,6 +417,8 @@ def detect(
                 private_link_service_id=link_id,
                 allowlist_mode=allowlist_mode,
             )
+            if native is None:
+                continue
             yield native if output_format == "native" else _to_ocsf(native)
 
 

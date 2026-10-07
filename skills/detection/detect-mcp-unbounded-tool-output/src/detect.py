@@ -15,7 +15,6 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,6 +23,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-mcp-unbounded-tool-output"
 # Framework depth markers (coverage_summary.py)
@@ -153,10 +153,6 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 def _finding_uid(session_uid: str, tool_name: str) -> str:
     return f"det-mcp-unbounded-tool-output-{session_uid}-{tool_name}"
 
@@ -172,7 +168,7 @@ def _build_native_finding(
     last_time_ms: int,
     max_bytes: int,
     max_lines: int,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     uid = _finding_uid(session_uid, tool_name)
     desc = (
         f"MCP tool '{tool_name}' in session '{session_uid}' produced {breach_count} "
@@ -182,6 +178,10 @@ def _build_native_finding(
         f"is the OWASP LLM10 Unbounded Resource Consumption / ATLAS AML.T0034 Cost "
         f"Harvesting pattern on the tool-output side of the loop."
     )
+    finding_time = finding_time_ms(last_time_ms)
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -191,7 +191,7 @@ def _build_native_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "MCP",
-        "time_ms": int(last_time_ms or _now_ms()),
+        "time_ms": finding_time,
         "severity": "medium",
         "severity_id": SEVERITY_MEDIUM,
         "status": "success",
@@ -349,7 +349,8 @@ def detect(
                 slot["max_bytes"],
                 slot["max_lines"],
             )
-            yield native if output_format == "native" else _render_ocsf_finding(native)
+            if native is not None:
+                yield native if output_format == "native" else _render_ocsf_finding(native)
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:

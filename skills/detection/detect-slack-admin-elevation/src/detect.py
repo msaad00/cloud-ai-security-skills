@@ -27,6 +27,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-slack-admin-elevation", layer="detection")
 
@@ -63,10 +64,6 @@ MITRE_TECHNIQUE_UID = "T1098.003"
 MITRE_TECHNIQUE_NAME = "Additional Cloud Roles"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A01"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -181,13 +178,16 @@ def _build_native_finding(
     allowlist_mode: str,
     window_violation: bool,
     window: tuple[int, int],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     granter_uid, granter_name = _granter(event)
     grantee_uid, grantee_name = _grantee(event)
     new_role = _new_role(event) or (
         "admin" if _action(event) == "role_change_to_admin" else "owner"
     )
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(granter_uid, grantee_uid, new_role, time_ms)
 
@@ -359,6 +359,8 @@ def detect(
         else:
             allowlist_mode = "fail-open"
         native = _build_native_finding(event, allowlist_mode, window_violation, window)
+        if native is None:
+            continue
         if output_format == "native":
             yield native
         else:

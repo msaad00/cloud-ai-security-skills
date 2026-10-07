@@ -15,7 +15,6 @@ import hashlib
 import json
 import sys
 from collections import Counter, deque
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -33,6 +32,7 @@ OCSF_VERSION = "1.8.0"
 CANONICAL_VERSION = "2026-04"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill=SKILL_NAME, layer="detection")
 
@@ -74,10 +74,6 @@ MITRE_TECHNIQUE_UID = "T1110"
 MITRE_TECHNIQUE_NAME = "Brute Force"
 MITRE_SUBTECHNIQUE_UID = "T1110.003"
 MITRE_SUBTECHNIQUE_NAME = "Password Spraying"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -230,7 +226,7 @@ def _build_native_finding(
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "Okta",
-        "time_ms": success["time_ms"] or _now_ms(),
+        "time_ms": success["time_ms"],
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -346,6 +342,9 @@ def detect(
             continue
         normalized = _normalize_event(event)
         if normalized is None:
+            continue
+        if finding_time_ms(normalized["time_ms"]) is None:
+            emit_finding_time_missing(SKILL_NAME)
             continue
         metadata_uid = normalized["event_uid"]
         if metadata_uid and metadata_uid in dedupe:

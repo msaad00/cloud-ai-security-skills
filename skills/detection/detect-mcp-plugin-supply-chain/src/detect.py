@@ -18,7 +18,6 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -28,6 +27,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-mcp-plugin-supply-chain"
 # Framework depth markers (coverage_summary.py)
@@ -76,10 +76,6 @@ def allowed_hosts() -> frozenset[str]:
     if not raw:
         return frozenset()
     return frozenset(part.strip().lower() for part in raw.split(",") if part.strip())
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _tool_obj(event: dict[str, Any]) -> dict[str, Any]:
@@ -187,7 +183,7 @@ def _build_native_finding(
     url: str,
     source_field: str,
     time_ms: int,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     uid = _finding_uid(session_uid, host)
     desc = (
         f"MCP tool '{tool_name}' in session '{session_uid}' declared an inputSchema "
@@ -196,6 +192,10 @@ def _build_native_finding(
         f"reaching outside the operator trust boundary (OWASP LLM05 supply chain via "
         f"plugins/tools, MITRE T1195.001 software supply-chain compromise)."
     )
+    finding_time = finding_time_ms(time_ms)
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -205,7 +205,7 @@ def _build_native_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "MCP",
-        "time_ms": int(time_ms or _now_ms()),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -340,10 +340,12 @@ def detect(
             key = (session_uid, host)
             if key in seen:
                 continue
-            seen.add(key)
             native = _build_native_finding(
                 session_uid, tool_name, host, url, source_field, event["time_ms"]
             )
+            if native is None:
+                continue
+            seen.add(key)
             yield native if output_format == "native" else _render_ocsf_finding(native)
 
 

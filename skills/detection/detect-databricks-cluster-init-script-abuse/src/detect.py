@@ -18,7 +18,6 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -30,6 +29,10 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 _log = get_logger(__name__, skill="detect-databricks-cluster-init-script-abuse", layer="detection")
 
@@ -81,10 +84,6 @@ MITRE_PERSISTENCE_TECHNIQUE_UID = "T1546"
 MITRE_PERSISTENCE_TECHNIQUE_NAME = "Boot or Logon Initialization Scripts"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A08"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -218,14 +217,17 @@ def _build_native_finding(
     *,
     destination: str,
     reasons: list[str],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     actor_uid = _actor_uid(event)
     actor_name = _actor_name(event)
     workspace_id = _workspace_id(event)
     cluster_id = _cluster_id(event)
     cluster_name = _cluster_name(event)
     operation = _api_operation(event)
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(cluster_id or cluster_name or operation, destination, time_ms)
 
@@ -432,6 +434,8 @@ def detect(
                 continue
             seen.add(key)
             native_finding = _build_native_finding(event, destination=destination, reasons=reasons)
+            if native_finding is None:
+                continue
             if output_format == "native":
                 yield native_finding
             else:

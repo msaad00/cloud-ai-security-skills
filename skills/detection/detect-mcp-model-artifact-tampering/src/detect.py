@@ -15,7 +15,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,6 +23,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-mcp-model-artifact-tampering"
 OCSF_VERSION = "1.8.0"
@@ -58,10 +58,6 @@ def _safe_int(value: Any) -> int:
 def _short(value: str) -> str:
     cleaned = (value or "").split(":")[-1]
     return cleaned[:8] if cleaned else "00000000"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _unmapped_mcp(event: dict[str, Any]) -> dict[str, Any]:
@@ -135,7 +131,7 @@ def _build_native_finding(
     tool_name: str,
     before_event: dict[str, Any],
     after_event: dict[str, Any],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     before = before_event["artifact_sha256"]
     after = after_event["artifact_sha256"]
     uid = _finding_uid(session_uid, tool_name, before, after)
@@ -145,6 +141,10 @@ def _build_native_finding(
         f"{after}. The session-trusted artifact has been swapped or tampered with mid-"
         f"flight (ATLAS AML.T0010 · OWASP LLM03 supply-chain compromise)."
     )
+    finding_time = finding_time_ms(after_event.get("time_ms"))
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -154,7 +154,7 @@ def _build_native_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "MCP",
-        "time_ms": int(after_event.get("time_ms") or _now_ms()),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -264,7 +264,8 @@ def detect(
         if prior_artifact == artifact:
             continue
         native = _build_native_finding(session_uid, tool_name, prior_event, event)
-        yield native if output_format == "native" else _render_ocsf_finding(native)
+        if native is not None:
+            yield native if output_format == "native" else _render_ocsf_finding(native)
         state[session_uid] = (artifact, event)
 
 

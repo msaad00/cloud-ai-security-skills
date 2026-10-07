@@ -8,7 +8,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -20,6 +19,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-sap-priv-user-access"
 OCSF_VERSION = "1.8.0"
@@ -53,10 +53,6 @@ MITRE_TACTIC_NAME = "Privilege Escalation"
 MITRE_TECHNIQUE_UID = "T1078"
 MITRE_TECHNIQUE_NAME = "Valid Accounts"
 OWASP_FINDING_TYPE = "OWASP-Top-10-A01"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _parse_env_list(name: str, default: Iterable[str] = ()) -> tuple[str, ...]:
@@ -173,8 +169,11 @@ def _finding_uid(event: dict[str, Any]) -> str:
 
 def _build_native_finding(
     event: dict[str, Any], matched_users: tuple[str, ...], matched_profiles: tuple[str, ...]
-) -> dict[str, Any]:
-    time_ms = _event_time(event) or _now_ms()
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     finding_uid = _finding_uid(event)
     actor_uid = _actor_id(event)
     actor_name = _actor_name(event)
@@ -312,6 +311,8 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
             continue
         if _is_privileged_access(event, privileged_users, privileged_profiles):
             native = _build_native_finding(event, privileged_users, privileged_profiles)
+            if native is None:
+                continue
             findings.append(native if output_format == "native" else _render_ocsf_finding(native))
     return findings
 

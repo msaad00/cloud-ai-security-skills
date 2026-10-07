@@ -138,6 +138,19 @@ creation time) fall back to the record's primary event time or are omitted.
 `tests/conformance/test_ingest_timestamps.py` enforces this for every
 ingester.
 
+Detectors follow the same rule. A finding's `time` is taken from its
+triggering events with `finding_time_ms` (same module), in the detector's
+preference order (for example the last event of a burst). When none of
+those events carries a usable time the detector skips the finding and
+writes one structured stderr warning:
+
+- `event`: `finding_time_missing`, `level`: `warning`
+- never the raw event or payload
+
+`tests/conformance/test_detect_finding_time.py` fails if any detector reads
+the wall clock, and replays every golden pipe with time-less events to prove
+the output stays byte-identical across runs.
+
 ## OCSF class usage
 
 ### Ingest skills

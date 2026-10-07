@@ -15,7 +15,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -27,6 +26,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-snowflake-share-creation", layer="detection")
 
@@ -66,10 +66,6 @@ MITRE_TECHNIQUE_UID = "T1537"
 MITRE_TECHNIQUE_NAME = "Transfer Data to Cloud Account"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A04"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -166,14 +162,17 @@ def _finding_uid(actor_uid: str, share_name: str, time_ms: int, operation: str) 
     return f"det-snowflake-share-creation-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any]) -> dict[str, Any] | None:
     actor_uid = _actor_uid(event)
     actor_name = _actor_name(event)
     share_name = _share_name(event)
     operation = _api_operation(event)
     operation_kind = _operation_kind(event) or operation.lower()
     target_accounts = _target_accounts(event)
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(actor_uid, share_name, time_ms, operation)
 
@@ -323,10 +322,11 @@ def detect(
         if meta_uid:
             dedupe.add(meta_uid)
         native_finding = _build_native_finding(event)
-        if output_format == "native":
-            yield native_finding
-        else:
-            yield _render_ocsf_finding(native_finding)
+        if native_finding is not None:
+            if output_format == "native":
+                yield native_finding
+            else:
+                yield _render_ocsf_finding(native_finding)
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:

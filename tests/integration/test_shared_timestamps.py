@@ -192,3 +192,33 @@ def test_emit_timestamp_unparseable_plain_text(monkeypatch, capsys):
     assert capsys.readouterr().err == (
         "[ingest-x] skipping record 2: missing or unparseable source timestamp\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("candidates", "expected"),
+    [
+        ((BASE_MS,), BASE_MS),
+        ((0, BASE_MS), BASE_MS),
+        ((None, "", BASE_MS + 1, BASE_MS), BASE_MS + 1),
+        ((str(BASE_MS),), BASE_MS),
+        ((float(BASE_MS),), BASE_MS),
+        ((True, BASE_MS), BASE_MS),
+        ((-1, BASE_MS), BASE_MS),
+        ((MAX_MS + 1, BASE_MS), BASE_MS),
+        ((math.nan, math.inf, BASE_MS), BASE_MS),
+        ((), None),
+        ((None, 0, "", "garbage", False, -5, {}, []), None),
+    ],
+)
+def test_finding_time_ms_takes_first_usable_event_time(candidates, expected):
+    assert TS.finding_time_ms(*candidates) == expected
+
+
+def test_emit_finding_time_missing_is_structured(monkeypatch, capsys):
+    monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
+    TS.emit_finding_time_missing("detect-x")
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["skill"] == "detect-x"
+    assert payload["level"] == "warning"
+    assert payload["event"] == "finding_time_missing"
+    assert set(payload) == {"timestamp", "skill", "level", "event", "message"}

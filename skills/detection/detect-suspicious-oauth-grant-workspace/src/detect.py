@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -19,6 +18,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-suspicious-oauth-grant-workspace"
 OCSF_VERSION = "1.8.0"
@@ -63,10 +63,6 @@ MITRE_TECHNIQUE_UID = "T1550.001"
 MITRE_TECHNIQUE_NAME = "Use Alternate Authentication Material: Application Access Token"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A05"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -208,12 +204,15 @@ def _finding_uid(client_id: str, actor: str, time_ms: int) -> str:
     return f"det-workspace-oauth-grant-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any] | None:
     actor_uid, actor_name = _actor(event)
     client_id = _client_id(event)
     app_name = _app_name(event)
     scopes = sorted(_scopes(event))
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(client_id, actor_uid, time_ms)
 
@@ -346,7 +345,8 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
         if not relevant:
             continue
         native = _build_native_finding(event, reason)
-        findings.append(native if output_format == "native" else _render_ocsf_finding(native))
+        if native is not None:
+            findings.append(native if output_format == "native" else _render_ocsf_finding(native))
     return findings
 
 

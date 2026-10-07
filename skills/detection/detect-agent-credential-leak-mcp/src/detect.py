@@ -13,7 +13,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -31,6 +30,7 @@ OCSF_VERSION = "1.8.0"
 CANONICAL_VERSION = "2026-04"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 OUTPUT_FORMATS = ("ocsf", "native")
 INGEST_SKILL = "ingest-mcp-proxy-ocsf"
@@ -214,17 +214,17 @@ def _finding_uid(
     return f"det-mcp-credential-leak-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:16]}"
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
-def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any]) -> dict[str, Any] | None:
     session_uid = str(event["session_uid"])
     tool_name = str(event["tool_name"] or "tool-unknown")
     event_uid = str(event["event_uid"] or "event-unknown")
     matches = list(event["matches"])
     finding_uid = _finding_uid(session_uid, tool_name, event_uid, matches)
     signal_names = [item["signal"] for item in matches]
+    time_ms = finding_time_ms(event.get("time_ms"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -234,7 +234,7 @@ def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "MCP",
-        "time_ms": int(event.get("time_ms") or _now_ms()),
+        "time_ms": time_ms,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -342,6 +342,8 @@ def detect(
         if suspicious is None:
             continue
         native = _build_native_finding(suspicious)
+        if native is None:
+            continue
         yield native if output_format == "native" else _render_ocsf_finding(native)
 
 

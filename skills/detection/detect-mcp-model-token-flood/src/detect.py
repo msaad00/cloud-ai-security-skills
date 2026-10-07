@@ -15,7 +15,6 @@ import json
 import os
 import sys
 from collections import deque
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,6 +23,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-mcp-model-token-flood"
 OCSF_VERSION = "1.8.0"
@@ -137,10 +137,6 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 def _finding_uid(user_uid: str, model_name: str, window_start_ms: int) -> str:
     return f"det-mcp-token-flood-{user_uid}-{model_name}-{window_start_ms}"
 
@@ -152,7 +148,7 @@ def _build_native_finding(
     total_tokens: int,
     threshold: int,
     window_minutes: int,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     first_time = window_events[0]["time_ms"]
     last_time = window_events[-1]["time_ms"]
     uid = _finding_uid(user_uid, model_name, first_time)
@@ -164,6 +160,10 @@ def _build_native_finding(
         f"saturating the model endpoint with cumulative volume that no single "
         f"per-call RLIMIT would block."
     )
+    finding_time = finding_time_ms(last_time)
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -173,7 +173,7 @@ def _build_native_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "MCP",
-        "time_ms": int(last_time or _now_ms()),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -311,7 +311,8 @@ def detect(
                     threshold,
                     window,
                 )
-                yield native if output_format == "native" else _render_ocsf_finding(native)
+                if native is not None:
+                    yield native if output_format == "native" else _render_ocsf_finding(native)
                 emitted_for_current_window = True
 
 

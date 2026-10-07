@@ -17,7 +17,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -30,6 +29,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-snowflake-failed-mfa-burst", layer="detection")
 
@@ -92,10 +92,6 @@ MITRE_SECONDARY_TECHNIQUE_UID = "T1621"
 MITRE_SECONDARY_TECHNIQUE_NAME = "Multi-Factor Authentication Request Generation"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A07"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -193,7 +189,7 @@ def _build_native_finding(
     actor_uid: str,
     actor_name: str,
     burst: list[dict[str, Any]],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     first = burst[0]
     last = burst[-1]
     failed_count = len(burst)
@@ -225,6 +221,11 @@ def _build_native_finding(
         for method in authentication_methods
     )
 
+    time_ms = finding_time_ms(last["time_ms"])
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
+
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -234,7 +235,7 @@ def _build_native_finding(
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "Snowflake",
-        "time_ms": last["time_ms"] or _now_ms(),
+        "time_ms": time_ms,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -388,10 +389,11 @@ def detect(
 
         if len(burst) >= fail_threshold:
             native_finding = _build_native_finding(actor_uid, item["actor_name"], list(burst))
-            if output_format == "native":
-                yield native_finding
-            else:
-                yield _render_ocsf_finding(native_finding)
+            if native_finding is not None:
+                if output_format == "native":
+                    yield native_finding
+                else:
+                    yield _render_ocsf_finding(native_finding)
             cooldown_until[actor_uid] = cur_time + window_ms
             burst.clear()
 

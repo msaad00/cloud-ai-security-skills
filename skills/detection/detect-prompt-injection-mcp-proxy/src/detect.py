@@ -14,7 +14,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from typing import Any, Iterable
 
 SKILL_NAME = "detect-prompt-injection-mcp-proxy"
@@ -27,6 +26,7 @@ REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.errors import ContractError  # noqa: E402
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 OUTPUT_FORMATS = ("ocsf", "native")
 
@@ -175,10 +175,6 @@ def _suspicious_tool_declaration(event: dict[str, Any]) -> dict[str, Any] | None
     return normalized
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 def _finding_uid(
     session_uid: str, tool_name: str, event_uid: str, matched_signals: list[str]
 ) -> str:
@@ -193,7 +189,7 @@ def _description_excerpt(description: str, limit: int = 180) -> str:
     return collapsed[: limit - 1] + "…"
 
 
-def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any]) -> dict[str, Any] | None:
     session_uid = str(event["session_uid"])
     tool_name = str(event["tool_name"])
     event_uid = str(event["event_uid"] or "event-unknown")
@@ -210,6 +206,10 @@ def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
         f"language that an agent could ingest as trusted instructions. Excerpt: {excerpt}"
     )
 
+    finding_time = finding_time_ms(event.get("time_ms"))
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -219,7 +219,7 @@ def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "MCP",
-        "time_ms": int(event.get("time_ms") or _now_ms()),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -326,6 +326,8 @@ def detect(
 
     for event in listed:
         native_finding = _build_native_finding(event)
+        if native_finding is None:
+            continue
         if native_finding["finding_uid"] in seen_findings:
             continue
         seen_findings.add(native_finding["finding_uid"])
