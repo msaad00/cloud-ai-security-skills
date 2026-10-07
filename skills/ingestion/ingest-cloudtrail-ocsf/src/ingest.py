@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.json_input import split_json_document  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 from skills._shared.timestamps import (  # noqa: E402
     TimestampUnparseable,
@@ -373,23 +374,7 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
       - falls back to line-by-line NDJSON if the whole-document parse fails.
       - blank lines and parse failures are skipped (warning to stderr).
     """
-    buf: list[str] = list(stream)
-    if not buf:
-        return
-
-    # Reconstruct the full text with explicit newlines so the line-by-line
-    # fallback works whether the input came from a real file (lines already
-    # end in \n) or from a list of pre-split strings (no newlines).
-    full = "\n".join(line.rstrip("\n") for line in buf).strip()
-    if not full:
-        return
-
-    # First try whole-document parse (CloudTrail digest files are single
-    # multi-line JSON objects, not NDJSON).
-    try:
-        whole = json.loads(full)
-    except json.JSONDecodeError:
-        whole = None
+    whole, lines = split_json_document(stream)
 
     if isinstance(whole, dict) and "Records" in whole:
         for r in whole.get("Records") or []:
@@ -405,9 +390,8 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
                 yield r
         return
 
-    # Fall back to line-by-line NDJSON, iterating the ORIGINAL buffer so
-    # each entry is parsed independently.
-    for lineno, raw_line in enumerate(buf, start=1):
+    # Fall back to line-by-line NDJSON; each entry is parsed independently.
+    for lineno, raw_line in enumerate(lines, start=1):
         line = raw_line.strip()
         if not line:
             continue
