@@ -19,6 +19,33 @@
       "expected_finding_count": 1
     },
     {
+      "name": "mcp_plugin_supply_chain",
+      "ingest_skill": "ingest-mcp-proxy-ocsf",
+      "detect_skill": "detect-mcp-plugin-supply-chain",
+      "raw_fixture": "mcp_plugin_supply_chain_raw.jsonl",
+      "expected_fixture": "mcp_plugin_supply_chain_pipe_findings.ocsf.jsonl",
+      "expected_ocsf_count": 3,
+      "expected_finding_count": 1,
+      "ingest_kwargs": {
+        "preserve_mcp_content": true
+      },
+      "detect_env": {
+        "MCP_PLUGIN_ALLOWED_HOSTS": "docs.example.com"
+      }
+    },
+    {
+      "name": "mcp_adversarial_input_corpus",
+      "ingest_skill": "ingest-mcp-proxy-ocsf",
+      "detect_skill": "detect-mcp-adversarial-input-corpus",
+      "raw_fixture": "mcp_adversarial_input_raw.jsonl",
+      "expected_fixture": "mcp_adversarial_input_pipe_findings.ocsf.jsonl",
+      "expected_ocsf_count": 3,
+      "expected_finding_count": 2,
+      "ingest_kwargs": {
+        "preserve_mcp_content": true
+      }
+    },
+    {
       "name": "entra_credential_addition",
       "ingest_skill": "ingest-entra-directory-audit-ocsf",
       "detect_skill": "detect-entra-credential-addition",

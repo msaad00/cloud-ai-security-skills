@@ -451,6 +451,15 @@ class TestPerSkillMcpSchemas:
         ]
         assert remaining["args"] == ["--output-format", "native"]
 
+    def test_mcp_ingest_content_preservation_is_typed_opt_in(self):
+        skill = tool_map(REPO_ROOT)["ingest-mcp-proxy-ocsf"]
+        _, off = expand_skill_parameters(skill, {"input_path": "/tmp/mcp.jsonl"})
+        assert off == ["/tmp/mcp.jsonl"]
+        _, on = expand_skill_parameters(
+            skill, {"input_path": "/tmp/mcp.jsonl", "preserve_mcp_content": True}
+        )
+        assert on == ["/tmp/mcp.jsonl", "--preserve-mcp-content"]
+
     def test_expand_skill_parameters_translate_positional(self):
         skill = tool_map(REPO_ROOT)["detect-lateral-movement"]
         remaining, cli_args = expand_skill_parameters(

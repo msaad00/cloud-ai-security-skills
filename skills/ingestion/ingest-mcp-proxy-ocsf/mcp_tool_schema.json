@@ -15,6 +15,13 @@
       "description": "Write OCSF JSONL to this path instead of stdout.",
       "minLength": 1,
       "x-cli-flag": "--output"
+    },
+    "preserve_mcp_content": {
+      "type": "boolean",
+      "description": "Opt in to retaining tool inputSchema, sampling systemPrompt, and message text (capped per field) so content detectors can fire. Retained text may contain sensitive data; off by default.",
+      "default": false,
+      "x-cli-flag": "--preserve-mcp-content",
+      "x-cli-style": "flag"
     }
   },
   "examples": [

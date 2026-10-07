@@ -246,11 +246,23 @@ For `Application Activity` events that originate from an MCP proxy, populate the
       "name":        "query_db",
       "description": "Query database using SQL",
       "input_schema_sha256": "sha256:abc123...",
-      "fingerprint":         "sha256:full_tool_fingerprint..."
+      "fingerprint":         "sha256:full_tool_fingerprint...",
+      "input_schema": { ... }        // opt-in only (--preserve-mcp-content), size-capped
+    }
+  },
+  "unmapped": {                      // opt-in only (--preserve-mcp-content)
+    "mcp": {
+      "prompt": "...",               // params.systemPrompt, capped
+      "request": {"params": {"messages": [{"content": "..."}]}},  // text only, capped
+      "truncated_fields": ["prompt"] // present only when a cap was hit
     }
   }
 }
 ```
+
+`input_schema` and `unmapped.mcp` are absent by default; see the ingester's
+[opt-in content preservation](../ingestion/ingest-mcp-proxy-ocsf/SKILL.md#opt-in-content-preservation)
+section for the privacy trade-off.
 
 Fingerprint definition: `sha256(json.dumps({name, description, inputSchema, annotations}, sort_keys=True))`.
 
@@ -262,7 +274,9 @@ Per-skill detector tests validate **detect-only** parity against frozen OCSF
 inputs. Cross-skill pipes additionally prove the ingest output is consumable
 by downstream detectors without manual field surgery.
 
-Selection criteria for pipes in `tests/integration/test_ingest_detect_pipes.py`:
+Pipes are registered in `tests/integration/golden_pipes.json`, the single
+source of truth read by both `tests/integration/test_ingest_detect_pipes.py`
+and `scripts/validate_golden_pipes.py`. Selection criteria:
 
 1. **High-signal closed loop** — raw fixture must produce at least one Detection
    Finding through the real ingest entrypoint.
@@ -274,14 +288,14 @@ Selection criteria for pipes in `tests/integration/test_ingest_detect_pipes.py`:
 4. **Determinism** — regenerate pipe goldens only via the documented ingest→detect
    command shown in the test failure message.
 5. **Multi-source pipes** — when a detector correlates across producers (e.g.
-   CloudTrail + VPC flow for lateral movement), declare `extra_ingest_streams`
-   in `tests/integration/pipe_harness.py` rather than hand-merging OCSF.
+   CloudTrail + VPC flow for lateral movement), declare `extra_raw_fixtures`
+   in the registry rather than hand-merging OCSF.
+6. **Opt-in ingest / detect config** — `ingest_kwargs` (e.g.
+   `{"preserve_mcp_content": true}`) and `detect_env` (e.g.
+   `MCP_PLUGIN_ALLOWED_HOSTS`) mirror the CLI flags and env vars an operator
+   would set.
 
-Shipped pipes (12): MCP tool drift · MCP prompt injection · Entra credential
-addition · Entra role grant · Google Workspace suspicious login · CloudTrail
-access-key creation · AWS lateral movement (CloudTrail + VPC) · Okta MFA fatigue
-· Okta credential stuffing · K8s sensitive secret read · K8s privilege
-escalation · K8s container escape.
+See `tests/integration/golden_pipes.json` for the shipped pipe list.
 
 ## Test contract
 

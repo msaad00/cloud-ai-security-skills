@@ -85,8 +85,12 @@ OCSF output populates:
 ## Usage
 
 ```bash
-MCP_PLUGIN_ALLOWED_HOSTS="schema.openai.com,registry.modelcontextprotocol.io" \
-  python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
-  | python src/detect.py \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py --preserve-mcp-content mcp-proxy.jsonl \
+  | MCP_PLUGIN_ALLOWED_HOSTS="schema.openai.com,registry.modelcontextprotocol.io" \
+    python src/detect.py \
   > plugin-supply-chain-findings.ocsf.jsonl
 ```
+
+The ingester keeps `mcp.tool.input_schema` only with `--preserve-mcp-content`
+(opt-in, see its [privacy note](../../ingestion/ingest-mcp-proxy-ocsf/SKILL.md#opt-in-content-preservation));
+without it this detector sees no schema and emits nothing.
