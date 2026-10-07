@@ -45,11 +45,15 @@ metadata:
 ## Code standards
 
 - Python 3.11+ with type hints
-- Strict typing for `skills/remediation/*/src` and `skills/_shared/`: every new
-  or modified remediation skill or shared helper must pass
-  `bash scripts/run_mypy.sh`, which type-checks those paths under
+- Typing bar: `skills/detection/*/src`, `skills/remediation/*/src`, and
+  `skills/_shared/` are strict-typed. New skills in those layers are picked up
+  automatically and must pass `make typecheck` (runs `scripts/run_mypy.sh` in a
+  dev-group-only env, same as CI) under
   `--disallow-untyped-defs --disallow-incomplete-defs --warn-return-any`
-  (plus `--disallow-any-generics` for `skills/_shared/`). Add real annotations and narrow `Any`/`Optional` at the
+  (plus `--disallow-any-generics` for detection and `skills/_shared/`). Missing
+  imports are errors: if a new optional third-party SDK has no stubs, add it to
+  the scoped `[[tool.mypy.overrides]]` list in `pyproject.toml` rather than
+  ignoring imports globally. Add real annotations and narrow `Any`/`Optional` at the
   boundary; use `typing.cast` only for genuinely untyped third-party SDK returns
   (boto3/azure/google/kubernetes). Blanket `# type: ignore` is not accepted — a
   `# type: ignore[code]` is allowed only with a specific error code and a
@@ -71,7 +75,7 @@ metadata:
 1. Fork the repo and create a feature branch
 2. Add or modify skills following the structure above
 3. Install the locked toolchain once: `uv sync --all-groups` (CI installs from the same `uv.lock` with `uv sync --frozen`)
-4. Run the full local gate: `make check` runs lint (`make lint`: ruff check + format check), type checking (`make typecheck`: `scripts/run_mypy.sh`, the same command CI's `type-check` job runs; the remediation layer and `skills/_shared/` are strict-typed — see Code standards), the shared validators (`make validate`), and the test suites over the same paths CI runs (`make test`). While iterating on one skill, `uv run pytest skills/<layer>/your-skill/tests/ -v` is the fast loop
+4. Run the full local gate: `make check` runs lint (`make lint`: ruff check + format check), type checking (`make typecheck`: `scripts/run_mypy.sh`, the same command CI's `type-check` job runs; the detection and remediation layers and `skills/_shared/` are strict-typed — see Code standards), the shared validators (`make validate`), and the test suites over the same paths CI runs (`make test`). While iterating on one skill, `uv run pytest skills/<layer>/your-skill/tests/ -v` is the fast loop
 5. Shared validators: `make validate` runs the same validator set CI enforces (contract, integrity, runtime, structure, presets, dependency consistency, framework coverage, OCSF metadata, counts, deny-list parity, provenance, trust frontmatter, safe-skill bar, golden OCSF, and docs sync). If `validate_skill_structure.py` flags an empty subtree under `skills/detection-engineering/` (or anywhere else), it usually means stale `__pycache__` from an earlier on-disk layout — run `git clean -fdX skills/detection-engineering/` to drop ignored files only, then re-run the validator.
 6. Open a PR against `main` with a clear description
 7. If the PR is intended for a release cut, follow [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) before tagging

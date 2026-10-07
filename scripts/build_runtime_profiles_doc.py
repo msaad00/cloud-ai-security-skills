@@ -181,10 +181,12 @@ def render_doc(records: list[dict[str, Any]]) -> str:
         "raw numbers."
     )
     parts.append("")
-    parts.append("Closes:")
+    parts.append("Related issues:")
     parts.append(
         "- [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) — "
-        "deploy and verify all three runner templates end to end (CI surface)."
+        "deploy and verify all three runner templates end to end. This doc covers "
+        "the local CI surface only; real-cloud deploy proof is still outstanding "
+        "(see `runners/DEPLOYMENT_VERIFICATION.md`)."
     )
     parts.append(
         "- [#199](https://github.com/msaad00/cloud-ai-security-skills/issues/199) — "
@@ -223,14 +225,17 @@ def render_doc(records: list[dict[str, Any]]) -> str:
     parts.append(
         "- the audit assertion for that runner passed (the receiver writes a "
         "single-line JSONL audit; the SSE runner writes an HMAC-chained log and "
-        "`scripts/verify_audit_chain.py` returned exit 0; the AWS runner has no "
-        "in-process audit chain — its audit gap is documented below);"
+        "`scripts/verify_audit_chain.py` returned exit 0; the AWS, GCP, and "
+        "Azure runners have no in-process audit chain — their audit gaps are "
+        "documented below);"
     )
     parts.append(
         "- the **sink-arrival assertion** for that runner held (webhook receiver "
         "currently does not fan out — gap below; SSE response payload shape was "
         "verified for every reply; AWS scenario asserts exact SQS message count "
-        "= N)."
+        "= N; GCP and Azure scenarios assert the findings topic received exactly "
+        "the golden findings once and that the N-1 redeliveries were suppressed "
+        "by the dedupe store)."
     )
     parts.append("")
     parts.append("## Honest gaps")
@@ -289,10 +294,13 @@ def render_doc(records: list[dict[str, Any]]) -> str:
         "harness assumes the templates render — it does not re-validate them."
     )
     parts.append(
-        "- GCP and Azure cloud-runner end-to-end coverage is still gap (see "
-        "above). The real-cloud deploy proof requested by #198 stays the "
-        "responsibility of an operator running the templates against a real "
-        "account; this harness only covers what can be exercised locally."
+        "- Backends are local only: the AWS runner runs against `moto`; the "
+        "GCP and Azure runners run their real handlers against in-process fakes "
+        "of the cloud SDK clients (GCS, Pub/Sub, Firestore; Blob Storage, "
+        "Service Bus, Table Storage), not emulators and not a real cloud. IAM, "
+        "trigger wiring, packaging, and quotas are not exercised here — the "
+        "real-cloud deploy proof requested by #198 stays the responsibility of "
+        "an operator running the templates against a real account."
     )
     parts.append("")
     return "\n".join(parts) + "\n"

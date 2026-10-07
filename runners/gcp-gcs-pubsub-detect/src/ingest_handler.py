@@ -57,9 +57,21 @@ def _read_object(bucket: str, name: str) -> str:
     return blob.download_as_text()
 
 
-def handle_gcs_event(event: dict[str, Any], _context: Any) -> dict[str, int]:
-    bucket = event["bucket"]
-    name = event["name"]
+def _event_data(event: Any) -> dict[str, Any]:
+    # 2nd gen functions receive a CloudEvent (payload on `.data`); 1st gen
+    # background functions receive the payload dict directly.
+    data = getattr(event, "data", event)
+    if not isinstance(data, dict):
+        raise ValueError("storage event payload must be a JSON object")
+    return data
+
+
+def handle_gcs_event(event: Any, _context: Any = None) -> dict[str, int]:
+    data = _event_data(event)
+    bucket = data.get("bucket")
+    name = data.get("name")
+    if not isinstance(bucket, str) or not bucket or not isinstance(name, str) or not name:
+        raise ValueError("storage event is missing bucket or name")
     payload = _read_object(bucket, name)
     lines = _run_skill(payload)
 

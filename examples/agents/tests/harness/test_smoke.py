@@ -295,6 +295,27 @@ class TestHitlGateReachable:
         assert "cloud-ai-security-skills" in binding["mcp_config"]["mcpServers"]
         assert payload["mcp_tools_discovered"]
 
+    def test_continue_mcp_binding_documents_config_yaml(self):
+        result = subprocess.run(
+            [sys.executable, str(EXAMPLES / "continue_mcp_security_agent.py")],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+            cwd=REPO_ROOT,
+            env={**os.environ},
+        )
+        assert result.returncode == 0, result.stderr
+        payload = json.loads(result.stdout)
+        binding = payload["continue_binding"]
+        assert binding["integration"] == "continue_config_yaml"
+        assert binding["config_path"] == "~/.continue/config.yaml"
+        assert binding["docs"] == "docs/integrations/ide-agents.md"
+        servers = binding["mcp_config"]["mcpServers"]
+        assert [server["name"] for server in servers] == ["cloud-ai-security-skills"]
+        assert servers[0]["args"][0].endswith("mcp-server/src/server.py")
+        assert payload["mcp_tools_discovered"]
+
     def test_anthropic_binding_documents_mcp_config(self):
         result = subprocess.run(
             [sys.executable, str(EXAMPLES / "anthropic_sdk_security_agent.py")],
