@@ -63,6 +63,7 @@ import os
 import signal
 import sys
 import threading
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -196,11 +197,11 @@ class KeyStore:
     def __init__(
         self,
         *,
-        env: dict[str, str] | None = None,
+        env: Mapping[str, str] | None = None,
         emit_audit: Callable[[dict[str, Any]], None] | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
-        self._env = os.environ if env is None else env
+        self._env: Mapping[str, str] = os.environ if env is None else env
         self._emit_audit = emit_audit
         self._clock = clock or _utc_now
         self._lock = threading.Lock()
