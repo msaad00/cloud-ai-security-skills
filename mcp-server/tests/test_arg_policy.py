@@ -275,6 +275,7 @@ _NON_PATH_FLAGS = frozenset(
         "--output-format",
         "--policy-findings-format",
         "--prefix",
+        "--preserve-mcp-content",
         "--pretty",
         "--previous-hash",
         "--profile",
