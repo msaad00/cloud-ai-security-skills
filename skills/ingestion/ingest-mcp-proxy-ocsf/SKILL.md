@@ -77,6 +77,11 @@ canonical projection instead of the OCSF envelope. Each record includes:
 - `method`
 - `direction`
 - `tool` when the source event declares a tool
+- `unmapped` only when `--preserve-mcp-content` is on (same fields as OCSF)
+
+Native output carries the same content as OCSF: raw `params` and `body` are
+never emitted, so `tools/call` arguments, prompts, message text, tool schemas,
+and tool output are absent unless preserved by the opt-in below.
 
 Example:
 
@@ -100,12 +105,16 @@ Example:
 
 ## Opt-in content preservation
 
-By default the OCSF output keeps **no** MCP content: tool `inputSchema` is
-reduced to `mcp.tool.input_schema_sha256`, and sampling prompts, message text,
-and `tools/call` arguments are dropped. Two content detectors cannot fire on
-that output:
-[`detect-mcp-plugin-supply-chain`](../../detection/detect-mcp-plugin-supply-chain/)
-and [`detect-mcp-adversarial-input-corpus`](../../detection/detect-mcp-adversarial-input-corpus/).
+By default neither output format keeps MCP content: tool `inputSchema` is
+reduced to `input_schema_sha256`, and sampling prompts, message text,
+`tools/call` arguments, and `tools/call` response output are dropped. Six
+content detectors cannot fire on that output:
+[`detect-mcp-plugin-supply-chain`](../../detection/detect-mcp-plugin-supply-chain/),
+[`detect-mcp-adversarial-input-corpus`](../../detection/detect-mcp-adversarial-input-corpus/),
+[`detect-agent-credential-leak-mcp`](../../detection/detect-agent-credential-leak-mcp/),
+[`detect-system-prompt-extraction`](../../detection/detect-system-prompt-extraction/),
+[`detect-tool-output-exfiltration-instructions`](../../detection/detect-tool-output-exfiltration-instructions/),
+and [`detect-tool-output-policy-bypass`](../../detection/detect-tool-output-policy-bypass/).
 
 `--preserve-mcp-content` (or `MCP_PRESERVE_CONTENT=1`) opts in to keeping
 exactly the fields those detectors read, in both OCSF and native output:
@@ -115,17 +124,19 @@ exactly the fields those detectors read, in both OCSF and native output:
 | `body.tools[].inputSchema` (`tools/list` response) | `mcp.tool.input_schema` | omitted with `mcp.tool.input_schema_omitted: "size_cap"` when its compact JSON exceeds the cap |
 | `params.systemPrompt` (e.g. `sampling/createMessage`) | `unmapped.mcp.prompt` | truncated to the cap |
 | `params.messages[].content` | `unmapped.mcp.request.params.messages[].content` | text blocks only, joined with `\n`; image/audio data is never kept; truncated to the cap |
+| `body` (`tools/call` response) | `unmapped.mcp.response.body` | kept as-is; omitted with `unmapped.mcp.response.body_omitted: "size_cap"` when its compact JSON exceeds the cap |
 
 - Per-field cap: `MCP_PRESERVE_CONTENT_MAX_CHARS` characters (default 16384).
   Truncated fields are listed in `unmapped.mcp.truncated_fields`.
-- The flag never adds `tools/call` arguments to OCSF output.
-- Native output (`--output-format native`) already carries the raw `params`
-  and `body` objects verbatim, independent of this flag; treat native output
-  as raw proxy content for retention purposes.
+- The flag never adds `tools/call` arguments to either output format.
+- Native output (`--output-format native`) carries exactly the same preserved
+  fields as OCSF (`tool.input_schema`, `unmapped.mcp`). Earlier releases
+  passed raw `params` / `body` through verbatim in native output; that
+  stopped, so native consumers of tool output need the flag.
 - When on, a single `mcp_content_preserved` stderr event records the decision.
 - Fingerprints, event UIDs, and every other field are identical with or
-  without the flag; with the flag off, output is byte-identical to earlier
-  releases.
+  without the flag; with the flag off, OCSF output is byte-identical to
+  earlier releases.
 
 Privacy: preserved prompts and schemas can contain user data, secrets, or
 attacker-controlled text. Turn the flag on only where the downstream sink is
