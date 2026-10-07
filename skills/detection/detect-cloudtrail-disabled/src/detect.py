@@ -17,7 +17,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -34,6 +33,7 @@ CANONICAL_VERSION = "2026-04"
 OCSF_VERSION = "1.8.0"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill=SKILL_NAME, layer="detection")
 
@@ -141,8 +141,11 @@ def _build_native_finding(
     operation: str,
     trail_name: str,
     trail_arn: str,
-) -> dict[str, Any]:
-    time_ms = int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(event.get("time"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = str((event.get("metadata") or {}).get("uid") or "")
     trail_identity = trail_arn or trail_name
     finding_uid = _finding_uid(event_uid, operation, trail_identity, time_ms)
@@ -278,6 +281,8 @@ def detect(
             trail_name=trail_name,
             trail_arn=trail_arn,
         )
+        if native is None:
+            continue
         yield native if output_format == "native" else _to_ocsf(native)
 
 

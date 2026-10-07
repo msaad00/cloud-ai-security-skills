@@ -18,7 +18,6 @@ import fnmatch
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -27,6 +26,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-sensitive-secret-read-k8s"
 OCSF_VERSION = "1.8.0"
@@ -176,10 +176,6 @@ def _short(s: str) -> str:
     return hashlib.sha256((s or "").encode()).hexdigest()[:8]
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 # ---------------------------------------------------------------------------
 # Finding builder
 # ---------------------------------------------------------------------------
@@ -192,7 +188,7 @@ def _build_finding(
     namespace: str,
     secret_name: str,
     matched_patterns: list[str],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     uid = f"det-k8s-secret-read-{_short(actor)}-{_short(f'{namespace}/{secret_name}')}"
 
     patterns_str = ", ".join(matched_patterns)
@@ -204,6 +200,10 @@ def _build_finding(
         f"at runtime. (MITRE T1552.007 Unsecured Credentials: Container API)"
     )
 
+    finding_time = finding_time_ms(event["time_ms"])
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "record_type": "detection_finding",
@@ -212,7 +212,7 @@ def _build_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": str(event["provider"] or "Kubernetes"),
-        "time_ms": int(event["time_ms"]) or _now_ms(),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -253,7 +253,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
         "type_uid": FINDING_TYPE_UID,
         "severity_id": SEVERITY_HIGH,
         "status_id": 1,
-        "time": int(native_finding["time_ms"]) or _now_ms(),
+        "time": int(native_finding["time_ms"]),
         "metadata": {
             "version": OCSF_VERSION,
             "uid": native_finding["event_uid"],
@@ -342,7 +342,6 @@ def detect(
         dedup_key = f"{actor}|{namespace}|{secret_name}"
         if dedup_key in seen:
             continue
-        seen.add(dedup_key)
 
         native_finding = _build_finding(
             event=normalized,
@@ -351,6 +350,9 @@ def detect(
             secret_name=secret_name,
             matched_patterns=matched,
         )
+        if native_finding is None:
+            continue
+        seen.add(dedup_key)
         yield _render_ocsf_finding(native_finding) if output_format == "ocsf" else native_finding
 
 

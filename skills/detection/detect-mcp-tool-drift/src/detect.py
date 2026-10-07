@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.errors import ContractError  # noqa: E402
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-mcp-tool-drift"
 # Framework depth markers (coverage_summary.py)
@@ -122,10 +122,6 @@ def _is_tools_list_response_with_fingerprint(event: dict[str, Any]) -> bool:
     return bool(normalized["tool_name"]) and bool(normalized["fingerprint"])
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 # ---------------------------------------------------------------------------
 # Finding builder
 # ---------------------------------------------------------------------------
@@ -136,7 +132,7 @@ def _build_finding(
     tool_name: str,
     before_event: dict[str, Any],
     after_event: dict[str, Any],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     """Produce one native detection finding describing a single drift."""
     before_fp = before_event["fingerprint"]
     after_fp = after_event["fingerprint"]
@@ -152,6 +148,10 @@ def _build_finding(
         f"called this tool under the previous schema and will trust the new one."
     )
 
+    finding_time = finding_time_ms(after_event.get("time_ms"))
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -161,7 +161,7 @@ def _build_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "MCP",
-        "time_ms": after_event.get("time_ms") or _now_ms(),
+        "time_ms": finding_time,
         "severity": "high",
         "activity_id": FINDING_ACTIVITY_CREATE,
         "severity_id": SEVERITY_HIGH,
@@ -296,7 +296,8 @@ def detect(
             continue
 
         finding = _build_finding(session_uid, tool_name, prior_event, event)
-        yield _render_ocsf_finding(finding) if output_format == "ocsf" else finding
+        if finding is not None:
+            yield _render_ocsf_finding(finding) if output_format == "ocsf" else finding
         # Update state so we only raise ONCE per distinct transition.
         # A subsequent re-drift will produce a new finding because the "before"
         # fingerprint has moved forward.

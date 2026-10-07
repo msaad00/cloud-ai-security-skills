@@ -18,7 +18,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -31,6 +30,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-clickhouse-bulk-export", layer="detection")
 
@@ -99,10 +99,6 @@ _TARGET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bURL\s*\(\s*'([^']+)'", re.IGNORECASE), "url"),
     (re.compile(r'\bURL\s*\(\s*"([^"]+)"', re.IGNORECASE), "url"),
 )
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -294,7 +290,7 @@ def _build_native_finding(
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "ClickHouse",
-        "time_ms": last["time_ms"] or _now_ms(),
+        "time_ms": last["time_ms"],
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -402,6 +398,9 @@ def detect(
     relevant: list[dict[str, Any]] = []
     for event in events:
         if not _is_relevant(event):
+            continue
+        if finding_time_ms(_event_time(event)) is None:
+            emit_finding_time_missing(SKILL_NAME)
             continue
         meta_uid = _metadata_uid(event)
         if meta_uid and meta_uid in dedupe:

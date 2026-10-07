@@ -15,7 +15,6 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -27,6 +26,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-slack-external-channel-add", layer="detection")
 
@@ -68,10 +68,6 @@ MITRE_TECHNIQUE_UID = "T1078.004"
 MITRE_TECHNIQUE_NAME = "Valid Accounts: Cloud Accounts"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A01"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -169,13 +165,16 @@ def _finding_uid(adder: str, added: str, channel_name: str, time_ms: int) -> str
     return f"det-slack-external-channel-add-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any], pattern_source: str) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any], pattern_source: str) -> dict[str, Any] | None:
     adder_uid, adder_name = _actor_user(event)
     added_uid, added_name = _added_user(event)
     channel = _channel(event)
     channel_name = str(channel.get("name") or "")
     channel_id = str(channel.get("id") or "")
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(adder_uid, added_uid, channel_name, time_ms)
 
@@ -321,6 +320,8 @@ def detect(
         if meta_uid:
             dedupe.add(meta_uid)
         native = _build_native_finding(event, pattern_source)
+        if native is None:
+            continue
         if output_format == "native":
             yield native
         else:

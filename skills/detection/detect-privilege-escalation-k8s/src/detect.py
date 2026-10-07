@@ -15,7 +15,6 @@ import hashlib
 import json
 import sys
 from bisect import bisect_left
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-privilege-escalation-k8s"
 OCSF_VERSION = "1.8.0"
@@ -87,10 +87,6 @@ def _safe_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _short(s: str) -> str:
@@ -171,8 +167,14 @@ def _normalized_events(events: Iterable[dict[str, Any]]) -> list[dict[str, Any]]
     normalized: list[dict[str, Any]] = []
     for event in events:
         item = _normalize_event(event)
-        if item is not None:
-            normalized.append(item)
+        if item is None:
+            continue
+        # Rules correlate events by time; an event with no source time cannot
+        # be placed, so it is skipped rather than given the wall clock.
+        if finding_time_ms(item["time_ms"]) is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
+        normalized.append(item)
     normalized.sort(key=lambda item: item["time_ms"])
     return normalized
 
@@ -221,7 +223,7 @@ def _build_native_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "Kubernetes",
-        "time_ms": last_seen_time or _now_ms(),
+        "time_ms": last_seen_time,
         "severity": _severity_name(severity_id),
         "severity_id": severity_id,
         "status": "success",

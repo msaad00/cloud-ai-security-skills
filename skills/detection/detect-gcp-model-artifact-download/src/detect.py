@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 from urllib.parse import unquote
@@ -18,6 +17,10 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 SKILL_NAME = "detect-gcp-model-artifact-download"
 # Framework depth markers (coverage_summary.py)
@@ -146,10 +149,6 @@ def _src_ip(event: dict[str, Any]) -> str:
     return str(endpoint.get("ip") or "")
 
 
-def _time_ms(event: dict[str, Any]) -> int:
-    return int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
-
-
 def _event_uid(event: dict[str, Any]) -> str:
     metadata = event.get("metadata") or {}
     return str(metadata.get("uid") or "")
@@ -211,8 +210,11 @@ def _build_native_finding(
     bucket_name: str,
     object_key: str,
     artifact_match: str,
-) -> dict[str, Any]:
-    time_ms = _time_ms(event)
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(event.get("time"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     finding_uid = _finding_uid(
         event_uid=_event_uid(event),
         actor_name=_actor_name(event),
@@ -357,6 +359,8 @@ def detect(
             object_key=object_key,
             artifact_match=artifact_match,
         )
+        if native is None:
+            continue
         yield native if output_format == "native" else _to_ocsf(native)
 
 

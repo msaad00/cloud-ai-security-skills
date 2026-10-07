@@ -107,3 +107,60 @@ def test_multiline_document_is_buffered_and_parsed() -> None:
 
 def io_lines(text: str) -> list[str]:
     return text.splitlines(keepends=True)
+
+
+BOM = "﻿"
+
+
+@pytest.mark.parametrize(
+    ("lines", "expected_doc", "expected_lines"),
+    [
+        ([BOM + '{"a": 1}\n'], {"a": 1}, ['{"a": 1}\n']),
+        ([BOM + '{"a": 1}\n', '{"b": 2}\n'], None, ['{"a": 1}\n', '{"b": 2}\n']),
+        ([BOM + "\n", '{"a": 1}\n', '{"b": 2}\n'], None, ["\n", '{"a": 1}\n', '{"b": 2}\n']),
+        (
+            [BOM + "{\n", '  "Records": [{"x": 1}]\n', "}\n"],
+            {"Records": [{"x": 1}]},
+            ["{\n", '  "Records": [{"x": 1}]\n', "}\n"],
+        ),
+        ([BOM + '[{"x": 1}]\n'], [{"x": 1}], ['[{"x": 1}]\n']),
+        # Only one leading BOM is stripped; a BOM later in the stream is data.
+        ([BOM + BOM + '{"a": 1}\n'], None, [BOM + '{"a": 1}\n']),
+        (['{"a": 1}\n', BOM + '{"b": 2}\n'], None, ['{"a": 1}\n', BOM + '{"b": 2}\n']),
+    ],
+)
+def test_leading_utf8_bom_is_stripped_once(
+    lines: list[str], expected_doc: Any, expected_lines: list[str]
+) -> None:
+    doc, replay = JI.split_json_document(iter(lines))
+    assert doc == expected_doc
+    assert list(replay) == expected_lines
+
+
+@pytest.mark.parametrize(
+    ("lines", "expected_lines"),
+    [
+        (
+            ['[{"x": 1}, {"x": 2}]\n', '{"b": 3}\n'],
+            ['{"x": 1}\n', '{"x": 2}\n', '{"b": 3}\n'],
+        ),
+        (
+            ["\n", '[{"x": 1}]\r\n', "\n", '{"b": 3}\n', "garbage\n"],
+            ["\n", '{"x": 1}\n', "\n", '{"b": 3}\n', "garbage\n"],
+        ),
+        (["[]\n", '{"b": 3}\n'], ['{"b": 3}\n']),
+        (['[1, "s", null]\n', '{"b": 3}\n'], ["1\n", '"s"\n', "null\n", '{"b": 3}\n']),
+        # Only the first line is expanded; a later array line is left to the
+        # ingester's own per-line shape handling.
+        (
+            ['{"a": 1}\n', '[{"x": 1}]\n'],
+            ['{"a": 1}\n', '[{"x": 1}]\n'],
+        ),
+    ],
+)
+def test_first_line_array_followed_by_ndjson_is_expanded(
+    lines: list[str], expected_lines: list[str]
+) -> None:
+    doc, replay = JI.split_json_document(iter(lines))
+    assert doc is None
+    assert list(replay) == expected_lines

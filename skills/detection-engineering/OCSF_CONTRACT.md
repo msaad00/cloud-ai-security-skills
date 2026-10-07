@@ -104,8 +104,22 @@ Every event a skill emits MUST populate these fields at minimum. Fields marked `
 Every ingest skill parses vendor timestamps with
 `skills/_shared/timestamps.py` (`parse_ts_ms`), which accepts ISO-8601
 (`Z`, numeric offsets, any fractional precision; naive values are UTC) and
-positive epoch numbers or numeric strings in seconds, milliseconds,
-microseconds, or nanoseconds (unit inferred from magnitude).
+epoch numbers or numeric strings in seconds, milliseconds, microseconds, or
+nanoseconds (unit inferred from magnitude). The parsing rules:
+
+- A numeric string parses exactly like the number it spells, including
+  decimal and exponent forms (`"1.7e12"` equals `1.7e12`).
+- Numeric values below `1e8` are rejected: a year (`"2026"`) or a counter is
+  never read as epoch seconds. `1e8` seconds is 1973-03-03T09:46:40Z.
+- Magnitude picks the unit: below `1e11` is seconds, below `1e14`
+  milliseconds, below `1e17` microseconds, otherwise nanoseconds. A
+  millisecond value before 1973-03-03 is therefore read as seconds; send
+  such times as ISO-8601.
+- A time at or before 1970-01-01T00:00:00Z is rejected whether it arrives
+  as ISO-8601 or as an epoch number, and so is anything after year 9999.
+- A leap second (`23:59:60`) clamps to `23:59:59.999` of the same minute,
+  so ordering against the following second is preserved.
+- Only ASCII digits are accepted.
 
 When a record's primary event time is missing or unparseable, the ingester
 **skips the record** and writes one structured stderr warning, the same way
@@ -123,6 +137,19 @@ windowed detectors. Secondary times (for example `first_seen_time`, session
 creation time) fall back to the record's primary event time or are omitted.
 `tests/conformance/test_ingest_timestamps.py` enforces this for every
 ingester.
+
+Detectors follow the same rule. A finding's `time` is taken from its
+triggering events with `finding_time_ms` (same module), in the detector's
+preference order (for example the last event of a burst). When none of
+those events carries a usable time the detector skips the finding and
+writes one structured stderr warning:
+
+- `event`: `finding_time_missing`, `level`: `warning`
+- never the raw event or payload
+
+`tests/conformance/test_detect_finding_time.py` fails if any detector reads
+the wall clock, and replays every golden pipe with time-less events to prove
+the output stays byte-identical across runs.
 
 ## OCSF class usage
 

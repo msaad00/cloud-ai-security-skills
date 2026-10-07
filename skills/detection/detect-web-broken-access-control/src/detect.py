@@ -30,7 +30,6 @@ import json
 import re
 import sys
 from collections import deque
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -42,6 +41,7 @@ from skills._shared.errors import emit_error  # noqa: E402
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-web-broken-access-control"
 LAYER = "detection"
@@ -146,12 +146,8 @@ def _src_ip(event: dict[str, Any]) -> str:
     return str(src.get("ip") or "")
 
 
-def _time_ms(event: dict[str, Any]) -> int:
-    t = event.get("time")
-    try:
-        return int(t) if t is not None else int(datetime.now(timezone.utc).timestamp() * 1000)
-    except (TypeError, ValueError):
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
+def _time_ms(event: dict[str, Any]) -> int | None:
+    return finding_time_ms(event.get("time"))
 
 
 def _authz_header_hash(event: dict[str, Any]) -> str:
@@ -191,13 +187,13 @@ def _finding_uid(rule: str, key: str, time_ms: int) -> str:
 
 def _build_native(
     *,
+    time_ms: int,
     rule: str,
     event: dict[str, Any],
     actor_uid: str,
     target_id: str,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    time_ms = _time_ms(event)
     finding_uid = _finding_uid(rule, f"{actor_uid or '<anon>'}|{target_id}|{_path(event)}", time_ms)
     return {
         "schema_mode": "native",
@@ -311,6 +307,10 @@ def detect(
     for event in events:
         if not _is_http_activity(event):
             continue
+        event_time = _time_ms(event)
+        if event_time is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
 
         path = _path(event)
         if not path:
@@ -325,6 +325,7 @@ def detect(
             mismatch = bool(actor_uid) and captured_id != actor_uid and captured_id not in groups
             if mismatch or not actor_uid:
                 native = _build_native(
+                    time_ms=event_time,
                     rule="idor",
                     event=event,
                     actor_uid=actor_uid,
@@ -344,7 +345,7 @@ def detect(
         if not ip or status == 0:
             continue
         key = (ip, path)
-        now = _time_ms(event)
+        now = event_time
         bucket = swap_state.setdefault(key, deque())
         cutoff = now - auth_swap_window_ms
         while bucket and bucket[0][0] < cutoff:
@@ -361,6 +362,7 @@ def detect(
                 if not authz_hash or not prior_hash or authz_hash == prior_hash:
                     continue
                 native = _build_native(
+                    time_ms=event_time,
                     rule="auth-swap-flip",
                     event=event,
                     actor_uid=_actor_uid(event),

@@ -21,7 +21,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -32,6 +31,10 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 SKILL_NAME = "detect-gcp-audit-logs-disabled"
 CANONICAL_VERSION = "2026-04"
@@ -137,8 +140,11 @@ def _build_native_finding(
     operation: str,
     target_name: str,
     target_type: str,
-) -> dict[str, Any]:
-    time_ms = int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(event.get("time"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = str((event.get("metadata") or {}).get("uid") or "")
     finding_uid = _finding_uid(event_uid, operation, target_name, time_ms)
     return {
@@ -273,6 +279,8 @@ def detect(
             target_name=target_name,
             target_type=target_type,
         )
+        if native is None:
+            continue
         yield native if output_format == "native" else _to_ocsf(native)
 
 

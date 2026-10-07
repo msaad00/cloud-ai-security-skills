@@ -98,7 +98,21 @@ def input_schema_fingerprint(tool: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _event_uid(raw: dict[str, Any]) -> str:
+def _called_tool_name(raw: dict[str, Any]) -> str:
+    params = raw.get("params")
+    name = params.get("name") if isinstance(params, dict) else None
+    return name if isinstance(name, str) else ""
+
+
+def _event_uid(raw: dict[str, Any], tool_name: str = "", tool_index: int | None = None) -> str:
+    """Deterministic event id built only from identity fields.
+
+    Raw ``params`` / ``body`` (tools/call arguments, prompts, tool output) are
+    deliberately excluded: the other inputs appear in the output, so hashing
+    content into an unkeyed digest would let a reader brute-force short or
+    guessable values. The JSON-RPC ``id`` (when the proxy records it) and the
+    tool name / position keep uids unique per emitted event.
+    """
     return hashlib.sha256(
         json.dumps(
             {
@@ -106,8 +120,9 @@ def _event_uid(raw: dict[str, Any]) -> str:
                 "session_id": raw.get("session_id", "sess-unknown"),
                 "method": raw.get("method", ""),
                 "direction": raw.get("direction", ""),
-                "params": raw.get("params", {}),
-                "body": raw.get("body", {}),
+                "jsonrpc_id": raw.get("id"),
+                "tool_name": tool_name,
+                "tool_index": tool_index,
             },
             sort_keys=True,
             separators=(",", ":"),
@@ -127,9 +142,12 @@ def _status_name(status_id: int) -> str:
     return {1: "success", 0: "unknown"}.get(status_id, "unknown")
 
 
-def _build_canonical_event(raw: dict[str, Any], activity_id: int) -> dict[str, Any]:
+def _build_canonical_event(
+    raw: dict[str, Any], activity_id: int, event_uid: str | None = None
+) -> dict[str, Any]:
     """Populate the stable repo-owned canonical activity shape."""
-    event_uid = _event_uid(raw)
+    if event_uid is None:
+        event_uid = _event_uid(raw)
     return {
         "schema_mode": "canonical",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -316,9 +334,11 @@ def convert_event(
                 else _render_ocsf_event(canonical)
             )
             return
-        for tool in tools:
+        for index, tool in enumerate(tools):
+            name = tool.get("name", "") if isinstance(tool, dict) else ""
+            uid = _event_uid(raw, name if isinstance(name, str) else "", index)
             canonical = _with_tool(
-                _build_canonical_event(raw, ACTIVITY_CREATE), tool, preserve_mcp_content
+                _build_canonical_event(raw, ACTIVITY_CREATE, uid), tool, preserve_mcp_content
             )
             yield (
                 _render_native_event(canonical)
@@ -328,8 +348,8 @@ def convert_event(
         return
 
     if method == "tools/call" and direction == "request":
-        called_name = ((raw.get("params") or {}).get("name")) or ""
-        event = _build_canonical_event(raw, ACTIVITY_READ)
+        called_name = _called_tool_name(raw)
+        event = _build_canonical_event(raw, ACTIVITY_READ, _event_uid(raw, called_name))
         if called_name:
             # Do NOT populate a fingerprint here — this is a call, not a
             # declaration. The detector pairs the call to the last-seen
@@ -359,37 +379,63 @@ def convert_event(
 # ---------------------------------------------------------------------------
 
 
+def _line_messages(parsed: Any, lineno: int) -> list[dict[str, Any]]:
+    """Return the records on one line: the object itself, or the members of a
+    JSON-RPC batch array (one level; nested arrays are not batches)."""
+    if isinstance(parsed, dict):
+        return [parsed]
+    if not isinstance(parsed, list):
+        print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
+        return []
+    if not parsed:
+        print(f"[{SKILL_NAME}] skipping line {lineno}: empty JSON-RPC batch", file=sys.stderr)
+        return []
+    members: list[dict[str, Any]] = []
+    for index, member in enumerate(parsed):
+        if isinstance(member, dict):
+            members.append(member)
+        else:
+            print(
+                f"[{SKILL_NAME}] skipping line {lineno} batch member {index}: not a JSON object",
+                file=sys.stderr,
+            )
+    return members
+
+
 def ingest(
     lines: Iterable[str],
     output_format: str = "ocsf",
     *,
     preserve_mcp_content: bool = False,
 ) -> Iterable[dict[str, Any]]:
-    """Yield activity records for a stream of raw JSONL lines."""
+    """Yield activity records for a stream of raw JSONL lines.
+
+    A line holding a JSON array is a JSON-RPC batch: each object member is
+    converted exactly as if it were its own line, under the same redaction
+    rules.
+    """
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
     for lineno, line in enumerate(lines, start=1):
+        if lineno == 1:
+            line = line.removeprefix("﻿")
         line = line.strip()
         if not line:
             continue
         try:
-            raw = json.loads(line)
+            parsed = json.loads(line)
         except json.JSONDecodeError as e:
             print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
             continue
-        if not isinstance(raw, dict):
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
-            continue
-        try:
-            yield from convert_event(
-                raw, output_format=output_format, preserve_mcp_content=preserve_mcp_content
-            )
-        except TimestampUnparseable:
-            emit_timestamp_unparseable(SKILL_NAME, record=lineno, line=lineno)
-            continue
-        except Exception as e:  # defence-in-depth — never crash the pipeline
-            print(f"[{SKILL_NAME}] skipping line {lineno}: convert error: {e}", file=sys.stderr)
-            continue
+        for raw in _line_messages(parsed, lineno):
+            try:
+                yield from convert_event(
+                    raw, output_format=output_format, preserve_mcp_content=preserve_mcp_content
+                )
+            except TimestampUnparseable:
+                emit_timestamp_unparseable(SKILL_NAME, record=lineno, line=lineno)
+            except Exception as e:  # defence-in-depth — never crash the pipeline
+                print(f"[{SKILL_NAME}] skipping line {lineno}: convert error: {e}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:

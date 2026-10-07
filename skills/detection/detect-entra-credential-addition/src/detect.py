@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,6 +24,10 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 SKILL_NAME = "detect-entra-credential-addition"
 OCSF_VERSION = "1.8.0"
@@ -65,10 +68,6 @@ FEDERATED_CREDENTIAL_OPERATIONS = {
     "CREATE FEDERATED IDENTITY CREDENTIAL",
     "ADD FEDERATED IDENTITY CREDENTIAL",
 }
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _safe_int(value: Any) -> int:
@@ -187,7 +186,11 @@ def _finding_uid(kind: str, event_uid: str, target_uid: str) -> str:
     return f"det-entra-cred-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:16]}"
 
 
-def _build_native_finding(normalized: dict[str, Any], kind: str) -> dict[str, Any]:
+def _build_native_finding(normalized: dict[str, Any], kind: str) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(normalized["time_ms"])
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     target = _target(normalized)
     actor_name = _actor_name(normalized)
     event_uid = normalized["event_uid"]
@@ -251,7 +254,7 @@ def _build_native_finding(normalized: dict[str, Any], kind: str) -> dict[str, An
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": normalized["provider"] or "Azure",
-        "time_ms": normalized["time_ms"] or _now_ms(),
+        "time_ms": time_ms,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -372,6 +375,8 @@ def detect(
     normalized_events.sort(key=lambda item: (item["time_ms"], item["event_uid"]))
     for normalized in normalized_events:
         native_finding = _build_native_finding(normalized, normalized["kind"])
+        if native_finding is None:
+            continue
         if output_format == "native":
             yield native_finding
         else:

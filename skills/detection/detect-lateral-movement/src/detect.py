@@ -19,7 +19,6 @@ import ipaddress
 import json
 import sys
 from bisect import bisect_left, bisect_right
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -30,6 +29,7 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.env import env_int  # noqa: E402
 from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-lateral-movement"
 OCSF_VERSION = "1.8.0"
@@ -191,10 +191,6 @@ def is_rfc1918(ip_str: str) -> bool:
 
 def _short(s: str) -> str:
     return hashlib.sha256((s or "").encode()).hexdigest()[:8]
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _provider_display(provider: str) -> str:
@@ -392,7 +388,11 @@ def _build_native_finding(
     *,
     anchor_event: dict[str, Any],
     flow_event: dict[str, Any],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(flow_event["time_ms"])
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     session = str(anchor_event["session_uid"])
     principal = str(anchor_event["actor_name"])
     provider_code = str(anchor_event["provider"])
@@ -431,7 +431,7 @@ def _build_native_finding(
         "event_uid": uid,
         "provider": provider_code,
         "account_uid": account,
-        "time_ms": int(flow_event["time_ms"]) or _now_ms(),
+        "time_ms": time_ms,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -484,7 +484,7 @@ def _render_ocsf_finding(native_finding: dict[str, Any]) -> dict[str, Any]:
         "type_uid": FINDING_TYPE_UID,
         "severity_id": SEVERITY_HIGH,
         "status_id": 1,
-        "time": int(native_finding["time_ms"]) or _now_ms(),
+        "time": int(native_finding["time_ms"]),
         "metadata": {
             "version": OCSF_VERSION,
             "uid": native_finding["event_uid"],
@@ -677,8 +677,10 @@ def detect(
                 dedup_key = f"{anchor_provider}|{session}|{flow['dst_ip']}|{flow['dst_port']}"
                 if dedup_key in seen:
                     continue
-                seen.add(dedup_key)
                 native_finding = _build_native_finding(anchor_event=anchor, flow_event=flow)
+                if native_finding is None:
+                    continue
+                seen.add(dedup_key)
                 findings.append(
                     _render_ocsf_finding(native_finding)
                     if output_format == "ocsf"

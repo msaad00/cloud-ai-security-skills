@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -26,6 +25,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-slack-oauth-app-install-broad-scope", layer="detection")
 
@@ -64,10 +64,6 @@ MITRE_TECHNIQUE_UID = "T1098.005"
 MITRE_TECHNIQUE_NAME = "Account Manipulation: Device Registration"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A05"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -172,11 +168,14 @@ def _finding_uid(app_id: str, installer: str, time_ms: int) -> str:
     return f"det-slack-oauth-app-broad-scope-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any] | None:
     installer_uid, installer_name = _installer(event)
     app_id, app_name = _app_info(event)
     scopes = _scopes(event)
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(app_id, installer_uid, time_ms)
 
@@ -321,10 +320,11 @@ def detect(
         if meta_uid:
             dedupe.add(meta_uid)
         native = _build_native_finding(event, reason)
-        if output_format == "native":
-            yield native
-        else:
-            yield _render_ocsf_finding(native)
+        if native is not None:
+            if output_format == "native":
+                yield native
+            else:
+                yield _render_ocsf_finding(native)
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:

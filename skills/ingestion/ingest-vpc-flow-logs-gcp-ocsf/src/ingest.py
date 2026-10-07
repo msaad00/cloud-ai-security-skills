@@ -296,7 +296,7 @@ def convert_entry_native(entry: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    text = "".join(stream).strip()
+    text = "".join(stream).removeprefix("\ufeff").strip()
     if not text:
         return
     try:

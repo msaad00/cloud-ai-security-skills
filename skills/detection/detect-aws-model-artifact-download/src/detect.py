@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -25,6 +24,7 @@ CANONICAL_VERSION = "2026-04"
 OCSF_VERSION = "1.8.0"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill=SKILL_NAME, layer="detection")
 
@@ -171,8 +171,8 @@ def _src_ip(event: dict[str, Any]) -> str:
     return str(endpoint.get("ip") or "")
 
 
-def _time_ms(event: dict[str, Any]) -> int:
-    return int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+def _time_ms(event: dict[str, Any]) -> int | None:
+    return finding_time_ms(event.get("time"))
 
 
 def _event_uid(event: dict[str, Any]) -> str:
@@ -215,8 +215,11 @@ def _build_native_finding(
     bucket_name: str,
     object_key: str,
     artifact_match: str,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     time_ms = _time_ms(event)
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     finding_uid = _finding_uid(
         event_uid=_event_uid(event),
         actor_account_uid=_actor_account(event),
@@ -377,6 +380,8 @@ def detect(
             object_key=object_key,
             artifact_match=artifact_match,
         )
+        if native is None:
+            continue
         yield native if output_format == "native" else _to_ocsf(native)
 
 

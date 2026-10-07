@@ -36,7 +36,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -47,6 +46,10 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 SKILL_NAME = "detect-gcp-open-firewall"
 CANONICAL_VERSION = "2026-04"
@@ -282,8 +285,11 @@ def _build_native_finding(
     public_cidrs_hit: list[str],
     risky_ports_hit: list[int],
     allowed_entry: dict[str, Any],
-) -> dict[str, Any]:
-    time_ms = int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(event.get("time"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = str((event.get("metadata") or {}).get("uid") or "")
     finding_uid = _finding_uid(event_uid, fw_name, time_ms)
     actor = _actor(event)
@@ -465,6 +471,8 @@ def detect(
                 risky_ports_hit=port_hits,
                 allowed_entry=allowed_entry,
             )
+            if native is None:
+                continue
             yield native if output_format == "native" else _to_ocsf(native)
 
 

@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -28,6 +27,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill="detect-snowflake-network-policy-disable", layer="detection")
 
@@ -85,10 +85,6 @@ MITRE_TECHNIQUE_UID = "T1562.007"
 MITRE_TECHNIQUE_NAME = "Impair Defenses: Disable or Modify Cloud Firewall"
 
 OWASP_FINDING_TYPE = "OWASP-Top-10-A05"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -197,7 +193,7 @@ def _finding_uid(actor_uid: str, policy_name: str, time_ms: int, reason: str) ->
     return f"det-snowflake-network-policy-disable-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any] | None:
     actor_uid = _actor_uid(event)
     actor_name = _actor_name(event)
     policy_name = _policy_name(event) or "<account>"
@@ -205,7 +201,10 @@ def _build_native_finding(event: dict[str, Any], reason: str) -> dict[str, Any]:
     operation_kind = _operation_kind(event) or operation.lower()
     allowed = _ip_list(event, "allowed_ip_list")
     blocked = _ip_list(event, "blocked_ip_list")
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = _metadata_uid(event)
     finding_uid = _finding_uid(actor_uid, policy_name, time_ms, reason)
 
@@ -365,10 +364,11 @@ def detect(
         if not dangerous:
             continue
         native_finding = _build_native_finding(event, reason)
-        if output_format == "native":
-            yield native_finding
-        else:
-            yield _render_ocsf_finding(native_finding)
+        if native_finding is not None:
+            if output_format == "native":
+                yield native_finding
+            else:
+                yield _render_ocsf_finding(native_finding)
 
 
 def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
