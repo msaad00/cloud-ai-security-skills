@@ -23,7 +23,8 @@ except ImportError:  # pragma: no cover - exercised only in minimal local test e
 def _firestore_client():
     if firestore is None:
         raise RuntimeError("google-cloud-firestore is required for the GCP runner")
-    return firestore.Client()
+    database = os.environ.get("DEDUPE_DATABASE", "").strip() or "(default)"
+    return firestore.Client(database=database)
 
 
 def _publisher_client():

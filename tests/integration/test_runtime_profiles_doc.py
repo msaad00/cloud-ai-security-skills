@@ -33,7 +33,7 @@ def _record(runner: str, scenario: str, **extra):
     }
 
 
-def test_doc_does_not_claim_real_cloud_deploy_proof():
+def test_doc_scopes_itself_to_local_ci_and_points_at_deploy_proof():
     doc = BUILDER.render_doc(
         [
             _record("cloud-runner-gcp-gcs-pubsub", "gcs", backend="in_process_fakes"),
@@ -42,5 +42,6 @@ def test_doc_does_not_claim_real_cloud_deploy_proof():
     )
     assert "Closes" not in doc
     assert "still gap" not in doc
-    assert "still outstanding for GCP" in doc
+    assert "real-cloud deploy proof is captured for AWS, GCP, and Azure" in doc
+    assert "outstanding for GCP" not in doc
     assert "in-process fakes" in doc

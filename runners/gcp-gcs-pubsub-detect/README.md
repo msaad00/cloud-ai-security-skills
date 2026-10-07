@@ -38,7 +38,7 @@ The runner keeps state and side effects at the edges:
 ### Ingest function
 
 - `INGEST_SKILL_CMD`
-  Example: `python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native`
+  Example: `python skills/ingestion/ingest-gcp-audit-ocsf/src/ingest.py`
 - `DETECT_TOPIC`
   Fully qualified Pub/Sub topic path such as
   `projects/my-project/topics/cloud-security-detect`
@@ -46,9 +46,12 @@ The runner keeps state and side effects at the edges:
 ### Detect function
 
 - `DETECT_SKILL_CMD`
-  Example: `python skills/detection/detect-lateral-movement/src/detect.py --output-format native`
+  Example: `python skills/detection/detect-gcp-open-firewall/src/detect.py`
 - `DEDUPE_COLLECTION`
   Firestore collection used for replay-safe dedupe keys
+- `DEDUPE_DATABASE`
+  Optional Firestore database ID. Defaults to `(default)`; the Terraform
+  template sets it from `firestore_database`.
 - `DEDUPE_TTL_DAYS`
   Optional retention window for dedupe documents. Defaults to `30`. The
   Terraform template also enables Firestore TTL on the `expires_at` field so
@@ -68,12 +71,32 @@ The Terraform template expects:
 
 That keeps the template deployable without assuming a build system.
 
-`main.tf` deploys Cloud Functions 2nd gen, which invoke event functions with a
-single CloudEvent. `handle_gcs_event` and `handle_pubsub_event` accept that
-CloudEvent (payload on `.data`, Pub/Sub message under `data.message`) as well
-as the 1st gen `(data, context)` shape. How a packaged archive registers the
-CloudEvent signature with the Functions Framework is part of the real deploy
-proof and is not verified locally.
+Each archive carries its handler file, this directory's `requirements.txt`
+(Functions Framework plus the Storage, Pub/Sub, and Firestore clients), and
+the repo-relative `skills/_shared` and skill directories. The template sets
+`GOOGLE_FUNCTION_SOURCE` so the handler file does not have to be renamed to
+`main.py`.
+
+Signature binding (verified on the 2026-10-07 live run): no decorator or
+entry-point shim is needed. The platform built both functions with
+`_GOOGLE_FUNCTION_SIGNATURE_TYPE=event`, so the Functions Framework calls the
+entry points with the legacy `(data, context)` shape — the storage object
+dict for ingest and the Pub/Sub message dict for detect. The handlers also
+accept a single CloudEvent (payload on `.data`, Pub/Sub message under
+`data.message`) in case a deployment uses the `cloudevent` signature.
+
+The template also creates a dedicated build service account
+(`roles/cloudbuild.builds.builder` plus read on the archive bucket) because
+new projects build functions as the default compute account, which may hold
+no roles. It grants each function's own service account
+`roles/eventarc.eventReceiver` and `roles/run.invoker` as the trigger
+identity, and grants the Cloud Storage service agent `roles/pubsub.publisher`
+for the Eventarc storage trigger.
+
+Optional naming inputs: `name_prefix` (topics and functions),
+`service_account_prefix` (5-23 characters), `labels`, `firestore_database`,
+and `firestore_deletion_policy` (`ABANDON` by default; `DELETE` lets
+`terraform destroy` remove a named test database).
 
 ## Concurrency ceiling
 
@@ -97,18 +120,52 @@ based on cost, quota, and downstream sink pressure for their environment.
 
 ## Live Deploy Verification Status
 
-Current repo reality:
+Real deploy proof captured on 2026-10-07 (GCP `us-central1`, Cloud Functions
+2nd gen `python311`, run image `python311_20260906_3_11_16_RC00`, builder
+`python_20260926_RC00`) with `ingest-gcp-audit-ocsf` → `detect-gcp-open-firewall`
+and the golden fixture `skills/detection-engineering/golden/gcp_open_firewall_raw.json`,
+following the [Prepared Walkthrough](#prepared-walkthrough) below. All
+resources were removed afterwards (`terraform destroy`, the two buckets, the
+`gcf-v2-sources-*` bucket, the `gcf-artifacts` repository) and the APIs
+enabled for the run were disabled again. Project ID is redacted.
 
-- the Terraform template is shipped
-- handler behavior is covered in tests
-- Terraform validation runs in CI
-- `scripts/runner_e2e.sh` runs the real handlers end to end in CI against
-  in-process fakes of the cloud SDK clients — no real cloud; see
-  [`../DEPLOYMENT_VERIFICATION.md`](../DEPLOYMENT_VERIFICATION.md#local-emulated-end-to-end)
-- a checked-in real-cloud deploy-and-first-event walkthrough is still pending
+| Step | Evidence |
+|---|---|
+| package | ingest zip 36,004 B, detect zip 38,905 B (handler + `requirements.txt` at root, `skills/_shared`, one skill dir) |
+| deploy | `terraform apply` → 21 resources, including a named Firestore database with TTL on `expires_at`; both functions `ACTIVE`, built by the dedicated build service account |
+| trigger | object `incoming/run1/gcp_open_firewall_raw.json` uploaded 05:44:15Z; the first five Eventarc deliveries got `403` while the `run.invoker` grant propagated (created ~1 min earlier), the retry at 05:45:45Z returned `200` (1.88 s) |
+| ingest → topic | detect function invoked from the detect topic at 05:45:50Z, `200` (1.03 s); bare `python` resolves on the `python311` runtime |
+| dedupe | Firestore document `gfw-8f8fe79c95260b06`, `payload_sha256=ce757899…141d` (byte-identical to the golden `gcp_open_firewall_pipe_findings.ocsf.jsonl` line, MITRE T1190), `expires_at` = seen_at + 30 d |
+| publish | a subscription on the findings topic received exactly one message (published 05:45:51Z), body sha256 identical to the golden line |
+| redelivery | same object re-uploaded as `incoming/run2-redeliver/…` 05:46:41Z → ingest `200` (1.46 s), detect `200` (0.51 s); Firestore still holds exactly 1 document with the original `seen_at`; no second message reached the findings topic |
 
-That remaining deployment proof is tracked in
-[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198).
+Bugs the live run found and this repo now fixes:
+
+- The first apply failed because the build ran as the project's default
+  compute service account, which had no roles, so the source fetch step was
+  denied. The template now creates a dedicated build service account.
+- The template set no Eventarc trigger identity (it would default to the
+  compute account without `run.invoker`) and did not grant the Cloud Storage
+  service agent `roles/pubsub.publisher`; both are now in the template.
+- No `requirements.txt` shipped, so the handlers' Pub/Sub, Storage, and
+  Firestore imports would fall back to `None` and every invocation would raise.
+- Topic, function, and service account names were hardcoded, and the
+  `(default)` Firestore database is abandoned on destroy. The new naming
+  inputs and `firestore_database` / `firestore_deletion_policy` (with the
+  matching `DEDUPE_DATABASE` handler setting) allow an isolated, fully
+  removable deployment.
+
+Operational notes from the live run:
+
+- Right after enabling Eventarc, function creation can fail with "Permission
+  denied while using the Eventarc Service Agent"; re-apply after a few
+  minutes.
+- Expect `403` deliveries for about a minute after apply while the trigger's
+  `run.invoker` grant propagates; Eventarc retries them.
+- The Firestore TTL field takes about 6 minutes to create and to delete.
+- Cloud Functions creates a `gcf-v2-sources-<project-number>-<region>` bucket
+  and a `gcf-artifacts` Artifact Registry repository outside Terraform; delete
+  them separately when tearing down.
 
 ## First Event Proof Checklist
 
@@ -126,7 +183,25 @@ When capturing the live walkthrough for this runner, record:
 
 ## Prepared Walkthrough
 
+### 0. Package the handlers
+
+From the repo root (one archive per function; the repo layout must be
+preserved because skills resolve `skills._shared` relative to their own path):
+
+```bash
+zip -qr -X /tmp/ingest.zip skills/_shared skills/ingestion/ingest-gcp-audit-ocsf/src -x '*__pycache__*'
+zip -qr -X /tmp/detect.zip skills/_shared skills/detection/detect-gcp-open-firewall/src -x '*__pycache__*'
+(cd runners/gcp-gcs-pubsub-detect && zip -q -X /tmp/ingest.zip requirements.txt && zip -q -X /tmp/detect.zip requirements.txt \
+  && cd src && zip -q -X /tmp/ingest.zip ingest_handler.py && zip -q -X /tmp/detect.zip detect_handler.py)
+gcloud storage cp /tmp/ingest.zip gs://<function-archive-bucket>/code/ingest.zip
+gcloud storage cp /tmp/detect.zip gs://<function-archive-bucket>/code/detect.zip
+```
+
 ### 1. Deploy the infrastructure
+
+The ingest skill must emit OCSF (its default): `detect-*` skills consume OCSF
+and skip native-format records, so `--output-format native` on the ingest side
+produces zero findings.
 
 ```bash
 terraform -chdir=runners/gcp-gcs-pubsub-detect init
@@ -135,28 +210,27 @@ terraform -chdir=runners/gcp-gcs-pubsub-detect apply \
   -var region=<gcp-region> \
   -var source_bucket_name=<existing-source-bucket> \
   -var function_source_bucket=<function-archive-bucket> \
-  -var ingest_source_object=<ingest-handler.zip> \
-  -var detect_source_object=<detect-handler.zip> \
-  -var 'ingest_skill_command=python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native' \
-  -var 'detect_skill_command=python skills/detection/detect-lateral-movement/src/detect.py --output-format native'
+  -var ingest_source_object=code/ingest.zip \
+  -var detect_source_object=code/detect.zip \
+  -var 'ingest_skill_command=python skills/ingestion/ingest-gcp-audit-ocsf/src/ingest.py' \
+  -var 'detect_skill_command=python skills/detection/detect-gcp-open-firewall/src/detect.py'
 ```
 
 ### 2. Bind the function archives
 
-- upload the packaged ingest and detect handler archives to the
-  `function_source_bucket`
-- confirm both Cloud Functions point at the intended skill commands
+- confirm both functions are `ACTIVE` and point at the intended skill
+  commands: `gcloud functions describe <name-prefix>-ingest --region <gcp-region>`
 
 ### 3. Send one real event
 
 ```bash
-gcloud storage cp sample-cloudtrail.jsonl gs://<existing-source-bucket>/incoming/sample-cloudtrail.jsonl
+gcloud storage cp skills/detection-engineering/golden/gcp_open_firewall_raw.json \
+  gs://<existing-source-bucket>/incoming/gcp_open_firewall_raw.json
 ```
 
 ### 4. Capture proof
 
-- Cloud Logging evidence for the ingest function invocation
-- a message on the detect Pub/Sub topic
-- Cloud Logging evidence for the detect function invocation
+- Cloud Logging request entries for the ingest function (`200`)
+- Cloud Logging request entries for the detect function (`200`)
 - a Firestore dedupe document with `payload_sha256` and `expires_at`
-- a message on the findings topic or a downstream subscriber receipt
+- a message on the findings topic (create a subscription before the upload)
