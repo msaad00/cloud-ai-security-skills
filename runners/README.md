@@ -44,10 +44,11 @@ controls.
 All five runners (the three cloud detect pipelines, the webhook receiver, and
 the MCP SSE transport) are shipped and CI-validated.
 
-The repo does not yet claim a captured real-cloud deploy-and-first-event proof
-for all templates. That remaining work is tracked in
-[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198) and
-summarized in [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md).
+`aws-s3-sqs-detect` and `azure-blob-eventgrid-detect` have a captured
+real-cloud deploy-and-first-event proof (2026-10-07, including a suppressed
+redelivery); `gcp-gcs-pubsub-detect` does not yet. Status and evidence links
+are in [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md); the GCP proof
+is tracked in [`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198).
 
 What is now committed:
 
@@ -64,7 +65,6 @@ What is now committed:
 
 What is still not claimed:
 
-- a checked-in record that those walkthroughs were executed in AWS, GCP, and
-  Azure against real deployed resources (the local harness proves handler
-  wiring and dedupe, not IAM, trigger delivery, packaging, or quotas in a
-  real cloud)
+- a checked-in record that the GCP walkthrough was executed against real
+  deployed resources (the local harness proves handler wiring and dedupe, not
+  IAM, trigger delivery, packaging, or quotas in a real cloud)

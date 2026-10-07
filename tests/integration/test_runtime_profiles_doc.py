@@ -42,5 +42,5 @@ def test_doc_does_not_claim_real_cloud_deploy_proof():
     )
     assert "Closes" not in doc
     assert "still gap" not in doc
-    assert "real-cloud deploy proof is still outstanding" in doc
+    assert "still outstanding for GCP" in doc
     assert "in-process fakes" in doc

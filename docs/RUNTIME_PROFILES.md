@@ -5,7 +5,7 @@
 This document is regenerated from `runtime-profile-results.jsonl` every time the harness runs. It is intentionally light on prose: the point is to detect **regressions** between CI runs, not to advertise raw numbers.
 
 Related issues:
-- [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) — deploy and verify all three runner templates end to end. This doc covers the local CI surface only; real-cloud deploy proof is still outstanding (see `runners/DEPLOYMENT_VERIFICATION.md`).
+- [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) — deploy and verify all three runner templates end to end. This doc covers the local CI surface only; real-cloud deploy proof is captured for AWS and Azure and still outstanding for GCP (see `runners/DEPLOYMENT_VERIFICATION.md`).
 - [#199](https://github.com/msaad00/cloud-ai-security-skills/issues/199) — benchmark runtime profiles at representative scale (CI cadence).
 
 ## What this is
