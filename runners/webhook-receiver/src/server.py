@@ -3,8 +3,11 @@
 Single endpoint shape: `POST /webhook/<skill-name>`. Defaults are
 default-deny so a fresh deployment cannot route any payload until
 `WEBHOOK_ALLOWED_SKILLS` opts a skill in, and an allowlisted skill still
-needs an HMAC secret or bearer token. Bodies above `WEBHOOK_MAX_BODY_BYTES`
-(default 1 MiB) are refused with 413.
+needs an HMAC secret or bearer token. Authentication runs before routing
+and every auth failure is the same `401 unauthorized`, so an
+unauthenticated caller cannot tell which skills exist or are allowlisted;
+the specific reason goes to the audit record only. Bodies above
+`WEBHOOK_MAX_BODY_BYTES` (default 1 MiB) are refused with 413.
 """
 
 from __future__ import annotations
@@ -39,8 +42,10 @@ for _path in (CURRENT_DIR, MCP_SRC):
 
 from arg_policy import is_wrapper_only_env  # noqa: E402  pylint: disable=wrong-import-position
 from auth import (  # noqa: E402  pylint: disable=wrong-import-position
+    ReplayCache,
     auth_configured_for,
     hmac_secrets,
+    timestamp_tolerance_seconds,
     verify_bearer,
     verify_hmac,
 )
@@ -70,7 +75,9 @@ def _max_body_bytes() -> int:
 
 # Validate configuration at import so a misconfigured deploy refuses to start.
 hmac_secrets()
+timestamp_tolerance_seconds()
 MAX_BODY_BYTES = _max_body_bytes()
+REPLAY_CACHE = ReplayCache()
 
 
 class _PayloadTooLarge(Exception):
@@ -139,6 +146,32 @@ def _sink_results_to_dict(results: list[SinkResult]) -> list[dict[str, Any]]:
     ]
 
 
+def _authenticate(
+    skill_name: str,
+    headers: dict[str, str],
+    body: bytes,
+    audit_event: dict[str, Any],
+) -> str:
+    """Return the failure reason, or "" when the request is authenticated."""
+    if not auth_configured_for(skill_name):
+        return "auth_not_configured"
+    hmac_result = verify_hmac(skill_name, headers, body)
+    if not hmac_result.ok:
+        return hmac_result.reason
+    bearer_result = verify_bearer(headers)
+    if not bearer_result.ok:
+        return bearer_result.reason
+    if hmac_result.replay_key:
+        audit_event["hmac_scheme"] = "legacy_body_only" if hmac_result.legacy else "timestamped"
+        if not REPLAY_CACHE.check_and_store(
+            hmac_result.replay_key,
+            expires_at=hmac_result.replay_expires_at,
+            now=int(time.time()),
+        ):
+            return "replayed_request"
+    return ""
+
+
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok", "service": "webhook-receiver"}
@@ -169,7 +202,15 @@ async def webhook(skill_name: str, request: Request) -> Response:
         audit_event["payload_sha256"] = hashlib.sha256(body).hexdigest() if body else ""
         audit_event["payload_length"] = len(body)
 
-        # 1) Routing — closed-set: unknown / wrong-category / not allowlisted.
+        # 1) Auth before routing, so 401 never depends on whether the route
+        # exists. Fail closed when nothing is configured for this name.
+        auth_failure = _authenticate(skill_name, headers, body, audit_event)
+        if auth_failure:
+            audit_event["result"] = "error"
+            audit_event["error_type"] = auth_failure
+            raise HTTPException(status_code=401, detail="unauthorized")
+
+        # 2) Routing — closed-set: unknown / wrong-category / not allowlisted.
         resolution = resolve(skill_name)
         if not resolution.found:
             audit_event["result"] = "error"
@@ -181,23 +222,6 @@ async def webhook(skill_name: str, request: Request) -> Response:
             audit_event["error_type"] = "skill_not_allowed"
             audit_event["error_message"] = resolution.reason
             raise HTTPException(status_code=403, detail=resolution.reason)
-
-        # 2) Auth — fail closed when nothing is configured for this skill,
-        # then HMAC and bearer; any failure aborts before subprocess.
-        if not auth_configured_for(skill_name):
-            audit_event["result"] = "error"
-            audit_event["error_type"] = "auth_not_configured"
-            raise HTTPException(status_code=401, detail="auth_not_configured")
-        hmac_result = verify_hmac(skill_name, headers, body)
-        if not hmac_result.ok:
-            audit_event["result"] = "error"
-            audit_event["error_type"] = hmac_result.reason
-            raise HTTPException(status_code=401, detail=hmac_result.reason)
-        bearer_result = verify_bearer(headers)
-        if not bearer_result.ok:
-            audit_event["result"] = "error"
-            audit_event["error_type"] = bearer_result.reason
-            raise HTTPException(status_code=401, detail=bearer_result.reason)
 
         # 3) Skill execution — feed the raw body to stdin, capture OCSF JSONL.
         skill = resolution.skill
