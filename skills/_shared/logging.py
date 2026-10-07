@@ -85,7 +85,7 @@ class _JsonFormatter(logging.Formatter):
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-class _ContextAdapter(logging.LoggerAdapter):
+class _ContextAdapter(logging.LoggerAdapter[logging.Logger]):
     """Stamp every log line with the skill / layer / correlation_id."""
 
     def process(
@@ -112,7 +112,7 @@ def get_logger(
     skill: str = "",
     layer: str = "",
     level: int = logging.INFO,
-) -> logging.LoggerAdapter:
+) -> logging.LoggerAdapter[logging.Logger]:
     """Build a structured logger pinned to one skill name + layer.
 
     The skill name and layer are stamped into every record alongside

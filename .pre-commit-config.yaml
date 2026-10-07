@@ -2,9 +2,9 @@ repos:
   # Keep revs aligned with the versions locked in uv.lock so pre-commit
   # and `uv run ruff/bandit` agree on findings and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.10
+    rev: v0.16.8
     hooks:
-      - id: ruff
+      - id: ruff-check
       - id: ruff-format
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
