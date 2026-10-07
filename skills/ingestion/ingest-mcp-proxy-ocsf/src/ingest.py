@@ -148,8 +148,6 @@ def _build_canonical_event(raw: dict[str, Any], activity_id: int) -> dict[str, A
         "session_uid": raw.get("session_id", "sess-unknown"),
         "method": raw.get("method", "unknown"),
         "direction": raw.get("direction", "unknown"),
-        "params": raw.get("params") or {},
-        "body": raw.get("body") or {},
     }
 
 
@@ -176,10 +174,10 @@ def _text_of(content: Any) -> str | None:
 
 
 def _preserved_unmapped(raw: dict[str, Any]) -> dict[str, Any] | None:
-    """Build `unmapped.mcp` with the prompt + message text a request carries."""
+    """Build `unmapped.mcp` with prompt/message text or tools/call response output."""
     params = raw.get("params")
     if not isinstance(params, dict):
-        return None
+        params = {}
     cap = _max_chars()
     truncated: list[str] = []
 
@@ -202,6 +200,12 @@ def _preserved_unmapped(raw: dict[str, Any]) -> dict[str, Any] | None:
             kept.append({"content": _capped(text, label)} if text else {})
         if any(kept):
             mcp["request"] = {"params": {"messages": kept}}
+    body = raw.get("body")
+    if raw.get("method") == "tools/call" and raw.get("direction") == "response" and body:
+        if len(json.dumps(body, separators=(",", ":"))) > cap:
+            mcp["response"] = {"body_omitted": "size_cap"}
+        else:
+            mcp["response"] = {"body": body}
     if not mcp:
         return None
     if truncated:
@@ -294,7 +298,10 @@ def convert_event(
     With ``preserve_mcp_content`` (opt-in), tools/list events also carry
     ``mcp.tool.input_schema`` and requests carrying ``params.systemPrompt`` /
     ``params.messages`` (e.g. sampling/createMessage) carry their text under
-    ``unmapped.mcp``. tools/call arguments are never preserved.
+    ``unmapped.mcp``, and tools/call responses carry their output under
+    ``unmapped.mcp.response.body``. tools/call arguments are never preserved.
+
+    Raw ``params`` / ``body`` are never emitted in either output format.
     """
     method = raw.get("method", "")
     direction = raw.get("direction", "")

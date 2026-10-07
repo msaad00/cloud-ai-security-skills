@@ -11,8 +11,28 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Changed
+
+- **`ingest-mcp-proxy-ocsf` native output is redacted by default**
+  (behavior change, #714): `--output-format native` no longer passes raw
+  `params` / `body` through. It carries the same content as OCSF: tool
+  schemas as SHA-256 fingerprints, no prompts, message text, `tools/call`
+  arguments, or tool output. The new `--preserve-mcp-content` /
+  `MCP_PRESERVE_CONTENT=1` opt-in keeps capped tool `inputSchema`, sampling
+  `systemPrompt` / message text, and `tools/call` response output
+  (`unmapped.mcp.response.body`) in both formats; `tools/call` arguments are
+  never emitted. `detect-agent-credential-leak-mcp`,
+  `detect-system-prompt-extraction`,
+  `detect-tool-output-exfiltration-instructions`, and
+  `detect-tool-output-policy-bypass` now read the preserved response body
+  (OCSF or native); pipes into them need the flag. Default OCSF output is
+  byte-identical.
+
 ### Security
 
+- **MCP content is no longer emitted by default in any output format**:
+  native `ingest-mcp-proxy-ocsf` output previously leaked `tools/call`
+  arguments, prompts, and tool output verbatim (#714).
 - **MCP argument boundary** (`mcp-server/src/arg_policy.py`): `tools/call`
   rejects path-valued flags (`--output`/`-o`, `--config`, `--manifest`,
   `--quarantine-file`, ... and their argparse abbreviations) and path-like
