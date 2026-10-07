@@ -27,9 +27,7 @@ def _small_cap(monkeypatch):
     monkeypatch.setenv("CLOUD_SECURITY_MCP_WORKER_MAX_BYTES", str(CAP))
 
 
-def _run(
-    code: str, stdin_text: str = "", timeout: float = 30
-) -> subprocess.CompletedProcess:
+def _run(code: str, stdin_text: str = "", timeout: float = 30) -> subprocess.CompletedProcess:
     return MODULE._run_one_shot(
         [sys.executable, "-c", code],
         stdin_text=stdin_text,
