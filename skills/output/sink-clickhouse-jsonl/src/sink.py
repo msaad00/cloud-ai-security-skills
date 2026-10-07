@@ -147,7 +147,8 @@ def _summary(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Append JSONL records into a pre-provisioned ClickHouse table."
+        description="Append JSONL records into a pre-provisioned ClickHouse table.",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "--table", required=True, help="Target ClickHouse table: table or database.table."

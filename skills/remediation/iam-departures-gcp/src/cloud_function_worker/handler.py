@@ -546,7 +546,8 @@ def _build_argparser() -> argparse.ArgumentParser:
             "--dry-run prints the plan; --apply executes and dual-audits; --reverify "
             "checks post-action drift. --apply requires "
             f"{INCIDENT_ENV_VAR} + {APPROVER_ENV_VAR}."
-        )
+        ),
+        allow_abbrev=False,
     )
     parser.add_argument("manifest", help="Path to local manifest JSON or `gs://bucket/object` URI")
     mode = parser.add_mutually_exclusive_group(required=True)

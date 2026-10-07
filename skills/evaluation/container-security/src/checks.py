@@ -386,16 +386,36 @@ def print_summary(findings: list[Finding]) -> None:
     print(f"  Pass rate: {passed / total * 100:.0f}%\n" if total else "")
 
 
+def _load_stdin_config() -> dict:
+    content = sys.stdin.read()
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        import yaml
+
+        return yaml.safe_load(content) or {}
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Container Security Benchmark")
-    parser.add_argument("config", help="Path to container config (JSON/YAML)")
+    parser = argparse.ArgumentParser(description="Container Security Benchmark", allow_abbrev=False)
+    parser.add_argument(
+        "config",
+        nargs="?",
+        default="-",
+        help="Path to container config (JSON/YAML); `-` or omitted reads stdin",
+    )
     parser.add_argument("--section", choices=list(ALL_CHECKS.keys()))
     parser.add_argument("--output", choices=["console", "json"], default="console")
     parser.add_argument("--output-format", choices=list(OUTPUT_FORMATS), default="native")
     args = parser.parse_args()
-    p = Path(args.config)
-    content = p.read_text()
-    config = json.loads(content) if p.suffix == ".json" else __import__("yaml").safe_load(content)
+    if args.config == "-":
+        config = _load_stdin_config()
+    else:
+        p = Path(args.config)
+        content = p.read_text()
+        config = (
+            json.loads(content) if p.suffix == ".json" else __import__("yaml").safe_load(content)
+        )
     findings = run_benchmark(config, section=args.section)
     if args.output == "json":
         rendered = (

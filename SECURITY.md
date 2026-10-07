@@ -34,6 +34,9 @@ or directly by email if a contact is listed on the maintainer profile. Include:
 - keep CSPM execution roles read-only unless the skill is explicitly remediation-oriented
 - run CI checks before merging changes that affect IAM, cloud auth, or infrastructure templates
 - keep S3 artifacts KMS-encrypted and scope cross-account trust by `aws:PrincipalOrgID`
+- set `CLOUD_SECURITY_AUDIT_HMAC_KEY` to a random value of at least 32 bytes (`openssl rand -hex 32`); the MCP server refuses shorter keys and the template placeholder
+- pass payloads to MCP tools through `input`; the wrapper rejects file-path arguments (see [`mcp-server/README.md`](mcp-server/README.md))
+- configure an HMAC secret or bearer token for every skill the webhook receiver routes; it returns `401` otherwise
 
 ## Dependency Trust And SBOM
 

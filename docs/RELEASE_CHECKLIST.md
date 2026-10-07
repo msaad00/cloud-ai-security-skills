@@ -51,10 +51,9 @@ If a change mixes categories, bump to the highest applicable level.
    - `python scripts/validate_safe_skill_bar.py`
    - `bash scripts/run_mypy.sh`
    - `bandit -r skills mcp-server scripts -c pyproject.toml --severity-level medium`
-6. Confirm coverage gates still pass:
-   - overall `>= 70%`
-   - detection `>= 80%`
-   - evaluation `>= 60%`
+6. Confirm coverage gates still pass: CI's `coverage` job runs
+   `scripts/validate_test_coverage.py`, which holds the overall and per-layer
+   floors (shipped code only; test files are excluded from measurement)
 7. Confirm docs and registries are current:
    - [`docs/INSTALL.md`](INSTALL.md)
    - [`docs/framework-coverage.json`](framework-coverage.json)

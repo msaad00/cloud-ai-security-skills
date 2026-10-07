@@ -1579,7 +1579,9 @@ def print_summary(findings: list[Finding]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="CIS Azure Foundations Benchmark v2.1 Assessment")
+    parser = argparse.ArgumentParser(
+        description="CIS Azure Foundations Benchmark v2.1 Assessment", allow_abbrev=False
+    )
     parser.add_argument("--subscription-id", required=True, help="Azure subscription ID")
     parser.add_argument(
         "--section",

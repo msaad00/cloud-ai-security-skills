@@ -823,7 +823,8 @@ def main(argv: list[str] | None = None) -> int:
     vars must be set or the CLI returns 2 without firing anything.
     """
     parser = argparse.ArgumentParser(
-        description="Run the Entra IAM departures worker against a manifest file."
+        description="Run the Entra IAM departures worker against a manifest file.",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "manifest", help="Path to a manifest JSON file (see examples/manifest.json)."

@@ -173,7 +173,8 @@ def _summary(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Append JSONL records into a pre-provisioned Snowflake table."
+        description="Append JSONL records into a pre-provisioned Snowflake table.",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "--table",

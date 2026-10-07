@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import sys
 from pathlib import Path
 
@@ -162,6 +164,38 @@ def test_audit_writer_exception_does_not_break_call():
     assert result.exit_code == 0
 
 
+def test_audit_writer_exception_emits_structured_warning(monkeypatch):
+    """A failing audit writer must not crash the call, but the failure must
+    not be silent either: one structured JSON warning lands on stderr."""
+
+    def _broken_writer(rec):
+        raise RuntimeError("operator's sink is down")
+
+    handler = LIB._log.logger.handlers[0]
+    buf = io.StringIO()
+    monkeypatch.setattr(handler, "stream", buf)
+
+    client = LIB.SkillsClient(
+        allowed_skills=("ingest-cloudtrail-ocsf",),
+        audit_writer=_broken_writer,
+    )
+    raw = (
+        REPO_ROOT / "skills" / "detection-engineering" / "golden" / "cloudtrail_raw_sample.jsonl"
+    ).read_bytes()
+    result = client.invoke("ingest-cloudtrail-ocsf", stdin=raw)
+    assert result.exit_code == 0
+
+    lines = [line for line in buf.getvalue().splitlines() if line.strip()]
+    assert len(lines) == 1
+    warning = json.loads(lines[0])
+    assert warning["level"] == "warning"
+    assert warning["event"] == "skills_library_audit_writer_failed"
+    assert warning["error_type"] == "RuntimeError"
+    assert warning["error"] == "operator's sink is down"
+    assert warning["skill"] == "ingest-cloudtrail-ocsf"
+    assert warning["correlation_id"] == result.correlation_id
+
+
 def test_approval_count_helper_handles_empty():
     assert LIB._approval_count(None) == 0
     assert LIB._approval_count({}) == 0
@@ -174,3 +208,22 @@ def test_approval_count_helper_dedupes():
 def test_approval_count_helper_falls_back_to_singular():
     assert LIB._approval_count({"approver_email": "a@x.com"}) == 1
     assert LIB._approval_count({"approver_id": "a-1"}) == 1
+
+
+@pytest.mark.parametrize("token", ["--appl", "--app", "--apply=1"])
+def test_invoke_refuses_abbreviated_apply(token):
+    client = LIB.SkillsClient(allowed_skills=("remediate-mcp-tool-quarantine",))
+    approval = {"approver_ids": ["a-1", "a-2"], "ticket_id": "SEC-1"}
+    with pytest.raises(LIB.SkillCallRefused, match="write-capable"):
+        client.invoke("remediate-mcp-tool-quarantine", args=[token], approval_context=approval)
+
+
+def test_child_env_excludes_wrapper_secrets(monkeypatch):
+    monkeypatch.setenv("CLOUD_SECURITY_AUDIT_HMAC_KEY", "k" * 40)
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_AUDIT_LOG", "/tmp/audit.jsonl")
+    monkeypatch.setenv("CLOUD_SECURITY_HTTP_MAX_ATTEMPTS", "3")
+    client = LIB.SkillsClient(allowed_skills=("ingest-cloudtrail-ocsf",))
+    env = client._build_child_env("corr-1", None)
+    assert "CLOUD_SECURITY_AUDIT_HMAC_KEY" not in env
+    assert "CLOUD_SECURITY_MCP_AUDIT_LOG" not in env
+    assert env["CLOUD_SECURITY_HTTP_MAX_ATTEMPTS"] == "3"

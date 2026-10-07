@@ -362,20 +362,6 @@ class TestPerSkillMcpSchemas:
         assert "section" in props
         assert props["section"]["enum"] == ["iam", "storage", "logging", "networking"]
 
-        detect = tool_definition(tool_map(REPO_ROOT)["detect-lateral-movement"])
-        assert "input_path" in detect["inputSchema"]["properties"]
-        assert "output_path" in detect["inputSchema"]["properties"]
-
-        convert = tool_definition(tool_map(REPO_ROOT)["convert-ocsf-to-sarif"])
-        assert "input_path" in convert["inputSchema"]["properties"]
-
-        ingest = tool_definition(tool_map(REPO_ROOT)["ingest-cloudtrail-ocsf"])
-        assert "input_path" in ingest["inputSchema"]["properties"]
-        assert "output_format" in ingest["inputSchema"]["properties"]
-
-        mcp_detect = tool_definition(tool_map(REPO_ROOT)["detect-mcp-tool-drift"])
-        assert "input_path" in mcp_detect["inputSchema"]["properties"]
-
         gcp = tool_definition(tool_map(REPO_ROOT)["cspm-gcp-cis-benchmark"])
         assert "project" in gcp["inputSchema"]["properties"]
 
@@ -383,14 +369,29 @@ class TestPerSkillMcpSchemas:
         assert "subscription_id" in azure["inputSchema"]["properties"]
         assert "section" in azure["inputSchema"]["properties"]
 
-        okta_ingest = tool_definition(tool_map(REPO_ROOT)["ingest-okta-system-log-ocsf"])
-        assert "input_path" in okta_ingest["inputSchema"]["properties"]
+        ingest = tool_definition(tool_map(REPO_ROOT)["ingest-cloudtrail-ocsf"])
+        assert "output_format" in ingest["inputSchema"]["properties"]
 
-        entra_ingest = tool_definition(tool_map(REPO_ROOT)["ingest-entra-directory-audit-ocsf"])
-        assert "input_path" in entra_ingest["inputSchema"]["properties"]
+        mermaid = tool_definition(tool_map(REPO_ROOT)["convert-ocsf-to-mermaid-attack-flow"])
+        assert "fenced" in mermaid["inputSchema"]["properties"]
 
-        k8s_ingest = tool_definition(tool_map(REPO_ROOT)["ingest-k8s-audit-ocsf"])
-        assert "input_path" in k8s_ingest["inputSchema"]["properties"]
+    def test_path_parameters_are_not_advertised(self):
+        # File paths are rejected at the wrapper boundary (arg_policy), so the
+        # typed `input_path` / `output_path` overlay properties are dropped.
+        for name in (
+            "detect-lateral-movement",
+            "detect-mcp-tool-drift",
+            "convert-ocsf-to-sarif",
+            "ingest-cloudtrail-ocsf",
+            "ingest-okta-system-log-ocsf",
+            "ingest-entra-directory-audit-ocsf",
+            "ingest-k8s-audit-ocsf",
+        ):
+            schema = tool_definition(tool_map(REPO_ROOT)[name])["inputSchema"]
+            assert "input_path" not in schema["properties"], name
+            assert "output_path" not in schema["properties"], name
+            assert all("input_path" not in ex for ex in schema.get("examples", [])), name
+            assert schema["examples"], name
 
     def test_expand_skill_parameters_translate_flags(self):
         skill = tool_map(REPO_ROOT)["cspm-aws-cis-benchmark"]

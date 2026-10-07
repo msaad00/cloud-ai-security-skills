@@ -158,6 +158,11 @@ CLAIMS: list[Claim] = [
         "total",
     ),
     (
+        REPO_ROOT / "docs" / "images" / "hero-banner.svg",
+        r"(\d+) ingest skills",
+        "ingest_only",
+    ),
+    (
         REPO_ROOT / "docs" / "images" / "coverage-matrix.svg",
         r"Rows list every shipped detection \((\d+)\)",
         "detection",

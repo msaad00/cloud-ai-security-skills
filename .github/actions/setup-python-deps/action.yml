@@ -1,13 +1,29 @@
 name: Setup Python And Deps
-description: Set up Python with pip cache and install a scoped dependency set for a workflow job.
+description: >-
+  Set up Python and uv, then install the locked dependency set from uv.lock
+  (`uv sync --frozen`) into an activated .venv. Run tools with `uv run`.
 
 inputs:
   python-version:
     description: Python version to install.
     required: false
     default: "3.11"
-  packages:
-    description: Space-delimited packages to install with pip.
+  uv-version:
+    description: uv version to install.
+    required: false
+    default: "0.10.9"
+  sync-args:
+    description: >-
+      Extra arguments for `uv sync --frozen`, e.g. `--group aws --group gcp`
+      or `--all-groups`. The `dev` group is always included (uv default group).
+      Set `skip` to install uv only, without syncing the project environment.
+    required: false
+    default: ""
+  tools:
+    description: >-
+      Space-delimited CLI tools that are not in uv.lock (e.g. sqlfluff,
+      cfn-lint). Each is installed into its own isolated environment with
+      `uv tool install`, so it can never alter the locked project .venv.
     required: false
     default: ""
 
@@ -18,21 +34,44 @@ runs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip
 
-    - name: Install dependencies
-      if: ${{ inputs.packages != '' }}
+    - name: Set up uv
+      uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      with:
+        version: ${{ inputs.uv-version }}
+        python-version: ${{ inputs.python-version }}
+        activate-environment: "true"
+        enable-cache: "true"
+        cache-dependency-glob: uv.lock
+
+    - name: Install locked dependencies
+      if: ${{ inputs.sync-args != 'skip' }}
       shell: bash
+      env:
+        SYNC_ARGS: ${{ inputs.sync-args }}
       run: |
         set -euo pipefail
-        python -m pip install --upgrade pip
         for attempt in 1 2 3; do
-          if pip install ${{ inputs.packages }}; then
-            exit 0
+          # shellcheck disable=SC2086 # SYNC_ARGS is an intentional word list
+          if uv sync --frozen ${SYNC_ARGS}; then
+            break
           fi
           if [ "$attempt" -eq 3 ]; then
             exit 1
           fi
-          echo "pip install failed on attempt $attempt; retrying after transient network backoff" >&2
+          echo "uv sync failed on attempt $attempt; retrying after transient network backoff" >&2
           sleep $((attempt * 5))
+        done
+        # Later `uv run` calls must use exactly what was synced from the lock.
+        echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+
+    - name: Install unlocked CLI tools
+      if: ${{ inputs.tools != '' }}
+      shell: bash
+      env:
+        TOOLS: ${{ inputs.tools }}
+      run: |
+        set -euo pipefail
+        for tool in ${TOOLS}; do
+          uv tool install "$tool"
         done

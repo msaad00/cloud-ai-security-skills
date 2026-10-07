@@ -45,6 +45,13 @@ audit record is emitted per request.
 - **Signature verification first.** Per-route HMAC-SHA-256 on the raw
   body, or bearer-token, or both. Missing signature → `401`. Invalid
   signature → `401`. The body is verified before the skill is invoked.
+- **Fail closed.** An allowlisted skill with no HMAC secret and no
+  `WEBHOOK_BEARER_TOKEN` → `401 auth_not_configured`. A malformed
+  `WEBHOOK_HMAC_SECRETS` or `WEBHOOK_MAX_BODY_BYTES` stops the process at
+  startup instead of silently disabling the check.
+- **Bounded bodies.** Requests larger than `WEBHOOK_MAX_BODY_BYTES`
+  (default 1 MiB) → `413`, enforced while streaming so a chunked upload
+  without `Content-Length` cannot buffer past the cap.
 - **Sink fan-out.** Each emitted OCSF event is written to every sink in
   `WEBHOOK_SINK_TARGETS` (`s3,snowflake,clickhouse`). Sinks are the
   shipped `skills/output/sink-*-jsonl` skills — same dual-audit, same
@@ -60,9 +67,10 @@ audit record is emitted per request.
 | `WEBHOOK_ALLOWED_SKILLS` | Comma-separated allowlist. Any other skill name returns `403`. Defaults to **none** (locked-down by default). |
 | `WEBHOOK_HMAC_SECRETS` | JSON object: `{"<skill-name>": "shared-secret"}`. Per-skill secret used for HMAC-SHA-256 verification of `X-Hub-Signature-256` (or the configurable header). |
 | `WEBHOOK_HMAC_HEADER` | Header carrying the signature. Defaults to `X-Hub-Signature-256`. |
-| `WEBHOOK_BEARER_TOKEN` | Optional bearer token. When set, `Authorization: Bearer <token>` is required on every route. Combine with HMAC for two-factor request auth. |
+| `WEBHOOK_BEARER_TOKEN` | Bearer token. When set, `Authorization: Bearer <token>` is required on every route. Combine with HMAC for two-factor request auth. Every allowlisted skill needs an HMAC secret or this token. |
+| `WEBHOOK_MAX_BODY_BYTES` | Max request body in bytes (default `1048576`). Larger bodies return `413`. |
 | `WEBHOOK_SINK_TARGETS` | Comma-separated subset of `s3`, `snowflake`, `clickhouse`. Empty means no sink fan-out (response payload only). |
-| `CLOUD_SECURITY_MCP_AUDIT_LOG` | Same env as the MCP wrapper — durable JSONL audit file with HMAC chain when `CLOUD_SECURITY_AUDIT_HMAC_KEY` is set. |
+| `CLOUD_SECURITY_MCP_AUDIT_LOG` | Same env as the MCP wrapper — durable JSONL audit file (append + fsync per request). This surface does not add the HMAC chain fields. |
 
 ## Deployment templates
 
@@ -114,9 +122,11 @@ curl -sS -X POST localhost:8080/webhook/ingest-cloudtrail-ocsf \
 - **Request body verified before skill invocation.** Invalid signature
   never reaches the skill subprocess; the audit record still fires
   with `result: error` and `error_type: signature_invalid`.
-- **Skills inherit the existing safe-env contract.** The receiver
-  spawns the skill with the same `SAFE_CHILD_ENV_VARS` whitelist the
-  MCP wrapper uses. No ambient secret leaks into the skill process.
+- **Minimal skill environment.** The receiver spawns the skill with
+  `PATH`, `PYTHONPATH`, and `CLOUD_SECURITY_*` settings only, minus
+  wrapper-only values (`CLOUD_SECURITY_AUDIT_HMAC_KEY`,
+  `CLOUD_SECURITY_MCP_*`, and names containing `BEARER` or `HMAC`).
+  `WEBHOOK_*` secrets never reach the skill process.
 - **Sink fan-out is best-effort, never silent.** Sink failures are
   logged into the audit record per-target. The webhook response
   surfaces `"sink_results": [{"target": "s3", "ok": true}, ...]` so

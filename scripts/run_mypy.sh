@@ -13,8 +13,17 @@ fi
 
 # Tighten the shared/runtime surfaces first. Keep per-skill checking gradual
 # while this repo incrementally removes Any and missing annotations.
+# Phase 2 of #608: every module under skills/_shared/ is strict-typed.
 "${MYPY_CMD[@]}" \
-  skills/_shared/runtime_telemetry.py \
+  skills/_shared \
+  --config-file pyproject.toml \
+  --cache-dir "$MYPY_CACHE_DIR" \
+  --disallow-untyped-defs \
+  --disallow-incomplete-defs \
+  --warn-return-any \
+  --disallow-any-generics
+
+"${MYPY_CMD[@]}" \
   mcp-server/src \
   scripts \
   --config-file pyproject.toml \
@@ -39,14 +48,13 @@ for dir in "${STRICT_SKILL_DIRS[@]}"; do
     --warn-return-any
 done
 
-# Phase 1 of #608: the whole remediation layer is strict-typed. These skills
-# import shared helpers under skills/_shared/ that are not yet strict-clean (a
-# later #608 phase, e.g. skills/_shared/http.py has a latent no-any-return).
+# Phase 1 of #608: the whole remediation layer is strict-typed.
 # --follow-imports=silent scopes the strict check to each remediation skill's
-# OWN files: the shared modules are still analyzed for types, so remediation
-# call sites stay fully strict-checked, but not-yet-strict errors physically
-# located in _shared/ are not reported here. New remediation skills must land
-# strict-clean under these flags (see CONTRIBUTING.md).
+# OWN files: imported modules are still analyzed for types, so remediation
+# call sites stay fully strict-checked, while errors in imported code are
+# reported by the invocation that owns that code (skills/_shared/ above).
+# New remediation skills must land strict-clean under these flags (see
+# CONTRIBUTING.md).
 REMEDIATION_STRICT_DIRS=(
   "skills/remediation/iam-departures-aws/src"
   "skills/remediation/iam-departures-azure-entra/src"

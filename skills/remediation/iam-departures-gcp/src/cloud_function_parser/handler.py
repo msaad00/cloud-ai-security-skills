@@ -355,7 +355,8 @@ def _build_argparser() -> argparse.ArgumentParser:
             "intentionally absent here (the worker function is the destructive "
             "surface). Both incident + approver env vars are still required to "
             "exercise the worker."
-        )
+        ),
+        allow_abbrev=False,
     )
     parser.add_argument("manifest", help="Path to local manifest JSON or `gs://bucket/object` URI")
     parser.add_argument(

@@ -19,6 +19,33 @@ Design rules:
 - fixed local repo-owned entrypoints only
 - direct CLI usage of skills stays unchanged
 
+Argument boundary (`src/arg_policy.py`):
+
+- payloads go through `input` (stdin); callers cannot point a skill at the
+  host filesystem
+- path-valued flags are rejected, including argparse prefix abbreviations
+  and `=value` forms: `--output`/`-o`, `--config`, `--manifest`,
+  `--quarantine-file`, `--policy-findings-output`, `--scan-paths`,
+  `--proc-root`, `--log-root`; evaluation `checks.py` keeps
+  `--output console|json`, which is a render switch
+- positional args that look like a path (contain `/` or `\`, start with `.`
+  or `~`, or name an existing file relative to the repo root) are rejected;
+  `-` is allowed
+- typed schema parameters that map to paths (`input_path`, `output_path`)
+  are no longer advertised in `tools/list` and are rejected the same way
+- `container-security`, `k8s-security-benchmark`, `model-serving-security`,
+  and `gpu-cluster-security` read their JSON/YAML config from stdin when the
+  `config` path is omitted, so pass it as `input`
+- rejections return JSON-RPC `-32602` and are audited with
+  `error_type: ArgPolicyError`; the skill is never spawned
+
+Child environment:
+
+- skills get a fixed allowlist of process vars plus `CLOUD_SECURITY_*`
+  settings, minus wrapper-only values: `CLOUD_SECURITY_AUDIT_HMAC_KEY`,
+  anything under `CLOUD_SECURITY_MCP_*`, and any name containing `BEARER` or
+  `HMAC`
+
 Remediation parity:
 
 - standalone remediation skills with a single `src/handler.py` entrypoint are
@@ -27,12 +54,17 @@ Remediation parity:
   `src/handler.py` shims (see #411) — one MCP tool per cloud, not one tool for
   the full multi-Lambda orchestration
 - those tools stay dry-run/re-verify only at the wrapper boundary; the MCP
-  wrapper rejects `--apply`
+  wrapper rejects `--apply`, any abbreviation of it (`--appl`), and
+  `--apply=...`; write-capable layers also set `allow_abbrev=False` on their
+  parsers
 
 Audit behavior:
 
 - the wrapper emits one JSON audit line per resolved tool call
 - the audit record contract lives in [../docs/MCP_AUDIT_CONTRACT.md](../docs/MCP_AUDIT_CONTRACT.md)
+- a configured `CLOUD_SECURITY_AUDIT_HMAC_KEY` must be at least 32 bytes and
+  not the `please-set-me` template placeholder; otherwise the stdio server
+  and the SSE listener exit with status 2 before serving
 - wrapper diagnostics stay on `stderr`; wrapped skill output stays on `stdout`
 - every audit event records the resolved `timeout_seconds` so operators can tell from the log whether a call was governed by the default, a per-skill override, or an env override
 - every call also gets a wrapper-generated `correlation_id` that is recorded in

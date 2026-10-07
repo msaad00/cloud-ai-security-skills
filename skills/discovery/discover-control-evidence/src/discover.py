@@ -436,7 +436,8 @@ def to_ocsf_live_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate deterministic technical-control evidence from discovery artifacts."
+        description="Generate deterministic technical-control evidence from discovery artifacts.",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "input", nargs="?", help="Path to a discovery artifact JSON file. Reads stdin when omitted."

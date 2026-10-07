@@ -45,9 +45,9 @@ services:
       MCP_SSE_ALLOW_PUBLIC_BIND: "1"
       MCP_SSE_BEARER_KEYS_FILE: "/etc/cloud-security/sse-bearer-keys.json"
       CLOUD_SECURITY_MCP_AUDIT_LOG: "/var/log/cloud-security/audit.jsonl"
-      # Generate this once and persist it alongside the audit log so
-      # restarts continue the same chain. `openssl rand -hex 32` works.
-      CLOUD_SECURITY_AUDIT_HMAC_KEY: "${CLOUD_SECURITY_AUDIT_HMAC_KEY:-please-set-me}"
+      # Required (>= 32 bytes). Generate once with `openssl rand -hex 32` and
+      # persist it alongside the audit log so restarts continue the same chain.
+      CLOUD_SECURITY_AUDIT_HMAC_KEY: "${CLOUD_SECURITY_AUDIT_HMAC_KEY:?set CLOUD_SECURITY_AUDIT_HMAC_KEY, e.g. openssl rand -hex 32}"
     tmpfs:
       - /tmp:size=64m
     volumes:

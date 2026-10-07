@@ -103,7 +103,7 @@ estimates **~500 engineer-hours / ~12 weeks** to reach feature parity
 with the v0.10.0-era harness before the first detector is written. That's
 the historical lower-bound harness cost, before the current 134-skill
 catalog. Detector content is on top of that — the v0.10 baseline alone was
-six hours per detector × 39 detectors = another **~240 hours**, plus the
+six hours per detector × the 39 detectors shipped at v0.10 = another **~240 hours**, plus the
 calibration work, captured-fixture corpus, and framework-mapping research.
 Realistic all-in: a small team for a quarter before it reaches the older
 baseline, then more work to catch the current catalog.

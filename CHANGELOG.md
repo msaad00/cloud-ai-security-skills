@@ -11,6 +11,36 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Security
+
+- **MCP argument boundary** (`mcp-server/src/arg_policy.py`): `tools/call`
+  rejects path-valued flags (`--output`/`-o`, `--config`, `--manifest`,
+  `--quarantine-file`, ... and their argparse abbreviations) and path-like
+  positional args, so a caller can no longer make a skill read or truncate
+  host files (including the audit log). Payloads go through `input`; the
+  `input_path`/`output_path` typed parameters are no longer advertised.
+  `container-security`, `k8s-security-benchmark`, `model-serving-security`,
+  and `gpu-cluster-security` now read their config from stdin when no path
+  is given.
+- **`--apply` abbreviation bypass closed**: the MCP wrapper and the Python
+  library shim treat `--appl`, `--apply=...`, and other prefixes as
+  `--apply`; remediation, evaluation, output, discovery, and view parsers set
+  `allow_abbrev=False`.
+- **Child env scrub**: skill subprocesses (MCP, library shim, webhook
+  receiver) no longer receive `CLOUD_SECURITY_AUDIT_HMAC_KEY`,
+  `CLOUD_SECURITY_MCP_*`, or `*BEARER*` / `*HMAC*` variables.
+- **Audit HMAC key fails closed**: keys under 32 bytes or the
+  `please-set-me` placeholder stop the stdio and SSE servers at startup; the
+  `mcp-sse` compose template now requires the key instead of defaulting it.
+- **Webhook receiver fails closed**: a routed skill with neither an HMAC
+  secret nor a bearer token gets `401`; malformed `WEBHOOK_HMAC_SECRETS`
+  stops startup. Request bodies are capped (`WEBHOOK_MAX_BODY_BYTES`,
+  `MCP_SSE_MAX_BODY_BYTES`, default 1 MiB) with `413`.
+- **Wildcard IAM validator** (`scripts/validate_safe_skill_bar.py`) now
+  catches YAML/CloudFormation `Resource: '*'`, list forms (`["*"]`,
+  `- '*'`), and service wildcards (`iam:*`), skips Deny statements, and
+  scans `runners/` as well as `skills/`.
+
 ## [0.12.0] — 2026-09-17 — Repo-wide audit: MCP hardening, detector determinism, guardrail parity
 
 Full-repo correctness and security audit across ingestion, detection,
