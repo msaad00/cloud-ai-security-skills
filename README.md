@@ -9,43 +9,61 @@
   <a href="docs/COVERAGE_SNAPSHOT.md"><img alt="Coverage gated" src="https://img.shields.io/badge/coverage-CI_gated-0f766e"></a>
 </p>
 
-<p align="center"><strong>134 deterministic security skills for cloud &amp; AI infrastructure.</strong> Ingest, detect, evaluate, remediate — one bundle on CLI, CI, MCP, webhook, library, and runners.</p>
+<p align="center"><strong>134 deterministic security skills for cloud &amp; AI infrastructure.</strong> Turn raw cloud, identity, Kubernetes, and MCP logs into standard findings, then fix what matters behind a human approval gate — with an audit trail and a re-check that proves the fix held.</p>
 
-<p align="center">
-  <strong>Security engineer?</strong> Start at <a href="docs/QUICKSTART.md"><code>docs/QUICKSTART.md</code></a> — first finding in 30 seconds, no cloud creds required. &nbsp;|&nbsp;
-  <strong>AI / agent developer?</strong> Wire MCP in <a href="docs/AGENT_QUICKSTART.md"><code>docs/AGENT_QUICKSTART.md</code></a>. &nbsp;|&nbsp;
-  <strong>Framework / compliance?</strong> See <a href="docs/FRAMEWORK_COVERAGE.md"><code>docs/FRAMEWORK_COVERAGE.md</code></a> for MITRE ATT&amp;CK, CIS, and NIST coverage.
-</p>
+## What this is
 
----
+- **Deterministic skills, not prompts.** Every skill is a small Python bundle (`SKILL.md` + `src/` + `tests/` + `REFERENCES.md`) that reads stdin and writes JSONL. Same input, same finding. Models can orchestrate; they never invent the facts.
+- **A real contract on the wire.** Ingest and detect speak [OCSF 1.8](skills/detection-engineering/OCSF_CONTRACT.md); detections are Detection Finding `2004` with MITRE ATT&CK / ATLAS mappings, frozen by golden fixtures so a refactor that changes the shape fails CI.
+- **Writes are gated, audited, and re-verified.** Remediation is dry-run by default, needs a named approver and incident ID before `--apply`, audits before and after every write, and re-checks live state. Policy: [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md).
+- **One codebase, every surface.** The same skill runs from a shell pipe, CI, an MCP client, a webhook/queue runner, or as a Python library. Wrappers add orchestration, never a second implementation.
 
-## Start here
+## How the loop closes
 
-| Need | Read |
-|---|---|
-| Run a pipeline locally | [`docs/QUICKSTART.md`](docs/QUICKSTART.md) |
-| Pick a skill | [`docs/SKILL_INDEX.md`](docs/SKILL_INDEX.md) |
-| Wire an agent (MCP) | [`docs/AGENT_QUICKSTART.md`](docs/AGENT_QUICKSTART.md) |
-| Ship a SOC workflow | [`docs/HARNESS.md`](docs/HARNESS.md) |
-| Build a warehouse lake | [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md) · [`docs/SNOWFLAKE_DATA_LAKE.md`](docs/SNOWFLAKE_DATA_LAKE.md) |
-| Browse every doc | [`docs/README.md`](docs/README.md) |
+![Closed-loop flow — raw logs to OCSF ingest, deterministic detection, SARIF/Mermaid view, HITL gate, remediation, dual audit, and re-verification feeding back into the pipeline.](docs/images/closed-loop-flow.svg)
+
+Details: [`docs/REMEDIATION_VERIFICATION.md`](docs/REMEDIATION_VERIFICATION.md) (VERIFIED / DRIFT / UNREACHABLE) · [`docs/MCP_AUDIT_CONTRACT.md`](docs/MCP_AUDIT_CONTRACT.md) (HMAC-chained MCP audit log) · [`docs/DATA_FLOW.md`](docs/DATA_FLOW.md).
 
 ## Quickstart
+
+No cloud credentials needed — the demo replays a captured CloudTrail fixture.
 
 ```bash
 git clone https://github.com/msaad00/cloud-ai-security-skills.git
 cd cloud-ai-security-skills
-# Install uv if needed: curl -LsSf https://astral.sh/uv/install.sh | sh
-uv sync --group dev --group aws   # see docs/INSTALL.md for other groups
+uv sync                      # install uv first: https://docs.astral.sh/uv/
+uv run make demo             # ingest -> detect -> SARIF, then prints the findings
+```
 
-python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
+Expected stdout tail (structured JSON logs go to stderr; `<rule id>` is the SARIF rule):
+
+```text
+Findings written to $TMPDIR/cloud-security-demo.sarif
+1 finding(s) emitted
+  - <rule id>: AWS IAM access key created
+
+Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `bob` in account `123456789012` (us-east-1). Source IP: 203.0.113.42. This creates additional AWS credential material for a valid cloud account.
+```
+
+The same pipeline, spelled out — each stage is a standalone skill joined by a Unix pipe:
+
+```bash
+uv run python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
-  | python skills/detection/detect-aws-access-key-creation/src/detect.py \
-  | python skills/view/convert-ocsf-to-sarif/src/convert.py \
+  | uv run python skills/detection/detect-aws-access-key-creation/src/detect.py \
+  | uv run python skills/view/convert-ocsf-to-sarif/src/convert.py \
   > findings.sarif
 ```
 
-No clone required for the demo path: [`docs/QUICKSTART.md`](docs/QUICKSTART.md). MCP wiring: repo-root [`.mcp.json`](.mcp.json) + [`docs/integrations/`](docs/integrations/).
+Drop the last stage to see the raw OCSF Detection Finding. More paths: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) · cloud SDK groups: [`docs/INSTALL.md`](docs/INSTALL.md).
+
+| Need | Read |
+|---|---|
+| Pick a skill | [`docs/SKILL_INDEX.md`](docs/SKILL_INDEX.md) |
+| Wire an agent (MCP) | [`docs/AGENT_QUICKSTART.md`](docs/AGENT_QUICKSTART.md) |
+| Ship a SOC workflow | [`docs/HARNESS.md`](docs/HARNESS.md) |
+| Map to frameworks | [`docs/FRAMEWORK_COVERAGE.md`](docs/FRAMEWORK_COVERAGE.md) |
+| Browse every doc | [`docs/README.md`](docs/README.md) |
 
 ## Skills at a glance
 
@@ -72,42 +90,27 @@ Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/SKILL_CON
 
 **Invariant:** skills own facts, schemas, mappings, confidence, and audit. Orchestrators own workflow state and model choice only.
 
-## Workflow packaging — LangGraph, LangChain, and this repo
+## Design decisions
 
-You do not pick this repo **instead of** LangGraph or LangChain. You compose them. **MCP is the tool surface** — frameworks own workflow state and model choice only.
+Full rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) and the eleven-principle [`SECURITY_BAR.md`](SECURITY_BAR.md).
 
-| Layer | Owns | Shipped here | When to use |
-|---|---|---|---|
-| **This repo** | security skills, OCSF wire, HITL gates, allowlists, audit | 134 skill bundles + MCP wrapper | always — facts, mappings, and write authority stay here |
-| **LangGraph** | multi-step workflow state, branches, checkpoints, HITL routing | [`langgraph_security_graph.py`](examples/agents/langgraph_security_graph.py) + [`harness_profiles/`](examples/agents/harness_profiles/) | durable SOC DAGs, analyst review gates, checkpoint/replay |
-| **LangChain** | MCP stdio wiring or optional triage message adapter | [`langchain_mcp_security_agent.py`](examples/agents/langchain_mcp_security_agent.py) + [`harness_adapters.py`](examples/agents/harness_adapters.py) | MCP-first loops **or** bounded LLM drafting inside LangGraph triage |
+- **Side effects live at the edges.** Only `source-*` (read external systems), `remediate-*` (write to cloud/identity), and `sink-*` (write to storage) touch the outside world. Everything else is a pure stdin → stdout transform.
+- **OCSF for streams, native for operations.** Findings use OCSF so SIEMs ingest them unchanged; inventory, AI BOM, and remediation audit stay native because they are not event streams. [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md)
+- **Approval scales with blast radius.** Single-user session kills need one approver and an incident window; MCP tool quarantine and Kubernetes node drain need two. Protected namespaces and principals are denied in code, not just config. [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md)
+- **Least privilege is linted.** `scripts/validate_safe_skill_bar.py` fails CI on wildcard IAM without justification and on any `sts:AssumeRole` allow without an org/account boundary condition.
+- **Agentless and quiet.** No daemons, no telemetry, no undeclared egress; official vendor SDKs, with any exception documented. [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
+- **Idempotent, replay-safe persistence.** Deterministic identifiers plus append-only or merge-safe sinks mean queue retries and reruns converge. [`docs/SINK_CONTRACT.md`](docs/SINK_CONTRACT.md)
 
-**LangGraph (recommended for SOC workflows)** — reference harness ships profiles, preflight inspector, eval runner, drift doctor, and optional `StateGraph` runtime. Pipeline: ingest → enrich → triage → analyst review → dry-run remediate → audit → verify closure. Profiles swap allowlists, lake replay vs raw ingest, and model policy without forking skills.
+## Quality gates
 
-**LangChain (optional glue, not a parallel stack)** — use for MCP stdio config when your client is LangChain-native, or as a chat-message adapter behind the LangGraph triage schema gate. Do **not** wrap skills as LCEL `@tool` chains; the MCP server keeps one audited contract across all clients.
+Every PR to `main` runs these in CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml), [`docs/TESTING.md`](docs/TESTING.md)):
 
-| Pattern | Relevance | Status |
-|---|---|---|
-| MCP stdio + harness profile | **High** — default for Cursor, Claude, Windsurf, Codex, Cortex, Zed | 10 client examples + `emit_mcp_client_configs.py` |
-| LangGraph SOC harness | **High** — durable graph, HITL interrupt/resume, checkpoint replay | CI-tested; `uv sync --group langgraph` |
-| LangChain MCP agent | **Medium** — portability for LangChain shops | offline-runnable; `langchain-mcp-adapters` when installed |
-| LangChain inside LangGraph triage | **Low–medium** — bounded rank/summarize/draft only | schema-gated; security facts never from the model |
-| LCEL skill wrappers | **Avoid** — bypasses audit/HITL | documented anti-pattern in [`examples/agents/README.md`](examples/agents/README.md) |
+- **3,500+ test functions** across ~200 test files — per-skill unit tests, golden-fixture contract tests, integration, and MCP server tests, with per-layer coverage floors.
+- **21 repo validators** in `make validate` — skill contract and structure, HITL/safe-skill bar, framework mapping depth, OCSF metadata, remediation infra stubs, doc-count drift, secret literals — plus 3 generated-doc freshness checks in `make docs-check`.
+- **Frozen wire format** — 165 OCSF events across 76 golden fixtures and 40 end-to-end golden pipes.
+- **Static and supply chain** — `ruff`, `mypy`, `bandit`, `uv lock --check`, IaC linting, and a signed CycloneDX SBOM.
 
-Packaged profiles (read-only SOC, analyst triage, dry-run remediation) and golden eval fixtures ship under [`examples/agents/`](examples/agents/). Details: [`docs/HARNESS.md`](docs/HARNESS.md).
-
-![Agentic SOC orchestrator — LangGraph owns workflow; skills own trust rails.](docs/images/agentic-soc-orchestrator.svg)
-
-## Data lakes
-
-Closed-loop lake packs for operator-owned warehouses:
-
-- **ClickHouse** — [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md) · [`packs/clickhouse/`](packs/clickhouse/)
-- **Snowflake** — [`docs/SNOWFLAKE_DATA_LAKE.md`](docs/SNOWFLAKE_DATA_LAKE.md) · [`packs/snowflake/`](packs/snowflake/)
-
-Write with `sink-*-jsonl`, replay with `source-*-query`, audit rows land back through the same sink.
-
-## Agent integrations
+## Agent and MCP integrations
 
 | Client | Doc |
 |---|---|
@@ -118,6 +121,24 @@ Write with `sink-*-jsonl`, replay with `source-*-query`, audit rows land back th
 | Python library | [`skills/_shared/library.py`](skills/_shared/library.py) |
 
 Presets: [`presets/`](presets/) · workflows: [`examples/workflows/`](examples/workflows/)
+
+<details>
+<summary><b>Workflow frameworks (LangGraph / LangChain)</b> — compose, don't replace</summary>
+
+LangGraph owns multi-step workflow state, checkpoints, and HITL interrupts; this repo owns the facts, mappings, approval gates, and audit. MCP is the tool surface between them. The reference harness ([`langgraph_security_graph.py`](examples/agents/langgraph_security_graph.py), [`harness_profiles/`](examples/agents/harness_profiles/)) runs ingest → enrich → triage → analyst review → dry-run remediate → audit → verify closure. LangChain is optional glue ([`langchain_mcp_security_agent.py`](examples/agents/langchain_mcp_security_agent.py), [`harness_adapters.py`](examples/agents/harness_adapters.py)); wrapping skills as LCEL tools is a documented anti-pattern ([`examples/agents/README.md`](examples/agents/README.md)). Full guide: [`docs/HARNESS.md`](docs/HARNESS.md).
+
+![Agentic SOC orchestrator — LangGraph owns workflow; skills own trust rails.](docs/images/agentic-soc-orchestrator.svg)
+
+</details>
+
+## Data lakes
+
+Closed-loop lake packs for operator-owned warehouses:
+
+- **ClickHouse** — [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md) · [`packs/clickhouse/`](packs/clickhouse/)
+- **Snowflake** — [`docs/SNOWFLAKE_DATA_LAKE.md`](docs/SNOWFLAKE_DATA_LAKE.md) · [`packs/snowflake/`](packs/snowflake/)
+
+Write with `sink-*-jsonl`, replay with `source-*-query`, audit rows land back through the same sink.
 
 ## Trust · compliance · more
 
@@ -155,6 +176,6 @@ Full per-skill matrix: [`docs/FRAMEWORK_COVERAGE.md`](docs/FRAMEWORK_COVERAGE.md
 
 ## Roadmap · contributing
 
-Roadmap issues: [#253](../../issues/253) · [#254](../../issues/254) · [#255](../../issues/255). PRs: [`CONTRIBUTING.md`](CONTRIBUTING.md). Apache 2.0.
+Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md) · issues [#253](../../issues/253) · [#254](../../issues/254) · [#255](../../issues/255). PRs: [`CONTRIBUTING.md`](CONTRIBUTING.md). Apache 2.0.
 
 Companion scanner: [`agent-bom`](https://github.com/msaad00/agent-bom).
