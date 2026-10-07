@@ -68,6 +68,13 @@ The Terraform template expects:
 
 That keeps the template deployable without assuming a build system.
 
+`main.tf` deploys Cloud Functions 2nd gen, which invoke event functions with a
+single CloudEvent. `handle_gcs_event` and `handle_pubsub_event` accept that
+CloudEvent (payload on `.data`, Pub/Sub message under `data.message`) as well
+as the 1st gen `(data, context)` shape. How a packaged archive registers the
+CloudEvent signature with the Functions Framework is part of the real deploy
+proof and is not verified locally.
+
 ## Concurrency ceiling
 
 The template exposes `max_instance_count` and defaults it to `50` for both the
@@ -95,6 +102,9 @@ Current repo reality:
 - the Terraform template is shipped
 - handler behavior is covered in tests
 - Terraform validation runs in CI
+- `scripts/runner_e2e.sh` runs the real handlers end to end in CI against
+  in-process fakes of the cloud SDK clients — no real cloud; see
+  [`../DEPLOYMENT_VERIFICATION.md`](../DEPLOYMENT_VERIFICATION.md#local-emulated-end-to-end)
 - a checked-in real-cloud deploy-and-first-event walkthrough is still pending
 
 That remaining deployment proof is tracked in
