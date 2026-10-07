@@ -5,6 +5,7 @@
 - **Snowflake Connector for Python** — https://docs.snowflake.com/en/developer-guide/python-connector/python-connector
 - **Connecting with the Snowflake Connector for Python** — https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect
 - **Executing queries with the Snowflake Connector for Python** — https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example
+- **Python Connector API (`Cursor.fetchmany`)** — https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api
 
 ## Read-only SQL semantics
 

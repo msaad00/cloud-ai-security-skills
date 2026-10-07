@@ -22,12 +22,18 @@ class _FakeCursor:
         self.description = description
         self.executed = None
         self.closed = False
+        self.fetch_sizes: list[int] = []
 
     def execute(self, query):
         self.executed = query
 
     def fetchall(self):
-        return self.rows
+        raise AssertionError("fetchall buffers the whole result set")
+
+    def fetchmany(self, size):
+        self.fetch_sizes.append(size)
+        batch, self.rows = self.rows[:size], self.rows[size:]
+        return batch
 
     def close(self):
         self.closed = True
@@ -135,7 +141,7 @@ class TestFetchRows:
         )
         monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
 
-        rows = fetch_rows("SELECT * FROM sec.cloudtrail_ocsf")
+        rows = list(fetch_rows("SELECT * FROM sec.cloudtrail_ocsf"))
 
         assert rows == [{"EVENT_TIME": "2026-04-15T00:00:00Z", "ACTION": "AssumeRole"}]
         assert fake.cursor_instance is not None
@@ -147,6 +153,28 @@ class TestFetchRows:
         fake = _FakeConnection([("value",)], description=None)
         monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
 
-        rows = fetch_rows("SHOW TABLES")
+        rows = list(fetch_rows("SHOW TABLES"))
 
         assert rows == [{"value": ("value",)}]
+
+    def test_streams_rows_in_batches(self, monkeypatch):
+        fake = _FakeConnection([(i,) for i in range(5)], description=[("N",)])
+        monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
+
+        rows = fetch_rows("SELECT n FROM t", batch_size=2)
+        assert next(rows) == {"N": 0}
+        assert fake.cursor_instance.fetch_sizes == [2]
+        assert fake.closed is False
+
+        assert list(rows) == [{"N": i} for i in range(1, 5)]
+        assert fake.cursor_instance.fetch_sizes == [2, 2, 2, 2]
+        assert fake.cursor_instance.closed is True
+        assert fake.closed is True
+
+    def test_main_writes_each_row_as_jsonl(self, monkeypatch, capsys):
+        fake = _FakeConnection([(i,) for i in range(3)], description=[("N",)])
+        monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
+
+        assert _INGEST.main(["--query", "SELECT n FROM t"]) == 0
+        assert capsys.readouterr().out == '{"N":0}\n{"N":1}\n{"N":2}\n'
+        assert fake.closed is True
