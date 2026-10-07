@@ -86,6 +86,9 @@ Current repo reality:
 - the template is shipped
 - handler behavior is covered in tests
 - infrastructure validation runs in CI
+- `scripts/runner_e2e.sh` runs the real handlers end to end in CI against
+  `moto` S3 + SQS (ingest leg) — no real cloud; see
+  [`../DEPLOYMENT_VERIFICATION.md`](../DEPLOYMENT_VERIFICATION.md#local-emulated-end-to-end)
 - a checked-in real-cloud deploy-and-first-event walkthrough is still pending
 
 That remaining deployment proof is tracked in
