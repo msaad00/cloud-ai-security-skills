@@ -13,6 +13,8 @@ from typing import Any, Iterable
 
 SKILL_NAME = "sink-clickhouse-jsonl"
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,254}$")
+# ClickHouse recommends inserts of 10,000-100,000 rows; each INSERT creates a part.
+DEFAULT_BATCH_SIZE = 10_000
 
 
 @dataclass(frozen=True)
@@ -95,6 +97,13 @@ def _prepare_rows(stdin: Iterable[str]) -> list[PreparedRow]:
     return rows
 
 
+def _positive_int(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
+
+
 def _connect() -> Any:
     import clickhouse_connect
 
@@ -112,19 +121,33 @@ def _connect() -> Any:
     return clickhouse_connect.get_client(**kwargs)
 
 
-def _insert_rows(table_name: str, rows: list[PreparedRow]) -> int:
+def _insert_rows(
+    table_name: str, rows: list[PreparedRow], batch_size: int = DEFAULT_BATCH_SIZE
+) -> int:
     client = _connect()
+    inserted = 0
     try:
-        client.insert(
-            table=table_name,
-            data=[
-                [row.payload_json, row.schema_mode, row.event_uid, row.finding_uid] for row in rows
-            ],
-            column_names=["payload", "schema_mode", "event_uid", "finding_uid"],
-        )
+        for start in range(0, len(rows), batch_size):
+            batch = rows[start : start + batch_size]
+            client.insert(
+                table=table_name,
+                data=[
+                    [row.payload_json, row.schema_mode, row.event_uid, row.finding_uid]
+                    for row in batch
+                ],
+                column_names=["payload", "schema_mode", "event_uid", "finding_uid"],
+            )
+            inserted += len(batch)
+    except Exception:
+        if inserted:
+            print(
+                f"[{SKILL_NAME}] {inserted} records were inserted before the failure",
+                file=sys.stderr,
+            )
+        raise
     finally:
         client.close()
-    return len(rows)
+    return inserted
 
 
 def _summary(
@@ -168,6 +191,12 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument(
         "--apply", dest="dry_run", action="store_false", help="Execute ClickHouse inserts."
     )
+    parser.add_argument(
+        "--batch-size",
+        type=_positive_int,
+        default=DEFAULT_BATCH_SIZE,
+        help=f"Rows per INSERT (default {DEFAULT_BATCH_SIZE}).",
+    )
     parser.set_defaults(dry_run=True)
     args = parser.parse_args(argv)
 
@@ -176,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         rows = _prepare_rows(sys.stdin)
         if not rows:
             raise ValueError("stdin did not contain any JSONL records")
-        inserted = 0 if args.dry_run else _insert_rows(table_name, rows)
+        inserted = 0 if args.dry_run else _insert_rows(table_name, rows, args.batch_size)
         sys.stdout.write(
             json.dumps(_summary(table_name, rows, args.dry_run, inserted), separators=(",", ":"))
             + "\n"

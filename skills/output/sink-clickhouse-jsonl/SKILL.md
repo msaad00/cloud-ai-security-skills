@@ -73,6 +73,14 @@ Safety flags:
 - `--apply` executes writes
 - `--dry-run` keeps the write path disabled explicitly
 
+Optional:
+
+- `--batch-size <n>` (default 10000, per ClickHouse's insert batching
+  guidance) rows per `INSERT`. All input is validated before the first write,
+  so invalid JSONL writes nothing. ClickHouse has no multi-statement
+  transaction: if a later batch fails, earlier batches stay written and the
+  count is reported on stderr with a non-zero exit.
+
 ## Output
 
 Emits one repo-native sink-result JSON object to `stdout`:

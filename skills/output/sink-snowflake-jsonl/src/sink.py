@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import logging
 import os
@@ -10,10 +11,11 @@ import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 SKILL_NAME = "sink-snowflake-jsonl"
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]{0,254}$")
+DEFAULT_BATCH_SIZE = 1000
 
 
 @dataclass(frozen=True)
@@ -77,8 +79,7 @@ def _extract_finding_uid(record: dict[str, Any]) -> str:
     return ""
 
 
-def _prepare_rows(stdin: Iterable[str]) -> list[PreparedRow]:
-    rows: list[PreparedRow] = []
+def _prepare_rows(stdin: Iterable[str]) -> Iterator[PreparedRow]:
     for line_number, raw_line in enumerate(stdin, start=1):
         line = raw_line.strip()
         if not line:
@@ -89,15 +90,25 @@ def _prepare_rows(stdin: Iterable[str]) -> list[PreparedRow]:
             raise ValueError(f"line {line_number}: invalid JSON ({exc.msg})") from exc
         if not isinstance(payload, dict):
             raise ValueError(f"line {line_number}: expected a JSON object")
-        rows.append(
-            PreparedRow(
-                payload_json=json.dumps(payload, separators=(",", ":"), sort_keys=True),
-                schema_mode=_extract_schema_mode(payload),
-                event_uid=_extract_event_uid(payload),
-                finding_uid=_extract_finding_uid(payload),
-            )
+        yield PreparedRow(
+            payload_json=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+            schema_mode=_extract_schema_mode(payload),
+            event_uid=_extract_event_uid(payload),
+            finding_uid=_extract_finding_uid(payload),
         )
-    return rows
+
+
+def _tally(rows: Iterable[PreparedRow], schema_modes: Counter[str]) -> Iterator[PreparedRow]:
+    for row in rows:
+        schema_modes[row.schema_mode] += 1
+        yield row
+
+
+def _positive_int(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
 
 
 def _connect() -> Any:
@@ -123,26 +134,34 @@ def _connect() -> Any:
     return conn
 
 
-def _insert_rows(table_name: str, rows: list[PreparedRow]) -> int:
+def _insert_rows(
+    table_name: str, rows: Iterable[PreparedRow], batch_size: int = DEFAULT_BATCH_SIZE
+) -> int:
+    # Bandit flags dynamic SQL strings generically, but the only interpolated
+    # value here is the already-validated table identifier path.
+    sql = (
+        f"INSERT INTO {table_name} "  # nosec B608
+        "(payload, schema_mode, event_uid, finding_uid) "
+        "VALUES (PARSE_JSON(%s), %s, %s, %s)"
+    )
     conn = _connect()
     try:
         cursor = conn.cursor()
         try:
-            cursor.executemany(
-                # Bandit flags dynamic SQL strings generically, but the only interpolated
-                # value here is the already-validated table identifier path.
-                (
-                    f"INSERT INTO {table_name} "  # nosec B608
-                    "(payload, schema_mode, event_uid, finding_uid) "
-                    "VALUES (PARSE_JSON(%s), %s, %s, %s)"
-                ),
-                [
-                    (row.payload_json, row.schema_mode, row.event_uid, row.finding_uid)
-                    for row in rows
-                ],
-            )
+            # All batches share one transaction, so any failure (including an
+            # invalid input line mid-stream) rolls back every earlier batch.
+            inserted = 0
+            it = iter(rows)
+            while batch := list(itertools.islice(it, batch_size)):
+                cursor.executemany(
+                    sql,
+                    [
+                        (row.payload_json, row.schema_mode, row.event_uid, row.finding_uid)
+                        for row in batch
+                    ],
+                )
+                inserted += len(batch)
             conn.commit()
-            inserted = len(rows)
         except Exception:
             conn.rollback()
             raise
@@ -154,9 +173,9 @@ def _insert_rows(table_name: str, rows: list[PreparedRow]) -> int:
 
 
 def _summary(
-    table_name: str, rows: list[PreparedRow], dry_run: bool, inserted: int
+    table_name: str, schema_modes: Counter[str], dry_run: bool, inserted: int
 ) -> dict[str, Any]:
-    schema_modes = Counter(row.schema_mode for row in rows)
+    input_records = sum(schema_modes.values())
     return {
         "schema_mode": "native",
         "canonical_schema_version": "v1",
@@ -164,9 +183,9 @@ def _summary(
         "sink": "snowflake",
         "table": table_name,
         "dry_run": dry_run,
-        "input_records": len(rows),
+        "input_records": input_records,
         "inserted_records": inserted,
-        "would_insert_records": len(rows) if dry_run else 0,
+        "would_insert_records": input_records if dry_run else 0,
         "schema_modes": dict(sorted(schema_modes.items())),
     }
 
@@ -199,17 +218,33 @@ def main(argv: list[str] | None = None) -> int:
         action="store_false",
         help="Execute parameterized INSERT statements.",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=_positive_int,
+        default=DEFAULT_BATCH_SIZE,
+        help=f"Rows per executemany call within the single transaction (default {DEFAULT_BATCH_SIZE}).",
+    )
     parser.set_defaults(dry_run=True)
     args = parser.parse_args(argv)
 
     try:
         table_name = _normalize_table_name(args.table)
-        rows = _prepare_rows(sys.stdin)
-        if not rows:
+        schema_modes: Counter[str] = Counter()
+        rows = _tally(_prepare_rows(sys.stdin), schema_modes)
+        first = next(rows, None)
+        if first is None:
             raise ValueError("stdin did not contain any JSONL records")
-        inserted = 0 if args.dry_run else _insert_rows(table_name, rows)
+        rows = itertools.chain([first], rows)
+        if args.dry_run:
+            inserted = 0
+            for _ in rows:
+                pass
+        else:
+            inserted = _insert_rows(table_name, rows, args.batch_size)
         sys.stdout.write(
-            json.dumps(_summary(table_name, rows, args.dry_run, inserted), separators=(",", ":"))
+            json.dumps(
+                _summary(table_name, schema_modes, args.dry_run, inserted), separators=(",", ":")
+            )
             + "\n"
         )
     except Exception as exc:
