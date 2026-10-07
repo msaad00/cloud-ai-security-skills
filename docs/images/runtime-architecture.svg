@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="rt-title rt-desc">
+  <title id="rt-title">Cloud AI Security Skills — runtime architecture</title>
+  <desc id="rt-desc">Five entry surfaces run one skill bundle of 134 skills. CLI pipes, CI jobs, and the AWS, GCP, and Azure event runners call skills directly. MCP clients, the webhook receiver, and the Python library go through a shared wrapper that enforces a tool allowlist with typed schemas, rejects file-path arguments, requires an approval context for --apply, scrubs secrets from the child environment, applies resource limits, a timeout, and a 10 MB output cap, and writes an HMAC-chained audit log. The bundle holds source, ingest, discover, detect, evaluate, view, remediate, and sink skills. Output goes to SIEM and SOAR as OCSF, to code scanning as SARIF, to cloud and identity APIs through human-approved remediation, and to an S3, Snowflake, or ClickHouse lake that source skills replay from.</desc>
+  <defs>
+    <linearGradient id="rt-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#060b17"/><stop offset="100%" stop-color="#0a1325"/></linearGradient>
+    <marker id="rt-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7dd3fc"/></marker>
+    <marker id="rt-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#fbbf24"/></marker>
+    <marker id="rt-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5eead4"/></marker>
+    <marker id="rt-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c4b5fd"/></marker>
+  </defs>
+  <rect width="900" height="560" fill="url(#rt-bg)"/>
+  <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
+    <text x="14" y="38" font-size="24" font-weight="800" fill="#f8fafc">One skill bundle, every surface</text>
+    <text x="14" y="64" font-size="14" fill="#94a3b8">Same code, output contract, and guardrails whether a human, a pipeline, or an agent runs it.</text>
+
+    <g font-size="12" font-weight="700" letter-spacing="1.2">
+      <text x="14" y="102" fill="#7dd3fc">ENTRY SURFACES</text>
+      <text x="232" y="250" fill="#fbbf24">SHARED WRAPPER</text>
+      <text x="470" y="102" fill="#6ee7b7">SKILL BUNDLE</text>
+      <text x="740" y="102" fill="#c4b5fd">DESTINATIONS</text>
+    </g>
+
+    <!-- direct calls: CLI/CI and event runners -->
+    <path d="M194 146H462" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#rt-blue)"/>
+    <path d="M194 220H462" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#rt-blue)"/>
+    <text x="330" y="138" font-size="12" fill="#64748b" text-anchor="middle">stdin → JSONL stdout</text>
+    <text x="330" y="212" font-size="12" fill="#64748b" text-anchor="middle">queue-triggered, deduped</text>
+
+    <!-- wrapped calls: MCP, webhook, library -->
+    <path d="M194 294H228" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#rt-amber)"/>
+    <path d="M194 368H228" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#rt-amber)"/>
+    <path d="M194 442H228" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#rt-amber)"/>
+    <path d="M432 368H462" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#rt-amber)"/>
+
+    <!-- bundle to destinations -->
+    <path d="M706 146H736" stroke="#c4b5fd" stroke-width="2.5" marker-end="url(#rt-violet)"/>
+    <path d="M706 220H736" stroke="#c4b5fd" stroke-width="2.5" marker-end="url(#rt-violet)"/>
+    <path d="M706 294H736" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#rt-amber)"/>
+    <path d="M706 388H736" stroke="#5eead4" stroke-width="2.5" marker-end="url(#rt-teal)"/>
+
+    <!-- lake replay back into source-* -->
+    <path d="M813 426V500H586V482" fill="none" stroke="#5eead4" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#rt-teal)"/>
+    <text x="699" y="520" font-size="12" fill="#5eead4" text-anchor="middle">replay from the lake via source-* adapters</text>
+
+    <g text-anchor="middle">
+      <rect x="14" y="114" width="180" height="64" rx="12" fill="#0f172a" stroke="#60a5fa"/>
+      <text x="104" y="141" font-size="14" font-weight="800" fill="#93c5fd">CLI pipe · CI job</text>
+      <text x="104" y="162" font-size="12" fill="#94a3b8">shell, GitHub Actions</text>
+
+      <rect x="14" y="188" width="180" height="64" rx="12" fill="#0f172a" stroke="#60a5fa"/>
+      <text x="104" y="215" font-size="14" font-weight="800" fill="#93c5fd">Event runners</text>
+      <text x="104" y="236" font-size="12" fill="#94a3b8">AWS · GCP · Azure queues</text>
+
+      <rect x="14" y="262" width="180" height="64" rx="12" fill="#0f172a" stroke="#fbbf24"/>
+      <text x="104" y="289" font-size="14" font-weight="800" fill="#fcd34d">MCP server</text>
+      <text x="104" y="310" font-size="12" fill="#94a3b8">stdio · SSE, agent clients</text>
+
+      <rect x="14" y="336" width="180" height="64" rx="12" fill="#0f172a" stroke="#fbbf24"/>
+      <text x="104" y="363" font-size="14" font-weight="800" fill="#fcd34d">Webhook receiver</text>
+      <text x="104" y="384" font-size="12" fill="#94a3b8">HMAC or bearer, fail-closed</text>
+
+      <rect x="14" y="410" width="180" height="64" rx="12" fill="#0f172a" stroke="#fbbf24"/>
+      <text x="104" y="437" font-size="14" font-weight="800" fill="#fcd34d">Python library</text>
+      <text x="104" y="458" font-size="12" fill="#94a3b8">SkillsClient, in-process</text>
+    </g>
+
+    <rect x="232" y="262" width="200" height="212" rx="14" fill="#1a1405" stroke="#fbbf24" stroke-width="1.6"/>
+    <g font-size="12" fill="#e2e8f0">
+      <text x="248" y="290" font-size="14" font-weight="800" fill="#fcd34d">Guardrails</text>
+      <text x="248" y="316">• allowlist + typed tool schemas</text>
+      <text x="248" y="340">• no file-path arguments</text>
+      <text x="248" y="364">• --apply needs approval context</text>
+      <text x="248" y="388">• secrets scrubbed from child env</text>
+      <text x="248" y="412">• rlimits · timeout · 10 MB cap</text>
+      <text x="248" y="436">• HMAC-chained audit log</text>
+      <text x="248" y="460" fill="#94a3b8">CLI and runners skip this layer</text>
+    </g>
+
+    <rect x="466" y="114" width="240" height="364" rx="14" fill="#0b1220" stroke="#34d399"/>
+    <text x="586" y="138" font-size="14" font-weight="800" fill="#6ee7b7" text-anchor="middle">134 skills · stdin → stdout</text>
+    <g font-size="13">
+      <rect x="476" y="150" width="220" height="32" rx="8" fill="#0f172a" stroke="#2dd4bf"/>
+      <text x="488" y="171" font-weight="700" fill="#5eead4">source-*</text><text x="604" y="171" font-size="12" fill="#94a3b8">lake query</text><text x="594" y="171" font-weight="800" fill="#f8fafc" text-anchor="end">4</text>
+      <rect x="476" y="190" width="220" height="32" rx="8" fill="#0f172a" stroke="#60a5fa"/>
+      <text x="488" y="211" font-weight="700" fill="#93c5fd">ingest-*</text><text x="604" y="211" font-size="12" fill="#94a3b8">OCSF 1.8</text><text x="594" y="211" font-weight="800" fill="#f8fafc" text-anchor="end">25</text>
+      <rect x="476" y="230" width="220" height="32" rx="8" fill="#0f172a" stroke="#60a5fa"/>
+      <text x="488" y="251" font-weight="700" fill="#93c5fd">discover-*</text><text x="604" y="251" font-size="12" fill="#94a3b8">inventory</text><text x="594" y="251" font-weight="800" fill="#f8fafc" text-anchor="end">5</text>
+      <rect x="476" y="270" width="220" height="32" rx="8" fill="#0f172a" stroke="#34d399"/>
+      <text x="488" y="291" font-weight="700" fill="#6ee7b7">detect-*</text><text x="604" y="291" font-size="12" fill="#94a3b8">OCSF 2004</text><text x="594" y="291" font-weight="800" fill="#f8fafc" text-anchor="end">71</text>
+      <rect x="476" y="310" width="220" height="32" rx="8" fill="#0f172a" stroke="#34d399"/>
+      <text x="488" y="331" font-weight="700" fill="#6ee7b7">evaluate-*</text><text x="604" y="331" font-size="12" fill="#94a3b8">CIS · NIST</text><text x="594" y="331" font-weight="800" fill="#f8fafc" text-anchor="end">12</text>
+      <rect x="476" y="350" width="220" height="32" rx="8" fill="#0f172a" stroke="#a78bfa"/>
+      <text x="488" y="371" font-weight="700" fill="#c4b5fd">view</text><text x="604" y="371" font-size="12" fill="#94a3b8">SARIF, Mermaid</text><text x="594" y="371" font-weight="800" fill="#f8fafc" text-anchor="end">2</text>
+      <rect x="476" y="390" width="220" height="32" rx="8" fill="#1a1405" stroke="#fbbf24"/>
+      <text x="488" y="411" font-weight="700" fill="#fcd34d">remediate-*</text><text x="604" y="411" font-size="12" fill="#94a3b8">HITL-gated</text><text x="594" y="411" font-weight="800" fill="#f8fafc" text-anchor="end">12</text>
+      <rect x="476" y="430" width="220" height="32" rx="8" fill="#0f172a" stroke="#2dd4bf"/>
+      <text x="488" y="451" font-weight="700" fill="#5eead4">sink-*</text><text x="604" y="451" font-size="12" fill="#94a3b8">append-only</text><text x="594" y="451" font-weight="800" fill="#f8fafc" text-anchor="end">3</text>
+    </g>
+
+    <g text-anchor="middle">
+      <rect x="740" y="114" width="146" height="64" rx="12" fill="#0f172a" stroke="#a78bfa"/>
+      <text x="813" y="141" font-size="14" font-weight="800" fill="#c4b5fd">SIEM / SOAR</text>
+      <text x="813" y="162" font-size="12" fill="#94a3b8">OCSF JSONL</text>
+
+      <rect x="740" y="188" width="146" height="64" rx="12" fill="#0f172a" stroke="#a78bfa"/>
+      <text x="813" y="215" font-size="14" font-weight="800" fill="#c4b5fd">Code scanning</text>
+      <text x="813" y="236" font-size="12" fill="#94a3b8">SARIF · PR review</text>
+
+      <rect x="740" y="262" width="146" height="64" rx="12" fill="#1a1405" stroke="#fbbf24"/>
+      <text x="813" y="289" font-size="14" font-weight="800" fill="#fcd34d">Cloud · IdP APIs</text>
+      <text x="813" y="310" font-size="12" fill="#94a3b8">approved writes only</text>
+
+      <rect x="740" y="350" width="146" height="76" rx="12" fill="#0f172a" stroke="#2dd4bf"/>
+      <text x="813" y="376" font-size="14" font-weight="800" fill="#5eead4">Lake</text>
+      <text x="813" y="396" font-size="12" fill="#94a3b8">S3 · Snowflake</text>
+      <text x="813" y="413" font-size="12" fill="#94a3b8">ClickHouse</text>
+    </g>
+  </g>
+</svg>
