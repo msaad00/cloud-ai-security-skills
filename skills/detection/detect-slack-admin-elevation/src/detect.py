@@ -148,7 +148,10 @@ def _grant_window() -> tuple[int, int]:
 def _hour_outside_window(time_ms: int, window: tuple[int, int]) -> bool:
     if time_ms <= 0:
         return False
-    dt = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+    try:
+        dt = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return False
     start, end = window
     return not (start <= dt.hour < end)
 

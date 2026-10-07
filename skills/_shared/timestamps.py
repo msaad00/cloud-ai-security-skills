@@ -18,6 +18,9 @@ from skills._shared.runtime_telemetry import emit_stderr_event
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 _ONE_MS = timedelta(milliseconds=1)
+# datetime.max at millisecond precision; anything later cannot be rendered by
+# datetime.fromtimestamp downstream and is never a real event time.
+MAX_TS_MS = (datetime.max.replace(tzinfo=timezone.utc) - _EPOCH) // _ONE_MS
 _NUMERIC = re.compile(r"^\d+(\.\d+)?$")
 # Legacy non-ISO layouts seen in SAP audit exports (DATUM/UZEIT, dd.mm.yyyy).
 _EXTRA_FORMATS = ("%Y%m%d %H%M%S", "%d.%m.%Y %H:%M:%S")
@@ -77,8 +80,16 @@ def parse_ts_ms(value: Any) -> int | None:
     Accepts ISO-8601 strings (`Z`, numeric offsets, any fractional precision;
     naive values are UTC) and positive epoch numbers or numeric strings whose
     unit (s / ms / us / ns) is inferred from magnitude. Missing, empty,
-    boolean, non-positive, non-finite, and unrecognised values return None.
+    boolean, non-positive, non-finite, unrecognised, and post-year-9999
+    values return None.
     """
+    parsed = _parse_any(value)
+    if parsed is None or parsed > MAX_TS_MS:
+        return None
+    return parsed
+
+
+def _parse_any(value: Any) -> int | None:
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, int):

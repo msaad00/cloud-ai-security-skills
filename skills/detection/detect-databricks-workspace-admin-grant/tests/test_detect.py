@@ -99,6 +99,15 @@ TIME_OUTSIDE_WINDOW_MS = 1744686000000
 
 
 class TestDetection:
+    def test_out_of_range_time_does_not_kill_the_batch(self) -> None:
+        events = [
+            _event(uid="ev-huge", time_ms=10**22, grantee="huge@example.com"),
+            _event(uid="ev-ok", time_ms=TIME_IN_WINDOW_MS),
+        ]
+        findings = list(detect(events))
+        grantees = [f["evidence"]["grantee"] for f in findings]
+        assert "newadmin@example.com" in grantees
+
     def test_unauthorized_granter_fires(self) -> None:
         events = [_event(uid="ev-1", time_ms=TIME_IN_WINDOW_MS)]
         findings = list(detect(events))

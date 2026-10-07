@@ -90,6 +90,15 @@ def _event(
 
 
 class TestDetection:
+    def test_out_of_range_time_does_not_kill_the_batch(self, monkeypatch) -> None:
+        monkeypatch.setenv("SLACK_AUTHORIZED_GRANTERS", "U_BREAKGLASS")
+        events = [
+            _event(uid="huge", time_ms=10**22, grantee_uid="U_HUGE"),
+            _event(uid="ok"),
+        ]
+        findings = list(detect(events))
+        assert "U_GRANTEE" in [f["evidence"]["grantee"] for f in findings]
+
     def test_unauthorized_granter_in_window_fires(self, monkeypatch) -> None:
         monkeypatch.setenv("SLACK_AUTHORIZED_GRANTERS", "U_BREAKGLASS,U_SECOPS_BOT")
         findings = list(detect([_event(uid="a1")]))
