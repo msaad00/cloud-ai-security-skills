@@ -28,6 +28,7 @@ because they need fixed layout, logo marks, and exact text containment:
 | File | Purpose |
 |---|---|
 | [`../images/hero-banner.svg`](../images/hero-banner.svg) | first-viewport repo positioning, shipped counts, and signal-source vendor marks |
+| [`../images/runtime-architecture.svg`](../images/runtime-architecture.svg) | runtime architecture: entry surfaces → shared guardrail wrapper → skill bundle → destinations, with lake replay |
 | [`../images/architecture-layers.svg`](../images/architecture-layers.svg) | seven skill layers in phase columns (signals → intake → analyze → act → persist) |
 | [`../images/agentic-soc-orchestrator.svg`](../images/agentic-soc-orchestrator.svg) | LangGraph-first orchestration; LangChain as optional MCP/triage glue |
 | [`../images/clickhouse-data-lake.svg`](../images/clickhouse-data-lake.svg) | ClickHouse closed-loop lake hero |
