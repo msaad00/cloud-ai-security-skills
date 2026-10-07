@@ -254,6 +254,7 @@ _NON_PATH_FLAGS = frozenset(
         "--approve-pod-kill",
         "--auth-swap-window-ms",
         "--auto-remediate",
+        "--batch-size",
         "--bucket",
         "--compression-type",
         "--confirm",
