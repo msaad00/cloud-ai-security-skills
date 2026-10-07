@@ -560,8 +560,8 @@ class TestAssumeRoleBoundaryGuardrail:
 
     def test_test_coverage_validator_passes(self, tmp_path: Path):
         # Synthetic report: every layer in LAYER_FLOORS gets a class whose hit
-        # rate sits comfortably above its floor (90% for _shared, 70% for
-        # remediation, 80% for the rest). If a future PR adds a new layer
+        # rate sits comfortably above its floor (94% for _shared, 70% for
+        # remediation, 79-85% for the rest). If a future PR adds a new layer
         # floor, add a corresponding row here so the test keeps reflecting
         # what a clean run looks like.
         report = tmp_path / "coverage.xml"
@@ -611,9 +611,38 @@ class TestAssumeRoleBoundaryGuardrail:
             f"</coverage>\n"
         )
 
+    def test_test_coverage_validator_rejects_reports_that_measure_test_files(self, tmp_path: Path):
+        # Test modules executed by pytest are ~100% covered by definition, so
+        # counting them inflates every floor. The validator must refuse such
+        # a report instead of passing it.
+        xml = self._synthetic_coverage_xml(
+            layers={
+                "_shared": (95, 100),
+                "detection": (85, 100),
+                "discovery": (85, 100),
+                "evaluation": (85, 100),
+                "ingestion": (85, 100),
+                "output": (85, 100),
+                "remediation": (75, 100),
+                "view": (85, 100),
+            },
+            overall_line_rate=0.86,
+        ).replace("skills/view/example/src/example.py", "skills/view/example/tests/test_example.py")
+        report = tmp_path / "coverage-with-tests.xml"
+        report.write_text(xml, encoding="utf-8")
+        assert TEST_COVERAGE.main([str(report)]) == 1
+
+    def test_coverage_config_omits_test_files(self):
+        import tomllib
+
+        config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        omit = config["tool"]["coverage"]["run"]["omit"]
+        assert "*/tests/*" in omit
+        assert "*/conftest.py" in omit
+
     def test_test_coverage_validator_fails_low_detection_floor(self, tmp_path: Path):
         # Same shape as the passing fixture but `detection` drops to 60% —
-        # below its 80% floor. The other layers still pass so we isolate the
+        # below its 79% floor. The other layers still pass so we isolate the
         # failure mode to the floor we're testing.
         report = tmp_path / "coverage-low.xml"
         report.write_text(

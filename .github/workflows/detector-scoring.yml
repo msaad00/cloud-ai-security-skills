@@ -31,7 +31,7 @@ jobs:
       - uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
-          packages: pyyaml
+          sync-args: --group mcp
 
       - name: Ensure base ref is fetched
         run: |

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import sys
 from pathlib import Path
 
@@ -160,6 +162,38 @@ def test_audit_writer_exception_does_not_break_call():
     ).read_bytes()
     result = client.invoke("ingest-cloudtrail-ocsf", stdin=raw)
     assert result.exit_code == 0
+
+
+def test_audit_writer_exception_emits_structured_warning(monkeypatch):
+    """A failing audit writer must not crash the call, but the failure must
+    not be silent either: one structured JSON warning lands on stderr."""
+
+    def _broken_writer(rec):
+        raise RuntimeError("operator's sink is down")
+
+    handler = LIB._log.logger.handlers[0]
+    buf = io.StringIO()
+    monkeypatch.setattr(handler, "stream", buf)
+
+    client = LIB.SkillsClient(
+        allowed_skills=("ingest-cloudtrail-ocsf",),
+        audit_writer=_broken_writer,
+    )
+    raw = (
+        REPO_ROOT / "skills" / "detection-engineering" / "golden" / "cloudtrail_raw_sample.jsonl"
+    ).read_bytes()
+    result = client.invoke("ingest-cloudtrail-ocsf", stdin=raw)
+    assert result.exit_code == 0
+
+    lines = [line for line in buf.getvalue().splitlines() if line.strip()]
+    assert len(lines) == 1
+    warning = json.loads(lines[0])
+    assert warning["level"] == "warning"
+    assert warning["event"] == "skills_library_audit_writer_failed"
+    assert warning["error_type"] == "RuntimeError"
+    assert warning["error"] == "operator's sink is down"
+    assert warning["skill"] == "ingest-cloudtrail-ocsf"
+    assert warning["correlation_id"] == result.correlation_id
 
 
 def test_approval_count_helper_handles_empty():

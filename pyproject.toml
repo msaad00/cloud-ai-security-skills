@@ -108,6 +108,11 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+[tool.coverage.run]
+# Measure shipped code only: test modules and fixtures are not product
+# coverage and would inflate the floors in scripts/validate_test_coverage.py.
+omit = ["*/tests/*", "*/conftest.py"]
+
 [tool.mypy]
 # Skills use a flat src/<entrypoint>.py layout (e.g. src/detect.py, src/ingest.py)
 # repeated across dozens of skill directories. Running `mypy skills/` discovers
