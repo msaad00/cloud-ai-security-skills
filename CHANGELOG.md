@@ -11,6 +11,11 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-10-07 — Replay-safe webhooks, source-only finding time
+
+Pre-1.0 MINOR release **with breaking changes** for webhook senders and MCP
+event-uid consumers; see "Changed (breaking)".
+
 ### Changed (breaking)
 
 - **Webhook HMAC now signs a timestamp** (#723): senders sign
