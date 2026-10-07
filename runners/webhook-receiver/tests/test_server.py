@@ -8,6 +8,7 @@ import hmac
 import importlib.util
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -37,6 +38,24 @@ def _hex_hmac(secret: str, body: bytes) -> str:
     return hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
 
+def _signed(secret: str, body: bytes, ts: int | None = None) -> dict[str, str]:
+    stamp = str(int(time.time()) if ts is None else ts)
+    sig = _hex_hmac(secret, stamp.encode() + b"." + body)
+    return {"X-Hub-Signature-256": f"sha256={sig}", "X-Webhook-Timestamp": stamp}
+
+
+class _Done:
+    returncode = 0
+    stdout = b""
+    stderr = b""
+
+
+def _capture_audit(monkeypatch, server) -> list[dict]:
+    events: list[dict] = []
+    monkeypatch.setattr(server, "_emit_audit", events.append)
+    return events
+
+
 def test_healthz_returns_ok(monkeypatch):
     server = _load_server(monkeypatch)
     client = TestClient(server.app)
@@ -45,72 +64,192 @@ def test_healthz_returns_ok(monkeypatch):
     assert resp.json() == {"status": "ok", "service": "webhook-receiver"}
 
 
-def test_unknown_skill_returns_404(monkeypatch):
-    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "")
+UNAUTH_ROUTES = [
+    "this-skill-does-not-exist",
+    "ingest-cloudtrail-ocsf",
+    "ingest-okta-system-log-ocsf",
+    "remediate-mcp-tool-quarantine",
+]
+
+
+@pytest.mark.parametrize(
+    "auth_env",
+    [
+        {},
+        {"WEBHOOK_BEARER_TOKEN": "real"},
+        {"WEBHOOK_HMAC_SECRETS": json.dumps({"ingest-cloudtrail-ocsf": "secret"})},
+    ],
+    ids=["no-auth-configured", "bearer-configured", "hmac-configured"],
+)
+def test_unauthenticated_requests_get_uniform_401_on_every_route(monkeypatch, auth_env):
+    """Before auth, an unknown skill, a non-allowlisted skill, a wrong-category
+    skill, and an allowlisted skill must be indistinguishable."""
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
+    monkeypatch.delenv("WEBHOOK_BEARER_TOKEN", raising=False)
+    monkeypatch.delenv("WEBHOOK_HMAC_SECRETS", raising=False)
+    for key, value in auth_env.items():
+        monkeypatch.setenv(key, value)
     server = _load_server(monkeypatch)
     client = TestClient(server.app)
-    resp = client.post("/webhook/this-skill-does-not-exist", content=b"{}")
+    responses = [client.post(f"/webhook/{route}", content=b"{}") for route in UNAUTH_ROUTES]
+    assert {r.status_code for r in responses} == {401}
+    assert {r.text for r in responses} == {'{"detail":"unauthorized"}'}
+
+
+def test_unknown_skill_returns_404_after_auth(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "")
+    monkeypatch.setenv("WEBHOOK_BEARER_TOKEN", "real")
+    server = _load_server(monkeypatch)
+    client = TestClient(server.app)
+    resp = client.post(
+        "/webhook/this-skill-does-not-exist",
+        content=b"{}",
+        headers={"Authorization": "Bearer real"},
+    )
     assert resp.status_code == 404
 
 
-def test_known_skill_outside_allowlist_returns_403(monkeypatch):
+def test_known_skill_outside_allowlist_returns_403_after_auth(monkeypatch):
     """Default-deny — the skill ships but the operator has not opted it in."""
     monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "")
+    monkeypatch.setenv("WEBHOOK_BEARER_TOKEN", "real")
     server = _load_server(monkeypatch)
     client = TestClient(server.app)
-    resp = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}")
+    resp = client.post(
+        "/webhook/ingest-cloudtrail-ocsf",
+        content=b"{}",
+        headers={"Authorization": "Bearer real"},
+    )
     assert resp.status_code == 403
 
 
 def test_remediation_skill_is_refused_even_if_allowlisted(monkeypatch):
     """Receiver refuses non-ingestion categories regardless of allowlist."""
     monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "remediate-mcp-tool-quarantine")
+    monkeypatch.setenv("WEBHOOK_BEARER_TOKEN", "real")
     server = _load_server(monkeypatch)
     client = TestClient(server.app)
-    resp = client.post("/webhook/remediate-mcp-tool-quarantine", content=b"{}")
+    resp = client.post(
+        "/webhook/remediate-mcp-tool-quarantine",
+        content=b"{}",
+        headers={"Authorization": "Bearer real"},
+    )
     assert resp.status_code == 403
     assert "ingestion" in resp.json()["detail"]
 
 
-def test_missing_signature_returns_401(monkeypatch):
-    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
-    monkeypatch.setenv(
-        "WEBHOOK_HMAC_SECRETS",
-        json.dumps({"ingest-cloudtrail-ocsf": "secret"}),
-    )
-    server = _load_server(monkeypatch)
-    client = TestClient(server.app)
-    resp = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}")
-    assert resp.status_code == 401
-    assert resp.json()["detail"] == "missing_signature"
-
-
-def test_invalid_signature_returns_401(monkeypatch):
-    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
-    monkeypatch.setenv(
-        "WEBHOOK_HMAC_SECRETS",
-        json.dumps({"ingest-cloudtrail-ocsf": "secret"}),
-    )
+def test_hmac_secret_on_non_allowlisted_skill_returns_403_after_auth(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "")
+    monkeypatch.delenv("WEBHOOK_BEARER_TOKEN", raising=False)
+    monkeypatch.setenv("WEBHOOK_HMAC_SECRETS", json.dumps({"ingest-cloudtrail-ocsf": "secret"}))
     server = _load_server(monkeypatch)
     client = TestClient(server.app)
     resp = client.post(
-        "/webhook/ingest-cloudtrail-ocsf",
-        content=b"{}",
-        headers={"X-Hub-Signature-256": "sha256=" + ("0" * 64)},
+        "/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=_signed("secret", b"{}")
+    )
+    assert resp.status_code == 403
+
+
+def _hmac_server(monkeypatch, **extra_env):
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
+    monkeypatch.delenv("WEBHOOK_BEARER_TOKEN", raising=False)
+    monkeypatch.delenv("WEBHOOK_ALLOW_LEGACY_HMAC", raising=False)
+    monkeypatch.setenv("WEBHOOK_HMAC_SECRETS", json.dumps({"ingest-cloudtrail-ocsf": "secret"}))
+    monkeypatch.setenv("WEBHOOK_SINK_TARGETS", "")
+    for key, value in extra_env.items():
+        monkeypatch.setenv(key, value)
+    server = _load_server(monkeypatch)
+    monkeypatch.setattr(server.subprocess, "run", lambda *a, **k: _Done())
+    return server
+
+
+@pytest.mark.parametrize(
+    ("headers", "reason"),
+    [
+        ({}, "missing_signature"),
+        (
+            {"X-Hub-Signature-256": "sha256=" + "0" * 64, "X-Webhook-Timestamp": "1"},
+            "signature_invalid",
+        ),
+        ({"X-Hub-Signature-256": "sha256=" + _hex_hmac("secret", b"{}")}, "missing_timestamp"),
+    ],
+)
+def test_hmac_failures_return_uniform_401_with_reason_in_audit(monkeypatch, headers, reason):
+    server = _hmac_server(monkeypatch)
+    events = _capture_audit(monkeypatch, server)
+    client = TestClient(server.app)
+    resp = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=headers)
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "unauthorized"
+    assert events[-1]["error_type"] == reason
+
+
+def test_stale_timestamp_returns_401(monkeypatch):
+    server = _hmac_server(monkeypatch)
+    events = _capture_audit(monkeypatch, server)
+    client = TestClient(server.app)
+    stale = int(time.time()) - 301
+    resp = client.post(
+        "/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=_signed("secret", b"{}", stale)
     )
     assert resp.status_code == 401
-    assert resp.json()["detail"] == "signature_invalid"
+    assert events[-1]["error_type"] == "timestamp_out_of_window"
+
+
+def test_replayed_signed_request_is_rejected(monkeypatch):
+    server = _hmac_server(monkeypatch)
+    events = _capture_audit(monkeypatch, server)
+    client = TestClient(server.app)
+    headers = _signed("secret", b"{}")
+    first = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=headers)
+    second = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=headers)
+    assert first.status_code == 200, first.text
+    assert second.status_code == 401
+    assert events[-1]["error_type"] == "replayed_request"
+    # A fresh signature for the same body is a new delivery and is accepted.
+    third = client.post(
+        "/webhook/ingest-cloudtrail-ocsf",
+        content=b"{}",
+        headers=_signed("secret", b"{}", int(time.time()) - 1),
+    )
+    assert third.status_code == 200, third.text
+
+
+def test_legacy_body_only_hmac_requires_opt_in(monkeypatch):
+    legacy = {"X-Hub-Signature-256": "sha256=" + _hex_hmac("secret", b"{}")}
+    server = _hmac_server(monkeypatch)
+    client = TestClient(server.app)
+    assert (
+        client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=legacy).status_code
+        == 401
+    )
+
+    server = _hmac_server(monkeypatch, WEBHOOK_ALLOW_LEGACY_HMAC="1")
+    events = _capture_audit(monkeypatch, server)
+    client = TestClient(server.app)
+    first = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=legacy)
+    assert first.status_code == 200, first.text
+    assert events[-1]["hmac_scheme"] == "legacy_body_only"
+    replay = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=legacy)
+    assert replay.status_code == 401
 
 
 def test_bearer_required_when_configured(monkeypatch):
     monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
     monkeypatch.setenv("WEBHOOK_BEARER_TOKEN", "real")
     server = _load_server(monkeypatch)
+    events = _capture_audit(monkeypatch, server)
     client = TestClient(server.app)
     resp = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}")
-    # 401 for missing bearer (no HMAC configured here)
     assert resp.status_code == 401
-    assert resp.json()["detail"] == "missing_bearer"
+    assert resp.json()["detail"] == "unauthorized"
+    assert events[-1]["error_type"] == "missing_bearer"
+
+
+def test_invalid_tolerance_refuses_to_start(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS", "0")
+    with pytest.raises(ValueError, match="WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS"):
+        _load_server(monkeypatch)
 
 
 def test_valid_signature_routes_to_skill(monkeypatch, tmp_path):
@@ -129,14 +268,10 @@ def test_valid_signature_routes_to_skill(monkeypatch, tmp_path):
     body = (
         REPO_ROOT / "skills" / "detection-engineering" / "golden" / "cloudtrail_raw_sample.jsonl"
     ).read_bytes()
-    sig = _hex_hmac("secret", body)
     resp = client.post(
         "/webhook/ingest-cloudtrail-ocsf",
         content=body,
-        headers={
-            "X-Hub-Signature-256": f"sha256={sig}",
-            "Content-Type": "application/json",
-        },
+        headers={**_signed("secret", body), "Content-Type": "application/json"},
     )
     assert resp.status_code == 200, resp.text
     payload = resp.json()
@@ -162,10 +297,12 @@ def test_no_auth_configured_fails_closed(monkeypatch):
         raise AssertionError("skill must not run without auth")
 
     monkeypatch.setattr(server.subprocess, "run", _boom)
+    events = _capture_audit(monkeypatch, server)
     client = TestClient(server.app)
     resp = client.post("/webhook/ingest-cloudtrail-ocsf", content=_cloudtrail_body())
     assert resp.status_code == 401
-    assert resp.json()["detail"] == "auth_not_configured"
+    assert resp.json()["detail"] == "unauthorized"
+    assert events[-1]["error_type"] == "auth_not_configured"
 
 
 def test_malformed_hmac_secrets_refuse_to_start(monkeypatch):

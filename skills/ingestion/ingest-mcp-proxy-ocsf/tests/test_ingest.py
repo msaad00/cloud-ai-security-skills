@@ -235,7 +235,7 @@ class TestIngest:
         assert "skipping line 1" in capsys.readouterr().err
 
     def test_skips_non_object_json(self, capsys):
-        lines = ["[1,2,3]", '{"timestamp":"2026-04-10T05:00:00Z","method":"ping"}']
+        lines = ["123", '{"timestamp":"2026-04-10T05:00:00Z","method":"ping"}']
         events = list(ingest(lines))
         assert len(events) == 1
         assert "not a JSON object" in capsys.readouterr().err
@@ -565,3 +565,109 @@ class TestNativeRedaction:
         monkeypatch.setenv(MAX_CHARS_ENV, "16")
         _, _, response, _ = ingest(_canary_session(), preserve_mcp_content=True)
         assert response["unmapped"] == {"mcp": {"response": {"body_omitted": "size_cap"}}}
+
+
+# ── Event uid derivation ───────────────────────────────────────────────
+
+
+def _uids(raw: dict) -> list[str]:
+    return [e["metadata"]["uid"] for e in convert_event(raw)]
+
+
+def _call(**overrides) -> dict:
+    raw = {
+        "timestamp": "2026-04-10T09:00:01.000Z",
+        "session_id": "s",
+        "method": "tools/call",
+        "direction": "request",
+        "params": {"name": "t", "arguments": {"pin": "1234"}},
+    }
+    raw.update(overrides)
+    return raw
+
+
+class TestEventUid:
+    def test_uid_does_not_depend_on_call_arguments(self):
+        """A short argument must not be recoverable by brute-forcing the uid."""
+        base = _uids(_call())
+        for args in ({"pin": "0000"}, {}, {"pin": "1234", "extra": CANARY}):
+            assert _uids(_call(params={"name": "t", "arguments": args})) == base
+
+    def test_uid_does_not_depend_on_content_not_in_output(self):
+        sampling = _sampling({"systemPrompt": "a", "messages": []})
+        other = _sampling({"systemPrompt": f"b-{CANARY}", "messages": [{"content": "x"}]})
+        assert _uids(sampling) == _uids(other)
+        response = _call(direction="response", params=None, body={"content": "x"})
+        assert _uids(response) == _uids(_call(direction="response", params=None, body={"y": 1}))
+
+    def test_uid_distinguishes_output_identity_fields(self):
+        base = _uids(_call())
+        assert _uids(_call(timestamp="2026-04-10T09:00:02.000Z")) != base
+        assert _uids(_call(session_id="s2")) != base
+        assert _uids(_call(direction="response")) != base
+        assert _uids(_call(params={"name": "other", "arguments": {}})) != base
+
+    def test_uid_distinguishes_jsonrpc_id_when_present(self):
+        assert _uids(_call(id=1)) != _uids(_call(id=2))
+
+    def test_tools_list_events_get_one_uid_per_tool(self):
+        raw = {
+            "timestamp": "2026-04-10T09:00:00.000Z",
+            "session_id": "s",
+            "method": "tools/list",
+            "direction": "response",
+            "body": {"tools": [{"name": "a"}, {"name": "b"}, {"name": "a"}]},
+        }
+        uids = _uids(raw)
+        assert len(uids) == len(set(uids)) == 3
+
+    def test_uids_unique_across_golden_raw_fixtures(self):
+        for fixture in sorted(GOLDEN.glob("mcp_*raw*.jsonl")):
+            uids = [e["metadata"]["uid"] for e in ingest(fixture.read_text().splitlines())]
+            assert uids, fixture.name
+            assert len(uids) == len(set(uids)), fixture.name
+
+
+# ── JSON-RPC batch lines ───────────────────────────────────────────────
+
+
+class TestBatchLines:
+    def test_batch_array_expands_to_member_events_in_order(self):
+        single = [json.loads(line) for line in _canary_session()]
+        batched = list(ingest([json.dumps(single)]))
+        line_by_line = list(ingest(_canary_session()))
+        assert batched == line_by_line
+        assert len(batched) == 4
+
+    def test_batched_tools_call_reaches_detector_shape(self):
+        batched = list(ingest([json.dumps([_call(), _call(timestamp="2026-04-10T09:00:05Z")])]))
+        assert [e["mcp"]["tool"] for e in batched] == [{"name": "t"}, {"name": "t"}]
+        assert all(e["activity_id"] == ACTIVITY_READ for e in batched)
+
+    def test_batched_members_follow_redaction_rules(self, monkeypatch):
+        monkeypatch.delenv(PRESERVE_CONTENT_ENV, raising=False)
+        line = json.dumps([json.loads(line) for line in _canary_session()])
+        for fmt in OUTPUT_FORMATS:
+            assert CANARY not in json.dumps(list(ingest([line], output_format=fmt)))
+            preserved = json.dumps(
+                list(ingest([line], output_format=fmt, preserve_mcp_content=True))
+            )
+            assert f"msg-{CANARY}" in preserved
+            assert f"args-{CANARY}" not in preserved
+
+    def test_batch_skips_non_object_members(self, capsys):
+        line = json.dumps([1, [_call()], _call(), "x"])
+        events = list(ingest([line]))
+        assert len(events) == 1
+        err = capsys.readouterr().err
+        assert "skipping line 1 batch member 0: not a JSON object" in err
+        assert "skipping line 1 batch member 1: not a JSON object" in err
+        assert "skipping line 1 batch member 3: not a JSON object" in err
+
+    def test_empty_batch_is_skipped_with_warning(self, capsys):
+        assert list(ingest(["[]"])) == []
+        assert "empty JSON-RPC batch" in capsys.readouterr().err
+
+    def test_batch_member_with_bad_timestamp_does_not_drop_siblings(self):
+        line = json.dumps([_call(timestamp="not-a-time"), _call()])
+        assert len(list(ingest([line]))) == 1
