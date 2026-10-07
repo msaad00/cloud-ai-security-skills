@@ -37,6 +37,7 @@ import json
 import os
 import secrets
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +75,8 @@ BIND_ENV = "MCP_SSE_BIND"
 PORT_ENV = "MCP_SSE_PORT"
 KEYS_ENV = KEYS_ENV_FALLBACK
 ALLOW_PUBLIC_BIND_ENV = "MCP_SSE_ALLOW_PUBLIC_BIND"
+MAX_BODY_ENV = "MCP_SSE_MAX_BODY_BYTES"
+DEFAULT_MAX_BODY_BYTES = 1024 * 1024
 
 DEFAULT_BIND = "127.0.0.1"
 DEFAULT_PORT = 8765
@@ -133,6 +136,49 @@ def _check_bind_safety(bind: str, has_keys: bool, env: dict[str, str] | None = N
         )
         sys.stderr.flush()
         raise SystemExit(2)
+
+
+def _max_body_bytes(src: Mapping[str, str]) -> int:
+    raw = (src.get(MAX_BODY_ENV) or "").strip()
+    if not raw:
+        return DEFAULT_MAX_BODY_BYTES
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 0
+    if value <= 0:
+        sys.stderr.write(f"[mcp-sse] {MAX_BODY_ENV} must be a positive integer, got {raw!r}\n")
+        sys.stderr.flush()
+        raise SystemExit(2)
+    return value
+
+
+class _BodyError(Exception):
+    def __init__(self, status_code: int, error: str) -> None:
+        super().__init__(error)
+        self.status_code = status_code
+        self.error = error
+
+
+async def _read_json_object(request: Request, max_bytes: int) -> dict[str, Any]:
+    """Read at most `max_bytes` of body and decode one JSON object. The
+    stream is consumed incrementally so a chunked upload without
+    Content-Length cannot buffer past the cap."""
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > max_bytes:
+        raise _BodyError(413, "payload_too_large")
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > max_bytes:
+            raise _BodyError(413, "payload_too_large")
+    try:
+        payload = json.loads(bytes(body))
+    except ValueError as exc:
+        raise _BodyError(400, "invalid_json") from exc
+    if not isinstance(payload, dict):
+        raise _BodyError(400, "invalid_payload")
+    return payload
 
 
 def _verify_bearer(request: Request, key_store: KeyStore) -> bool:
@@ -226,6 +272,13 @@ def create_app(
     if install_sighup:
         key_store.install_sighup_handler()
     _check_bind_safety(effective_bind, key_store.has_keys(), env)
+    max_body_bytes = _max_body_bytes(src)
+    try:
+        dispatch.audit_sink()
+    except ValueError as exc:
+        sys.stderr.write(f"[mcp-sse] {exc}\n")
+        sys.stderr.flush()
+        raise SystemExit(2) from exc
 
     registry = _SessionRegistry()
 
@@ -260,18 +313,16 @@ def create_app(
     async def messages(request: Request) -> Response:
         if not _verify_bearer(request, key_store):
             return JSONResponse({"error": "unauthorized"}, status_code=401)
+        try:
+            payload = await _read_json_object(request, max_body_bytes)
+        except _BodyError as exc:
+            return JSONResponse({"error": exc.error}, status_code=exc.status_code)
         token = request.query_params.get("session", "")
         if not token:
             return JSONResponse({"error": "missing_session"}, status_code=400)
         session = await registry.get(token)
         if session is None:
             return JSONResponse({"error": "unknown_session"}, status_code=404)
-        try:
-            payload = await request.json()
-        except (ValueError, json.JSONDecodeError):
-            return JSONResponse({"error": "invalid_json"}, status_code=400)
-        if not isinstance(payload, dict):
-            return JSONResponse({"error": "invalid_payload"}, status_code=400)
 
         # Dispatch off the event loop — the per-tool subprocess can take
         # multiple seconds and we don't want to wedge the listener.
@@ -295,11 +346,9 @@ def create_app(
         if not _verify_bearer(request, key_store):
             return JSONResponse({"error": "unauthorized"}, status_code=401)
         try:
-            payload = await request.json()
-        except (ValueError, json.JSONDecodeError):
-            return JSONResponse({"error": "invalid_json"}, status_code=400)
-        if not isinstance(payload, dict):
-            return JSONResponse({"error": "invalid_payload"}, status_code=400)
+            payload = await _read_json_object(request, max_body_bytes)
+        except _BodyError as exc:
+            return JSONResponse({"error": exc.error}, status_code=exc.status_code)
         response = await asyncio.to_thread(
             dispatch.handle_request, payload, transport=SSE_TRANSPORT_LABEL
         )

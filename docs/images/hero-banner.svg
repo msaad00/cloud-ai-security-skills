@@ -43,7 +43,7 @@
     </g>
 
     <text x="60" y="222" fill="#64748b" font-size="12" font-weight="700" letter-spacing="1.4">SIGNAL SOURCES</text>
-    <text x="60" y="242" fill="#475569" font-size="13">22 ingest skills normalize logs, APIs, IdP, and SaaS exports into OCSF 1.8</text>
+    <text x="60" y="242" fill="#94a3b8" font-size="13">25 ingest skills normalize logs, APIs, IdP, and SaaS exports into OCSF 1.8</text>
 
     <g transform="translate(60,256)">
       <g transform="translate(0,0)">
@@ -88,6 +88,6 @@
       </g>
     </g>
 
-    <text x="60" y="382" fill="#475569" font-size="12">Vendor marks from Simple Icons (CC0). Full matrix: docs/INGEST_COVERAGE.md</text>
+    <text x="60" y="382" fill="#94a3b8" font-size="12">Vendor marks from Simple Icons (CC0). Full matrix: docs/INGEST_COVERAGE.md</text>
   </g>
 </svg>

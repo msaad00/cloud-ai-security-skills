@@ -172,7 +172,14 @@ def _stdio_call(tool: str, args: list[str], stdin_text: str) -> dict:
             proc.kill()
 
 
-def _build_app(monkeypatch, tmp_path, *, key="test-key", bind="127.0.0.1", hmac_key="chain-key"):
+def _build_app(
+    monkeypatch,
+    tmp_path,
+    *,
+    key="test-key",
+    bind="127.0.0.1",
+    hmac_key="chain-key-0123456789abcdef0123456789abcdef",
+):
     """Wire env, reset the cached audit sink, and build the Starlette app.
 
     The audit sink is a process-local global; each test that wants its
@@ -319,7 +326,9 @@ class TestAuditChain:
         # chain, and the verifier has to replay them as one stream.
         log_path = tmp_path / "audit.jsonl"
         monkeypatch.setenv("CLOUD_SECURITY_MCP_AUDIT_LOG", str(log_path))
-        monkeypatch.setenv("CLOUD_SECURITY_AUDIT_HMAC_KEY", "chain-key")
+        monkeypatch.setenv(
+            "CLOUD_SECURITY_AUDIT_HMAC_KEY", "chain-key-0123456789abcdef0123456789abcdef"
+        )
         SERVER._reset_audit_sink_for_tests()
 
         # Synthetic stdio audit event — bypass tool subprocess so the
@@ -366,7 +375,10 @@ class TestAuditChain:
         assert records[1]["prev_hash"] == records[0]["chain_hash"]
 
         # And the canonical verifier must accept the joined log.
-        env = {**os.environ, "CLOUD_SECURITY_AUDIT_HMAC_KEY": "chain-key"}
+        env = {
+            **os.environ,
+            "CLOUD_SECURITY_AUDIT_HMAC_KEY": "chain-key-0123456789abcdef0123456789abcdef",
+        }
         result = subprocess.run(
             [sys.executable, str(VERIFY_SCRIPT), str(log_path)],
             env=env,
@@ -468,7 +480,10 @@ class TestConcurrentClients:
 
         # The verifier is the canonical chain check: replay the log
         # under the configured key and assert zero errors.
-        env = {**os.environ, "CLOUD_SECURITY_AUDIT_HMAC_KEY": "chain-key"}
+        env = {
+            **os.environ,
+            "CLOUD_SECURITY_AUDIT_HMAC_KEY": "chain-key-0123456789abcdef0123456789abcdef",
+        }
         result = subprocess.run(
             [sys.executable, str(VERIFY_SCRIPT), str(log_path)],
             env=env,
@@ -478,3 +493,65 @@ class TestConcurrentClients:
         )
         assert result.returncode == 0, result.stderr
         assert "verified 4 records, 0 error(s)" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# Boundary hardening — body cap and fail-closed audit key.
+# ---------------------------------------------------------------------------
+
+
+class TestSseBoundary:
+    def test_rpc_rejects_oversized_body(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("MCP_SSE_MAX_BODY_BYTES", "128")
+        app, _ = _build_app(monkeypatch, tmp_path)
+        big = {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": {"pad": "x" * 512}}
+        with TestClient(app) as client:
+            response = client.post("/rpc", json=big, headers={"Authorization": "Bearer test-key"})
+            small = client.post(
+                "/rpc",
+                json={"jsonrpc": "2.0", "id": 2, "method": "ping"},
+                headers={"Authorization": "Bearer test-key"},
+            )
+        assert response.status_code == 413
+        assert response.json()["error"] == "payload_too_large"
+        assert small.status_code == 200
+
+    def test_rpc_rejects_oversized_chunked_body_without_content_length(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("MCP_SSE_MAX_BODY_BYTES", "128")
+        app, _ = _build_app(monkeypatch, tmp_path)
+
+        def _chunks():
+            yield b'{"jsonrpc": "2.0", "id": 1, "method": "ping", "params": {"pad": "'
+            yield b"x" * 512
+            yield b'"}}'
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/rpc",
+                content=_chunks(),
+                headers={"Authorization": "Bearer test-key"},
+            )
+        assert response.status_code == 413
+
+    def test_messages_rejects_oversized_body(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("MCP_SSE_MAX_BODY_BYTES", "128")
+        app, _ = _build_app(monkeypatch, tmp_path)
+        big = {"jsonrpc": "2.0", "id": 1, "method": "ping", "params": {"pad": "x" * 512}}
+        with TestClient(app) as client:
+            response = client.post(
+                "/messages?session=anything",
+                json=big,
+                headers={"Authorization": "Bearer test-key"},
+            )
+        assert response.status_code == 413
+
+    def test_invalid_body_cap_refuses_to_start(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("MCP_SSE_MAX_BODY_BYTES", "lots")
+        with pytest.raises(SystemExit) as excinfo:
+            _build_app(monkeypatch, tmp_path)
+        assert excinfo.value.code == 2
+
+    def test_placeholder_hmac_key_refuses_to_start(self, monkeypatch, tmp_path):
+        with pytest.raises(SystemExit) as excinfo:
+            _build_app(monkeypatch, tmp_path, hmac_key="please-set-me")
+        assert excinfo.value.code == 2

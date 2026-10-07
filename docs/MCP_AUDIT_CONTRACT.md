@@ -70,7 +70,7 @@ post-hoc, set:
 | Variable | Effect |
 |---|---|
 | `CLOUD_SECURITY_MCP_AUDIT_LOG` | Absolute path to a JSONL file. Each `mcp_tool_call` event is appended with a per-event `fsync()`. The file is created with mode `0600`; parent directories are created if needed. |
-| `CLOUD_SECURITY_AUDIT_HMAC_KEY` | When set, every event carries `prev_hash` and `chain_hash` fields, computed as `HMAC-SHA-256(key, prev_hash \|\| canonical_event_json)`. The chain seeds from `0` * 64 on first start and resumes from the last persisted `chain_hash` across restarts. |
+| `CLOUD_SECURITY_AUDIT_HMAC_KEY` | When set, every event carries `prev_hash` and `chain_hash` fields, computed as `HMAC-SHA-256(key, prev_hash \|\| canonical_event_json)`. The chain seeds from `0` * 64 on first start and resumes from the last persisted `chain_hash` across restarts. The key must be at least 32 bytes and not the `please-set-me` placeholder, or the server refuses to start (exit 2). It is never forwarded to skill subprocesses. |
 
 Verify a chain post-hoc:
 
@@ -203,9 +203,16 @@ Before the subprocess runs, the wrapper enforces:
   `CLOUD_SECURITY_MCP_ALLOWED_SKILLS`; setting
   `CLOUD_SECURITY_MCP_REQUIRE_CALLER_ALLOWED_SKILLS=1` rejects calls without a
   caller skill scope by exposing no callable tools
+- the final argv (free-form `args` plus typed schema parameters) carries no
+  filesystem paths: path-valued flags such as `--output`/`-o`, `--config`,
+  `--manifest` (and their argparse abbreviations) and path-like positionals
+  are rejected with `error_type: ArgPolicyError`; payloads travel through
+  `input`. See [`mcp-server/README.md`](../mcp-server/README.md#mcp-server)
+  for the exact rule.
 - write-capable tools must stay in safe mode at the wrapper boundary:
-  `--dry-run` for generic write tools, or no `--apply` for dry-run-default
-  `handler.py` / `checks.py` entrypoints
+  `--dry-run` (exact token) for generic write tools, or no `--apply` for
+  dry-run-default `handler.py` / `checks.py` entrypoints; `--apply=...` and
+  any prefix abbreviation such as `--appl` count as `--apply`
 - write-capable tools with `approver_roles` must receive `_approval_context`
 
 These checks are part of the audited lifecycle. A failure here still produces an

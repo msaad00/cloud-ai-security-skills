@@ -1568,7 +1568,9 @@ def print_summary(findings: list[Finding]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="CIS GCP Foundations Benchmark v3.0 Assessment")
+    parser = argparse.ArgumentParser(
+        description="CIS GCP Foundations Benchmark v3.0 Assessment", allow_abbrev=False
+    )
     parser.add_argument("--project", required=True, help="GCP project ID")
     parser.add_argument(
         "--section",

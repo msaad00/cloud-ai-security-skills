@@ -680,7 +680,7 @@ def run(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Plan, apply, or re-verify MCP tool quarantine entries."
+        description="Plan, apply, or re-verify MCP tool quarantine entries.", allow_abbrev=False
     )
     parser.add_argument("input", nargs="?", help="JSONL input. Defaults to stdin.")
     parser.add_argument("--output", "-o", help="JSONL output. Defaults to stdout.")

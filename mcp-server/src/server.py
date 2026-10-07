@@ -16,6 +16,7 @@ CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
+import arg_policy  # noqa: E402
 import sandbox  # noqa: E402
 import worker_pool  # noqa: E402
 from audit_sink import AuditSink, sink_from_env  # noqa: E402
@@ -395,7 +396,7 @@ def _build_child_env() -> dict[str, str]:
         if value:
             env[key] = value
     for key, raw_value in os.environ.items():
-        if not key.startswith("CLOUD_SECURITY_"):
+        if not key.startswith("CLOUD_SECURITY_") or arg_policy.is_wrapper_only_env(key):
             continue
         value = raw_value.strip()
         if value:
@@ -411,18 +412,21 @@ def _is_safe_write_invocation(skill: SkillSpec, args: list[str]) -> bool:
     Remediation `handler.py` and evaluation `checks.py` entrypoints can be
     dry-run by default and only write when `--apply` is present, so allow those
     tools to run as long as `--apply` is absent. Other write-capable categories
-    keep the stricter explicit `--dry-run` requirement.
+    keep the stricter explicit `--dry-run` requirement. Argparse prefix
+    abbreviations (`--appl`) and `--apply=...` count as `--apply`.
     """
     if skill.read_only:
         return True
+    if any(arg_policy.is_apply_flag(arg) for arg in args):
+        return False
     if (
         skill.category == "remediation"
         and skill.entrypoint
         and skill.entrypoint.name == "handler.py"
     ):
-        return "--apply" not in args
+        return True
     if skill.category == "evaluation" and skill.entrypoint and skill.entrypoint.name == "checks.py":
-        return "--apply" not in args
+        return True
     return "--dry-run" in args
 
 
@@ -430,7 +434,7 @@ def _requires_approval_context(skill: SkillSpec, args: list[str]) -> bool:
     if skill.read_only or not skill.approver_roles:
         return False
     if skill.category == "evaluation" and skill.entrypoint and skill.entrypoint.name == "checks.py":
-        return "--apply" in args
+        return any(arg_policy.is_apply_flag(arg) for arg in args)
     return True
 
 
@@ -565,6 +569,7 @@ def _call_tool(
     try:
         if name not in _scoped_tool_map(caller_context, tools):
             raise KeyError(f"unknown tool `{name}`")
+        arg_policy.check_args(args, category=skill.category, root=repo_root())
         if not _is_safe_write_invocation(skill, args):
             raise ValueError(
                 "write-capable tools must stay in dry-run/read-only mode under MCP "
@@ -765,6 +770,12 @@ def _handle_request(
 
 
 def serve() -> int:
+    try:
+        _audit_sink()
+    except ValueError as exc:
+        sys.stderr.write(f"[mcp] {exc}\n")
+        sys.stderr.flush()
+        return 2
     while True:
         message = _read_message(sys.stdin.buffer)
         if message is None:

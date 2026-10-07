@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="cms-title cms-desc">
-  <title id="cms-title">Cloud AI Security Skills  closed-loop coverage summary</title>
+  <title id="cms-title">Cloud AI Security Skills â€” closed-loop coverage summary</title>
   <desc id="cms-desc">Compact summary of detect-to-remediate coverage. 71 shipped detection skills; 13 closed loops today. Writes remain HITL gated and dry-run first. Full per-skill matrix lives in docs/FRAMEWORK_COVERAGE.md and docs/images/coverage-matrix.svg.</desc>
 
   <defs>
@@ -13,7 +13,7 @@
 
   <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
     <text x="48" y="52" font-size="28" font-weight="800" fill="#f8fafc">Closed-loop coverage</text>
-    <text x="48" y="80" font-size="14" fill="#94a3b8">Detections with a shipped, HITL-gated remediation path · full matrix in FRAMEWORK_COVERAGE.md</text>
+    <text x="48" y="80" font-size="14" fill="#94a3b8">Detections with a shipped, HITL-gated remediation path Â· full matrix in FRAMEWORK_COVERAGE.md</text>
 
     <!-- summary cards -->
     <rect x="48" y="108" width="200" height="88" rx="16" fill="#052e2b" stroke="#22c55e"/>
@@ -47,9 +47,9 @@
 
     <!-- closed-loop examples -->
     <text x="48" y="300" font-size="13" font-weight="700" fill="#e2e8f0">Shipped closed loops (sample)</text>
-    <text x="48" y="324" font-size="12" fill="#94a3b8">open SG/NSG/firewall ’ revoke · K8s escape/RBAC ’ revoke · MCP tool drift ’ quarantine · Okta/Workspace session ’ kill · IAM departures ’ AWS/Azure/GCP</text>
+    <text x="48" y="324" font-size="12" fill="#94a3b8">open SG/NSG/firewall â†’ revoke Â· K8s escape/RBAC â†’ revoke Â· MCP tool drift â†’ quarantine Â· Okta/Workspace session â†’ kill Â· IAM departures â†’ AWS/Azure/GCP</text>
 
     <rect x="48" y="340" width="1104" height="32" rx="10" fill="#0f172a" stroke="#334155"/>
-    <text x="64" y="362" font-size="12" fill="#64748b">Full 71-row matrix: docs/images/coverage-matrix.svg · docs/FRAMEWORK_COVERAGE.md</text>
+    <text x="64" y="362" font-size="12" fill="#64748b">Full 71-row matrix: docs/images/coverage-matrix.svg Â· docs/FRAMEWORK_COVERAGE.md</text>
   </g>
 </svg>

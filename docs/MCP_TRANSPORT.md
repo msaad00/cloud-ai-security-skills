@@ -74,6 +74,7 @@ worker pool, resource limits) fires identically to stdio.
 | `MCP_SSE_BEARER_KEYS_FILE` | _(unset)_ | absolute path to a JSON keys file (preferred for production, see "Bearer-key rotation contract" below) |
 | `MCP_SSE_BEARER_KEYS` | _(unset)_ | comma-separated env fallback (slice-1 contract); ignored when the file env is set |
 | `MCP_SSE_ALLOW_PUBLIC_BIND` | _(unset)_ | required when `MCP_SSE_BIND` is non-loopback; together with at least one bearer key, this opts the operator into network exposure |
+| `MCP_SSE_MAX_BODY_BYTES` | `1048576` | max request body on `/rpc` and `/messages`, enforced while streaming; larger bodies get `413 payload_too_large`, a non-positive or non-integer value stops startup |
 
 The audit-log envs documented in
 [`MCP_AUDIT_CONTRACT.md`](MCP_AUDIT_CONTRACT.md)

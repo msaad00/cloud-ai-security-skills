@@ -357,7 +357,8 @@ def main(argv: list[str] | None = None) -> int:
     worker Function.
     """
     parser = argparse.ArgumentParser(
-        description="Dry-run the Entra IAM departures parser against a manifest file."
+        description="Dry-run the Entra IAM departures parser against a manifest file.",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "manifest", help="Path to a manifest JSON file (see examples/manifest.json)."
