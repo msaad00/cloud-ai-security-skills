@@ -69,6 +69,10 @@ non-read-only verbs.
 Raw JSONL rows exactly as the Databricks SQL connector returns them,
 serialized with JSON-safe string conversion for datetimes and other non-JSON-native values.
 
+Rows are fetched with `cursor.fetchmany` in batches of 1000 and written as they
+arrive, so memory stays bounded for large result sets. A mid-stream error exits
+non-zero after the rows already written.
+
 Typical compositions:
 
 ```bash

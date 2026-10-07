@@ -5,6 +5,7 @@
 - **clickhouse-connect Python client** — https://clickhouse.com/docs/integrations/python
 - **HTTPS / native interfaces** — https://clickhouse.com/docs/interfaces/overview
 - **Querying with the Python client** — https://clickhouse.com/docs/integrations/python#querying-data
+- **Streaming queries (`query_rows_stream`)** — https://clickhouse.com/docs/integrations/language-clients/python/advanced-querying#streaming-queries
 
 ## Read-only SQL semantics
 

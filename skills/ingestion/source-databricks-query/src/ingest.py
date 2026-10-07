@@ -6,11 +6,12 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from skills._shared.read_only_sql import normalize_read_only_query
 
 SKILL_NAME = "source-databricks-query"
+FETCH_BATCH_SIZE = 1000
 
 
 def _read_query(cli_query: str | None, stdin: Iterable[str]) -> str:
@@ -43,29 +44,28 @@ def _connect() -> Any:
     return sql.connect(**kwargs)
 
 
-def fetch_rows(query: str) -> list[dict[str, Any]]:
+def _normalize_row(row: Any, column_names: list[str]) -> dict[str, Any]:
+    if isinstance(row, dict):
+        return dict(row)
+    if column_names:
+        return {name: value for name, value in zip(column_names, row, strict=False)}
+    return {"value": row}
+
+
+def fetch_rows(query: str, batch_size: int = FETCH_BATCH_SIZE) -> Iterator[dict[str, Any]]:
     conn = _connect()
     try:
         cursor = conn.cursor()
         try:
             cursor.execute(_normalize_query(query))
-            rows = cursor.fetchall()
             column_names = [column[0] for column in (cursor.description or [])]
+            while rows := cursor.fetchmany(batch_size):
+                for row in rows:
+                    yield _normalize_row(row, column_names)
         finally:
             cursor.close()
     finally:
         conn.close()
-
-    normalized: list[dict[str, Any]] = []
-    for row in rows:
-        if isinstance(row, dict):
-            normalized.append(dict(row))
-            continue
-        if column_names:
-            normalized.append({name: value for name, value in zip(column_names, row, strict=False)})
-        else:
-            normalized.append({"value": row})
-    return normalized
 
 
 def main(argv: list[str] | None = None) -> int:

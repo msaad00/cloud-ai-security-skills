@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -68,9 +70,13 @@ class TestPrepareRowsAndKey:
 
         assert rows[0].schema_mode == "native"
         assert rows[1].schema_mode == "ocsf"
-        key = _object_key("findings/lm", rows, datetime(2026, 4, 15, 12, 0, 0, tzinfo=UTC))
-        assert key.startswith("findings/lm/2026/04/15/20260415T120000Z-")
-        assert key.endswith(".jsonl")
+        body = _SINK._body(rows)
+        key = _object_key("findings/lm", body, datetime(2026, 4, 15, 12, 0, 0, tzinfo=UTC))
+        digest = hashlib.sha256(
+            "\n".join(row.payload_json for row in rows).encode("utf-8")
+        ).hexdigest()[:12]
+        assert key == f"findings/lm/2026/04/15/20260415T120000Z-{digest}.jsonl"
+        assert body == ("\n".join(row.payload_json for row in rows) + "\n").encode("utf-8")
 
     def test_rejects_non_object_json(self):
         try:
@@ -86,13 +92,16 @@ class TestWriteAndMain:
         fake = _FakeClient()
         monkeypatch.setattr(_SINK, "_client", lambda: fake)
 
-        written = _SINK._write_object(
+        _SINK._write_object(
             "my-sec-lake",
             "findings/lm/2026/04/15/object.jsonl",
-            _prepare_rows(['{"schema_mode":"native","event_uid":"evt-1","finding_uid":"f-1"}\n']),
+            _SINK._body(
+                _prepare_rows(
+                    ['{"schema_mode":"native","event_uid":"evt-1","finding_uid":"f-1"}\n']
+                )
+            ),
         )
 
-        assert written == 1
         assert len(fake.calls) == 1
         call = fake.calls[0]
         assert call["Bucket"] == "my-sec-lake"
@@ -123,7 +132,7 @@ class TestWriteAndMain:
         monkeypatch.setattr(
             _SINK,
             "_object_key",
-            lambda prefix, rows: "findings/lm/2026/04/15/object.jsonl",
+            lambda prefix, body: "findings/lm/2026/04/15/object.jsonl",
         )
 
         exit_code = main(["--bucket", "my-sec-lake", "--prefix", "findings/lm"])
@@ -141,7 +150,7 @@ class TestWriteAndMain:
         monkeypatch.setattr(
             _SINK,
             "_object_key",
-            lambda prefix, rows: "evidence/ctrl/2026/04/15/object.jsonl",
+            lambda prefix, body: "evidence/ctrl/2026/04/15/object.jsonl",
         )
 
         exit_code = main(["--bucket", "my-sec-lake", "--prefix", "evidence/ctrl", "--apply"])
@@ -160,7 +169,7 @@ class TestWriteAndMain:
         monkeypatch.setattr(
             _SINK,
             "_object_key",
-            lambda prefix, rows: "evidence/ctrl/2026/04/15/object.jsonl",
+            lambda prefix, body: "evidence/ctrl/2026/04/15/object.jsonl",
         )
 
         exit_code = main(["--bucket", "my-sec-lake", "--prefix", "evidence/ctrl", "--apply"])
@@ -175,3 +184,18 @@ class TestWriteAndMain:
 
         assert exit_code == 1
         assert "stdin did not contain any JSONL records" in capsys.readouterr().err
+
+
+def test_importing_the_sink_does_not_load_boto3():
+    code = (
+        "import importlib.util, sys\n"
+        f"spec = importlib.util.spec_from_file_location('s3_sink_lazy', {str(_SRC)!r})\n"
+        "mod = importlib.util.module_from_spec(spec)\n"
+        "sys.modules[spec.name] = mod\n"
+        "spec.loader.exec_module(mod)\n"
+        "print('boto3' in sys.modules)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert result.stdout.strip() == "False"

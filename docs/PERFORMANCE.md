@@ -65,7 +65,7 @@ work, not import) is consistent.
 |---|---|---|
 | `CLOUD_SECURITY_MCP_WORKER_POOL` | unset (off) | Truthy values: `1`, `true`, `yes`, `on`. |
 | `CLOUD_SECURITY_MCP_WORKER_IDLE_SECONDS` | 300 | A worker idle longer than this is killed on the next dispatch and re-spawned cold next call. |
-| `CLOUD_SECURITY_MCP_WORKER_MAX_BYTES` | 10485760 (10 MB) | Single-call stdout cap. A worker that exceeds it is killed; the call returns exit 1 with a diagnostic. |
+| `CLOUD_SECURITY_MCP_WORKER_MAX_BYTES` | 10485760 (10 MB) | Single-call output cap, applied to worker and one-shot calls alike. A worker that exceeds it on stdout is killed; a one-shot child that exceeds it on stdout or stderr is killed. Either way the call returns exit 1 with a diagnostic. |
 
 ### What the pool does NOT change
 

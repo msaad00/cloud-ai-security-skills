@@ -24,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.json_input import split_json_document  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 from skills._shared.timestamps import (  # noqa: E402
     TimestampUnparseable,
@@ -685,18 +686,7 @@ def convert_event(event: dict[str, Any], output_format: str = "ocsf") -> dict[st
 
 
 def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    buf = list(stream)
-    if not buf:
-        return
-
-    full = "\n".join(line.rstrip("\n") for line in buf).strip()
-    if not full:
-        return
-
-    try:
-        whole = json.loads(full)
-    except json.JSONDecodeError:
-        whole = None
+    whole, lines = split_json_document(stream)
 
     if isinstance(whole, dict):
         if isinstance(((whole.get("data") or {}).get("events")), list):
@@ -713,7 +703,7 @@ def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
                 yield event
         return
 
-    for lineno, raw_line in enumerate(buf, start=1):
+    for lineno, raw_line in enumerate(lines, start=1):
         line = raw_line.strip()
         if not line:
             continue

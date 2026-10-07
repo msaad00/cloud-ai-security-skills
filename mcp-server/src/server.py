@@ -438,6 +438,81 @@ def _requires_approval_context(skill: SkillSpec, args: list[str]) -> bool:
     return True
 
 
+def _run_one_shot(
+    command: list[str],
+    *,
+    stdin_text: str,
+    cwd: str | Path,
+    env: dict[str, str] | None,
+    timeout: float,
+    preexec_fn: Any,
+) -> subprocess.CompletedProcess[str]:
+    """`subprocess.run(capture_output=True, text=True)` with the worker pool's
+    output cap: a child writing more than `CLOUD_SECURITY_MCP_WORKER_MAX_BYTES`
+    to stdout or stderr is killed and the call fails, rather than the wrapper
+    buffering unbounded output (and echoing it twice in the response)."""
+    max_bytes = worker_pool._max_bytes()
+    overflow = threading.Event()
+    captured: dict[str, list[str]] = {"stdout": [], "stderr": []}
+
+    with subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=cwd,
+        env=env,
+        preexec_fn=preexec_fn,
+    ) as proc:
+
+        def _drain(name: str, stream: Any) -> None:
+            size = 0
+            while chunk := stream.read(65536):
+                size += len(chunk.encode("utf-8"))
+                if size > max_bytes:
+                    overflow.set()
+                    proc.kill()
+                    return
+                captured[name].append(chunk)
+
+        def _feed() -> None:
+            try:
+                proc.stdin.write(stdin_text)  # type: ignore[union-attr]
+                proc.stdin.close()  # type: ignore[union-attr]
+            except (BrokenPipeError, OSError, ValueError):
+                pass
+
+        threads = [
+            threading.Thread(target=_drain, args=("stdout", proc.stdout), daemon=True),
+            threading.Thread(target=_drain, args=("stderr", proc.stderr), daemon=True),
+            threading.Thread(target=_feed, daemon=True),
+        ]
+        for thread in threads:
+            thread.start()
+        try:
+            returncode = proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            raise
+        finally:
+            for thread in threads:
+                thread.join()
+
+    if overflow.is_set():
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            "",
+            "skill output exceeded CLOUD_SECURITY_MCP_WORKER_MAX_BYTES "
+            f"({max_bytes} bytes); process killed",
+        )
+    return subprocess.CompletedProcess(
+        command, returncode, "".join(captured["stdout"]), "".join(captured["stderr"])
+    )
+
+
 def _call_tool(
     name: str,
     arguments: dict[str, Any] | None,
@@ -579,15 +654,12 @@ def _call_tool(
                 preexec_fn=_make_preexec(limits) if os.name == "posix" else None,
             )
         else:
-            completed = subprocess.run(
+            completed = _run_one_shot(
                 command,
-                input=stdin_text,
-                text=True,
-                capture_output=True,
+                stdin_text=stdin_text,
                 cwd=repo_root(),
                 env=env,
                 timeout=timeout_seconds,
-                check=False,
                 preexec_fn=_make_preexec(limits) if os.name == "posix" else None,
             )
 

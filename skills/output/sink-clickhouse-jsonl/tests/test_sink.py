@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 _SRC = Path(__file__).resolve().parent.parent / "src" / "sink.py"
 _SPEC = importlib.util.spec_from_file_location("sink_clickhouse_jsonl", _SRC)
 assert _SPEC and _SPEC.loader
@@ -22,13 +24,14 @@ main = _SINK.main
 
 
 class _FakeClient:
-    def __init__(self, *, should_fail: bool = False) -> None:
+    def __init__(self, *, should_fail: bool = False, fail_on_call: int | None = None) -> None:
         self.should_fail = should_fail
+        self.fail_on_call = fail_on_call
         self.calls = []
         self.closed = False
 
     def insert(self, *, table, data, column_names) -> None:
-        if self.should_fail:
+        if self.should_fail or len(self.calls) == self.fail_on_call:
             raise RuntimeError("insert failed")
         self.calls.append(
             {
@@ -166,3 +169,51 @@ class TestInsertAndMain:
 
         assert exit_code == 1
         assert "stdin did not contain any JSONL records" in capsys.readouterr().err
+
+    def test_apply_inserts_in_batches(self, monkeypatch, capsys):
+        fake = _FakeClient()
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        lines = "".join(f'{{"event_uid":"evt-{i}"}}\n' for i in range(5))
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(lines))
+
+        exit_code = main(["--table", "security.findings_sink", "--apply", "--batch-size", "2"])
+
+        assert exit_code == 0
+        assert [len(call["data"]) for call in fake.calls] == [2, 2, 1]
+        assert [row[2] for call in fake.calls for row in call["data"]] == [
+            f"evt-{i}" for i in range(5)
+        ]
+        assert json.loads(capsys.readouterr().out)["inserted_records"] == 5
+        assert fake.closed is True
+
+    def test_invalid_input_writes_nothing(self, monkeypatch, capsys):
+        fake = _FakeClient()
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        lines = '{"event_uid":"a"}\n{"event_uid":"b"}\n{"event_uid":"c"}\nnot json\n'
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(lines))
+
+        exit_code = main(["--table", "security.findings_sink", "--apply", "--batch-size", "1"])
+
+        assert exit_code == 1
+        assert "line 4: invalid JSON" in capsys.readouterr().err
+        assert fake.calls == []
+
+    def test_mid_run_failure_reports_rows_already_inserted(self, monkeypatch, capsys):
+        fake = _FakeClient(fail_on_call=1)
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        lines = "".join(f'{{"event_uid":"evt-{i}"}}\n' for i in range(3))
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(lines))
+
+        exit_code = main(["--table", "security.findings_sink", "--apply", "--batch-size", "2"])
+
+        assert exit_code == 1
+        err = capsys.readouterr().err
+        assert "insert failed" in err
+        assert "2 records were inserted before the failure" in err
+        assert fake.closed is True
+
+    @pytest.mark.parametrize("value", ["0", "-5", "x"])
+    def test_rejects_non_positive_batch_size(self, value):
+        with pytest.raises(SystemExit) as exc:
+            main(["--table", "security.findings_sink", "--batch-size", value])
+        assert exc.value.code == 2

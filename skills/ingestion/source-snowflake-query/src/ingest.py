@@ -7,11 +7,12 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from skills._shared.read_only_sql import normalize_read_only_query
 
 SKILL_NAME = "source-snowflake-query"
+FETCH_BATCH_SIZE = 1000
 
 
 def _configure_snowflake_logging() -> None:
@@ -58,25 +59,19 @@ def _dict_cursor_class() -> Any:
     return snowflake.connector.DictCursor
 
 
-def fetch_rows(query: str) -> list[dict[str, Any]]:
+def fetch_rows(query: str, batch_size: int = FETCH_BATCH_SIZE) -> Iterator[dict[str, Any]]:
     conn = _connect()
     try:
         cursor = conn.cursor(_dict_cursor_class())
         try:
             cursor.execute(_normalize_query(query))
-            rows = cursor.fetchall()
+            while rows := cursor.fetchmany(batch_size):
+                for row in rows:
+                    yield dict(row) if isinstance(row, dict) else {"value": row}
         finally:
             cursor.close()
     finally:
         conn.close()
-
-    normalized: list[dict[str, Any]] = []
-    for row in rows:
-        if isinstance(row, dict):
-            normalized.append(dict(row))
-        else:
-            normalized.append({"value": row})
-    return normalized
 
 
 def main(argv: list[str] | None = None) -> int:

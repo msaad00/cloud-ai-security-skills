@@ -17,20 +17,47 @@ fetch_rows = _INGEST.fetch_rows
 
 
 class _FakeResult:
-    def __init__(self, column_names, result_rows):
+    def __init__(self, column_names):
         self.column_names = column_names
-        self.result_rows = result_rows
+
+
+class _FakeStream:
+    def __init__(self, column_names, rows):
+        self.source = _FakeResult(column_names)
+        self._rows = iter(rows)
+        self.pulled = 0
+        self.entered = False
+        self.exited = False
+
+    def __enter__(self):
+        self.entered = True
+        return self
+
+    def __exit__(self, *exc):
+        self.exited = True
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        assert self.entered and not self.exited
+        row = next(self._rows)
+        self.pulled += 1
+        return row
 
 
 class _FakeClient:
     def __init__(self, column_names, rows):
-        self._result = _FakeResult(column_names, rows)
+        self.stream = _FakeStream(column_names, rows)
         self.queries: list[str] = []
         self.closed = False
 
     def query(self, statement):
+        raise AssertionError("query() buffers the whole result set")
+
+    def query_rows_stream(self, statement):
         self.queries.append(statement)
-        return self._result
+        return self.stream
 
     def close(self):
         self.closed = True
@@ -150,7 +177,7 @@ class TestFetchRows:
         )
         monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
 
-        rows = fetch_rows("SELECT event_uid, schema_mode, payload FROM security.events_sink")
+        rows = list(fetch_rows("SELECT event_uid, schema_mode, payload FROM security.events_sink"))
 
         assert rows == [
             {"event_uid": "evt-1", "schema_mode": "ocsf", "payload": '{"class_uid":6003}'},
@@ -163,7 +190,28 @@ class TestFetchRows:
         fake = _FakeClient(column_names=["payload"], rows=[])
         monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
 
-        rows = fetch_rows("SELECT payload FROM security.findings_sink")
+        rows = list(fetch_rows("SELECT payload FROM security.findings_sink"))
 
         assert rows == []
+        assert fake.closed is True
+
+    def test_streams_rows_lazily(self, monkeypatch):
+        fake = _FakeClient(column_names=["n"], rows=[(i,) for i in range(5)])
+        monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
+
+        rows = fetch_rows("SELECT n FROM t")
+        assert next(rows) == {"n": 0}
+        assert fake.stream.pulled == 1
+        assert fake.closed is False
+
+        assert list(rows) == [{"n": i} for i in range(1, 5)]
+        assert fake.stream.exited is True
+        assert fake.closed is True
+
+    def test_main_writes_each_row_as_jsonl(self, monkeypatch, capsys):
+        fake = _FakeClient(column_names=["n"], rows=[(i,) for i in range(3)])
+        monkeypatch.setattr(_INGEST, "_connect", lambda: fake)
+
+        assert _INGEST.main(["--query", "SELECT n FROM t"]) == 0
+        assert capsys.readouterr().out == '{"n":0}\n{"n":1}\n{"n":2}\n'
         assert fake.closed is True
