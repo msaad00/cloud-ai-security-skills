@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="loop-title loop-desc">
+  <title id="loop-title">Cloud AI Security Skills — closed-loop flow</title>
+  <desc id="loop-desc">Raw cloud, IdP, Kubernetes, and MCP logs are normalized by 25 ingest skills into OCSF 1.8. 71 deterministic detect skills emit OCSF Detection Finding 2004 with MITRE ATT&amp;CK or ATLAS mappings. View skills render SARIF and Mermaid. Writes pass a human-in-the-loop gate (dry-run by default, named approver and incident ID) before 12 remediation skills run with --apply. Every write is dual-audited before and after (lookup table plus encrypted evidence object), then re-verified as VERIFIED, DRIFT, or UNREACHABLE. DRIFT re-emits an OCSF 2004 finding into the same pipeline, and AWS IAM departures audit is ingested back for the next run.</desc>
+  <defs>
+    <linearGradient id="loop-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#060b17"/><stop offset="100%" stop-color="#0a1325"/></linearGradient>
+    <marker id="a-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7dd3fc"/></marker>
+    <marker id="a-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#fbbf24"/></marker>
+    <marker id="a-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5eead4"/></marker>
+  </defs>
+  <rect width="900" height="560" fill="url(#loop-bg)"/>
+  <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
+    <text x="14" y="38" font-size="24" font-weight="800" fill="#f8fafc">Closed loop: signal → finding → gated fix → proof</text>
+    <text x="14" y="64" font-size="14" fill="#94a3b8">Read-only until a human approves. Every write is audited, then re-verified against live state.</text>
+
+    <rect x="6" y="84" width="530" height="334" rx="16" fill="none" stroke="#1e3a5f" stroke-dasharray="6 5"/>
+    <text x="22" y="106" font-size="12" font-weight="700" fill="#7dd3fc" letter-spacing="1.2">READ-ONLY · NO SIDE EFFECTS</text>
+    <rect x="546" y="84" width="348" height="334" rx="16" fill="none" stroke="#5c4413" stroke-dasharray="6 5"/>
+    <text x="562" y="106" font-size="12" font-weight="700" fill="#fbbf24" letter-spacing="1.2">WRITE PATH · HUMAN-GATED</text>
+
+    <path d="M166 184H190" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#a-blue)"/>
+    <path d="M346 184H370" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#a-blue)"/>
+    <path d="M526 184H550" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#a-amber)"/>
+    <path d="M706 184H730" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#a-amber)"/>
+    <path d="M450 248V286" stroke="#7dd3fc" stroke-width="2.5" marker-end="url(#a-blue)"/>
+    <path d="M810 248V286" stroke="#fbbf24" stroke-width="2.5" marker-end="url(#a-amber)"/>
+    <path d="M734 345H710" stroke="#5eead4" stroke-width="2.5" marker-end="url(#a-teal)"/>
+    <path d="M630 400V442H270V252" fill="none" stroke="#5eead4" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#a-teal)"/>
+
+    <g text-anchor="middle">
+      <rect x="14" y="120" width="152" height="128" rx="14" fill="#0d1526" stroke="#475569" stroke-dasharray="5 4"/>
+      <text x="90" y="148" font-size="15" font-weight="800" fill="#cbd5e1">Raw signals</text>
+      <text x="90" y="172" font-size="13" fill="#94a3b8">cloud audit + flow</text>
+      <text x="90" y="192" font-size="13" fill="#94a3b8">IdP sign-in logs</text>
+      <text x="90" y="212" font-size="13" fill="#94a3b8">K8s audit</text>
+      <text x="90" y="232" font-size="13" fill="#94a3b8">MCP proxy logs</text>
+
+      <rect x="194" y="120" width="152" height="128" rx="14" fill="#0f172a" stroke="#60a5fa"/>
+      <text x="270" y="148" font-size="15" font-weight="800" fill="#93c5fd">Ingest</text>
+      <text x="270" y="172" font-size="13" font-weight="700" fill="#f8fafc">25 ingest-* skills</text>
+      <text x="270" y="192" font-size="13" fill="#cbd5e1">→ OCSF 1.8 JSONL</text>
+      <text x="270" y="212" font-size="13" fill="#94a3b8">+4 source-* adapters</text>
+      <text x="270" y="232" font-size="13" fill="#94a3b8">for warehouse replay</text>
+
+      <rect x="374" y="120" width="152" height="128" rx="14" fill="#0f172a" stroke="#34d399"/>
+      <text x="450" y="148" font-size="15" font-weight="800" fill="#6ee7b7">Detect</text>
+      <text x="450" y="172" font-size="13" font-weight="700" fill="#f8fafc">71 deterministic</text>
+      <text x="450" y="192" font-size="13" fill="#cbd5e1">Detection Finding</text>
+      <text x="450" y="212" font-size="13" fill="#cbd5e1">OCSF 2004 + MITRE</text>
+      <text x="450" y="232" font-size="13" fill="#94a3b8">ATT&amp;CK / ATLAS</text>
+
+      <rect x="554" y="120" width="152" height="128" rx="14" fill="#1a1405" stroke="#fbbf24" stroke-width="1.6"/>
+      <text x="630" y="148" font-size="15" font-weight="800" fill="#fcd34d">HITL gate</text>
+      <text x="630" y="172" font-size="13" font-weight="700" fill="#f8fafc">dry-run by default</text>
+      <text x="630" y="192" font-size="13" fill="#cbd5e1">named approver</text>
+      <text x="630" y="212" font-size="13" fill="#cbd5e1">+ incident ID</text>
+      <text x="630" y="232" font-size="13" fill="#94a3b8">2 approvers if high-risk</text>
+
+      <rect x="734" y="120" width="152" height="128" rx="14" fill="#0f172a" stroke="#fbbf24"/>
+      <text x="810" y="148" font-size="15" font-weight="800" fill="#fcd34d">Remediate</text>
+      <text x="810" y="172" font-size="13" font-weight="700" fill="#f8fafc">12 write skills</text>
+      <text x="810" y="192" font-size="13" fill="#cbd5e1">--apply after gate</text>
+      <text x="810" y="212" font-size="13" fill="#94a3b8">protected targets</text>
+      <text x="810" y="232" font-size="13" fill="#94a3b8">denied in code</text>
+
+      <rect x="374" y="290" width="152" height="110" rx="14" fill="#0f172a" stroke="#a78bfa"/>
+      <text x="450" y="318" font-size="15" font-weight="800" fill="#c4b5fd">View</text>
+      <text x="450" y="342" font-size="13" font-weight="700" fill="#f8fafc">SARIF · Mermaid</text>
+      <text x="450" y="362" font-size="13" fill="#94a3b8">code scanning +</text>
+      <text x="450" y="382" font-size="13" fill="#94a3b8">attack-flow review</text>
+
+      <rect x="554" y="290" width="152" height="110" rx="14" fill="#0f172a" stroke="#2dd4bf"/>
+      <text x="630" y="318" font-size="15" font-weight="800" fill="#5eead4">Re-verify</text>
+      <text x="630" y="342" font-size="13" font-weight="700" fill="#f8fafc">VERIFIED / DRIFT</text>
+      <text x="630" y="362" font-size="13" fill="#cbd5e1">/ UNREACHABLE</text>
+      <text x="630" y="382" font-size="13" fill="#94a3b8">--reverify</text>
+
+      <rect x="734" y="290" width="152" height="110" rx="14" fill="#0f172a" stroke="#2dd4bf"/>
+      <text x="810" y="318" font-size="15" font-weight="800" fill="#5eead4">Dual audit</text>
+      <text x="810" y="342" font-size="13" font-weight="700" fill="#f8fafc">before + after write</text>
+      <text x="810" y="362" font-size="13" fill="#cbd5e1">lookup table +</text>
+      <text x="810" y="382" font-size="13" fill="#cbd5e1">encrypted evidence</text>
+    </g>
+
+    <text x="450" y="468" text-anchor="middle" font-size="13" fill="#99f6e4">Loop closes: DRIFT re-emits an OCSF 2004 finding into the same pipeline;</text>
+    <text x="450" y="486" text-anchor="middle" font-size="13" fill="#99f6e4">AWS IAM departures audit is ingested back so the next run cross-checks closure.</text>
+
+    <rect x="14" y="504" width="872" height="40" rx="10" fill="#0b1220" stroke="#334155"/>
+    <text x="30" y="529" font-size="13" fill="#cbd5e1"><tspan font-weight="800" fill="#f8fafc">Same code on every surface</tspan><tspan fill="#64748b" xml:space="preserve">   |   </tspan>CLI · CI · MCP · runners<tspan fill="#64748b" xml:space="preserve">   |   </tspan>MCP tool calls: <tspan font-weight="700" fill="#5eead4">HMAC-chained</tspan> audit log when a key is set</text>
+  </g>
+</svg>
