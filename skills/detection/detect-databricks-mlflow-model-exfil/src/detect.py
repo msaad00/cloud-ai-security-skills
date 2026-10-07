@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -29,6 +28,10 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 _log = get_logger(__name__, skill="detect-databricks-mlflow-model-exfil", layer="detection")
 
@@ -86,10 +89,6 @@ MITRE_TECHNIQUE_UID = "T1567"
 MITRE_TECHNIQUE_NAME = "Exfiltration Over Web Service"
 
 OWASP_FINDING_TYPE = "OWASP-LLM-Top-10-LLM06"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -191,7 +190,7 @@ def _build_native_finding(
     download_count: int,
     operations_seen: list[str],
     raw_event_uids: list[str],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     actor_uid = _actor_uid(event)
     actor_name = _actor_name(event)
     workspace_id = _workspace_id(event)
@@ -200,7 +199,10 @@ def _build_native_finding(
     model_version = _model_version(event)
     target_stage = _target_stage(event)
     operation = _api_operation(event)
-    time_ms = _event_time(event) or _now_ms()
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     finding_uid = _finding_uid(model_name, actor_uid, window_start_ms)
 
     description = (
@@ -449,6 +451,8 @@ def detect(
                 operations_seen=[_api_operation(event)],
                 raw_event_uids=[_metadata_uid(event)] if _metadata_uid(event) else [],
             )
+            if native_finding is None:
+                continue
             if output_format == "native":
                 yield native_finding
             else:

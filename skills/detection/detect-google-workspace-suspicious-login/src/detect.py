@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -17,6 +16,10 @@ if str(REPO_ROOT) not in sys.path:
 from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 SKILL_NAME = "detect-google-workspace-suspicious-login"
 OCSF_VERSION = "1.8.0"
@@ -52,10 +55,6 @@ BRUTE_FORCE_UID = "T1110"
 BRUTE_FORCE_NAME = "Brute Force"
 VALID_ACCOUNTS_UID = "T1078"
 VALID_ACCOUNTS_NAME = "Valid Accounts"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -196,9 +195,13 @@ def _build_finding(
     ip: str,
     related: list[dict[str, Any]],
     finding_kind: str,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     first = related[0]
     last = related[-1]
+    time_ms = finding_time_ms(_event_time(last))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     first_uid = _metadata_uid(first)
     last_uid = _metadata_uid(last)
     finding_uid = _finding_uid(user_uid, first_uid, last_uid, finding_kind)
@@ -244,7 +247,7 @@ def _build_finding(
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "Google Workspace",
-        "time_ms": _event_time(last) or _now_ms(),
+        "time_ms": time_ms,
         "severity": "high",
         "status": "success",
         "activity_id": FINDING_ACTIVITY_CREATE,
@@ -405,6 +408,8 @@ def detect(
             related=[item["event"]],
             finding_kind="workspace-suspicious-flag",
         )
+        if finding is None:
+            continue
         uid = finding["event_uid"]
         uid = finding["event_uid"]
         if uid in seen_findings:
@@ -453,6 +458,8 @@ def detect(
                 related=related,
                 finding_kind="workspace-failure-burst",
             )
+            if finding is None:
+                continue
             uid = finding["event_uid"]
             if uid in seen_findings:
                 continue

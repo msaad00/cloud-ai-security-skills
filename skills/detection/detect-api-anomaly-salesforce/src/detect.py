@@ -8,7 +8,6 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -20,6 +19,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-api-anomaly-salesforce"
 OCSF_VERSION = "1.8.0"
@@ -54,10 +54,6 @@ MITRE_TACTIC_NAME = "Persistence"
 MITRE_TECHNIQUE_UID = "T1078.004"
 MITRE_TECHNIQUE_NAME = "Valid Accounts: Cloud Accounts"
 OWASP_FINDING_TYPE = "OWASP-Top-10-A01"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _parse_positive_int_env(name: str, default: int) -> int:
@@ -381,10 +377,12 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
         if not _is_relevant(event):
             continue
         actor = _actor_id(event)
-        # Bucket assignment must be deterministic for replay-safe dedup: never
-        # fall back to wall-clock time here (that would make window_start_ms,
-        # and therefore finding_uid, depend on when detect() happens to run).
-        event_time = _event_time(event)
+        # An event without a source time cannot be placed in a window; never
+        # substitute the wall clock (finding_uid would depend on run time).
+        event_time = finding_time_ms(_event_time(event))
+        if event_time is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
         buckets[(actor, _window_start(event_time, window_minutes))].append(event)
 
     findings: list[dict[str, Any]] = []

@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -28,6 +27,10 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import (  # noqa: E402
+    emit_finding_time_missing,
+    finding_time_ms,
+)
 
 _log = get_logger(__name__, skill="detect-databricks-token-creation", layer="detection")
 
@@ -92,10 +95,6 @@ MITRE_SUBTECHNIQUE_NAME = "Additional Cloud Credentials"
 # control-plane mirror of LLM02 (insecure output handling): the agent
 # pipeline outputs a long-lived credential without operator approval.
 OWASP_FINDING_TYPE = "OWASP-LLM-Top-10-LLM02"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -199,8 +198,11 @@ def _finding_uid(event_uid: str, actor_uid: str, workspace_id: str, time_ms: int
     return f"det-databricks-token-create-{digest}"
 
 
-def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
-    time_ms = _event_time(event) or _now_ms()
+def _build_native_finding(event: dict[str, Any]) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(_event_time(event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     actor_uid = _actor_uid(event)
     actor_email = _actor_email(event)
     actor_name = _actor_name(event)
@@ -413,6 +415,8 @@ def detect(
             seen_uids.add(meta_uid)
 
         native_finding = _build_native_finding(event)
+        if native_finding is None:
+            continue
         if output_format == "native":
             yield native_finding
         else:

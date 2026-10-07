@@ -7,7 +7,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -16,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-system-prompt-extraction"
 # Framework depth markers (coverage_summary.py)
@@ -199,10 +199,6 @@ def _prompt_extraction_event(event: dict[str, Any]) -> dict[str, Any] | None:
     return normalized
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 def _excerpt(text: str, limit: int = 180) -> str:
     collapsed = " ".join(text.split())
     if len(collapsed) <= limit:
@@ -223,13 +219,18 @@ def _finding_uid(
     )
 
 
-def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
+def _build_native_finding(event: dict[str, Any]) -> dict[str, Any] | None:
     session_uid = str(event["session_uid"])
     tool_name = str(event["tool_name"] or "tool-unknown")
     event_uid = str(event["event_uid"] or "event-unknown")
     matched = list(event["matched_signals"])
     excerpt = _excerpt(str(event["excerpt"] or ""))
     finding_uid = _finding_uid(session_uid, tool_name, event_uid, matched)
+
+    time_ms = finding_time_ms(event.get("time_ms"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
 
     return {
         "schema_mode": "native",
@@ -240,7 +241,7 @@ def _build_native_finding(event: dict[str, Any]) -> dict[str, Any]:
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "MCP",
-        "time_ms": int(event.get("time_ms") or _now_ms()),
+        "time_ms": time_ms,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -341,7 +342,8 @@ def detect(
                 )
             continue
         finding = _build_native_finding(event)
-        yield finding if output_format == "native" else _render_ocsf_finding(finding)
+        if finding is not None:
+            yield finding if output_format == "native" else _render_ocsf_finding(finding)
 
 
 def _iter_jsonl(path: str | None) -> Iterable[dict[str, Any]]:

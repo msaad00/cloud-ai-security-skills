@@ -170,9 +170,20 @@ fingerprint = sha256(
 
 This is the pivot point for detection skills. Anything that makes the fingerprint change = tool drift.
 
+## Event UID
+
+`metadata.uid` / `event_uid` is SHA-256 over identity fields only:
+`timestamp`, `session_id`, `method`, `direction`, the JSON-RPC `id` when
+the proxy records one, and the tool name (plus its position for each tool
+in a `tools/list` response, so every emitted event has its own uid). Raw
+`params` and `body` (tools/call arguments, prompts, tool output) are never
+hashed into it: the other inputs appear in the output, so an unkeyed digest
+over content would let a reader brute-force short or guessable values.
+
 ## Behaviour on malformed input
 
 - One bad line → warning to stderr, skipped, pipeline continues.
+- A line holding a JSON array is a JSON-RPC batch: each object member is converted exactly as if it were its own line, under the same redaction rules. Non-object members and empty batches are skipped with a stderr warning; one bad member does not drop its siblings.
 - Missing or unparseable `timestamp` → line skipped with a `timestamp_unparseable` stderr warning (never stamped with the current time).
 - Missing `session_id` → `"sess-unknown"` (detected by downstream detection skills).
 - Empty file → zero output lines, exit 0.

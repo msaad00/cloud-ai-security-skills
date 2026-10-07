@@ -19,7 +19,6 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -36,6 +35,7 @@ CANONICAL_VERSION = "2026-04"
 OCSF_VERSION = "1.8.0"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 _log = get_logger(__name__, skill=SKILL_NAME, layer="detection")
 
@@ -125,8 +125,11 @@ def _finding_uid(event_uid: str, resource_id: str, time_ms: int) -> str:
 
 def _build_native_finding(
     *, event: dict[str, Any], resource_id: str, setting_name: str
-) -> dict[str, Any]:
-    time_ms = int(event.get("time") or datetime.now(timezone.utc).timestamp() * 1000)
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(event.get("time"))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     event_uid = str((event.get("metadata") or {}).get("uid") or "")
     finding_uid = _finding_uid(event_uid, resource_id, time_ms)
     return {
@@ -250,6 +253,8 @@ def detect(
         native = _build_native_finding(
             event=event, resource_id=resource_id, setting_name=setting_name
         )
+        if native is None:
+            continue
         yield native if output_format == "native" else _to_ocsf(native)
 
 

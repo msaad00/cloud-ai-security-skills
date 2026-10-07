@@ -56,6 +56,8 @@ env:
   WEBHOOK_ALLOWED_SKILLS: ""           # comma-separated; empty == default-deny
   WEBHOOK_SINK_TARGETS: ""             # e.g. "s3,clickhouse"
   WEBHOOK_HMAC_HEADER: "X-Hub-Signature-256"
+  WEBHOOK_TIMESTAMP_HEADER: "X-Webhook-Timestamp"
+  WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: "300"
   CLOUD_SECURITY_MCP_AUDIT_LOG: "/var/log/cloud-security/audit.jsonl"
   CLOUD_SECURITY_SKILL_MAX_BYTES: ""   # 1 GiB default, override only for memory-heavy skills
 

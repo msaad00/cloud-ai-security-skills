@@ -71,27 +71,17 @@ def _event_without_time(worker_id: int, batch_id: str = "batch-1") -> dict[str, 
     return event
 
 
-def test_finding_uid_deterministic_when_event_time_missing(monkeypatch) -> None:
-    """Regression: events with no `time` field must bucket deterministically.
-
-    detect() used to fall back to wall-clock `_now_ms()` when an event's
-    time was missing, and that value fed straight into the window bucket
-    (and therefore into `finding_uid`). Replaying the exact same input at
-    two different wall-clock times must produce byte-identical findings so
-    SIEM dedupe/replay is safe.
-    """
+def test_events_without_time_are_skipped_with_warning(monkeypatch, capsys) -> None:
+    """Events with no source time cannot be windowed: they are skipped with a
+    structured warning instead of being bucketed at the wall clock or epoch
+    zero, so replays of the same input stay byte-identical."""
     monkeypatch.setenv("WORKDAY_TERMINATION_COUNT_THRESHOLD", "3")
+    monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
     events = "\n".join(json.dumps(_event_without_time(i)) for i in range(1, 4)) + "\n"
 
-    monkeypatch.setattr(detect_mod, "_now_ms", lambda: 1_000_000_000_000)
-    findings_a = detect_mod.detect(StringIO(events), output_format="native")
-
-    monkeypatch.setattr(detect_mod, "_now_ms", lambda: 2_000_000_000_000)
-    findings_b = detect_mod.detect(StringIO(events), output_format="native")
-
-    assert len(findings_a) == 1
-    assert findings_a == findings_b
-    assert findings_a[0]["finding_uid"] == findings_b[0]["finding_uid"]
+    assert detect_mod.detect(StringIO(events), output_format="native") == []
+    warnings = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    assert [w["event"] for w in warnings] == ["finding_time_missing"] * 3
 
 
 def test_cli_outputs_ocsf(monkeypatch, tmp_path: Path) -> None:

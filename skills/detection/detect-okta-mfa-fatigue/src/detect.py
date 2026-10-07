@@ -16,7 +16,6 @@ import hashlib
 import json
 import sys
 from collections import Counter, deque
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -36,6 +35,7 @@ OCSF_VERSION = "1.8.0"
 CANONICAL_VERSION = "2026-04"
 REPO_NAME = "cloud-ai-security-skills"
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 OUTPUT_FORMATS = ("ocsf", "native")
 
@@ -74,10 +74,6 @@ MITRE_TACTIC_UID = "TA0006"
 MITRE_TACTIC_NAME = "Credential Access"
 MITRE_TECHNIQUE_UID = "T1621"
 MITRE_TECHNIQUE_NAME = "Multi-Factor Authentication Request Generation"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _event_time(event: dict[str, Any]) -> int:
@@ -210,7 +206,7 @@ def _finding_uid(user_uid: str, first_uid: str, last_uid: str) -> str:
 
 def _build_native_finding(
     user_uid: str, user_name: str, burst: list[dict[str, Any]]
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     first = burst[0]
     last = burst[-1]
     first_uid = first["event_uid"]
@@ -253,6 +249,10 @@ def _build_native_finding(
         {"name": "session.uid", "type": "Other", "value": uid} for uid in session_uids
     )
 
+    finding_time = finding_time_ms(last["time_ms"])
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -262,7 +262,7 @@ def _build_native_finding(
         "finding_uid": finding_uid,
         "event_uid": finding_uid,
         "provider": "Okta",
-        "time_ms": last["time_ms"] or _now_ms(),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -433,6 +433,8 @@ def detect(
             and kinds["deny"] >= min_denials
         ):
             native_finding = _build_native_finding(user_uid, item["user_name"], list(burst))
+            if native_finding is None:
+                continue
             if output_format == "native":
                 yield native_finding
             else:

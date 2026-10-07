@@ -204,8 +204,7 @@ def run_webhook_scenario(samples: int) -> dict[str, Any]:
                 "error": f"fixture empty: {fixture_path}",
                 "samples": 0,
             }
-        body = (raw_lines[0] + "\n").encode("utf-8")
-        sig = "sha256=" + _hex_hmac(secret, body)
+        record = raw_lines[0]
 
         client = TestClient(server_mod.app)
 
@@ -221,7 +220,13 @@ def run_webhook_scenario(samples: int) -> dict[str, Any]:
             }
 
         failures = 0
-        for _ in range(samples):
+        for i in range(samples):
+            # Each sample is a distinct delivery: the receiver rejects a
+            # re-sent signature as a replay, so vary the body (trailing JSON
+            # whitespace) and sign it with a fresh timestamp.
+            body = (record + " " * i + "\n").encode("utf-8")
+            stamp = str(int(time.time()))
+            sig = "sha256=" + _hex_hmac(secret, stamp.encode("ascii") + b"." + body)
             t0 = time.perf_counter()
             resp = client.post(
                 f"/webhook/{scenario}",
@@ -229,6 +234,7 @@ def run_webhook_scenario(samples: int) -> dict[str, Any]:
                 headers={
                     "Content-Type": "application/json",
                     "X-Hub-Signature-256": sig,
+                    "X-Webhook-Timestamp": stamp,
                 },
             )
             dur_ms = (time.perf_counter() - t0) * 1000.0

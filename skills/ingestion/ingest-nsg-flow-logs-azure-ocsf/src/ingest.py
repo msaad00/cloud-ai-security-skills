@@ -297,7 +297,7 @@ def convert_tuple_native(
 
 
 def iter_raw_records(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    text = "".join(stream).strip()
+    text = "".join(stream).removeprefix("\ufeff").strip()
     if not text:
         return
     try:

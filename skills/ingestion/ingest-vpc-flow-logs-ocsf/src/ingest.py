@@ -426,7 +426,7 @@ def ingest(lines: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[s
     header_consumed = False
 
     for lineno, raw in enumerate(lines, start=1):
-        line = raw.strip()
+        line = (raw.removeprefix("\ufeff") if lineno == 1 else raw).strip()
         if not line:
             continue
 

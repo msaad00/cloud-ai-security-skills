@@ -23,7 +23,6 @@ import json
 import re
 import sys
 from collections import defaultdict, deque
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -35,6 +34,7 @@ from skills._shared.errors import emit_error  # noqa: E402
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-web-auth-failures"
 LAYER = "detection"
@@ -128,12 +128,8 @@ def _actor_uid(event: dict[str, Any]) -> str:
     return str(user.get("uid") or user.get("name") or "")
 
 
-def _time_ms(event: dict[str, Any]) -> int:
-    t = event.get("time")
-    try:
-        return int(t) if t is not None else int(datetime.now(timezone.utc).timestamp() * 1000)
-    except (TypeError, ValueError):
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
+def _time_ms(event: dict[str, Any]) -> int | None:
+    return finding_time_ms(event.get("time"))
 
 
 def _body_text(event: dict[str, Any]) -> str:
@@ -175,8 +171,8 @@ def _build_native(
     extra: dict[str, Any],
     technique_uid: str,
     technique_name: str,
+    time_ms: int,
 ) -> dict[str, Any]:
-    time_ms = _time_ms(event)
     finding_uid = _finding_uid(rule, f"{_src_ip(event)}|{_path(event)}", time_ms)
     return {
         "schema_mode": "native",
@@ -322,6 +318,9 @@ def detect(
         if not ip:
             continue
         now = _time_ms(event)
+        if now is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
         cutoff = now - window_ms
 
         # Maintain MFA window for this ip
@@ -347,6 +346,7 @@ def detect(
             if len(bucket) >= min_failures and burst_emitted_until.get(ip, 0) < bucket[0][0]:
                 unique_users = len({_actor_uid(e) for _, e in bucket if _actor_uid(e)})
                 native = _build_native(
+                    time_ms=now,
                     rule="brute-force-burst",
                     event=event,
                     extra={
@@ -368,6 +368,7 @@ def detect(
             if len(bucket) >= min_failures:
                 unique_users = len({_actor_uid(e) for _, e in bucket if _actor_uid(e)})
                 native = _build_native(
+                    time_ms=now,
                     rule="stuffing-flip",
                     event=event,
                     extra={
@@ -388,6 +389,7 @@ def detect(
             # Rule 3a: weak login — password grant on /oauth/token
             if path.startswith("/oauth") and _is_password_grant(event):
                 native = _build_native(
+                    time_ms=now,
                     rule="weak-login",
                     event=event,
                     extra={"reason": "oauth-password-grant"},
@@ -401,6 +403,7 @@ def detect(
             # challenge from the same IP in the same window.
             if not mfa_q:
                 native = _build_native(
+                    time_ms=now,
                     rule="weak-login",
                     event=event,
                     extra={"reason": "no-mfa-challenge-in-window"},

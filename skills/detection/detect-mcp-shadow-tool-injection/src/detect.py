@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -23,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-mcp-shadow-tool-injection"
 # Framework depth markers (coverage_summary.py)
@@ -60,10 +60,6 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _sha256_hex(value: str) -> str:
@@ -215,7 +211,7 @@ def _build_native_finding(
     live_schema_hash: str,
     diverged_parts: list[str],
     time_ms: int,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     uid = _finding_uid(
         session_uid,
         tool_name,
@@ -234,6 +230,10 @@ def _build_native_finding(
         f"Software Supply Chain). The agent should NOT trust this tool until the "
         f"MCP server re-publishes a baseline that matches the live declaration."
     )
+    finding_time = finding_time_ms(time_ms)
+    if finding_time is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     return {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
@@ -243,7 +243,7 @@ def _build_native_finding(
         "finding_uid": uid,
         "event_uid": uid,
         "provider": "MCP",
-        "time_ms": int(time_ms or _now_ms()),
+        "time_ms": finding_time,
         "severity": "high",
         "severity_id": SEVERITY_HIGH,
         "status": "success",
@@ -399,6 +399,8 @@ def detect(
             diverged,
             event["time_ms"],
         )
+        if native is None:
+            continue
         uid = native["finding_uid"]
         if uid in seen:
             continue

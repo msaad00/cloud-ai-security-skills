@@ -8,7 +8,6 @@ import json
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -20,6 +19,7 @@ from skills._shared.errors import ContractError, SkillError, emit_error  # noqa:
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-bulk-export-salesforce"
 OCSF_VERSION = "1.8.0"
@@ -55,10 +55,6 @@ MITRE_TACTIC_NAME = "Exfiltration"
 MITRE_TECHNIQUE_UID = "T1567"
 MITRE_TECHNIQUE_NAME = "Exfiltration Over Web Service"
 OWASP_FINDING_TYPE = "OWASP-Top-10-A01"
-
-
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
 def _parse_positive_int_env(name: str, default: int) -> int:
@@ -202,8 +198,11 @@ def _build_native_finding(
     window_minutes: int,
     min_rows: int,
     min_bytes: int,
-) -> dict[str, Any]:
-    time_ms = _event_time(logout_event) or _event_time(export_event) or _now_ms()
+) -> dict[str, Any] | None:
+    time_ms = finding_time_ms(_event_time(logout_event), _event_time(export_event))
+    if time_ms is None:
+        emit_finding_time_missing(SKILL_NAME)
+        return None
     finding_uid = _finding_uid(export_event, logout_event)
     actor_uid = _actor_id(export_event)
     actor_name = _actor_name(export_event)
@@ -354,14 +353,22 @@ def detect(stream: Iterable[str], output_format: str = "ocsf") -> list[dict[str,
             continue
         if not _is_logout(event):
             continue
-        logout_time = _event_time(event) or _now_ms()
+        logout_time = finding_time_ms(_event_time(event))
+        if logout_time is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
         key = _correlation_key(event)
         for export_event in exports_by_key.get(key, []):
-            export_time = _event_time(export_event) or logout_time
+            export_time = finding_time_ms(_event_time(export_event))
+            if export_time is None:
+                emit_finding_time_missing(SKILL_NAME)
+                continue
             if 0 <= logout_time - export_time <= window_ms:
                 native = _build_native_finding(
                     export_event, event, window_minutes, min_rows, min_bytes
                 )
+                if native is None:
+                    continue
                 findings.append(
                     native if output_format == "native" else _render_ocsf_finding(native)
                 )

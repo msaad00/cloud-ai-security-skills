@@ -27,7 +27,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -39,6 +38,7 @@ from skills._shared.errors import emit_error  # noqa: E402
 from skills._shared.identity import VENDOR_NAME as REPO_VENDOR  # noqa: E402
 from skills._shared.logging import get_logger  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
+from skills._shared.timestamps import emit_finding_time_missing, finding_time_ms  # noqa: E402
 
 SKILL_NAME = "detect-web-injection"
 LAYER = "detection"
@@ -198,12 +198,8 @@ def _actor_uid(event: dict[str, Any]) -> str:
     return str(user.get("uid") or user.get("name") or "")
 
 
-def _time_ms(event: dict[str, Any]) -> int:
-    t = event.get("time")
-    try:
-        return int(t) if t is not None else int(datetime.now(timezone.utc).timestamp() * 1000)
-    except (TypeError, ValueError):
-        return int(datetime.now(timezone.utc).timestamp() * 1000)
+def _time_ms(event: dict[str, Any]) -> int | None:
+    return finding_time_ms(event.get("time"))
 
 
 def _redact(text: str) -> str:
@@ -219,13 +215,13 @@ def _finding_uid(family: str, label: str, src_ip: str, path: str, time_ms: int) 
 
 def _build_native(
     *,
+    time_ms: int,
     event: dict[str, Any],
     family: str,
     label: str,
     surface: str,
     excerpt: str,
 ) -> dict[str, Any]:
-    time_ms = _time_ms(event)
     finding_uid = _finding_uid(family, label, _src_ip(event), _path(event), time_ms)
     return {
         "schema_mode": "native",
@@ -353,6 +349,10 @@ def detect(
     for event in events:
         if not _is_http_activity(event):
             continue
+        event_time = _time_ms(event)
+        if event_time is None:
+            emit_finding_time_missing(SKILL_NAME)
+            continue
 
         # Order matters: query string is the most common surface, then body,
         # then path-segment, then headers. We yield one finding per matched
@@ -368,6 +368,7 @@ def detect(
             if hit:
                 family, label, excerpt = hit
                 native = _build_native(
+                    time_ms=event_time,
                     event=event,
                     family=family,
                     label=label,
@@ -381,6 +382,7 @@ def detect(
             if hit:
                 family, label, excerpt = hit
                 native = _build_native(
+                    time_ms=event_time,
                     event=event,
                     family=family,
                     label=label,
