@@ -178,7 +178,7 @@ def _normalized_events(events: Iterable[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def _actor_is_service_account(event: dict[str, Any]) -> bool:
-    return event["actor_type"] == "ServiceAccount"
+    return bool(event["actor_type"] == "ServiceAccount")
 
 
 def _build_native_finding(

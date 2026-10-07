@@ -105,8 +105,17 @@ def _extract_uid(record: dict[str, Any]) -> str:
     raise ValueError("record is missing finding_info.uid, metadata.uid, and event_uid")
 
 
-def _decode_pubsub_event(event: dict[str, Any]) -> list[str]:
-    data = event.get("data")
+def _decode_pubsub_event(event: Any) -> list[str]:
+    # 2nd gen functions receive a CloudEvent whose `.data` wraps the Pub/Sub
+    # message under "message"; 1st gen background functions receive the
+    # message dict directly.
+    payload_obj = getattr(event, "data", event)
+    if not isinstance(payload_obj, dict):
+        raise ValueError("Pub/Sub event payload must be a JSON object")
+    message = payload_obj.get("message", payload_obj)
+    if not isinstance(message, dict):
+        raise ValueError("Pub/Sub event message must be a JSON object")
+    data = message.get("data")
     if not data:
         return []
     payload = base64.b64decode(data).decode("utf-8")
@@ -139,7 +148,7 @@ def _put_if_new(uid: str, payload: str) -> bool:
         return False
 
 
-def handle_pubsub_event(event: dict[str, Any], _context: Any) -> dict[str, int]:
+def handle_pubsub_event(event: Any, _context: Any = None) -> dict[str, int]:
     input_lines = _decode_pubsub_event(event)
     findings = _run_skill(input_lines)
 

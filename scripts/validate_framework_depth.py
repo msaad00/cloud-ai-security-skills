@@ -21,9 +21,9 @@ COVERAGE_SUMMARY = REPO_ROOT / "scripts" / "coverage_summary.py"
 # Minimum unique controls that must remain covered. Raise these when depth
 # expands deliberately — never lower without an issue + snapshot regen.
 MIN_DEPTH: dict[str, int] = {
-    "owasp-llm-top-10": 5,
-    "owasp-mcp-top-10": 3,
-    "nist-ai-rmf": 40,
+    "owasp-llm-top-10": 8,
+    "owasp-mcp-top-10": 7,
+    "nist-ai-rmf": 44,
 }
 
 

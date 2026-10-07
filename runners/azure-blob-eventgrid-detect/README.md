@@ -103,6 +103,9 @@ Current repo reality:
 - the Bicep template is shipped
 - handler behavior is covered in tests
 - template validation runs in CI
+- `scripts/runner_e2e.sh` runs the real handlers end to end in CI against
+  in-process fakes of the cloud SDK clients — no real cloud; see
+  [`../DEPLOYMENT_VERIFICATION.md`](../DEPLOYMENT_VERIFICATION.md#local-emulated-end-to-end)
 - a checked-in real-cloud deploy-and-first-event walkthrough is still pending
 
 That remaining deployment proof is tracked in
