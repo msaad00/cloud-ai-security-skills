@@ -124,9 +124,9 @@ CycloneDX SBOM attestation linking the tarball to its dependency graph:
   matching `.sigstore.json` Sigstore bundle, downloaded from the
   GitHub `tarball/refs/tags/<tag>` endpoint at release time and signed
   keylessly via `cosign sign-blob` with GitHub OIDC
-- Attestations: `actions/attest-build-provenance@v2` publishes SLSA
+- Attestations: `actions/attest-build-provenance@v4` publishes SLSA
   provenance for both the SBOM and the source tarball to the repo's
-  GitHub attestation log, and `actions/attest-sbom@v3` binds the SBOM to
+  GitHub attestation log, and `actions/attest-sbom@v4` binds the SBOM to
   the source tarball so consumers can verify the dependency graph came
   from the same release
 

@@ -32,6 +32,11 @@ independently.
 
 If a change mixes categories, bump to the highest applicable level.
 
+While the repo is on `0.x`, an incompatible change ships as a `MINOR` bump
+instead of `MAJOR`, and the CHANGELOG lists it under **Changed (breaking)**
+with what consumers must change. `1.0.0` is reserved for declaring the
+contract stable.
+
 ## Pre-Release
 
 1. Confirm scope and target version.
@@ -71,13 +76,15 @@ git tag -s vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-3. Verify the tag points at the intended merge commit.
-4. Verify GitHub Actions passed on the tagged commit if a release workflow uses
+3. Publish the GitHub Release for the tag (`gh release create vX.Y.Z --notes-file <notes>`).
+   `release-assets.yml` runs on `release: published`, not on a bare tag push.
+4. Verify the tag points at the intended merge commit.
+5. Verify GitHub Actions passed on the tagged commit if a release workflow uses
    tag triggers.
-5. Verify the release workflow attached the signed CycloneDX SBOM **and** the signed source tarball:
+6. Verify the release workflow attached the signed CycloneDX SBOM **and** the signed source tarball:
    - SBOM: `cloud-ai-security-skills-full-lock.cdx.json` plus `.sigstore.json`
    - Source tarball: `cloud-ai-security-skills-<tag>-source.tar.gz` plus `.sigstore.json`
-6. Verify the release workflow published SLSA build-provenance attestations for both the SBOM and the source tarball, plus a CycloneDX SBOM attestation binding the SBOM to the tarball. The attestations appear under the repo's GitHub attestation log and can be checked with `gh attestation verify <asset> --repo msaad00/cloud-ai-security-skills`.
+7. Verify the release workflow published SLSA build-provenance attestations for both the SBOM and the source tarball, plus a CycloneDX SBOM attestation binding the SBOM to the tarball. The attestations appear under the repo's GitHub attestation log and can be checked with `gh attestation verify <asset> --repo msaad00/cloud-ai-security-skills`.
 
 ## Post-Release
 

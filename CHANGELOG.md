@@ -11,10 +11,28 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
-### Changed
+## [0.13.0] — 2026-10-07 — Contract correctness, boundary hardening, streaming
 
+Pre-1.0 MINOR release that **includes output-contract changes** (see
+"Changed (breaking)"). Consumers that parse `finding_info.attacks[]`, native
+MCP ingest output, or rely on ingesters stamping wall-clock time should read
+that section before upgrading.
+
+### Changed (breaking)
+
+- **OCSF MITRE shape**: 17 detectors now emit `finding_info.attacks[]` with
+  nested `tactic` / `technique` / `sub_technique` objects, as
+  `OCSF_CONTRACT.md` requires (previously flat `technique_uid` /
+  `tactic_uid`). SARIF and Mermaid views now resolve rule IDs; the README
+  demo yields `T1098` instead of `no-mitre`. Native output is unchanged.
+  (#712)
+- **Source timestamps are never invented**: all 25 ingesters share
+  `skills/_shared/timestamps.py`; a record with no usable primary timestamp
+  is skipped with a structured `timestamp_unparseable` stderr warning
+  instead of being stamped with the current time, so replays produce
+  identical finding UIDs. (#712)
 - **`ingest-mcp-proxy-ocsf` native output is redacted by default**
-  (behavior change, #714): `--output-format native` no longer passes raw
+  (#716, closes #714): `--output-format native` no longer passes raw
   `params` / `body` through. It carries the same content as OCSF: tool
   schemas as SHA-256 fingerprints, no prompts, message text, `tools/call`
   arguments, or tool output. The new `--preserve-mcp-content` /
@@ -27,12 +45,49 @@ The format is loosely based on Keep a Changelog.
   `detect-tool-output-policy-bypass` now read the preserved response body
   (OCSF or native); pipes into them need the flag. Default OCSF output is
   byte-identical.
+- **Warehouse sources stream**: `source-snowflake-query`,
+  `source-databricks-query`, and `source-clickhouse-query` emit rows as they
+  arrive and exit non-zero after the rows already written if a query fails
+  partway. (#715)
+- **MCP one-shot output cap**: stdout/stderr are capped at
+  `CLOUD_SECURITY_MCP_WORKER_MAX_BYTES` (10 MB, same as the worker pool); a
+  child over the cap is killed and the call returns exit 1. (#715)
+
+### Added
+
+- `--preserve-mcp-content` / `MCP_PRESERVE_CONTENT=1` on
+  `ingest-mcp-proxy-ocsf` (default off, capped by
+  `MCP_PRESERVE_CONTENT_MAX_CHARS`), so `detect-mcp-plugin-supply-chain` and
+  `detect-mcp-adversarial-input-corpus` fire on real ingest output; golden
+  pipes added. `tests/integration/golden_pipes.json` is now the single pipe
+  registry. (#713, closes #664)
+- `--batch-size` on `sink-snowflake-jsonl` (default 1000, still one
+  transaction) and `sink-clickhouse-jsonl` (default 10000; a partial write
+  is reported on stderr). (#715)
+- `container-security`, `k8s-security-benchmark`, `model-serving-security`,
+  and `gpu-cluster-security` read their config from stdin when no path is
+  given. (#711)
+- GCP (storage CloudEvent → Pub/Sub) and Azure (Event Grid → Service Bus)
+  runners are exercised end to end in CI against in-process SDK fakes, with
+  dedupe checks. Real-cloud deploy proof is still tracked in #609. (#717)
+
+### Fixed
+
+- `webhook-receiver` container crashed on boot (`IndexError` resolving the
+  repo root); the image now keeps the source at its repo-relative path.
+  (#717)
+- GCP runner handlers accept the single-CloudEvent call that 2nd-gen Cloud
+  Functions make, as well as the legacy shape. (#717)
+- `SkillsClient` no longer silently swallows `audit_writer` failures; it
+  emits a structured stderr warning. (#710)
+- Invalid-XML `coverage-matrix-summary.svg` and other README SVG glitches.
+  (#709)
 
 ### Security
 
 - **MCP content is no longer emitted by default in any output format**:
   native `ingest-mcp-proxy-ocsf` output previously leaked `tools/call`
-  arguments, prompts, and tool output verbatim (#714).
+  arguments, prompts, and tool output verbatim (#716, closes #714).
 - **MCP argument boundary** (`mcp-server/src/arg_policy.py`): `tools/call`
   rejects path-valued flags (`--output`/`-o`, `--config`, `--manifest`,
   `--quarantine-file`, ... and their argparse abbreviations) and path-like
@@ -60,6 +115,31 @@ The format is loosely based on Keep a Changelog.
   catches YAML/CloudFormation `Resource: '*'`, list forms (`["*"]`,
   `- '*'`), and service wildcards (`iam:*`), skips Deny statements, and
   scans `runners/` as well as `skills/`.
+
+### Performance
+
+- Four detectors were quadratic on dense input and are now linear with
+  byte-identical output: `detect-privilege-escalation-k8s` (250k events:
+  467s / 2.1 GiB → 3.3s / 287 MiB), `detect-credential-stuffing-okta`,
+  `detect-okta-mfa-fatigue`, `detect-lateral-movement`. (#712)
+- 19 ingesters stream JSONL instead of buffering stdin (CloudTrail 500k
+  events: 1140 MiB → 33 MiB peak). (#715)
+
+### CI and internal
+
+- CI installs from `uv.lock` (`uv sync --frozen`); coverage excludes test
+  files and floors were reset to honest values; `make check` mirrors CI.
+  (#710)
+- Each test runs once across five required lanes with a partition check;
+  PR jobs are gated on changed paths; `uv lock --check` runs in `lint`;
+  third-party actions are SHA-pinned; the webhook image is built in CI.
+  (#719)
+- Strict mypy across every detector and `skills/_shared`; global
+  `ignore_missing_imports` replaced with scoped overrides. (#710, #717,
+  closes #608, #602)
+- README: closed-loop and runtime-architecture diagrams, shorter landing
+  page. (#709, #718)
+- Dev dependency bumps. (#696–#708)
 
 ## [0.12.0] — 2026-09-17 — Repo-wide audit: MCP hardening, detector determinism, guardrail parity
 

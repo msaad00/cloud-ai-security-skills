@@ -22,7 +22,7 @@ The current north star is not "more skills" by itself. It is:
 
 ### Current shipped progress snapshot
 
-- **ATT&CK depth:** 48 mapped skills in the coverage registry, with the first
+- **ATT&CK depth:** 86 mapped skills in the coverage registry, with the first
   AWS IAM-user credential-creation slices now shipped via access-key and
   login-profile detection, the first GCP service-account-key slice now shipped,
   the first AWS cloud-discovery burst slice now shipped, the first AWS

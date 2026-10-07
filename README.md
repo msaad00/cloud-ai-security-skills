@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml?query=branch%3Amain"><img alt="CI" src="https://github.com/msaad00/cloud-ai-security-skills/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.12.0-0ea5e9"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-0.13.0-0ea5e9"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache_2.0-blue"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue"></a>
   <a href="https://schema.ocsf.io/1.8.0"><img alt="OCSF 1.8" src="https://img.shields.io/badge/OCSF-1.8-22d3ee"></a>
@@ -86,7 +86,7 @@ Drop the last stage to see the raw OCSF Detection Finding. More paths: [`docs/QU
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/diagrams/`](docs/diagrams/)
 
-Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) · [`SECURITY_BAR.md`](SECURITY_BAR.md). Tests and CI gates: [`docs/TESTING.md`](docs/TESTING.md).
+Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) · [`SECURITY_BAR.md`](SECURITY_BAR.md). Tests and CI gates: [`docs/CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) · [`docs/TESTING.md`](docs/TESTING.md).
 
 **Invariant:** skills own facts, schemas, mappings, confidence, and audit. Orchestrators own workflow state and model choice only.
 
