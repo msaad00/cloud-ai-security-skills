@@ -32,9 +32,9 @@ runs:
         cat > "${RUNNER_TEMP}/test-lanes.sh" <<'LANES'
         FULL_SUITE=(skills tests/integration tests/conformance mcp-server/tests)
         ALL_LANES=(compliance remediation detection-engineering ai-infra integration)
-        # Lanes are whole layer directories, never sibling skill directories:
-        # each skill's conftest isolates its flat src/ module names only for
-        # collection orders pytest produces when walking a parent directory.
+        # Lanes are whole layer directories. The repo-root conftest isolates
+        # each skill's flat src/ module names per test module and per test, so
+        # sibling skill directories passed as separate args also stay isolated.
         lane_paths() {
           case "$1" in
             compliance) echo skills/evaluation ;;

@@ -82,6 +82,15 @@ that section before upgrading.
   emits a structured stderr warning. (#710)
 - Invalid-XML `coverage-matrix-summary.svg` and other README SVG glitches.
   (#709)
+- `CLOUD_SECURITY_MCP_TIMEOUT_SECONDS` was ignored by MCP `tools/call`
+  after the child env scrub; the wrapper now reads its own settings from
+  its environment. (pre-release audit)
+- Source timestamps past year 9999 are rejected by `parse_ts_ms` and
+  skipped with `timestamp_unparseable`; previously one such record made
+  `detect-databricks-workspace-admin-grant` and
+  `detect-slack-admin-elevation` crash and emit no findings for the whole
+  batch. Both detectors now tolerate an unrepresentable event time.
+  (pre-release audit)
 
 ### Security
 
@@ -102,8 +111,9 @@ that section before upgrading.
   `--apply`; remediation, evaluation, output, discovery, and view parsers set
   `allow_abbrev=False`.
 - **Child env scrub**: skill subprocesses (MCP, library shim, webhook
-  receiver) no longer receive `CLOUD_SECURITY_AUDIT_HMAC_KEY`,
-  `CLOUD_SECURITY_MCP_*`, or `*BEARER*` / `*HMAC*` variables.
+  receiver ingest and sink fan-out) no longer receive
+  `CLOUD_SECURITY_AUDIT_HMAC_KEY`, `CLOUD_SECURITY_MCP_*`, or `*BEARER*` /
+  `*HMAC*` variables. Sink fan-out was covered in the pre-release audit.
 - **Audit HMAC key fails closed**: keys under 32 bytes or the
   `please-set-me` placeholder stop the stdio and SSE servers at startup; the
   `mcp-sse` compose template now requires the key instead of defaulting it.

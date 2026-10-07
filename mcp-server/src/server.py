@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO, cast
@@ -135,12 +136,13 @@ def _scoped_tool_map(
     return {name: spec for name, spec in tools.items() if name in allowed}
 
 
-def _resolve_timeout(skill: SkillSpec, env: dict[str, str]) -> int:
+def _resolve_timeout(skill: SkillSpec, env: Mapping[str, str]) -> int:
     """Resolve the per-call subprocess timeout.
 
     Priority: env override > skill-declared timeout > global default. The env
     override is kept at the top so operators can widen or tighten the window
-    without editing every SKILL.md.
+    without editing every SKILL.md. `env` must be the wrapper's own
+    environment: the scrubbed child env drops CLOUD_SECURITY_MCP_* keys.
     """
     override = env.get("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", "").strip()
     if override:
@@ -613,7 +615,7 @@ def _call_tool(
                 env["SKILL_APPROVAL_TICKET"] = approval_context["ticket_id"]
             if "approval_timestamp" in approval_context:
                 env["SKILL_APPROVAL_TIMESTAMP"] = approval_context["approval_timestamp"]
-        timeout_seconds = _resolve_timeout(skill, env)
+        timeout_seconds = _resolve_timeout(skill, os.environ)
         audit_event["timeout_seconds"] = timeout_seconds
         limits = _resource_limits_from_env(timeout_seconds)
         audit_event["resource_limits"] = {

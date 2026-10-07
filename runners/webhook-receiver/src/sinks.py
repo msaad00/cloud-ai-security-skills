@@ -14,6 +14,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+_MCP_SRC = REPO_ROOT / "mcp-server" / "src"
+if str(_MCP_SRC) not in sys.path:
+    sys.path.insert(0, str(_MCP_SRC))
+
+from arg_policy import is_wrapper_only_env  # noqa: E402  pylint: disable=wrong-import-position
 
 # Map of operator-friendly sink name -> shipped skill entrypoint.
 _SINK_SKILL_NAMES: dict[str, str] = {
@@ -146,7 +151,7 @@ def _build_child_env(src: dict[str, str], correlation_id: str) -> dict[str, str]
         if value:
             env[key] = value
     for key, raw_value in src.items():
-        if not key.startswith("CLOUD_SECURITY_"):
+        if not key.startswith("CLOUD_SECURITY_") or is_wrapper_only_env(key):
             continue
         value = raw_value.strip()
         if value:

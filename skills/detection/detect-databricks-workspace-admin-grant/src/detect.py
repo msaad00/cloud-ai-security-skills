@@ -96,7 +96,10 @@ def _event_utc_hour(event: dict[str, Any]) -> int:
     time_ms = _event_time(event)
     if time_ms <= 0:
         return -1
-    dt = datetime.fromtimestamp(time_ms / 1000.0, tz=timezone.utc)
+    try:
+        dt = datetime.fromtimestamp(time_ms / 1000.0, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return -1
     return dt.hour
 
 

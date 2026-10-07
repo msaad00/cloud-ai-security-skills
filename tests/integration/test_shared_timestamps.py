@@ -22,6 +22,7 @@ sys.modules[spec.name] = TS
 spec.loader.exec_module(TS)
 
 BASE_MS = 1775797200000  # 2026-04-10T05:00:00Z
+MAX_MS = 253402300799999  # 9999-12-31T23:59:59.999Z, datetime.max at ms precision
 
 
 @pytest.mark.parametrize(
@@ -58,6 +59,7 @@ BASE_MS = 1775797200000  # 2026-04-10T05:00:00Z
         (str(BASE_MS * 1000), BASE_MS),
         (str(BASE_MS * 1_000_000), BASE_MS),
         ("17757972000000", 17757972000000),
+        ("9999-12-31T23:59:59.999Z", MAX_MS),
     ],
 )
 def test_parse_ts_ms_accepts_supported_shapes(value, expected):
@@ -87,6 +89,12 @@ def test_parse_ts_ms_accepts_supported_shapes(value, expected):
         [],
         {"time": BASE_MS},
         b"2026-04-10T05:00:00Z",
+        10**22,
+        1e22,
+        10**30,
+        "10000000000000000000000",
+        "1" + "0" * 40,
+        "9999-12-31T23:59:59-05:00",
     ],
 )
 def test_parse_ts_ms_returns_none_for_missing_or_unparseable(value):

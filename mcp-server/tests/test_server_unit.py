@@ -377,6 +377,36 @@ def test_checks_evaluation_dry_run_does_not_require_approval_context(monkeypatch
     assert result["isError"] is False
 
 
+def test_call_tool_honours_server_timeout_override_but_scrubs_it_from_child(monkeypatch):
+    """Wrapper config is read from the server's own environment; the child
+    still receives the scrubbed env without CLOUD_SECURITY_MCP_* keys."""
+    captured: dict[str, object] = {}
+    audit_events: list[dict[str, object]] = []
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", "7")
+    monkeypatch.setenv("CLOUD_SECURITY_SKILL_MAX_PROCESSES", "33")
+    monkeypatch.setattr(
+        MODULE, "tool_map", lambda: {"fake-skill": _FakeSkill(mcp_timeout_seconds=45)}
+    )
+    monkeypatch.setattr(
+        MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"]
+    )
+    monkeypatch.setattr(MODULE, "_emit_audit_event", lambda event: audit_events.append(event))
+
+    def _fake_run(*args, **kwargs):
+        captured.update(kwargs)
+        return _FakeCompleted()
+
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
+    MODULE._call_tool("fake-skill", {"args": []})
+
+    assert captured["timeout"] == 7
+    assert audit_events[0]["timeout_seconds"] == 7
+    assert audit_events[0]["resource_limits"]["max_processes"] == 33
+    child_env = captured["env"]
+    assert isinstance(child_env, dict)
+    assert not any(key.startswith("CLOUD_SECURITY_MCP_") for key in child_env)
+
+
 def test_resolve_timeout_prefers_env_override():
     skill = _FakeSkill(mcp_timeout_seconds=45)
     env = {"CLOUD_SECURITY_MCP_TIMEOUT_SECONDS": "300"}
