@@ -35,6 +35,20 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    # Jobs install different dependency sets from the same uv.lock. Without a
+    # per-set suffix they share one cache key, the first job to finish saves
+    # it, and jobs needing other groups re-download on every run.
+    - name: Derive uv cache suffix from the dependency set
+      id: cache-suffix
+      shell: bash
+      env:
+        SYNC_ARGS: ${{ inputs.sync-args }}
+        TOOLS: ${{ inputs.tools }}
+      run: |
+        set -euo pipefail
+        suffix="$(printf '%s|%s' "${SYNC_ARGS}" "${TOOLS}" | sha256sum | cut -c1-16)"
+        echo "suffix=${suffix}" >> "$GITHUB_OUTPUT"
+
     - name: Set up uv
       uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       with:
@@ -43,6 +57,7 @@ runs:
         activate-environment: "true"
         enable-cache: "true"
         cache-dependency-glob: uv.lock
+        cache-suffix: ${{ steps.cache-suffix.outputs.suffix }}
 
     - name: Install locked dependencies
       if: ${{ inputs.sync-args != 'skip' }}

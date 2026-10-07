@@ -17,7 +17,8 @@ permissions:
 
 concurrency:
   group: security-grades-${{ github.ref }}
-  cancel-in-progress: false
+  # Cancel superseded PR runs; never cancel the weekly scheduled regen.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   grades:
@@ -27,8 +28,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
+          version: "0.10.9"
           enable-cache: true
 
       - name: Set up Python
@@ -38,7 +40,7 @@ jobs:
 
       - name: Install dev + agent-bom
         run: |
-          uv sync --group dev
+          uv sync --frozen --group dev
           uv pip install agent-bom
 
       - name: Regenerate security grades

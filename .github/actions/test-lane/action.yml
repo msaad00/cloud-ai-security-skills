@@ -1,0 +1,119 @@
+name: Run Test Lane
+description: >-
+  Run one category lane of the repo test suite under coverage and upload the
+  coverage data for the `coverage` job to combine. The lane -> path mapping
+  below is the single source of truth; `check-partition` proves the lanes
+  together collect exactly the full suite (no test dropped, none run twice).
+  Expects the project environment to be synced already (setup-python-deps).
+
+inputs:
+  lane:
+    description: >-
+      One of compliance, remediation, detection-engineering, ai-infra,
+      integration.
+    required: true
+  check-partition:
+    description: >-
+      "true" to first assert the lanes partition the full suite exactly
+      (every collected test id in exactly one lane).
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Define lanes
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Sourced by the later steps. A new skill lands in its layer's lane
+        # automatically; a new layer or test root that no lane claims fails
+        # the partition check.
+        cat > "${RUNNER_TEMP}/test-lanes.sh" <<'LANES'
+        FULL_SUITE=(skills tests/integration tests/conformance mcp-server/tests)
+        ALL_LANES=(compliance remediation detection-engineering ai-infra integration)
+        # Lanes are whole layer directories, never sibling skill directories:
+        # each skill's conftest isolates its flat src/ module names only for
+        # collection orders pytest produces when walking a parent directory.
+        lane_paths() {
+          case "$1" in
+            compliance) echo skills/evaluation ;;
+            remediation) echo skills/remediation ;;
+            detection-engineering)
+              printf '%s\n' skills/ingestion skills/detection skills/view skills/output skills/detection-engineering ;;
+            ai-infra) echo skills/discovery ;;
+            integration) printf '%s\n' tests/integration tests/conformance mcp-server/tests ;;
+            *) echo "unknown test lane: $1" >&2; return 1 ;;
+          esac
+        }
+        collect_ids() {
+          local out="$1"; shift
+          local rc=0
+          uv run pytest --collect-only -p no:cacheprovider "$@" > "${out}.raw" || rc=$?
+          if [ "${rc}" -ne 0 ]; then
+            grep -v "::" "${out}.raw" >&2 || true
+            echo "::error::pytest collection failed (exit ${rc}) for: $*" >&2
+            return 1
+          fi
+          grep '::' "${out}.raw" | sort > "${out}" || true
+        }
+        LANES
+
+    - name: Check lanes partition the full suite
+      if: ${{ inputs.check-partition == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck source=/dev/null
+        source "${RUNNER_TEMP}/test-lanes.sh"
+        work="${RUNNER_TEMP}/lane-partition"
+        mkdir -p "${work}"
+        collect_ids "${work}/full.txt" "${FULL_SUITE[@]}"
+        : > "${work}/all-lanes.txt"
+        for lane in "${ALL_LANES[@]}"; do
+          paths=(); while IFS= read -r p; do paths+=("${p}"); done < <(lane_paths "${lane}")
+          for p in "${paths[@]}"; do
+            [ -e "${p}" ] || { echo "::error::lane ${lane} path ${p} does not exist"; exit 1; }
+          done
+          collect_ids "${work}/${lane}.txt" "${paths[@]}"
+          echo "lane ${lane}: $(wc -l < "${work}/${lane}.txt") tests"
+          cat "${work}/${lane}.txt" >> "${work}/all-lanes.txt"
+        done
+        sort -o "${work}/all-lanes.txt" "${work}/all-lanes.txt"
+        dupes="$(uniq -d "${work}/all-lanes.txt")"
+        missing="$(comm -23 "${work}/full.txt" "${work}/all-lanes.txt")"
+        extra="$(comm -13 "${work}/full.txt" <(uniq "${work}/all-lanes.txt"))"
+        echo "full suite: $(wc -l < "${work}/full.txt") tests"
+        status=0
+        if [ -n "${dupes}" ]; then
+          echo "::error::tests collected by more than one lane:"; echo "${dupes}" | head -50; status=1
+        fi
+        if [ -n "${missing}" ]; then
+          echo "::error::tests in the full suite that no lane runs:"; echo "${missing}" | head -50; status=1
+        fi
+        if [ -n "${extra}" ]; then
+          echo "::error::lane tests outside the full suite definition:"; echo "${extra}" | head -50; status=1
+        fi
+        exit "${status}"
+
+    - name: Run lane under coverage
+      shell: bash
+      env:
+        LANE: ${{ inputs.lane }}
+      run: |
+        set -euo pipefail
+        # shellcheck source=/dev/null
+        source "${RUNNER_TEMP}/test-lanes.sh"
+        paths=(); while IFS= read -r p; do paths+=("${p}"); done < <(lane_paths "${LANE}")
+        echo "lane ${LANE}: ${paths[*]}"
+        mkdir -p coverage-data
+        COVERAGE_FILE="coverage-data/${LANE}.coverage" \
+          uv run pytest "${paths[@]}" -ra -p no:cacheprovider --cov=skills --cov-report=
+
+    - name: Upload lane coverage data
+      uses: actions/upload-artifact@v7
+      with:
+        name: coverage-data-${{ inputs.lane }}
+        path: coverage-data/${{ inputs.lane }}.coverage
+        if-no-files-found: error
+        retention-days: 3

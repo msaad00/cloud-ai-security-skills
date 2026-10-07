@@ -476,7 +476,7 @@ This is what "OCSF can persist + update" means in practice: every finding is *al
    - Unit tests for every helper.
    - Positive golden-fixture parity tests.
    - Negative controls (at least 3, explaining what should **not** fire).
-6. Register the skill in `.github/workflows/ci.yml` matrix.
+6. No CI registration needed: the test lanes run every skill in its layer directory (see `docs/CI_WORKFLOW.md`).
 7. If the skill adds a new MITRE technique, add it to `OCSF_CONTRACT.md`'s pinned table.
 8. Run `pytest`, `ruff check`, `ruff format`, open a PR.
 

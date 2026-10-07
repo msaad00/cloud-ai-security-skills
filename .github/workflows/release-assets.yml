@@ -57,7 +57,7 @@ jobs:
           ls -l "${out}"
           echo "SOURCE_TARBALL=${out}" >> "$GITHUB_ENV"
 
-      - uses: sigstore/cosign-installer@v4.1.2
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign SBOM with GitHub OIDC
         run: |
