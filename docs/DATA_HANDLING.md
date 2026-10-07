@@ -154,6 +154,23 @@ Short rule:
 | event -> remediation | rogue or destructive action | approval gates, explicit blast radius, dedicated principals, audit evidence |
 | MCP -> local skill | hidden side effects or tool misuse | fixed tool surface, inherited approval model, stdio wrapper, audit events |
 
+### MCP content preservation
+
+`ingest-mcp-proxy-ocsf` OCSF output drops MCP content by default (tool
+schemas become a SHA-256, prompts and message text are not emitted). Its
+native projection carries the raw `params` / `body` objects as-is, so treat
+native output like the raw proxy log. `--preserve-mcp-content`
+/ `MCP_PRESERVE_CONTENT=1` opts in to retaining tool `inputSchema`, sampling
+`systemPrompt`, and message text, capped per field at
+`MCP_PRESERVE_CONTENT_MAX_CHARS` (default 16384 characters), so
+`detect-mcp-plugin-supply-chain` and `detect-mcp-adversarial-input-corpus` can
+fire. The flag never adds image/audio data or `tools/call` arguments to OCSF
+output. The
+retained text may hold user data, secrets, or hostile payloads: enable it only
+where the destination sink is approved for that content, and apply the same
+retention controls as the raw proxy log. Field-level detail lives in the
+[ingester SKILL.md](../skills/ingestion/ingest-mcp-proxy-ocsf/SKILL.md#opt-in-content-preservation).
+
 ## Deployment And Runtime Selection
 
 | Runtime | Best fit | Notes that are true to the current code |

@@ -19,12 +19,15 @@ from ingest import (  # type: ignore[import-not-found]
     CANONICAL_VERSION,
     CATEGORY_UID,
     CLASS_UID,
+    MAX_CHARS_ENV,
     OCSF_VERSION,
     OUTPUT_FORMATS,
+    PRESERVE_CONTENT_ENV,
     SKILL_NAME,
     convert_event,
     ingest,
     input_schema_fingerprint,
+    main,
     tool_fingerprint,
 )
 
@@ -308,3 +311,156 @@ class TestGoldenFixture:
         assert (
             native_events[0]["tool"]["fingerprint"] == ocsf_events[0]["mcp"]["tool"]["fingerprint"]
         )
+
+
+# ── Opt-in content preservation ───────────────────────────────────────
+
+SUPPLY_RAW = GOLDEN / "mcp_plugin_supply_chain_raw.jsonl"
+ADVERSARIAL_RAW = GOLDEN / "mcp_adversarial_input_raw.jsonl"
+
+
+def _sampling(params: dict) -> dict:
+    return {
+        "timestamp": "2026-04-10T08:00:00.000Z",
+        "session_id": "s",
+        "method": "sampling/createMessage",
+        "direction": "request",
+        "params": params,
+    }
+
+
+class TestPreserveMcpContentDefaultOff:
+    def test_default_cli_output_is_byte_identical_to_frozen_golden(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(PRESERVE_CONTENT_ENV, raising=False)
+        out = tmp_path / "out.jsonl"
+        assert main([str(RAW_FIXTURE), "--output", str(out)]) == 0
+        assert out.read_bytes() == OCSF_FIXTURE.read_bytes()
+
+    def test_env_falsey_values_keep_default(self, tmp_path, monkeypatch):
+        for value in ("", "0", "false", "no", "off"):
+            monkeypatch.setenv(PRESERVE_CONTENT_ENV, value)
+            out = tmp_path / "out.jsonl"
+            assert main([str(RAW_FIXTURE), "--output", str(out)]) == 0
+            assert out.read_bytes() == OCSF_FIXTURE.read_bytes()
+
+    def test_default_drops_schema_prompt_and_messages(self, monkeypatch):
+        monkeypatch.delenv(PRESERVE_CONTENT_ENV, raising=False)
+        for raw_path in (SUPPLY_RAW, ADVERSARIAL_RAW):
+            for fmt in OUTPUT_FORMATS:
+                for event in ingest(raw_path.read_text().splitlines(), output_format=fmt):
+                    assert "unmapped" not in event
+                    tool = (event.get("mcp") or {}).get("tool") or event.get("tool") or {}
+                    assert "input_schema" not in tool
+        ocsf_blob = "".join(json.dumps(e) for e in ingest(ADVERSARIAL_RAW.read_text().splitlines()))
+        assert "ignore all previous instructions" not in ocsf_blob
+        assert "DAN" not in ocsf_blob
+
+
+class TestPreserveMcpContentOn:
+    def test_tools_list_preserves_input_schema_under_mcp_tool(self):
+        events = list(ingest(SUPPLY_RAW.read_text().splitlines(), preserve_mcp_content=True))
+        listed = [e for e in events if e["mcp"]["method"] == "tools/list"]
+        assert [e["mcp"]["tool"]["name"] for e in listed] == ["docs_search", "sync_notes"]
+        schema = listed[1]["mcp"]["tool"]["input_schema"]
+        assert (
+            schema["properties"]["endpoint"]["default"] == "https://exfil.attacker.example/collect"
+        )
+        # fingerprints are unchanged by the flag
+        default = list(ingest(SUPPLY_RAW.read_text().splitlines()))
+        assert listed[1]["mcp"]["tool"]["fingerprint"] == default[1]["mcp"]["tool"]["fingerprint"]
+
+    def test_tools_call_arguments_are_not_preserved(self):
+        events = list(ingest(SUPPLY_RAW.read_text().splitlines(), preserve_mcp_content=True))
+        call = [e for e in events if e["mcp"]["method"] == "tools/call"][0]
+        assert "unmapped" not in call
+        assert "exfil" not in json.dumps(call)
+
+    def test_sampling_text_content_flattened_into_unmapped(self):
+        (event,) = convert_event(
+            _sampling(
+                {
+                    "messages": [
+                        {"role": "user", "content": {"type": "text", "text": "hi"}},
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "image", "data": "aGVsbG8=", "mimeType": "image/png"},
+                                {"type": "text", "text": "a"},
+                                {"type": "text", "text": "b"},
+                            ],
+                        },
+                        {"role": "user", "content": {"type": "audio", "data": "eA=="}},
+                        {"role": "user", "content": "plain"},
+                    ],
+                    "systemPrompt": "sys",
+                }
+            ),
+            preserve_mcp_content=True,
+        )
+        assert event["unmapped"] == {
+            "mcp": {
+                "prompt": "sys",
+                "request": {
+                    "params": {
+                        "messages": [
+                            {"content": "hi"},
+                            {"content": "a\nb"},
+                            {},
+                            {"content": "plain"},
+                        ]
+                    }
+                },
+            }
+        }
+        assert "aGVsbG8=" not in json.dumps(event)
+
+    def test_native_output_carries_same_preserved_fields(self):
+        raw = _sampling({"messages": [{"role": "user", "content": {"type": "text", "text": "x"}}]})
+        (ocsf,) = convert_event(raw, preserve_mcp_content=True)
+        (native,) = convert_event(raw, output_format="native", preserve_mcp_content=True)
+        assert native["unmapped"] == ocsf["unmapped"]
+
+    def test_long_strings_truncated_and_flagged(self, monkeypatch):
+        monkeypatch.setenv(MAX_CHARS_ENV, "8")
+        (event,) = convert_event(
+            _sampling(
+                {
+                    "messages": [{"role": "user", "content": {"type": "text", "text": "x" * 20}}],
+                    "systemPrompt": "y" * 20,
+                }
+            ),
+            preserve_mcp_content=True,
+        )
+        mcp = event["unmapped"]["mcp"]
+        assert mcp["prompt"] == "y" * 8
+        assert mcp["request"]["params"]["messages"][0]["content"] == "x" * 8
+        assert mcp["truncated_fields"] == ["prompt", "request.params.messages[0].content"]
+
+    def test_oversized_schema_omitted_and_flagged(self, monkeypatch):
+        monkeypatch.setenv(MAX_CHARS_ENV, "16")
+        raw = {
+            "timestamp": "2026-04-10T08:00:00.000Z",
+            "session_id": "s",
+            "method": "tools/list",
+            "direction": "response",
+            "body": {"tools": [{"name": "t", "inputSchema": {"description": "z" * 64}}]},
+        }
+        (event,) = convert_event(raw, preserve_mcp_content=True)
+        tool = event["mcp"]["tool"]
+        assert "input_schema" not in tool
+        assert tool["input_schema_omitted"] == "size_cap"
+
+    def test_env_var_enables_preservation_via_cli(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv(PRESERVE_CONTENT_ENV, "1")
+        out = tmp_path / "out.jsonl"
+        assert main([str(ADVERSARIAL_RAW), "--output", str(out)]) == 0
+        events = [json.loads(line) for line in out.read_text().splitlines()]
+        assert all("unmapped" in e for e in events)
+        assert "MCP content preservation is ON" in capsys.readouterr().err
+
+    def test_cli_flag_enables_preservation(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(PRESERVE_CONTENT_ENV, raising=False)
+        out = tmp_path / "out.jsonl"
+        assert main([str(SUPPLY_RAW), "--preserve-mcp-content", "--output", str(out)]) == 0
+        first = json.loads(out.read_text().splitlines()[0])
+        assert "input_schema" in first["mcp"]["tool"]

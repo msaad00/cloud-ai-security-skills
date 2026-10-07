@@ -98,6 +98,47 @@ Example:
 }
 ```
 
+## Opt-in content preservation
+
+By default the OCSF output keeps **no** MCP content: tool `inputSchema` is
+reduced to `mcp.tool.input_schema_sha256`, and sampling prompts, message text,
+and `tools/call` arguments are dropped. Two content detectors cannot fire on
+that output:
+[`detect-mcp-plugin-supply-chain`](../../detection/detect-mcp-plugin-supply-chain/)
+and [`detect-mcp-adversarial-input-corpus`](../../detection/detect-mcp-adversarial-input-corpus/).
+
+`--preserve-mcp-content` (or `MCP_PRESERVE_CONTENT=1`) opts in to keeping
+exactly the fields those detectors read, in both OCSF and native output:
+
+| Raw field | Output field | Notes |
+|---|---|---|
+| `body.tools[].inputSchema` (`tools/list` response) | `mcp.tool.input_schema` | omitted with `mcp.tool.input_schema_omitted: "size_cap"` when its compact JSON exceeds the cap |
+| `params.systemPrompt` (e.g. `sampling/createMessage`) | `unmapped.mcp.prompt` | truncated to the cap |
+| `params.messages[].content` | `unmapped.mcp.request.params.messages[].content` | text blocks only, joined with `\n`; image/audio data is never kept; truncated to the cap |
+
+- Per-field cap: `MCP_PRESERVE_CONTENT_MAX_CHARS` characters (default 16384).
+  Truncated fields are listed in `unmapped.mcp.truncated_fields`.
+- The flag never adds `tools/call` arguments to OCSF output.
+- Native output (`--output-format native`) already carries the raw `params`
+  and `body` objects verbatim, independent of this flag; treat native output
+  as raw proxy content for retention purposes.
+- When on, a single `mcp_content_preserved` stderr event records the decision.
+- Fingerprints, event UIDs, and every other field are identical with or
+  without the flag; with the flag off, output is byte-identical to earlier
+  releases.
+
+Privacy: preserved prompts and schemas can contain user data, secrets, or
+attacker-controlled text. Turn the flag on only where the downstream sink is
+approved for that content. Truncation means an injection placed past the cap,
+or a schema padded past the cap, is not scanned — treat
+`truncated_fields` / `input_schema_omitted` as a signal in their own right.
+See [`docs/DATA_HANDLING.md`](../../../docs/DATA_HANDLING.md#mcp-content-preservation).
+
+```bash
+python src/ingest.py --preserve-mcp-content mcp-proxy.jsonl \
+  | python ../../detection/detect-mcp-adversarial-input-corpus/src/detect.py
+```
+
 ## Fingerprint
 
 For every `tools/list` response entry and every `tools/call` request, the skill emits an OCSF event with a stable `mcp.tool.fingerprint`:

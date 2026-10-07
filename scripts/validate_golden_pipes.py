@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Check the ingest→detect golden pipe registry is complete (static check only).
 
-Reads ``tests/integration/golden_pipes.json`` and verifies every pipe names a
-raw and an expected fixture that exist on disk. A count gate prevents
+Reads ``tests/integration/golden_pipes.json`` and verifies every pipe names
+raw, extra raw, and expected fixtures that exist on disk. A count gate prevents
 accidental pipe registry shrinkage.
 
 This script does NOT execute any pipe. End-to-end execution (raw fixture →
 ingest → detect, compared against the frozen expected findings) happens in
-``tests/integration/test_ingest_detect_pipes.py``, which keeps its own
-``INGEST_DETECT_PIPES`` list rather than reading this registry.
+``tests/integration/test_ingest_detect_pipes.py``, which runs from the same
+registry.
 
 Exit codes: 0 on pass, 1 on failure.
 """
@@ -43,6 +43,10 @@ def main() -> int:
             path = GOLDEN_DIR / rel
             if not path.is_file():
                 errors.append(f"{name}: missing golden file {path.relative_to(REPO_ROOT)}")
+        for extra in pipe.get("extra_raw_fixtures", []):
+            path = GOLDEN_DIR / extra.get("raw_fixture", "")
+            if not path.is_file():
+                errors.append(f"{name}: missing extra golden file {path.relative_to(REPO_ROOT)}")
 
     if errors:
         print("Golden pipe validation failed:", file=sys.stderr)

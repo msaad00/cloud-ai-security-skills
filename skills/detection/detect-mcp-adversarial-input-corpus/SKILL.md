@@ -98,10 +98,16 @@ OCSF output populates:
 ## Usage
 
 ```bash
-python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py mcp-proxy.jsonl \
+python ../../ingestion/ingest-mcp-proxy-ocsf/src/ingest.py --preserve-mcp-content mcp-proxy.jsonl \
   | python src/detect.py \
   > adversarial-input-findings.ocsf.jsonl
 ```
+
+The ingester emits `unmapped.mcp.*` (sampling `systemPrompt` → `prompt`,
+message text → `request.params.messages[].content`) only with
+`--preserve-mcp-content` (opt-in, see its
+[privacy note](../../ingestion/ingest-mcp-proxy-ocsf/SKILL.md#opt-in-content-preservation));
+without it this detector sees no content and emits nothing.
 
 ## Fingerprint catalog
 
