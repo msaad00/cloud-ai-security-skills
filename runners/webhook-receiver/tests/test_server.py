@@ -200,7 +200,8 @@ def test_replayed_signed_request_is_rejected(monkeypatch):
     server = _hmac_server(monkeypatch)
     events = _capture_audit(monkeypatch, server)
     client = TestClient(server.app)
-    headers = _signed("secret", b"{}")
+    ts = int(time.time())
+    headers = _signed("secret", b"{}", ts)
     first = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=headers)
     second = client.post("/webhook/ingest-cloudtrail-ocsf", content=b"{}", headers=headers)
     assert first.status_code == 200, first.text
@@ -210,7 +211,7 @@ def test_replayed_signed_request_is_rejected(monkeypatch):
     third = client.post(
         "/webhook/ingest-cloudtrail-ocsf",
         content=b"{}",
-        headers=_signed("secret", b"{}", int(time.time()) - 1),
+        headers=_signed("secret", b"{}", ts - 1),
     )
     assert third.status_code == 200, third.text
 

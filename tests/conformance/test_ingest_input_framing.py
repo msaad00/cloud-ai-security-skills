@@ -14,10 +14,7 @@ import pytest
 from tests.conformance.test_ingest_timestamps import ALL_SKIP_CASES, _run_ingest, _source_text
 
 BOM = "﻿"
-# The MCP proxy ingester reads its input line by line on its own and is being
-# reworked separately (batched JSON-RPC); it joins these cases once that lands.
-PENDING = {"ingest-mcp-proxy-ocsf"}
-CASES = [(skill, source) for skill, source, _ in ALL_SKIP_CASES if skill not in PENDING]
+CASES = [(skill, source) for skill, source, _ in ALL_SKIP_CASES]
 
 
 @pytest.mark.parametrize(("skill", "source"), CASES, ids=[c[0] for c in CASES])

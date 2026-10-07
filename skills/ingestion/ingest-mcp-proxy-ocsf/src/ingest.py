@@ -417,6 +417,8 @@ def ingest(
     if output_format not in OUTPUT_FORMATS:
         raise ValueError(f"unsupported output_format `{output_format}`")
     for lineno, line in enumerate(lines, start=1):
+        if lineno == 1:
+            line = line.removeprefix("﻿")
         line = line.strip()
         if not line:
             continue

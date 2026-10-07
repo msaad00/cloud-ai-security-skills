@@ -11,6 +11,45 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- **Webhook HMAC now signs a timestamp** (#723): senders sign
+  `"{timestamp}.{body}"` and send `X-Webhook-Timestamp`; requests outside
+  a 300 s window (`WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS`) and replays of an
+  accepted signature within the window are rejected. Body-only signatures
+  are refused unless the deprecated `WEBHOOK_ALLOW_LEGACY_HMAC=1` is set.
+- **MCP event uids change** (#723): `ingest-mcp-proxy-ocsf` no longer hashes
+  raw `params` / `body` into the event uid (short `tools/call` arguments
+  could be brute-forced), and each tool in a `tools/list` response gets its
+  own uid. MCP golden fixtures were regenerated.
+- **Detector finding time never comes from the wall clock** (#721): finding
+  time is derived from the triggering events; when none has a usable time
+  the finding is skipped with a `finding_time_missing` stderr warning, so
+  replays are byte-identical. Windowed and correlating detectors exclude
+  time-less events instead of bucketing them at epoch 0.
+
+### Security
+
+- Webhook receiver authenticates before routing: every auth failure returns
+  a uniform `401 unauthorized`, so unauthenticated callers cannot enumerate
+  which skills are routed; the specific reason stays in the audit record
+  (#723).
+
+### Fixed
+
+- A UTF-8 byte-order mark at the start of input no longer drops the first
+  record in any ingester, including `ingest-mcp-proxy-ocsf` (#722).
+- A JSON array on the first line of an NDJSON stream is ingested element
+  by element instead of being dropped; batched JSON-RPC lines in
+  `ingest-mcp-proxy-ocsf` are expanded into their member messages (#722).
+- Timestamp parsing: exponent-form numeric strings parse like the number,
+  a leap second clamps to `:59.999`, numeric values below 1e8 (e.g.
+  `"2026"`) are no longer read as epoch seconds, times at or before
+  1970-01-01 are rejected for ISO and epoch alike, and non-ASCII digits are
+  rejected (#722).
+- `detect-bulk-export-salesforce` no longer correlates a time-less export to
+  a logout (#721).
+
 ## [0.13.0] — 2026-10-07 — Contract correctness, boundary hardening, streaming
 
 Pre-1.0 MINOR release that **includes output-contract changes** (see
