@@ -75,7 +75,7 @@ def test_call_tool_injects_caller_and_approval_context(monkeypatch):
         captured["cwd"] = kwargs["cwd"]
         return _FakeCompleted()
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
 
     result = MODULE._call_tool(
         "fake-skill",
@@ -137,7 +137,7 @@ def test_call_tool_scrubs_ambient_secret_env(monkeypatch):
         captured["env"] = kwargs["env"]
         return _FakeCompleted()
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
 
     MODULE._call_tool("fake-skill", {"args": []})
 
@@ -163,7 +163,7 @@ def test_call_tool_preserves_cloud_security_control_env(monkeypatch):
         captured["env"] = kwargs["env"]
         return _FakeCompleted()
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
 
     MODULE._call_tool("fake-skill", {"args": []})
 
@@ -281,7 +281,7 @@ def test_call_tool_accepts_multi_approver_context(monkeypatch):
         captured["env"] = kwargs["env"]
         return _FakeCompleted()
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
 
     result = MODULE._call_tool(
         "fake-skill",
@@ -372,7 +372,7 @@ def test_checks_evaluation_dry_run_does_not_require_approval_context(monkeypatch
     monkeypatch.setattr(
         MODULE, "build_command", lambda skill, args, output_format=None: ["python", "fake.py"]
     )
-    monkeypatch.setattr(MODULE.subprocess, "run", lambda *args, **kwargs: _FakeCompleted())
+    monkeypatch.setattr(MODULE, "_run_one_shot", lambda *args, **kwargs: _FakeCompleted())
     result = MODULE._call_tool("fake-skill", {"args": []})
     assert result["isError"] is False
 
@@ -417,7 +417,7 @@ def test_call_tool_audit_records_resolved_timeout(monkeypatch):
         assert kwargs["timeout"] == 150
         return _FakeCompleted()
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
     monkeypatch.delenv("CLOUD_SECURITY_MCP_TIMEOUT_SECONDS", raising=False)
     MODULE._call_tool("fake-skill", {"args": []})
     assert audit_events[0]["timeout_seconds"] == 150
@@ -532,7 +532,7 @@ def test_call_tool_forwards_caller_allowed_skill_scope(monkeypatch):
         captured["env"] = kwargs["env"]
         return _FakeCompleted()
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _fake_run)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _fake_run)
 
     MODULE._call_tool(
         "fake-skill",
@@ -589,7 +589,7 @@ def test_handle_request_returns_distinct_timeout_error_code(monkeypatch):
     def _raise_timeout(*args, **kwargs):
         raise MODULE.subprocess.TimeoutExpired(cmd=["python", "fake.py"], timeout=42)
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _raise_timeout)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _raise_timeout)
 
     response = MODULE._handle_request(
         {
@@ -625,7 +625,7 @@ def test_handle_request_survives_unexpected_dispatch_exception(monkeypatch):
     def _raise_oserror(*args, **kwargs):
         raise OSError("fork: Resource temporarily unavailable")
 
-    monkeypatch.setattr(MODULE.subprocess, "run", _raise_oserror)
+    monkeypatch.setattr(MODULE, "_run_one_shot", _raise_oserror)
 
     response = MODULE._handle_request(
         {
