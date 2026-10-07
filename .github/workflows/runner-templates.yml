@@ -12,6 +12,7 @@ on:
       - "runners/**"
       - "mcp-server/src/transports/**"
       - ".github/workflows/runner-templates.yml"
+  workflow_dispatch:
 
 concurrency:
   group: runner-templates-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -28,7 +29,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install Helm
-        uses: azure/setup-helm@v5
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v3.16.4
 
@@ -60,7 +61,22 @@ jobs:
         # Hadolint catches the usual Dockerfile mistakes (no `--no-cache-dir`
         # on `apt-get`, missing user, etc.). Continue-on-error so the lint
         # does not block on style nits, but the report is still attached.
-        uses: hadolint/hadolint-action@v3.5.0
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
         with:
           dockerfile: runners/mcp-sse/Dockerfile
           failure-threshold: error
+
+  webhook-receiver-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: docker build — webhook-receiver runner (full image, no push)
+        # Builds every stage of the shipped image so a broken Dockerfile,
+        # COPY path, or unresolvable dependency fails here instead of at
+        # deploy time. Build context is the repo root, as documented in the
+        # Dockerfile header.
+        run: docker build -t cloud-security-webhook-receiver:ci -f runners/webhook-receiver/Dockerfile .

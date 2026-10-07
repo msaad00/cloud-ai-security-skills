@@ -7,6 +7,10 @@ on:
       - "skills/detection-engineering/scoring/**"
       - ".github/workflows/detector-scoring.yml"
       - "scripts/score_pr_detectors.sh"
+      - "skills/_shared/**"
+      - ".github/actions/setup-python-deps/**"
+      - "pyproject.toml"
+      - "uv.lock"
 
 permissions:
   contents: read
