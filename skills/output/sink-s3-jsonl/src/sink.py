@@ -18,8 +18,6 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from skills._shared import aws  # noqa: E402
-
 SKILL_NAME = "sink-s3-jsonl"
 BUCKET_RE = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
 PREFIX_SEGMENT_RE = re.compile(r"^[A-Za-z0-9._=-]+$")
@@ -111,11 +109,9 @@ def _prepare_rows(stdin: Iterable[str]) -> list[PreparedRow]:
     return rows
 
 
-def _object_key(prefix: str, rows: list[PreparedRow], now: datetime | None = None) -> str:
+def _object_key(prefix: str, body: bytes, now: datetime | None = None) -> str:
     moment = now or datetime.now(UTC)
-    digest = hashlib.sha256(
-        "\n".join(row.payload_json for row in rows).encode("utf-8")
-    ).hexdigest()[:12]
+    digest = hashlib.sha256(body.removesuffix(b"\n")).hexdigest()[:12]
     return f"{prefix}/{moment:%Y/%m/%d}/{moment:%Y%m%dT%H%M%SZ}-{digest}.jsonl"
 
 
@@ -124,6 +120,8 @@ def _body(rows: list[PreparedRow]) -> bytes:
 
 
 def _client() -> Any:
+    from skills._shared import aws
+
     region_name = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
     kwargs: dict[str, str] = {}
     if region_name:
@@ -131,15 +129,13 @@ def _client() -> Any:
     return aws.client("s3", **kwargs)
 
 
-def _write_object(bucket: str, object_key: str, rows: list[PreparedRow]) -> int:
-    client = _client()
-    client.put_object(
+def _write_object(bucket: str, object_key: str, body: bytes) -> None:
+    _client().put_object(
         Bucket=bucket,
         Key=object_key,
-        Body=_body(rows),
+        Body=body,
         ContentType="application/x-ndjson",
     )
-    return len(rows)
 
 
 def _summary(
@@ -203,8 +199,12 @@ def main(argv: list[str] | None = None) -> int:
         rows = _prepare_rows(sys.stdin)
         if not rows:
             raise ValueError("stdin did not contain any JSONL records")
-        object_key = _object_key(prefix, rows)
-        written_records = 0 if args.dry_run else _write_object(bucket, object_key, rows)
+        body = _body(rows)
+        object_key = _object_key(prefix, body)
+        written_records = 0
+        if not args.dry_run:
+            _write_object(bucket, object_key, body)
+            written_records = len(rows)
         sys.stdout.write(
             json.dumps(
                 _summary(
