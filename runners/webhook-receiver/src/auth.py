@@ -1,6 +1,6 @@
 """Request authentication for the webhook receiver.
 
-Two layers, either or both can be required:
+Two layers; every routed skill must have at least one configured:
 
 1. **HMAC-SHA-256** of the raw request body, keyed per skill via
    `WEBHOOK_HMAC_SECRETS` (JSON object). The signature header is
@@ -12,6 +12,10 @@ Two layers, either or both can be required:
 The verifier is body-first: an invalid signature is rejected before the
 skill subprocess is spawned, and the audit record still fires with
 `result: error` so post-hoc reviewers see the rejected attempt.
+
+Fail closed: a skill with neither an HMAC secret nor a bearer token is
+refused (`auth_not_configured`), and a malformed `WEBHOOK_HMAC_SECRETS`
+raises instead of silently disabling signature checks.
 """
 
 from __future__ import annotations
@@ -33,18 +37,32 @@ def _const_eq(a: str, b: str) -> bool:
     return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
 
 
-def _hmac_secrets(env: dict[str, str] | None = None) -> dict[str, str]:
+def hmac_secrets(env: dict[str, str] | None = None) -> dict[str, str]:
+    """Parse `WEBHOOK_HMAC_SECRETS`. Raises ValueError when it is set but is
+    not a JSON object of string secrets."""
     src = os.environ if env is None else env
     raw = (src.get("WEBHOOK_HMAC_SECRETS") or "").strip()
     if not raw:
         return {}
     try:
         parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(parsed, dict):
-        return {}
-    return {str(k): str(v) for k, v in parsed.items() if isinstance(v, str)}
+    except json.JSONDecodeError as exc:
+        raise ValueError("WEBHOOK_HMAC_SECRETS is not valid JSON") from exc
+    if not isinstance(parsed, dict) or not all(isinstance(v, str) and v for v in parsed.values()):
+        raise ValueError(
+            "WEBHOOK_HMAC_SECRETS must be a JSON object mapping skill name to a non-empty secret"
+        )
+    return {str(k): v for k, v in parsed.items()}
+
+
+def _bearer_token(env: dict[str, str] | None = None) -> str:
+    src = os.environ if env is None else env
+    return (src.get("WEBHOOK_BEARER_TOKEN") or "").strip()
+
+
+def auth_configured_for(skill_name: str, *, env: dict[str, str] | None = None) -> bool:
+    """True when the skill has an HMAC secret or a bearer token is set."""
+    return skill_name in hmac_secrets(env) or bool(_bearer_token(env))
 
 
 def _hmac_header_name(env: dict[str, str] | None = None) -> str:
@@ -74,8 +92,9 @@ def verify_hmac(
     env: dict[str, str] | None = None,
 ) -> AuthResult:
     """Verify the HMAC signature for one webhook request. Returns ok=True
-    when no secret is configured for the skill (signature is optional)."""
-    secrets = _hmac_secrets(env)
+    when no secret is configured for the skill; `auth_configured_for`
+    guarantees the bearer layer is then required."""
+    secrets = hmac_secrets(env)
     secret = secrets.get(skill_name)
     if secret is None:
         # No per-skill secret configured -> HMAC layer is opt-in. The bearer
@@ -95,8 +114,7 @@ def verify_hmac(
 
 def verify_bearer(headers: dict[str, str], *, env: dict[str, str] | None = None) -> AuthResult:
     """Verify the bearer token, if one is configured."""
-    src = os.environ if env is None else env
-    expected = (src.get("WEBHOOK_BEARER_TOKEN") or "").strip()
+    expected = _bearer_token(env)
     if not expected:
         return AuthResult(ok=True)
     raw = headers.get("authorization") or headers.get("Authorization") or ""

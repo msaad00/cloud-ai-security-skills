@@ -35,6 +35,8 @@ from typing import Any
 
 AUDIT_LOG_ENV = "CLOUD_SECURITY_MCP_AUDIT_LOG"
 AUDIT_HMAC_KEY_ENV = "CLOUD_SECURITY_AUDIT_HMAC_KEY"
+MIN_HMAC_KEY_BYTES = 32
+_PLACEHOLDER_KEY_MARKER = "please-set-me"
 
 # Sentinel for the genesis event in a chain. Any non-empty deterministic value
 # works; this one is documented so verifiers can recognise the boundary.
@@ -169,11 +171,29 @@ def _read_last_chain_hash(path: Path) -> str | None:
     return last_hash if isinstance(last_hash, str) else None
 
 
+def _validated_hmac_key(raw_key: str) -> bytes:
+    """Fail closed on a weak or template-placeholder chain key: a guessable
+    key lets anyone who can write the log forge a valid chain."""
+    key = raw_key.encode("utf-8")
+    if _PLACEHOLDER_KEY_MARKER in raw_key.lower():
+        raise ValueError(
+            f"{AUDIT_HMAC_KEY_ENV} is still the template placeholder; "
+            "generate one with `openssl rand -hex 32`"
+        )
+    if len(key) < MIN_HMAC_KEY_BYTES:
+        raise ValueError(
+            f"{AUDIT_HMAC_KEY_ENV} must be at least {MIN_HMAC_KEY_BYTES} bytes; "
+            "generate one with `openssl rand -hex 32`"
+        )
+    return key
+
+
 def sink_from_env(env: dict[str, str] | None = None) -> AuditSink:
     """Build the sink from environment variables. Both vars are optional; the
-    default sink keeps the legacy stderr-only behaviour."""
+    default sink keeps the legacy stderr-only behaviour. A configured HMAC key
+    that is too short or still the template placeholder raises ValueError."""
     src = os.environ if env is None else env
     log_path = (src.get(AUDIT_LOG_ENV) or "").strip() or None
     raw_key = (src.get(AUDIT_HMAC_KEY_ENV) or "").strip()
-    hmac_key = raw_key.encode("utf-8") if raw_key else None
+    hmac_key = _validated_hmac_key(raw_key) if raw_key else None
     return AuditSink(log_path=log_path, hmac_key=hmac_key)

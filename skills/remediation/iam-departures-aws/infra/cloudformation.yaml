@@ -319,6 +319,7 @@ Resources:
                 Resource:
                   - !GetAtt ParserFunction.Arn
                   - !GetAtt WorkerFunction.Arn
+              # WILDCARD_OK: CloudWatch Logs delivery actions in Step Functions require Resource: '*'.
               - Sid: CloudWatchLogs
                 Effect: Allow
                 Action:
@@ -334,6 +335,7 @@ Resources:
                   - logs:DescribeResourcePolicies
                   - logs:DescribeLogGroups
                 Resource: '*'
+              # WILDCARD_OK: X-Ray telemetry APIs require Resource: '*'.
               - Sid: XRayTracing
                 Effect: Allow
                 Action:

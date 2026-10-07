@@ -885,7 +885,8 @@ def build_bom(document: dict[str, Any]) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate a deterministic AI BOM from AI asset inventory snapshots."
+        description="Generate a deterministic AI BOM from AI asset inventory snapshots.",
+        allow_abbrev=False,
     )
     parser.add_argument(
         "input", nargs="?", help="Path to the inventory JSON file. Reads stdin when omitted."

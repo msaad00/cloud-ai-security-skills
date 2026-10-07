@@ -51,7 +51,7 @@ def build_manifest(source_name: str, previous_hash: str | None = None) -> dict[s
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument(
         "--source", required=True, help="HR source name: snowflake, databricks, clickhouse, workday"
     )

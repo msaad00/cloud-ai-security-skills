@@ -14,14 +14,42 @@ SUBPROCESS_PATTERNS = (
     "check_output(",
 )
 
+_POLICY_KEY = r"""\b(?:action|resource)s?\b["']?\s*[:=]\s*"""
+
+# One line per pattern; JSON, YAML/CloudFormation and Terraform spellings.
 WILDCARD_PATTERNS = (
-    re.compile(r'"Action"\s*:\s*"\*"'),
-    re.compile(r'"Resource"\s*:\s*"\*"'),
-    re.compile(r"\bAction\s*=\s*\"\*\""),
-    re.compile(r"\bResource\s*=\s*\"\*\""),
+    # Action: "*" / "Resource": "*" / Resource = "*" / resources = ['*']
+    re.compile(_POLICY_KEY + r"""["']\*["']""", re.IGNORECASE),
+    re.compile(_POLICY_KEY + r"""\[[^\]]*["']\*["']""", re.IGNORECASE),
+    # Block-list item that is just "*" (YAML `- '*'`, JSON `"*",`).
+    re.compile(r"""^\s*(?:-\s*)?["']\*["']\s*,?\s*$"""),
+    # Service-wide action wildcard: "iam:*", 's3:*', `- sqs:*`, `Action: kms:*`.
+    re.compile(r"""["'][a-z0-9-]+:\*["']"""),
+    re.compile(r"""^\s*-\s*[a-z0-9-]+:\*\s*$"""),
+    re.compile(r"""\baction\b\s*:\s*[a-z0-9-]+:\*\s*$""", re.IGNORECASE),
 )
 
+_EFFECT_PATTERN = re.compile(r"""\beffect\b["']?\s*[:=]\s*["']?(allow|deny)\b""", re.IGNORECASE)
+
 POLICY_SUFFIXES = (".json", ".tf", ".yaml", ".yml")
+
+
+def _policy_scan_roots() -> tuple[Any, ...]:
+    # Resolved at call time so tests can repoint ROOT / SKILLS_ROOT.
+    return (SKILLS_ROOT, ROOT / "runners")
+
+
+def _policy_files() -> list[Any]:
+    files: list[Any] = []
+    for root in _policy_scan_roots():
+        if root.exists():
+            files.extend(
+                path
+                for path in sorted(root.rglob("*"))
+                if path.is_file() and path.suffix in POLICY_SUFFIXES
+            )
+    return files
+
 
 # Policy floors from docs/HITL_POLICY.md that are stricter than the generic
 # "write-capable skills need human approval" bar. Keep the set explicit so CI
@@ -254,15 +282,30 @@ def _has_wildcard_marker(lines: list[str], line_index: int) -> bool:
     return "WILDCARD_OK" in window
 
 
+def _statement_is_deny(lines: list[str], line_index: int) -> bool:
+    # Policies in this repo put Effect before Action/Resource, so the nearest
+    # preceding Effect belongs to the same statement; fall back to a short
+    # forward look for statements written the other way round.
+    for idx in range(line_index, max(-1, line_index - 33), -1):
+        match = _EFFECT_PATTERN.search(lines[idx])
+        if match:
+            return match.group(1).lower() == "deny"
+    for idx in range(line_index + 1, min(len(lines), line_index + 9)):
+        match = _EFFECT_PATTERN.search(lines[idx])
+        if match:
+            return match.group(1).lower() == "deny"
+    return False
+
+
 def validate_wildcards() -> list[str]:
     errors: list[str] = []
-    for path in sorted(SKILLS_ROOT.rglob("*")):
-        if not path.is_file() or path.suffix not in POLICY_SUFFIXES:
-            continue
+    for path in _policy_files():
         text = path.read_text()
         lines = text.splitlines()
         for idx, line in enumerate(lines):
             if any(pattern.search(line) for pattern in WILDCARD_PATTERNS):
+                if _statement_is_deny(lines, idx):
+                    continue
                 if not _has_wildcard_marker(lines, idx):
                     rel = path.relative_to(ROOT)
                     errors.append(
@@ -338,9 +381,7 @@ def _has_boundary_condition(lines: list[str], line_index: int) -> bool:
 
 def validate_assume_role_boundaries() -> list[str]:
     errors: list[str] = []
-    for path in sorted(SKILLS_ROOT.rglob("*")):
-        if not path.is_file() or path.suffix not in POLICY_SUFFIXES:
-            continue
+    for path in _policy_files():
         text = path.read_text()
         lines = text.splitlines()
         for idx, line in enumerate(lines):

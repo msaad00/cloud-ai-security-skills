@@ -834,3 +834,142 @@ class TestSecretLiteralChecker:
         bad = tmp_path / "leak.py"
         bad.write_text('API_KEY = "sk-abcdefghijklmnopqrstuvwxyz123456"\n', encoding="utf-8")
         assert checker._scan_file(bad)
+
+
+class TestWildcardGuardrail:
+    """`validate_wildcards` must catch every common spelling of an Allow on
+    `*` (scalar, inline list, block list, service wildcard) in JSON, YAML/CFN
+    and Terraform, across both skills/ and runners/, while Deny statements
+    and WILDCARD_OK-justified grants pass."""
+
+    def _write(self, tmp_path: Path, rel: str, body: str) -> None:
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body)
+
+    def _run(self, tmp_path: Path) -> list[str]:
+        original_root = SAFE.ROOT
+        original_skills_root = SAFE.SKILLS_ROOT
+        SAFE.ROOT = tmp_path
+        SAFE.SKILLS_ROOT = tmp_path / "skills"
+        try:
+            return SAFE.validate_wildcards()
+        finally:
+            SAFE.ROOT = original_root
+            SAFE.SKILLS_ROOT = original_skills_root
+
+    def _skill_policy(self, tmp_path: Path, filename: str, body: str) -> list[str]:
+        self._write(tmp_path, f"skills/remediation/fake/infra/{filename}", body)
+        return self._run(tmp_path)
+
+    def test_yaml_resource_star_single_quoted(self, tmp_path: Path):
+        body = "Statement:\n  - Effect: Allow\n    Action: s3:GetObject\n    Resource: '*'\n"
+        assert len(self._skill_policy(tmp_path, "cfn.yaml", body)) == 1
+
+    def test_yaml_action_star_double_quoted(self, tmp_path: Path):
+        body = 'Statement:\n  - Effect: Allow\n    Action: "*"\n    Resource: arn:aws:s3:::b\n'
+        assert len(self._skill_policy(tmp_path, "cfn.yml", body)) == 1
+
+    def test_json_inline_list_star(self, tmp_path: Path):
+        body = json.dumps(
+            {"Statement": [{"Effect": "Allow", "Action": ["s3:GetObject"], "Resource": ["*"]}]}
+        )
+        assert len(self._skill_policy(tmp_path, "policy.json", body)) == 1
+
+    def test_terraform_lowercase_resources_list(self, tmp_path: Path):
+        body = (
+            'data "aws_iam_policy_document" "x" {\n'
+            "  statement {\n"
+            '    effect    = "Allow"\n'
+            '    actions   = ["s3:GetObject"]\n'
+            '    resources = ["*"]\n'
+            "  }\n"
+            "}\n"
+        )
+        assert len(self._skill_policy(tmp_path, "main.tf", body)) == 1
+
+    def test_yaml_block_list_star(self, tmp_path: Path):
+        body = (
+            "Statement:\n"
+            "  - Effect: Allow\n"
+            "    Action:\n"
+            "      - s3:GetObject\n"
+            "    Resource:\n"
+            "      - '*'\n"
+        )
+        assert len(self._skill_policy(tmp_path, "cfn.yaml", body)) == 1
+
+    def test_service_wildcard_json(self, tmp_path: Path):
+        body = json.dumps(
+            {
+                "Statement": [
+                    {"Effect": "Allow", "Action": "iam:*", "Resource": "arn:aws:iam::1:user/x"}
+                ]
+            },
+            indent=2,
+        )
+        assert len(self._skill_policy(tmp_path, "policy.json", body)) == 1
+
+    def test_service_wildcard_yaml_list_item(self, tmp_path: Path):
+        body = (
+            "Statement:\n"
+            "  - Effect: Allow\n"
+            "    Action:\n"
+            "      - s3:*\n"
+            "    Resource: arn:aws:s3:::bucket\n"
+        )
+        assert len(self._skill_policy(tmp_path, "cfn.yaml", body)) == 1
+
+    def test_deny_statements_pass(self, tmp_path: Path):
+        body = (
+            "Statement:\n"
+            "  - Sid: DenyAllDirectIAM\n"
+            "    Effect: Deny\n"
+            "    Action: iam:*\n"
+            "    Resource: '*'\n"
+        )
+        assert self._skill_policy(tmp_path, "cfn.yaml", body) == []
+
+    def test_terraform_deny_service_wildcard_passes(self, tmp_path: Path):
+        body = (
+            "Statement = [{\n"
+            '  Effect   = "Deny"\n'
+            '  Action   = "s3:*"\n'
+            '  Resource = ["arn:aws:s3:::b", "arn:aws:s3:::b/*"]\n'
+            "}]\n"
+        )
+        assert self._skill_policy(tmp_path, "main.tf", body) == []
+
+    def test_wildcard_ok_marker_passes(self, tmp_path: Path):
+        body = (
+            "Statement:\n"
+            "  # WILDCARD_OK: X-Ray telemetry APIs have no resource-level scoping.\n"
+            "  - Effect: Allow\n"
+            "    Action: xray:PutTraceSegments\n"
+            "    Resource: '*'\n"
+        )
+        assert self._skill_policy(tmp_path, "cfn.yaml", body) == []
+
+    def test_arn_region_wildcards_are_not_service_wildcards(self, tmp_path: Path):
+        body = json.dumps(
+            {
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "logs:PutLogEvents",
+                        "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/x:*",
+                    }
+                ]
+            },
+            indent=2,
+        )
+        assert self._skill_policy(tmp_path, "policy.json", body) == []
+
+    def test_runners_are_scanned(self, tmp_path: Path):
+        body = "Statement:\n  - Effect: Allow\n    Action: sqs:*\n    Resource: '*'\n"
+        self._write(tmp_path, "runners/aws-fake/template.yaml", body)
+        errors = self._run(tmp_path)
+        assert errors and all(e.startswith("runners/aws-fake/template.yaml") for e in errors)
+
+    def test_repo_runners_and_skills_pass(self):
+        assert SAFE.validate_wildcards() == []
