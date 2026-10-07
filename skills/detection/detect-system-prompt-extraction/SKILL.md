@@ -82,9 +82,14 @@ matched signal names, and a fingerprint — never the full leaked body.
 
 ## Run
 
+The ingester drops tool-response content by default. Run it with
+`--preserve-mcp-content` (or `MCP_PRESERVE_CONTENT=1`) so `tools/call`
+response output reaches this detector as `unmapped.mcp.response.body`; see
+[MCP content preservation](../../../docs/DATA_HANDLING.md#mcp-content-preservation).
+
 ```bash
 # MCP proxy -> ingest native -> detect
-python skills/ingestion/ingest-mcp-proxy-ocsf/src/ingest.py raw.jsonl --output-format native \
+python skills/ingestion/ingest-mcp-proxy-ocsf/src/ingest.py raw.jsonl --output-format native --preserve-mcp-content \
   | python skills/detection/detect-system-prompt-extraction/src/detect.py \
   > findings.ocsf.jsonl
 

@@ -65,7 +65,8 @@ A finding fires when:
 1. `source_skill == ingest-mcp-proxy-ocsf`
 2. event is a native/canonical `application_activity`
 3. `method == "tools/call"` and `direction == "response"`
-4. the response `body` contains high-confidence credential patterns
+4. the response body (`body`, or the preserved `unmapped.mcp.response.body`)
+   contains high-confidence credential patterns
 
 This first slice matches:
 
@@ -83,9 +84,14 @@ This first slice matches:
 
 ## Run
 
+The ingester drops tool-response content by default. Run it with
+`--preserve-mcp-content` (or `MCP_PRESERVE_CONTENT=1`) so `tools/call`
+response output reaches this detector as `unmapped.mcp.response.body`; see
+[MCP content preservation](../../../docs/DATA_HANDLING.md#mcp-content-preservation).
+
 ```bash
 agent-bom proxy "<server cmd>" --log-format jsonl \
-  | python skills/ingestion/ingest-mcp-proxy-ocsf/src/ingest.py --output-format native \
+  | python skills/ingestion/ingest-mcp-proxy-ocsf/src/ingest.py --output-format native --preserve-mcp-content \
   | python skills/detection/detect-agent-credential-leak-mcp/src/detect.py \
   > findings.ocsf.jsonl
 ```

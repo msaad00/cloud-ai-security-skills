@@ -101,11 +101,21 @@ def _tool_name(event: dict[str, Any], params: dict[str, Any]) -> str:
     return str(tool.get("name") or params.get("name") or event.get("tool_name") or "")
 
 
+def _response_body(event: dict[str, Any]) -> Any:
+    """Raw `body` (hand-built input) or the opt-in preserved `unmapped.mcp.response.body`."""
+    if event.get("body") is not None:
+        return event["body"]
+    unmapped = event.get("unmapped")
+    mcp = unmapped.get("mcp") if isinstance(unmapped, dict) else None
+    response = mcp.get("response") if isinstance(mcp, dict) else None
+    return response.get("body") if isinstance(response, dict) else None
+
+
 def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
     if "class_uid" in event:
         if event.get("class_uid") != APPLICATION_ACTIVITY_UID:
             return None
-        body = event.get("body")
+        body = _response_body(event)
         params = event.get("params") or {}
         if not isinstance(params, dict):
             params = {}
@@ -139,7 +149,7 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any] | None:
         "method": str(event.get("method") or ""),
         "direction": str(event.get("direction") or ""),
         "tool_name": _tool_name(event, params),
-        "body": event.get("body"),
+        "body": _response_body(event),
     }
 
 
