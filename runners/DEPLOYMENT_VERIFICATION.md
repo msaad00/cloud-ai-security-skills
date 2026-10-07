@@ -16,7 +16,7 @@ Read next:
 | Runner | Template shipped | Handler tests | IaC validation in CI | Walkthrough committed | Local emulated end-to-end in CI | Real deploy proof captured | Tracking issue |
 |---|---|---|---|---|---|---|---|
 | `aws-s3-sqs-detect` | yes | yes | yes | yes | yes (`moto`, ingest leg) | yes (2026-10-07) — [evidence](aws-s3-sqs-detect/README.md#live-deploy-verification-status) | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
-| `gcp-gcs-pubsub-detect` | yes | yes | yes | yes | yes (in-process SDK fakes) | not yet (2026-10-07 attempt skipped: test project has billing disabled) | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
+| `gcp-gcs-pubsub-detect` | yes | yes | yes | yes | yes (in-process SDK fakes) | yes (2026-10-07) — [evidence](gcp-gcs-pubsub-detect/README.md#live-deploy-verification-status) | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
 | `azure-blob-eventgrid-detect` | yes | yes | yes | yes | yes (in-process SDK fakes) | yes (2026-10-07) — [evidence](azure-blob-eventgrid-detect/README.md#live-deploy-verification-status) | [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) |
 
 Current repo reality:
@@ -26,19 +26,16 @@ Current repo reality:
 - the repo now carries concrete first-event walkthroughs in each runner README
 - `scripts/runner_e2e.sh` runs every runner's real handler entrypoints locally
   in CI (see [Local emulated end-to-end](#local-emulated-end-to-end))
-- AWS and Azure have a captured real-cloud deploy-and-first-event proof
-  (2026-10-07), including a redelivery that the dedupe store suppressed; the
-  evidence and the exact commands live in each runner README
-- GCP has no real deploy proof yet: the 2026-10-07 attempt was skipped because
-  the test project has billing disabled
-
-The GCP proof is the remaining work tracked in `#198` / `#609`.
+- AWS, GCP, and Azure each have a captured real-cloud deploy-and-first-event
+  proof (2026-10-07), including a redelivery that the dedupe store
+  suppressed; the evidence and the exact commands live in each runner README
 
 The live runs surfaced defects the emulated lane could not: an
 `azure-data-tables` call that does not exist on the real SDK (the in-process
-fake modeled it), a Bicep "FQDN" output that is a URL, and AWS README deploy
-parameters that did not match the template. All are fixed alongside the
-evidence.
+fake modeled it), a Bicep "FQDN" output that is a URL, AWS README deploy
+parameters that did not match the template, and a GCP template that built
+functions as the default compute account, set no Eventarc trigger identity,
+and shipped no `requirements.txt`. All are fixed alongside the evidence.
 
 ## Local Emulated End-to-End
 

@@ -216,6 +216,23 @@ class TestGcpGcsPubsubDetectRunner:
         assert DETECT._put_if_new("uid-1", "payload") is True
         assert DETECT._put_if_new("uid-1", "payload") is False
 
+    def test_detect_firestore_client_uses_dedupe_database_env(self, monkeypatch):
+        seen: list[dict] = []
+
+        class _FakeFirestoreModule:
+            @staticmethod
+            def Client(**kwargs):
+                seen.append(kwargs)
+                return object()
+
+        monkeypatch.setattr(DETECT, "firestore", _FakeFirestoreModule)
+        monkeypatch.setenv("DEDUPE_DATABASE", "runner-dedupe")
+        DETECT._firestore_client()
+        monkeypatch.delenv("DEDUPE_DATABASE")
+        DETECT._firestore_client()
+
+        assert seen == [{"database": "runner-dedupe"}, {"database": "(default)"}]
+
 
 class _CloudEvent:
     """Shape of the CloudEvent a Cloud Functions 2nd gen handler receives:
@@ -292,3 +309,48 @@ class TestGcpRunnerCloudEventEntrypoints:
     def test_ingest_rejects_event_without_object_payload(self):
         with pytest.raises(ValueError, match="bucket"):
             INGEST.handle_gcs_event(_CloudEvent({}, {"name": "x"}))
+
+
+class TestGcpRunnerTemplateContract:
+    """Deploy prerequisites the 2026-10-07 live run showed the template must
+    carry itself rather than rely on project defaults."""
+
+    RUNNER = ROOT / "runners" / "gcp-gcs-pubsub-detect"
+
+    def _tf(self) -> str:
+        return (self.RUNNER / "main.tf").read_text(encoding="utf-8")
+
+    def test_functions_build_as_dedicated_service_account(self):
+        tf = self._tf()
+        assert tf.count("service_account = google_service_account.build.id") == 2
+        assert 'role    = "roles/cloudbuild.builds.builder"' in tf
+
+    def test_function_source_file_is_bound_without_main_py(self):
+        tf = self._tf()
+        assert 'GOOGLE_FUNCTION_SOURCE = "ingest_handler.py"' in tf
+        assert 'GOOGLE_FUNCTION_SOURCE = "detect_handler.py"' in tf
+
+    def test_event_triggers_use_function_identity_with_invoker_and_receiver(self):
+        tf = self._tf()
+        assert "service_account_email = google_service_account.ingest.email" in tf
+        assert "service_account_email = google_service_account.detect.email" in tf
+        assert tf.count('role     = "roles/run.invoker"') == 2
+        assert tf.count('role    = "roles/eventarc.eventReceiver"') == 2
+
+    def test_storage_agent_can_publish_eventarc_storage_events(self):
+        tf = self._tf()
+        assert 'data "google_storage_project_service_account" "gcs_agent"' in tf
+        assert "gcs_agent.email_address" in tf
+
+    def test_detect_reads_configured_firestore_database(self):
+        assert "DEDUPE_DATABASE   = google_firestore_database.dedupe.name" in self._tf()
+
+    def test_requirements_cover_handler_imports(self):
+        reqs = (self.RUNNER / "requirements.txt").read_text(encoding="utf-8")
+        names = {line.split(">")[0].split("=")[0].strip() for line in reqs.splitlines() if line}
+        assert {
+            "functions-framework",
+            "google-cloud-firestore",
+            "google-cloud-pubsub",
+            "google-cloud-storage",
+        } <= names

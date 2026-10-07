@@ -88,7 +88,7 @@ flowchart LR
 | Topic | Shipped today | Planned / contract-supported |
 |---|---|---|
 | Native / OCSF dual mode | selected ingest and detect skills, plus native-first discovery | repo-wide rollout across remaining ingest/detect paths |
-| Persistent execution | IAM departures event-driven path, plus `runners/aws-s3-sqs-detect`, `runners/gcp-gcs-pubsub-detect`, and `runners/azure-blob-eventgrid-detect` (exercised end to end in CI against local fakes; real-cloud deploy proof captured for AWS and Azure) | captured real-cloud deploy proof for the GCP runner ([#609](https://github.com/msaad00/cloud-ai-security-skills/issues/609)) |
+| Persistent execution | IAM departures event-driven path, plus `runners/aws-s3-sqs-detect`, `runners/gcp-gcs-pubsub-detect`, and `runners/azure-blob-eventgrid-detect` (exercised end to end in CI against local fakes; real-cloud deploy proof captured for AWS, GCP, and Azure) | — |
 | Audit and finding sinks | IAM departures dual-write to DynamoDB + S3; `sink-s3-jsonl`, `sink-snowflake-jsonl`, `sink-clickhouse-jsonl` | Snowpipe, Security Lake, BigQuery |
 | Visuals | repo architecture, detection pipeline, IAM departures workflow + data flow | deeper source / asset / plug-in visuals as the surface grows |
 

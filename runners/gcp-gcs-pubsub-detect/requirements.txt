@@ -1,0 +1,4 @@
+functions-framework>=3.5,<4
+google-cloud-firestore>=2.16,<3
+google-cloud-pubsub>=2.18,<3
+google-cloud-storage>=3.13,<4

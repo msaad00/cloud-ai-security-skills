@@ -185,9 +185,8 @@ def render_doc(records: list[dict[str, Any]]) -> str:
     parts.append(
         "- [#198](https://github.com/msaad00/cloud-ai-security-skills/issues/198) — "
         "deploy and verify all three runner templates end to end. This doc covers "
-        "the local CI surface only; real-cloud deploy proof is captured for AWS "
-        "and Azure and still outstanding for GCP "
-        "(see `runners/DEPLOYMENT_VERIFICATION.md`)."
+        "the local CI surface only; real-cloud deploy proof is captured for AWS, "
+        "GCP, and Azure (see `runners/DEPLOYMENT_VERIFICATION.md`)."
     )
     parts.append(
         "- [#199](https://github.com/msaad00/cloud-ai-security-skills/issues/199) — "
