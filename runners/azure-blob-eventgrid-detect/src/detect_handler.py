@@ -114,7 +114,7 @@ def _extract_uid(record: dict[str, Any]) -> str:
     raise ValueError("record is missing finding_info.uid, metadata.uid, and event_uid")
 
 
-def _dedupe_table():
+def _dedupe_table() -> Any:
     from azure.data.tables import TableServiceClient
     from azure.identity import DefaultAzureCredential
 
@@ -122,9 +122,7 @@ def _dedupe_table():
         endpoint=_table_account_url(),
         credential=DefaultAzureCredential(),
     )
-    table = service.get_table_client(table_name=_dedupe_table_name())
-    table.create_table_if_not_exists()
-    return table
+    return service.create_table_if_not_exists(table_name=_dedupe_table_name())
 
 
 def _put_if_new(uid: str, payload: str) -> bool:

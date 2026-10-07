@@ -290,3 +290,125 @@ class TestAzureBlobEventGridDetectRunner:
         assert "Microsoft.ServiceBus/namespaces/queues" in template
         assert "ServiceBusQueue" in template
         assert "Microsoft.Storage.BlobCreated" in template
+
+
+def _fake_azure_functions_module() -> types.ModuleType:
+    """Minimal stand-in for ``azure.functions`` that records trigger bindings."""
+
+    module = types.ModuleType("azure.functions")
+
+    class ServiceBusMessage:
+        def __init__(self, body: bytes):
+            self._body = body
+
+        def get_body(self) -> bytes:
+            return self._body
+
+    class FunctionApp:
+        def __init__(self):
+            self.bindings: dict[str, dict] = {}
+
+        def service_bus_queue_trigger(self, *, arg_name, queue_name, connection):
+            def register(fn):
+                self.bindings[fn.__name__] = {
+                    "arg_name": arg_name,
+                    "queue_name": queue_name,
+                    "connection": connection,
+                }
+                return fn
+
+            return register
+
+    setattr(module, "ServiceBusMessage", ServiceBusMessage)
+    setattr(module, "FunctionApp", FunctionApp)
+    return module
+
+
+class TestAzureFunctionAppBinding:
+    def _load(self, monkeypatch):
+        functions_module = _fake_azure_functions_module()
+        azure_module = sys.modules.get("azure") or types.ModuleType("azure")
+        monkeypatch.setitem(sys.modules, "azure", azure_module)
+        monkeypatch.setattr(azure_module, "functions", functions_module, raising=False)
+        monkeypatch.setitem(sys.modules, "azure.functions", functions_module)
+        monkeypatch.setitem(sys.modules, "ingest_handler", INGEST)
+        monkeypatch.setitem(sys.modules, "detect_handler", DETECT)
+        module = _load_module(
+            "cloud_security_azure_runner_function_app_test",
+            ROOT / "runners" / "azure-blob-eventgrid-detect" / "functionapp" / "function_app.py",
+        )
+        return module, functions_module
+
+    def test_triggers_bind_ingest_and_detect_queues_with_identity_connection(self, monkeypatch):
+        module, _ = self._load(monkeypatch)
+        assert module.app.bindings == {
+            "ingest": {
+                "arg_name": "msg",
+                "queue_name": "%INGEST_QUEUE_NAME%",
+                "connection": "ServiceBusConnection",
+            },
+            "detect": {
+                "arg_name": "msg",
+                "queue_name": "%DETECT_QUEUE_NAME%",
+                "connection": "ServiceBusConnection",
+            },
+        }
+
+    def test_triggers_pass_decoded_body_to_handlers(self, monkeypatch):
+        module, functions_module = self._load(monkeypatch)
+        seen: dict[str, list[str]] = {}
+
+        def fake_ingest(messages):
+            seen["ingest"] = messages
+            return {"queue_messages_processed": 1}
+
+        def fake_detect(messages):
+            seen["detect"] = messages
+            return {"published": 1}
+
+        monkeypatch.setattr(INGEST, "handle_ingest_messages", fake_ingest)
+        monkeypatch.setattr(DETECT, "handle_detect_messages", fake_detect)
+
+        module.ingest(functions_module.ServiceBusMessage(b'{"data": {"url": "u"}}'))
+        module.detect(functions_module.ServiceBusMessage(b'{"class_uid": 6003}'))
+
+        assert seen == {"ingest": ['{"data": {"url": "u"}}'], "detect": ['{"class_uid": 6003}']}
+
+
+class TestAzureDedupeTableSdkContract:
+    def test_dedupe_table_creates_table_via_service_client(self, monkeypatch):
+        # azure-data-tables exposes create_table_if_not_exists on
+        # TableServiceClient (returning a TableClient); TableClient has no such
+        # method. The fake mirrors that split so a wrong call fails here.
+        calls: list[tuple[str, str]] = []
+
+        class TableClient:
+            def __init__(self, name: str):
+                self.table_name = name
+
+        class TableServiceClient:
+            def __init__(self, endpoint: str, credential: object):
+                calls.append(("init", endpoint))
+
+            def create_table_if_not_exists(self, table_name: str) -> TableClient:
+                calls.append(("create_table_if_not_exists", table_name))
+                return TableClient(table_name)
+
+            def get_table_client(self, table_name: str) -> TableClient:
+                return TableClient(table_name)
+
+        tables_module = types.ModuleType("azure.data.tables")
+        setattr(tables_module, "TableServiceClient", TableServiceClient)
+        identity_module = types.ModuleType("azure.identity")
+        setattr(identity_module, "DefaultAzureCredential", lambda: object())
+        monkeypatch.setitem(sys.modules, "azure.data.tables", tables_module)
+        monkeypatch.setitem(sys.modules, "azure.data", types.ModuleType("azure.data"))
+        monkeypatch.setitem(sys.modules, "azure.identity", identity_module)
+        monkeypatch.setenv("TABLE_ACCOUNT_URL", "https://acct.table.core.windows.net")
+        monkeypatch.setenv("DEDUPE_TABLE_NAME", "runnerdedupe")
+
+        table = DETECT._dedupe_table()
+
+        assert isinstance(table, TableClient)
+        assert table.table_name == "runnerdedupe"
+        assert ("create_table_if_not_exists", "runnerdedupe") in calls

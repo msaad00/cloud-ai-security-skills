@@ -15,10 +15,10 @@ Parameters:
     Type: String
   IngestSkillCommand:
     Type: String
-    Description: Command run by the ingest Lambda, for example `python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native`
+    Description: Command run by the ingest Lambda, for example `python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py` (keep the default OCSF output; detect skills consume OCSF)
   DetectSkillCommand:
     Type: String
-    Description: Command run by the detect Lambda, for example `python skills/detection/detect-lateral-movement/src/detect.py --output-format native`
+    Description: Command run by the detect Lambda, for example `python skills/detection/detect-aws-open-security-group/src/detect.py`
   DedupeTtlDays:
     Type: Number
     Default: 30

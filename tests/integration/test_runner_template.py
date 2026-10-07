@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -214,3 +215,47 @@ class TestAwsS3SqsDetectRunner:
         assert DETECT._put_if_new("uid-1", "payload") is True
         assert DETECT._put_if_new("uid-1", "payload") is False
         assert set(table.items) == {"uid-1"}
+
+
+_AWS_RUNNER_DIR = ROOT / "runners" / "aws-s3-sqs-detect"
+
+
+def _template_parameter_names() -> set[str]:
+    text = (_AWS_RUNNER_DIR / "template.yaml").read_text()
+    block = text.split("\nParameters:\n", 1)[1].split("\nResources:\n", 1)[0]
+    return set(re.findall(r"^  ([A-Za-z0-9]+):\s*$", block, flags=re.MULTILINE))
+
+
+def _readme_deploy_overrides() -> dict[str, str]:
+    readme = (_AWS_RUNNER_DIR / "README.md").read_text()
+    deploy = re.search(r"aws cloudformation deploy \\\n.*?```", readme, flags=re.DOTALL)
+    assert deploy, "README must carry an aws cloudformation deploy command"
+    overrides = deploy.group(0).split("--parameter-overrides", 1)[1]
+    return dict(re.findall(r'"?([A-Za-z0-9]+)=("[^"]*"|[^\s\\]+)', overrides))
+
+
+class TestAwsRunnerReadmeContract:
+    def test_readme_deploy_overrides_match_template_parameters(self):
+        overrides = _readme_deploy_overrides()
+        params = _template_parameter_names()
+        assert set(overrides) <= params, set(overrides) - params
+        required = {
+            "SourceBucketName",
+            "IngestCodeBucket",
+            "IngestCodeKey",
+            "DetectCodeBucket",
+            "DetectCodeKey",
+            "IngestSkillCommand",
+            "DetectSkillCommand",
+        }
+        assert required <= set(overrides)
+
+    def test_readme_ingest_command_emits_ocsf_for_detect(self):
+        # detect-* skills consume OCSF; a native-format ingest produces zero findings.
+        ingest = _readme_deploy_overrides()["IngestSkillCommand"]
+        assert "--output-format native" not in ingest
+
+    def test_readme_documents_source_bucket_notification_command(self):
+        readme = (_AWS_RUNNER_DIR / "README.md").read_text()
+        assert "s3api put-bucket-notification-configuration" in readme
+        assert "LambdaFunctionConfigurations" in readme
