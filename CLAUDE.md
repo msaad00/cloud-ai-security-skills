@@ -10,8 +10,10 @@ Use this file for repo defaults, safety posture, and navigation. Use
 ## Repository structure
 
 Skills are grouped into layered categories — not by cloud. The category answers
-*what kind of work does this skill do*, not *which cloud does it run in*. See
-[`skills/README.md`](skills/README.md) for the full catalog.
+*what kind of work does this skill do*, not *which cloud does it run in*. The
+tree below shows **representative examples per layer, not every skill** — see
+[`skills/README.md`](skills/README.md) and [`docs/SKILL_INDEX.md`](docs/SKILL_INDEX.md)
+for the full catalog.
 
 ```
 skills/

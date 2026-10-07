@@ -9,6 +9,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SRC = REPO_ROOT / "runners" / "webhook-receiver" / "src" / "auth.py"
 spec = importlib.util.spec_from_file_location("webhook_auth_test", SRC)
@@ -94,10 +96,28 @@ def test_bearer_accepts_correct_token():
     assert AUTH.verify_bearer(headers, env=env).ok is True
 
 
-def test_hmac_secrets_silently_ignores_malformed_json():
-    """Misconfigured env should not crash the receiver; it should
-    fall through to default-deny on the routing layer instead."""
-    env = {"WEBHOOK_HMAC_SECRETS": "not-json"}
-    result = AUTH.verify_hmac("anything", {}, b"x", env=env)
-    # No secret resolved → ok=True (HMAC is opt-in per skill).
-    assert result.ok is True
+@pytest.mark.parametrize(
+    "raw",
+    ["not-json", "[]", '{"ingest-x": 1}', '"secret"'],
+)
+def test_malformed_hmac_secrets_raise(raw):
+    """A typo in WEBHOOK_HMAC_SECRETS must not silently disable signing."""
+    with pytest.raises(ValueError, match="WEBHOOK_HMAC_SECRETS"):
+        AUTH.verify_hmac("anything", {}, b"x", env={"WEBHOOK_HMAC_SECRETS": raw})
+
+
+def test_auth_not_configured_without_secret_or_bearer():
+    assert AUTH.auth_configured_for("ingest-x", env={}) is False
+    assert (
+        AUTH.auth_configured_for(
+            "ingest-x", env={"WEBHOOK_HMAC_SECRETS": json.dumps({"other": "s"})}
+        )
+        is False
+    )
+
+
+def test_auth_configured_with_skill_secret_or_bearer():
+    assert AUTH.auth_configured_for(
+        "ingest-x", env={"WEBHOOK_HMAC_SECRETS": json.dumps({"ingest-x": "s"})}
+    )
+    assert AUTH.auth_configured_for("ingest-x", env={"WEBHOOK_BEARER_TOKEN": "t"})

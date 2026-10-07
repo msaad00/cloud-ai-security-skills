@@ -2,7 +2,9 @@
 
 Single endpoint shape: `POST /webhook/<skill-name>`. Defaults are
 default-deny so a fresh deployment cannot route any payload until
-`WEBHOOK_ALLOWED_SKILLS` opts a skill in.
+`WEBHOOK_ALLOWED_SKILLS` opts a skill in, and an allowlisted skill still
+needs an HMAC secret or bearer token. Bodies above `WEBHOOK_MAX_BODY_BYTES`
+(default 1 MiB) are refused with 413.
 """
 
 from __future__ import annotations
@@ -30,16 +32,62 @@ except ModuleNotFoundError as exc:  # pragma: no cover
     ) from exc
 
 CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.insert(0, str(CURRENT_DIR))
+MCP_SRC = CURRENT_DIR.parents[2] / "mcp-server" / "src"
+for _path in (CURRENT_DIR, MCP_SRC):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
-from auth import verify_bearer, verify_hmac  # noqa: E402  pylint: disable=wrong-import-position
+from arg_policy import is_wrapper_only_env  # noqa: E402  pylint: disable=wrong-import-position
+from auth import (  # noqa: E402  pylint: disable=wrong-import-position
+    auth_configured_for,
+    hmac_secrets,
+    verify_bearer,
+    verify_hmac,
+)
 from router import REPO_ROOT, resolve  # noqa: E402  pylint: disable=wrong-import-position
 from sinks import (  # noqa: E402  pylint: disable=wrong-import-position
     SinkResult,
     fan_out,
     new_correlation_id,
 )
+
+MAX_BODY_ENV = "WEBHOOK_MAX_BODY_BYTES"
+DEFAULT_MAX_BODY_BYTES = 1024 * 1024
+
+
+def _max_body_bytes() -> int:
+    raw = (os.environ.get(MAX_BODY_ENV) or "").strip()
+    if not raw:
+        return DEFAULT_MAX_BODY_BYTES
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 0
+    if value <= 0:
+        raise ValueError(f"{MAX_BODY_ENV} must be a positive integer, got {raw!r}")
+    return value
+
+
+# Validate configuration at import so a misconfigured deploy refuses to start.
+hmac_secrets()
+MAX_BODY_BYTES = _max_body_bytes()
+
+
+class _PayloadTooLarge(Exception):
+    pass
+
+
+async def _read_body(request: Request) -> bytes:
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+        raise _PayloadTooLarge
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_BODY_BYTES:
+            raise _PayloadTooLarge
+    return bytes(body)
+
 
 app = FastAPI(
     title="cloud-ai-security-skills · webhook receiver",
@@ -100,19 +148,27 @@ def healthz() -> dict[str, str]:
 async def webhook(skill_name: str, request: Request) -> Response:
     started = time.monotonic()
     correlation_id = new_correlation_id()
-    body = await request.body()
     headers = {k.lower(): v for k, v in request.headers.items()}
     audit_event: dict[str, Any] = {
         "event": "webhook_request",
         "timestamp": _now_iso(),
         "correlation_id": correlation_id,
         "skill": skill_name,
-        "payload_sha256": hashlib.sha256(body).hexdigest() if body else "",
-        "payload_length": len(body),
+        "payload_sha256": "",
+        "payload_length": 0,
         "result": "pending",
     }
 
     try:
+        try:
+            body = await _read_body(request)
+        except _PayloadTooLarge:
+            audit_event["result"] = "error"
+            audit_event["error_type"] = "payload_too_large"
+            raise HTTPException(status_code=413, detail="payload_too_large") from None
+        audit_event["payload_sha256"] = hashlib.sha256(body).hexdigest() if body else ""
+        audit_event["payload_length"] = len(body)
+
         # 1) Routing — closed-set: unknown / wrong-category / not allowlisted.
         resolution = resolve(skill_name)
         if not resolution.found:
@@ -126,7 +182,12 @@ async def webhook(skill_name: str, request: Request) -> Response:
             audit_event["error_message"] = resolution.reason
             raise HTTPException(status_code=403, detail=resolution.reason)
 
-        # 2) Auth — HMAC then bearer; either failure aborts before subprocess.
+        # 2) Auth — fail closed when nothing is configured for this skill,
+        # then HMAC and bearer; any failure aborts before subprocess.
+        if not auth_configured_for(skill_name):
+            audit_event["result"] = "error"
+            audit_event["error_type"] = "auth_not_configured"
+            raise HTTPException(status_code=401, detail="auth_not_configured")
         hmac_result = verify_hmac(skill_name, headers, body)
         if not hmac_result.ok:
             audit_event["result"] = "error"
@@ -147,7 +208,11 @@ async def webhook(skill_name: str, request: Request) -> Response:
             capture_output=True,
             cwd=REPO_ROOT,
             env={
-                **{k: v for k, v in os.environ.items() if k.startswith("CLOUD_SECURITY_")},
+                **{
+                    k: v
+                    for k, v in os.environ.items()
+                    if k.startswith("CLOUD_SECURITY_") and not is_wrapper_only_env(k)
+                },
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
                 "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
                 "PYTHONUNBUFFERED": "1",

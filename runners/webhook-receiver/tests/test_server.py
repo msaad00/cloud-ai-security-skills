@@ -144,3 +144,101 @@ def test_valid_signature_routes_to_skill(monkeypatch, tmp_path):
     assert payload["skill_exit_code"] == 0
     assert payload["stdout_length"] > 0
     assert payload["sink_results"] == []  # no sinks configured
+
+
+def _cloudtrail_body() -> bytes:
+    return (
+        REPO_ROOT / "skills" / "detection-engineering" / "golden" / "cloudtrail_raw_sample.jsonl"
+    ).read_bytes()
+
+
+def test_no_auth_configured_fails_closed(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
+    monkeypatch.delenv("WEBHOOK_HMAC_SECRETS", raising=False)
+    monkeypatch.delenv("WEBHOOK_BEARER_TOKEN", raising=False)
+    server = _load_server(monkeypatch)
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("skill must not run without auth")
+
+    monkeypatch.setattr(server.subprocess, "run", _boom)
+    client = TestClient(server.app)
+    resp = client.post("/webhook/ingest-cloudtrail-ocsf", content=_cloudtrail_body())
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "auth_not_configured"
+
+
+def test_malformed_hmac_secrets_refuse_to_start(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_HMAC_SECRETS", "{not json")
+    with pytest.raises(ValueError, match="WEBHOOK_HMAC_SECRETS"):
+        _load_server(monkeypatch)
+
+
+def test_invalid_max_body_refuses_to_start(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_MAX_BODY_BYTES", "-5")
+    with pytest.raises(ValueError, match="WEBHOOK_MAX_BODY_BYTES"):
+        _load_server(monkeypatch)
+
+
+def test_oversized_body_returns_413(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
+    monkeypatch.setenv("WEBHOOK_BEARER_TOKEN", "real")
+    monkeypatch.setenv("WEBHOOK_MAX_BODY_BYTES", "64")
+    server = _load_server(monkeypatch)
+    client = TestClient(server.app)
+    resp = client.post(
+        "/webhook/ingest-cloudtrail-ocsf",
+        content=b"x" * 65,
+        headers={"Authorization": "Bearer real"},
+    )
+    assert resp.status_code == 413
+
+    def _chunks():
+        yield b"x" * 40
+        yield b"x" * 40
+
+    resp = client.post(
+        "/webhook/ingest-cloudtrail-ocsf",
+        content=_chunks(),
+        headers={"Authorization": "Bearer real"},
+    )
+    assert resp.status_code == 413
+
+
+def test_default_body_cap_is_one_mib(monkeypatch):
+    monkeypatch.delenv("WEBHOOK_MAX_BODY_BYTES", raising=False)
+    server = _load_server(monkeypatch)
+    assert server.MAX_BODY_BYTES == 1024 * 1024
+
+
+def test_skill_env_excludes_wrapper_secrets(monkeypatch):
+    monkeypatch.setenv("WEBHOOK_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
+    monkeypatch.setenv("WEBHOOK_BEARER_TOKEN", "real")
+    monkeypatch.setenv("WEBHOOK_SINK_TARGETS", "")
+    monkeypatch.setenv("CLOUD_SECURITY_AUDIT_HMAC_KEY", "k" * 40)
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_AUDIT_LOG", "/dev/null")
+    monkeypatch.setenv("CLOUD_SECURITY_HTTP_MAX_ATTEMPTS", "3")
+    server = _load_server(monkeypatch)
+    captured: dict[str, dict[str, str]] = {}
+
+    class _Done:
+        returncode = 0
+        stdout = b""
+        stderr = b""
+
+    def _fake_run(*args, **kwargs):
+        captured["env"] = kwargs["env"]
+        return _Done()
+
+    monkeypatch.setattr(server.subprocess, "run", _fake_run)
+    client = TestClient(server.app)
+    resp = client.post(
+        "/webhook/ingest-cloudtrail-ocsf",
+        content=_cloudtrail_body(),
+        headers={"Authorization": "Bearer real"},
+    )
+    assert resp.status_code == 200, resp.text
+    env = captured["env"]
+    assert "CLOUD_SECURITY_AUDIT_HMAC_KEY" not in env
+    assert "CLOUD_SECURITY_MCP_AUDIT_LOG" not in env
+    assert env["CLOUD_SECURITY_HTTP_MAX_ATTEMPTS"] == "3"

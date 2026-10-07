@@ -70,7 +70,7 @@
       <text x="990" y="214" text-anchor="middle" font-size="12.5" fill="#94a3b8">ClickHouse</text>
       <text x="990" y="246" text-anchor="middle" font-size="12" fill="#64748b">append-only sinks</text>
     </g>
-    <rect x="60" y="416" width="1020" height="44" rx="12" fill="#0b1220" stroke="#334155"/>
-    <text x="80" y="444" font-size="13.5" fill="#cbd5e1"><tspan font-weight="800" fill="#f8fafc">7 layers · 134 skills</tspan><tspan fill="#475569">    |    </tspan>Wire: <tspan font-weight="700" fill="#5eead4">OCSF 1.8</tspan> ingest+detect · <tspan font-weight="700" fill="#fbbf24">native</tspan> discover+remediate · <tspan font-weight="700" fill="#a78bfa">SARIF/Mermaid</tspan> view · pass-through sinks</text>
+    <rect x="60" y="416" width="1080" height="44" rx="12" fill="#0b1220" stroke="#334155"/>
+    <text x="80" y="444" font-size="13.5" fill="#cbd5e1"><tspan font-weight="800" fill="#f8fafc">7 layers · 134 skills</tspan><tspan fill="#64748b" xml:space="preserve">   |   </tspan>Wire: <tspan font-weight="700" fill="#5eead4">OCSF 1.8</tspan> ingest+detect · <tspan font-weight="700" fill="#fbbf24">native</tspan> discover+remediate · <tspan font-weight="700" fill="#a78bfa">SARIF/Mermaid</tspan> view · pass-through sinks</text>
   </g>
 </svg>

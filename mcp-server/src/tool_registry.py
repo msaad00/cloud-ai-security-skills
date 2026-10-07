@@ -9,6 +9,12 @@ from typing import Any
 
 import yaml
 
+CURRENT_DIR = Path(__file__).resolve().parent
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
+
+from arg_policy import is_path_schema_property  # noqa: E402
+
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 
 ENTRYPOINT_CANDIDATES = (
@@ -273,6 +279,9 @@ def _merge_schema_properties(
     for key, spec in overlay_properties.items():
         if key in WRAPPER_SCHEMA_PROPERTY_KEYS:
             continue
+        # The wrapper rejects file-path args, so don't advertise them.
+        if isinstance(spec, dict) and is_path_schema_property(spec):
+            continue
         merged[key] = spec
     return merged
 
@@ -290,8 +299,15 @@ def merge_tool_input_schema(
         if not isinstance(base_props, dict):
             base_props = {}
         merged["properties"] = _merge_schema_properties(base_props, overlay_props)
-    if "examples" in overlay:
-        merged["examples"] = overlay["examples"]
+    examples = overlay.get("examples")
+    if isinstance(examples, list):
+        advertised = merged.get("properties")
+        advertised_keys = set(advertised) if isinstance(advertised, dict) else set()
+        merged["examples"] = [
+            example
+            for example in examples
+            if isinstance(example, dict) and set(example) <= advertised_keys
+        ]
     if "description" in overlay and overlay["description"]:
         merged["description"] = overlay["description"]
     return merged

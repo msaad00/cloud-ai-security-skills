@@ -900,8 +900,20 @@ def print_summary(findings: list[Finding]) -> None:
     print(f"  Pass rate: {passed / total * 100:.0f}%\n" if total else "")
 
 
+def _load_stdin_config() -> dict:
+    content = sys.stdin.read()
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        import yaml
+
+        return yaml.safe_load(content) or {}
+
+
 def load_config(path: str) -> dict:
     """Load serving config from JSON or YAML file."""
+    if path == "-":
+        return _load_stdin_config()
     p = Path(path)
     if not p.exists():
         print(f"Error: Config file not found: {path}", file=sys.stderr)
@@ -922,8 +934,15 @@ def load_config(path: str) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Model Serving Security Benchmark")
-    parser.add_argument("config", help="Path to serving config file (JSON/YAML)")
+    parser = argparse.ArgumentParser(
+        description="Model Serving Security Benchmark", allow_abbrev=False
+    )
+    parser.add_argument(
+        "config",
+        nargs="?",
+        default="-",
+        help="Path to serving config file (JSON/YAML); `-` or omitted reads stdin",
+    )
     parser.add_argument(
         "--section", choices=list(ALL_CHECKS.keys()), help="Run specific section only"
     )

@@ -172,7 +172,7 @@ def _summary(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Persist JSONL records into a new immutable S3 object."
+        description="Persist JSONL records into a new immutable S3 object.", allow_abbrev=False
     )
     parser.add_argument("--bucket", required=True, help="Target S3 bucket.")
     parser.add_argument(

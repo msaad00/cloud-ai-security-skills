@@ -2151,7 +2151,9 @@ def print_summary(findings: list[Finding]) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="CIS AWS Foundations Benchmark v3.0 Assessment")
+    parser = argparse.ArgumentParser(
+        description="CIS AWS Foundations Benchmark v3.0 Assessment", allow_abbrev=False
+    )
     parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     parser.add_argument(
         "--section", choices=list(SECTIONS.keys()), help="Run specific section only"

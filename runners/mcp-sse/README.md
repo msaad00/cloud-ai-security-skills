@@ -100,7 +100,8 @@ The chart creates:
 | `MCP_SSE_BEARER_KEYS` | _(unset)_ | comma-separated env fallback (slice-1 contract) |
 | `MCP_SSE_ALLOW_PUBLIC_BIND` | _(unset)_ | required for non-loopback binds |
 | `CLOUD_SECURITY_MCP_AUDIT_LOG` | _(unset)_ | path to the JSONL audit log |
-| `CLOUD_SECURITY_AUDIT_HMAC_KEY` | _(unset)_ | HMAC key for the tamper-evident chain |
+| `MCP_SSE_MAX_BODY_BYTES` | `1048576` | max JSON-RPC request body on `/rpc` and `/messages`; larger bodies get `413` |
+| `CLOUD_SECURITY_AUDIT_HMAC_KEY` | _(unset)_ | HMAC key for the tamper-evident chain; >= 32 bytes, placeholder rejected (required by the compose template) |
 
 ## Bearer-key rotation
 

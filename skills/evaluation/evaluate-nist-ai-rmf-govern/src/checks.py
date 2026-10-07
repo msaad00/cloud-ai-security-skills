@@ -397,7 +397,7 @@ def print_summary(findings: list[Finding]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description=f"{BENCHMARK_NAME} — manifest-completeness evaluator"
+        description=f"{BENCHMARK_NAME} — manifest-completeness evaluator", allow_abbrev=False
     )
     parser.add_argument(
         "manifest",

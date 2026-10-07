@@ -23,6 +23,7 @@ SCHEMA_FILENAME = "mcp_tool_schema.json"
 EXPECTED_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
 
 sys.path.insert(0, str(REPO_ROOT / "mcp-server" / "src"))
+from arg_policy import is_path_schema_property  # noqa: E402
 from tool_registry import (  # noqa: E402
     WRAPPER_SCHEMA_PROPERTY_KEYS,
     discover_skills,
@@ -80,7 +81,9 @@ def _errors_for_schema_file(skill_dir: Path) -> list[str]:
     if not isinstance(merged_props, dict):
         errors.append(f"{rel}: merged schema missing properties")
     else:
-        for key in properties:
+        for key, spec in properties.items():
+            if isinstance(spec, dict) and is_path_schema_property(spec):
+                continue
             if key not in merged_props:
                 errors.append(f"{rel}: merged schema dropped property {key!r}")
 
