@@ -6,7 +6,7 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from skills._shared.read_only_sql import normalize_read_only_query
 
@@ -43,17 +43,15 @@ def _connect() -> Any:
     return clickhouse_connect.get_client(**kwargs)
 
 
-def fetch_rows(query: str) -> list[dict[str, Any]]:
+def fetch_rows(query: str) -> Iterator[dict[str, Any]]:
     client = _connect()
     try:
-        result = client.query(_normalize_query(query))
-        column_names = list(result.column_names)
-        rows = [
-            {column_names[i]: value for i, value in enumerate(row)} for row in result.result_rows
-        ]
+        with client.query_rows_stream(_normalize_query(query)) as stream:
+            column_names = list(stream.source.column_names)
+            for row in stream:
+                yield {column_names[i]: value for i, value in enumerate(row)}
     finally:
         client.close()
-    return rows
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -75,6 +75,13 @@ Safety flags:
 - `--apply` executes writes
 - `--dry-run` keeps the write path disabled explicitly
 
+Optional:
+
+- `--batch-size <n>` (default 1000) rows per parameterized `executemany` call.
+  Input is streamed and every batch runs inside one transaction, so the write
+  stays all-or-nothing: an invalid input line or a failed batch rolls back
+  everything already sent.
+
 ## Output
 
 Emits one repo-native sink-result JSON object to `stdout`:

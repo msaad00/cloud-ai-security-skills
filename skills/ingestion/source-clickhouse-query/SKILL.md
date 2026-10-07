@@ -72,6 +72,10 @@ Raw JSONL rows exactly as the ClickHouse client returns them, serialized with
 JSON-safe string conversion for `DateTime`, `UUID`, `Decimal`, and other
 non-JSON-native ClickHouse types.
 
+Rows are read with `query_rows_stream` and written as each block arrives, so
+memory stays bounded for large result sets. A mid-stream error exits non-zero
+after the rows already written.
+
 Typical compositions:
 
 ```bash

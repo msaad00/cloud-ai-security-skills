@@ -6,7 +6,10 @@ import importlib.util
 import io
 import json
 import sys
+from collections import Counter
 from pathlib import Path
+
+import pytest
 
 _SRC = Path(__file__).resolve().parent.parent / "src" / "sink.py"
 _SPEC = importlib.util.spec_from_file_location("sink_snowflake_jsonl", _SRC)
@@ -27,11 +30,13 @@ class _FakeCursor:
         self.raise_message = "insert failed"
         self.executemany_sql = ""
         self.executemany_params = []
+        self.batches: list[list] = []
         self.closed = False
 
     def executemany(self, sql, params) -> None:
         self.executemany_sql = sql
         self.executemany_params = list(params)
+        self.batches.append(self.executemany_params)
         if self.should_fail:
             raise RuntimeError(self.raise_message)
 
@@ -81,11 +86,13 @@ class TestNormalizeTableName:
 
 class TestPrepareRows:
     def test_extracts_metadata_from_native_and_ocsf(self):
-        rows = _prepare_rows(
-            [
-                '{"schema_mode":"native","event_uid":"evt-1","finding_uid":"f-1"}\n',
-                '{"metadata":{"uid":"evt-2"},"finding_info":{"uid":"f-2"}}\n',
-            ]
+        rows = list(
+            _prepare_rows(
+                [
+                    '{"schema_mode":"native","event_uid":"evt-1","finding_uid":"f-1"}\n',
+                    '{"metadata":{"uid":"evt-2"},"finding_info":{"uid":"f-2"}}\n',
+                ]
+            )
         )
 
         assert rows[0].schema_mode == "native"
@@ -97,7 +104,7 @@ class TestPrepareRows:
 
     def test_rejects_non_object_json(self):
         try:
-            _prepare_rows(['["not","an","object"]\n'])
+            list(_prepare_rows(['["not","an","object"]\n']))
         except ValueError as exc:
             assert "expected a JSON object" in str(exc)
         else:
@@ -152,13 +159,14 @@ class TestInsertAndMain:
         assert fake.closed is True
 
     def test_summary_reports_dry_run(self):
-        rows = _prepare_rows(['{"schema_mode":"native","event_uid":"evt-1"}\n'])
-        result = _summary('"security_db"."ops"."findings_sink"', rows, True, 0)
+        result = _summary('"security_db"."ops"."findings_sink"', Counter(native=1), True, 0)
 
         assert result["record_type"] == "sink_result"
         assert result["dry_run"] is True
         assert result["would_insert_records"] == 1
         assert result["inserted_records"] == 0
+        assert result["input_records"] == 1
+        assert result["schema_modes"] == {"native": 1}
 
     def test_main_defaults_to_dry_run(self, monkeypatch, capsys):
         monkeypatch.setattr(
@@ -204,3 +212,64 @@ class TestInsertAndMain:
 
         assert exit_code == 1
         assert "stdin did not contain any JSONL records" in capsys.readouterr().err
+
+    def test_apply_batches_executemany_in_one_transaction(self, monkeypatch, capsys):
+        fake = _FakeConnection()
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        lines = "".join(f'{{"event_uid":"evt-{i}"}}\n' for i in range(5))
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(lines))
+
+        exit_code = main(["--table", "findings_sink", "--apply", "--batch-size", "2"])
+
+        assert exit_code == 0
+        assert [len(batch) for batch in fake.cursor_instance.batches] == [2, 2, 1]
+        assert [row[2] for batch in fake.cursor_instance.batches for row in batch] == [
+            f"evt-{i}" for i in range(5)
+        ]
+        assert fake.commit_called is True
+        assert fake.rollback_called is False
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["input_records"] == 5
+        assert payload["inserted_records"] == 5
+        assert payload["schema_modes"] == {"raw": 5}
+
+    def test_invalid_line_after_a_batch_rolls_back_everything(self, monkeypatch, capsys):
+        fake = _FakeConnection()
+        monkeypatch.setattr(_SINK, "_connect", lambda: fake)
+        lines = '{"event_uid":"a"}\n{"event_uid":"b"}\n{"event_uid":"c"}\nnot json\n'
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(lines))
+
+        exit_code = main(["--table", "findings_sink", "--apply", "--batch-size", "2"])
+
+        assert exit_code == 1
+        assert "line 4: invalid JSON" in capsys.readouterr().err
+        assert len(fake.cursor_instance.batches) == 1
+        assert fake.commit_called is False
+        assert fake.rollback_called is True
+        assert fake.closed is True
+
+    def test_apply_with_empty_stdin_does_not_connect(self, monkeypatch, capsys):
+        def _no_connect():
+            raise AssertionError("must not connect without records")
+
+        monkeypatch.setattr(_SINK, "_connect", _no_connect)
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO("\n"))
+
+        assert main(["--table", "findings_sink", "--apply"]) == 1
+        assert "stdin did not contain any JSONL records" in capsys.readouterr().err
+
+    def test_dry_run_counts_streamed_records(self, monkeypatch, capsys):
+        lines = '{"schema_mode":"native"}\n{"metadata":{"uid":"e"}}\n{"x":1}\n'
+        monkeypatch.setattr(_SINK.sys, "stdin", io.StringIO(lines))
+
+        assert main(["--table", "findings_sink"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["input_records"] == 3
+        assert payload["would_insert_records"] == 3
+        assert payload["schema_modes"] == {"native": 1, "ocsf": 1, "raw": 1}
+
+    @pytest.mark.parametrize("value", ["0", "-1", "abc"])
+    def test_rejects_non_positive_batch_size(self, value, capsys):
+        with pytest.raises(SystemExit) as exc:
+            main(["--table", "findings_sink", "--batch-size", value])
+        assert exc.value.code == 2

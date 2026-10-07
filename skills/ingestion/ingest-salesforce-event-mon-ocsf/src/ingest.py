@@ -19,6 +19,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.json_input import split_json_document  # noqa: E402
 from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 from skills._shared.timestamps import (  # noqa: E402
     TimestampUnparseable,
@@ -383,19 +384,12 @@ def _yield_wrapped(value: Any) -> Iterable[dict[str, Any]]:
 
 
 def iter_raw_records(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    buf = list(stream)
-    if not buf:
-        return
-    full = "\n".join(line.rstrip("\n") for line in buf).strip()
-    if not full:
-        return
-    try:
-        whole = json.loads(full)
-    except json.JSONDecodeError:
-        whole = None
+    whole, lines = split_json_document(stream)
     if whole is not None:
         yield from _yield_wrapped(whole)
         return
+    # CSV / delimited fallbacks need more than one pass over the lines.
+    buf = list(lines)
 
     nonempty = [line for line in buf if line.strip()]
     if nonempty and "," in nonempty[0]:

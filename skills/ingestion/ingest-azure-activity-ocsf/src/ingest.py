@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
+from skills._shared.json_input import split_json_document  # noqa: E402
 from skills._shared.timestamps import (  # noqa: E402
     TimestampUnparseable,
     emit_timestamp_unparseable,
@@ -306,18 +307,7 @@ def convert_event_native(entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    buf: list[str] = list(stream)
-    if not buf:
-        return
-
-    full = "\n".join(line.rstrip("\n") for line in buf).strip()
-    if not full:
-        return
-
-    try:
-        whole = json.loads(full)
-    except json.JSONDecodeError:
-        whole = None
+    whole, lines = split_json_document(stream)
 
     if isinstance(whole, list):
         for record in whole:
@@ -333,7 +323,7 @@ def iter_raw_entries(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         yield whole
         return
 
-    for lineno, raw_line in enumerate(buf, start=1):
+    for lineno, raw_line in enumerate(lines, start=1):
         line = raw_line.strip()
         if not line:
             continue
