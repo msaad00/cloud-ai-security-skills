@@ -82,33 +82,13 @@ Drop the last stage to see the raw OCSF Detection Finding. More paths: [`docs/QU
 
 ## Architecture
 
-Signals flow intake → analyze → act → persist. Every surface calls the same skill bundle.
-
-![Architecture layers — signals through ingest, discover, detect, evaluate, remediate, view, and output.](docs/images/architecture-layers.svg)
+![Runtime architecture — CLI, CI and event runners call skills directly; MCP, webhook and library calls pass a shared guardrail wrapper; output goes to SIEM, code scanning, approved cloud writes, and a replayable lake.](docs/images/runtime-architecture.svg)
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/diagrams/`](docs/diagrams/)
 
+Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) · [`SECURITY_BAR.md`](SECURITY_BAR.md). Tests and CI gates: [`docs/TESTING.md`](docs/TESTING.md).
+
 **Invariant:** skills own facts, schemas, mappings, confidence, and audit. Orchestrators own workflow state and model choice only.
-
-## Design decisions
-
-Full rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) and the eleven-principle [`SECURITY_BAR.md`](SECURITY_BAR.md).
-
-- **Side effects live at the edges.** Only `source-*` (read external systems), `remediate-*` (write to cloud/identity), and `sink-*` (write to storage) touch the outside world. Everything else is a pure stdin → stdout transform.
-- **OCSF for streams, native for operations.** Findings use OCSF so SIEMs ingest them unchanged; inventory, AI BOM, and remediation audit stay native because they are not event streams. [`docs/NATIVE_VS_OCSF.md`](docs/NATIVE_VS_OCSF.md)
-- **Approval scales with blast radius.** Single-user session kills need one approver and an incident window; MCP tool quarantine and Kubernetes node drain need two. Protected namespaces and principals are denied in code, not just config. [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md)
-- **Least privilege is linted.** `scripts/validate_safe_skill_bar.py` fails CI on wildcard IAM without justification and on any `sts:AssumeRole` allow without an org/account boundary condition.
-- **Agentless and quiet.** No daemons, no telemetry, no undeclared egress; official vendor SDKs, with any exception documented. [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
-- **Idempotent, replay-safe persistence.** Deterministic identifiers plus append-only or merge-safe sinks mean queue retries and reruns converge. [`docs/SINK_CONTRACT.md`](docs/SINK_CONTRACT.md)
-
-## Quality gates
-
-Every PR to `main` runs these in CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml), [`docs/TESTING.md`](docs/TESTING.md)):
-
-- **3,500+ test functions** across ~200 test files — per-skill unit tests, golden-fixture contract tests, integration, and MCP server tests, with per-layer coverage floors.
-- **21 repo validators** in `make validate` — skill contract and structure, HITL/safe-skill bar, framework mapping depth, OCSF metadata, remediation infra stubs, doc-count drift, secret literals — plus 3 generated-doc freshness checks in `make docs-check`.
-- **Frozen wire format** — 165 OCSF events across 76 golden fixtures and 40 end-to-end golden pipes.
-- **Static and supply chain** — `ruff`, `mypy`, `bandit`, `uv lock --check`, IaC linting, and a signed CycloneDX SBOM.
 
 ## Agent and MCP integrations
 
