@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Validate ingest→detect golden pipe fixtures referenced by integration tests.
 
-Reads ``tests/integration/golden_pipes.json`` and verifies raw + expected
-fixtures exist. Count gate prevents accidental pipe registry shrinkage.
+Reads ``tests/integration/golden_pipes.json`` (the registry the pipe tests
+run from) and verifies raw, extra raw, and expected fixtures exist. Count gate prevents accidental pipe registry shrinkage.
 
 Exit codes: 0 on pass, 1 on failure.
 """
@@ -37,6 +37,10 @@ def main() -> int:
             path = GOLDEN_DIR / rel
             if not path.is_file():
                 errors.append(f"{name}: missing golden file {path.relative_to(REPO_ROOT)}")
+        for extra in pipe.get("extra_raw_fixtures", []):
+            path = GOLDEN_DIR / extra.get("raw_fixture", "")
+            if not path.is_file():
+                errors.append(f"{name}: missing extra golden file {path.relative_to(REPO_ROOT)}")
 
     if errors:
         print("Golden pipe validation failed:", file=sys.stderr)
