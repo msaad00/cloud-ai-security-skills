@@ -41,13 +41,13 @@ The skills remain unchanged and stateless.
 ### Ingest Lambda
 
 - `INGEST_SKILL_CMD`
-  Example: `python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native`
+  Example: `python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py` (OCSF, the default — detect skills consume OCSF)
 - `DETECT_QUEUE_URL`
 
 ### Detect Lambda
 
 - `DETECT_SKILL_CMD`
-  Example: `python skills/detection/detect-lateral-movement/src/detect.py --output-format native`
+  Example: `python skills/detection/detect-aws-open-security-group/src/detect.py`
 - `DEDUPE_TABLE`
 - `DEDUPE_TTL_DAYS` (optional, default 30, range 1-365). Controls how long dedupe rows live before DynamoDB TTL expires them.
 - `SNS_TOPIC_ARN`
@@ -81,18 +81,34 @@ system.
 
 ## Live Deploy Verification Status
 
-Current repo reality:
+Real deploy proof captured on 2026-10-07 (AWS `us-east-2`, Lambda
+`python3.11`, runtime version `python:3.11.mainlinev2.v43`), following the
+[Prepared Walkthrough](#prepared-walkthrough) below with
+`ingest-cloudtrail-ocsf` → `detect-aws-open-security-group` and the golden
+fixture `skills/detection-engineering/golden/aws_open_security_group_raw.jsonl`.
+The stack, bucket, and Lambda log groups were deleted afterwards and verified
+not-found. Account ID is redacted.
 
-- the template is shipped
-- handler behavior is covered in tests
-- infrastructure validation runs in CI
-- `scripts/runner_e2e.sh` runs the real handlers end to end in CI against
-  `moto` S3 + SQS (ingest leg) — no real cloud; see
-  [`../DEPLOYMENT_VERIFICATION.md`](../DEPLOYMENT_VERIFICATION.md#local-emulated-end-to-end)
-- a checked-in real-cloud deploy-and-first-event walkthrough is still pending
+| Step | Evidence |
+|---|---|
+| package | ingest zip 35,443 B, detect zip 37,455 B (handler at root + `skills/_shared` + one skill dir) |
+| deploy | `aws cloudformation deploy` → `CREATE_COMPLETE` for all 10 resources in ~2 min |
+| bind | `put-bucket-notification-configuration` → `s3:ObjectCreated:*`, prefix `incoming/` |
+| trigger | object `incoming/run1/aws_open_security_group_raw.jsonl` uploaded 04:10:28Z; ingest Lambda `START` 04:10:30Z, `Duration: 4462 ms`, no error |
+| ingest → queue | detect queue `NumberOfMessagesSent` = 1 (one OCSF line) |
+| detect | detect Lambda (SQS event source mapping) `START` 04:10:35Z, `Duration: 4412 ms`, `Errors` = 0; bare `python` resolves on the `python3.11` runtime |
+| dedupe | DynamoDB item `pk=asg-2a9136fc748f620b`, `payload_sha256=e222266d…4ca5` (byte-identical to the golden `aws_open_security_group_pipe_findings.ocsf.jsonl` line, MITRE T1190), `expires_at` = seen_at + 30 d |
+| publish | SNS `NumberOfMessagesPublished` = 1 (SampleCount 1) |
+| redelivery | same object re-uploaded as `incoming/run2-redeliver/…` 04:11:40Z → ingest ran, 2nd SQS message, detect ran 1589 ms with 0 errors; DynamoDB still holds exactly 1 item with the original `seen_at`; SNS total stays 1 |
 
-That remaining deployment proof is tracked in
-[`#198`](https://github.com/msaad00/cloud-ai-security-skills/issues/198).
+Operational notes from the live run:
+
+- An object uploaded within about a minute of `put-bucket-notification-configuration`
+  returned did not invoke the Lambda; uploads ~6 min later fired within 2 s.
+  After binding, confirm with one upload (or a short wait) before relying on
+  the trigger.
+- Lambda creates `/aws/lambda/<function>` log groups outside the stack;
+  delete them separately on teardown.
 
 ## First Event Proof Checklist
 
@@ -110,30 +126,73 @@ When capturing the live walkthrough for this runner, record:
 
 ## Prepared Walkthrough
 
+### 0. Package the handlers
+
+Each Lambda zip carries its handler at the zip root plus `skills/_shared` and
+the one skill directory it runs (skills resolve `skills._shared` relative to
+their own path, so the repo layout must be preserved; no `__init__.py` files
+are needed). `boto3` comes from the Lambda runtime. From the repo root:
+
+```bash
+zip -qr -X /tmp/ingest.zip skills/_shared skills/ingestion/ingest-cloudtrail-ocsf/src -x '*__pycache__*'
+zip -qr -X /tmp/detect.zip skills/_shared skills/detection/detect-aws-open-security-group/src -x '*__pycache__*'
+(cd runners/aws-s3-sqs-detect/src && zip -q -X /tmp/ingest.zip ingest_handler.py && zip -q -X /tmp/detect.zip detect_handler.py)
+aws s3 cp /tmp/ingest.zip s3://<artifacts-bucket>/code/ingest.zip
+aws s3 cp /tmp/detect.zip s3://<artifacts-bucket>/code/detect.zip
+```
+
 ### 1. Deploy the stack
+
+The ingest skill must emit OCSF (its default): `detect-*` skills consume OCSF
+and skip native-format records (with only a stderr warning), so `--output-format native` on the
+ingest side produces zero findings.
 
 ```bash
 aws cloudformation deploy \
   --template-file runners/aws-s3-sqs-detect/template.yaml \
   --stack-name cloud-security-runner-aws \
-  --capabilities CAPABILITY_NAMED_IAM \
+  --capabilities CAPABILITY_IAM \
   --parameter-overrides \
       SourceBucketName=<existing-source-bucket> \
-      IngestHandlerZipKey=<ingest-handler.zip> \
-      DetectHandlerZipKey=<detect-handler.zip> \
-      IngestSkillCommand="python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py --output-format native" \
-      DetectSkillCommand="python skills/detection/detect-lateral-movement/src/detect.py --output-format native"
+      IngestCodeBucket=<artifacts-bucket> \
+      IngestCodeKey=code/ingest.zip \
+      DetectCodeBucket=<artifacts-bucket> \
+      DetectCodeKey=code/detect.zip \
+      "IngestSkillCommand=python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py" \
+      "DetectSkillCommand=python skills/detection/detect-aws-open-security-group/src/detect.py"
 ```
 
 ### 2. Bind the source event
 
-- enable the source bucket notification so object-create events invoke the
-  ingest Lambda shipped by this stack
+The template grants S3 permission to invoke the ingest Lambda but does not own
+the (pre-existing) source bucket, so bind the notification yourself. This
+replaces the bucket's whole notification configuration; merge with any
+existing entries first (`aws s3api get-bucket-notification-configuration`).
+
+```bash
+INGEST_ARN=$(aws cloudformation describe-stack-resource \
+  --stack-name cloud-security-runner-aws --logical-resource-id IngestFunction \
+  --query StackResourceDetail.PhysicalResourceId --output text \
+  | xargs -I{} aws lambda get-function --function-name {} \
+      --query Configuration.FunctionArn --output text)
+
+aws s3api put-bucket-notification-configuration \
+  --bucket <existing-source-bucket> \
+  --notification-configuration '{
+    "LambdaFunctionConfigurations": [{
+      "Id": "cloud-security-runner-ingest",
+      "LambdaFunctionArn": "'"$INGEST_ARN"'",
+      "Events": ["s3:ObjectCreated:*"],
+      "Filter": {"Key": {"FilterRules": [{"Name": "prefix", "Value": "incoming/"}]}}
+    }]
+  }'
+```
 
 ### 3. Send one real event
 
 ```bash
-aws s3 cp sample-cloudtrail.jsonl s3://<existing-source-bucket>/incoming/sample-cloudtrail.jsonl
+aws s3 cp skills/detection-engineering/golden/aws_open_security_group_raw.jsonl \
+  s3://<existing-source-bucket>/incoming/aws_open_security_group_raw.jsonl
 ```
 
 ### 4. Capture proof

@@ -1024,9 +1024,6 @@ class _FakeAzure:
             def __init__(self, name: str) -> None:
                 self._rows = cloud.tables.setdefault(name, {})
 
-            def create_table_if_not_exists(self) -> None:
-                return None
-
             def create_entity(self, entity: dict[str, Any]) -> None:
                 key = (entity["PartitionKey"], entity["RowKey"])
                 if key in self._rows:
@@ -1047,6 +1044,9 @@ class _FakeAzure:
                 self.endpoint = endpoint
 
             def get_table_client(self, table_name: str) -> _TableClient:
+                return _TableClient(table_name)
+
+            def create_table_if_not_exists(self, table_name: str) -> _TableClient:
                 return _TableClient(table_name)
 
         def _module(name: str, **attrs: Any) -> ModuleType:

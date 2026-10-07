@@ -121,7 +121,10 @@ resource blobCreatedToIngestQueue 'Microsoft.EventGrid/systemTopics/eventSubscri
 
 output sourceStorageAccountName string = sourceStorageAccountName
 output sourceContainerName string = sourceContainerName
+@description('Service Bus endpoint URL (https://<namespace>.servicebus.windows.net:443/). Use serviceBusFullyQualifiedNamespace for SERVICE_BUS_FQDN.')
 output serviceBusNamespaceFqdn string = serviceBusNamespace.properties.serviceBusEndpoint
+@description('Bare host (<namespace>.servicebus.windows.net) for SERVICE_BUS_FQDN and ServiceBusConnection__fullyQualifiedNamespace.')
+output serviceBusFullyQualifiedNamespace string = split(replace(serviceBusNamespace.properties.serviceBusEndpoint, 'https://', ''), ':')[0]
 output ingestQueueName string = ingestQueueName
 output detectQueueName string = detectQueueName
 output alertsTopicName string = alertsTopicName
