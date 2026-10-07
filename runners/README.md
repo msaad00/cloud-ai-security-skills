@@ -55,14 +55,16 @@ What is now committed:
 - the deploy/apply inputs that need to be bound
 - the evidence operators should capture on the first successful run
 - a CI-driven end-to-end harness ([`scripts/runner_e2e.sh`](../scripts/runner_e2e.sh))
-  that exercises each runner against an ephemeral local backend, asserts
-  audit + sink arrival, and regenerates
+  that exercises each runner against an ephemeral local backend (`moto` for
+  AWS; in-process fakes of the GCS / Pub/Sub / Firestore and Blob / Service
+  Bus / Table Storage SDK clients for GCP and Azure), runs a real ingest +
+  detect skill pair, asserts sink arrival and redelivery dedupe, and regenerates
   [`docs/RUNTIME_PROFILES.md`](../docs/RUNTIME_PROFILES.md) on every run
   ([`.github/workflows/runner-e2e.yml`](../.github/workflows/runner-e2e.yml))
 
 What is still not claimed:
 
 - a checked-in record that those walkthroughs were executed in AWS, GCP, and
-  Azure against real deployed resources (the GCP and Azure rows in
-  `docs/RUNTIME_PROFILES.md` are still recorded as honest gaps — there is no
-  in-tree local mock for Pub/Sub or Event Grid + Service Bus)
+  Azure against real deployed resources (the local harness proves handler
+  wiring and dedupe, not IAM, trigger delivery, packaging, or quotas in a
+  real cloud)

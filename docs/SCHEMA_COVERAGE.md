@@ -257,7 +257,7 @@ JSON-RPC body."
 |---|---|---|---|---|
 | `timestamp`, `session_id`, `method`, `direction` | no | no | no | yes via the MCP custom profile |
 | tool name, description, schema fingerprint, tool fingerprint | no | no | no | yes via the MCP custom profile |
-| raw `params` and `body` payloads | no | no | yes | not first-class |
+| raw `params` and `body` payloads | yes by default; opt-in `--preserve-mcp-content` keeps capped schema / prompt / message / `tools/call` response output, never `tools/call` arguments | opt-in only | no | not first-class |
 | generic JSON-RPC wrapper detail not represented in the normalized MCP profile | partial | no | yes | partial |
 | repo-owned envelope fields such as `canonical_schema_version`, `record_type`, `profile`, `output_format` | no | no | yes | partial |
 

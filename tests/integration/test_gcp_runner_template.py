@@ -215,3 +215,80 @@ class TestGcpGcsPubsubDetectRunner:
 
         assert DETECT._put_if_new("uid-1", "payload") is True
         assert DETECT._put_if_new("uid-1", "payload") is False
+
+
+class _CloudEvent:
+    """Shape of the CloudEvent a Cloud Functions 2nd gen handler receives:
+    attributes via item access, payload on `.data`."""
+
+    def __init__(self, attributes: dict, data: dict):
+        self._attributes = attributes
+        self.data = data
+
+    def __getitem__(self, key):
+        return self._attributes[key]
+
+
+class TestGcpRunnerCloudEventEntrypoints:
+    """main.tf deploys `google_cloudfunctions2_function`; 2nd gen Python
+    event functions are invoked with a single CloudEvent argument."""
+
+    def test_ingest_accepts_gen2_storage_finalized_cloud_event(self, monkeypatch):
+        monkeypatch.setenv("INGEST_SKILL_CMD", _PASSTHROUGH_CMD)
+        monkeypatch.setenv("DETECT_TOPIC", "projects/test/topics/detect")
+        seen: list[tuple[str, str]] = []
+
+        def _read(bucket, name):
+            seen.append((bucket, name))
+            return "line-1\n"
+
+        monkeypatch.setattr(INGEST, "_read_object", _read)
+        published: list[bytes] = []
+
+        class _FakePublisher:
+            def publish(self, topic, payload):
+                published.append(payload)
+
+        monkeypatch.setattr(INGEST, "_publisher_client", lambda: _FakePublisher())
+        event = _CloudEvent(
+            {"type": "google.cloud.storage.object.v1.finalized"},
+            {"bucket": "raw-bucket", "name": "audit/day1.jsonl", "generation": "1"},
+        )
+
+        result = INGEST.handle_gcs_event(event)
+
+        assert result == {"objects_processed": 1, "messages_enqueued": 1}
+        assert seen == [("raw-bucket", "audit/day1.jsonl")]
+        assert published == [b"line-1"]
+
+    def test_detect_accepts_gen2_pubsub_message_published_cloud_event(self, monkeypatch):
+        monkeypatch.setenv("DETECT_SKILL_CMD", _PASSTHROUGH_CMD)
+        monkeypatch.setenv("FINDINGS_TOPIC", "projects/test/topics/findings")
+        monkeypatch.setattr(DETECT, "_put_if_new", lambda uid, payload: True)
+        monkeypatch.setattr(DETECT, "_publisher_client", lambda: object())
+        published: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            DETECT,
+            "_publish_findings",
+            lambda publisher, topic, records: published.extend(records),
+        )
+        finding = json.dumps({"finding_info": {"uid": "finding-1"}})
+        event = _CloudEvent(
+            {"type": "google.cloud.pubsub.topic.v1.messagePublished"},
+            {
+                "message": {
+                    "data": base64.b64encode(finding.encode("utf-8")).decode("ascii"),
+                    "messageId": "1",
+                },
+                "subscription": "projects/test/subscriptions/detect",
+            },
+        )
+
+        result = DETECT.handle_pubsub_event(event)
+
+        assert result == {"messages_processed": 1, "published": 1, "duplicates": 0}
+        assert published == [(finding, "finding-1")]
+
+    def test_ingest_rejects_event_without_object_payload(self):
+        with pytest.raises(ValueError, match="bucket"):
+            INGEST.handle_gcs_event(_CloudEvent({}, {"name": "x"}))

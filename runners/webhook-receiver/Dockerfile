@@ -70,13 +70,16 @@ COPY --from=build /install /usr/local
 
 # Copy only what the receiver needs at runtime. No tests, no infra,
 # no docs, no fixtures — keeps the rootfs read-only-friendly and the
-# attack surface small. The `webhook-receiver` directory has a hyphen
-# in its name (intentional, public-facing), so we can't import it as
-# a Python package — the CMD below uses `--app-dir` to put the source
-# directory on sys.path and load `server:app` by module name instead.
+# attack surface small. The receiver derives the repo root from its own
+# path (`router.py` -> parents[3]), so its source keeps the repo-relative
+# location under /app; flattening it would leave the root unresolvable.
+# The `webhook-receiver` directory has a hyphen in its name (intentional,
+# public-facing), so we can't import it as a Python package — the CMD
+# below uses `--app-dir` to put the source directory on sys.path and
+# load `server:app` by module name instead.
 COPY --chown=65532:65532 mcp-server/src                 /app/mcp-server/src
 COPY --chown=65532:65532 skills                         /app/skills
-COPY --chown=65532:65532 runners/webhook-receiver/src   /app/webhook_receiver
+COPY --chown=65532:65532 runners/webhook-receiver/src   /app/runners/webhook-receiver/src
 
 WORKDIR /app
 USER 65532:65532
@@ -90,7 +93,7 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 
 CMD ["python", "-m", "uvicorn", \
      "server:app", \
-     "--app-dir", "/app/webhook_receiver", \
+     "--app-dir", "/app/runners/webhook-receiver/src", \
      "--host", "0.0.0.0", \
      "--port", "8080", \
      "--workers", "2"]

@@ -8,8 +8,13 @@
 #   webhook-receiver     -> in-process FastAPI client + HMAC-signed POST
 #   mcp-sse              -> subprocess uvicorn + bearer-key JSON-RPC /rpc
 #   cloud-runner-aws     -> moto-mocked S3 + SQS, real lambda_handler
-#   cloud-runner-gcp     -> recorded as honest gap (no local mock today)
-#   cloud-runner-azure   -> recorded as honest gap (no local mock today)
+#   cloud-runner-gcp     -> in-process GCS / Pub/Sub / Firestore fakes,
+#                           real handle_gcs_event + handle_pubsub_event
+#   cloud-runner-azure   -> in-process Blob / Service Bus / Table fakes,
+#                           real handle_ingest_messages + handle_detect_messages
+#
+# None of these touch a real cloud. Real-cloud deploy proof is tracked
+# separately (runners/DEPLOYMENT_VERIFICATION.md, issue #198).
 #
 # Output:
 #   runtime-profile-results.jsonl   one JSONL record per (runner, scenario)

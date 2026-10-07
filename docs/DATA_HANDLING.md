@@ -156,16 +156,20 @@ Short rule:
 
 ### MCP content preservation
 
-`ingest-mcp-proxy-ocsf` OCSF output drops MCP content by default (tool
-schemas become a SHA-256, prompts and message text are not emitted). Its
-native projection carries the raw `params` / `body` objects as-is, so treat
-native output like the raw proxy log. `--preserve-mcp-content`
-/ `MCP_PRESERVE_CONTENT=1` opts in to retaining tool `inputSchema`, sampling
-`systemPrompt`, and message text, capped per field at
-`MCP_PRESERVE_CONTENT_MAX_CHARS` (default 16384 characters), so
-`detect-mcp-plugin-supply-chain` and `detect-mcp-adversarial-input-corpus` can
-fire. The flag never adds image/audio data or `tools/call` arguments to OCSF
-output. The
+`ingest-mcp-proxy-ocsf` drops MCP content by default in both OCSF and native
+output: tool schemas become a SHA-256, and prompts, message text, `tools/call`
+arguments, and `tools/call` response output are not emitted. Raw `params` /
+`body` objects are never passed through. `--preserve-mcp-content` /
+`MCP_PRESERVE_CONTENT=1` opts in to retaining tool `inputSchema`, sampling
+`systemPrompt`, message text, and `tools/call` response output, capped per
+field at `MCP_PRESERVE_CONTENT_MAX_CHARS` (default 16384 characters), so
+`detect-mcp-plugin-supply-chain`, `detect-mcp-adversarial-input-corpus`, and
+the tool-response detectors (`detect-agent-credential-leak-mcp`,
+`detect-system-prompt-extraction`,
+`detect-tool-output-exfiltration-instructions`,
+`detect-tool-output-policy-bypass`) can fire. Both output formats carry the
+same preserved fields. The flag never adds image/audio data or `tools/call`
+arguments to either format. The
 retained text may hold user data, secrets, or hostile payloads: enable it only
 where the destination sink is approved for that content, and apply the same
 retention controls as the raw proxy log. Field-level detail lives in the

@@ -464,3 +464,104 @@ class TestPreserveMcpContentOn:
         assert main([str(SUPPLY_RAW), "--preserve-mcp-content", "--output", str(out)]) == 0
         first = json.loads(out.read_text().splitlines()[0])
         assert "input_schema" in first["mcp"]["tool"]
+
+
+CANARY = "CANARY-7f3e9d1c"
+
+
+def _canary_session() -> list[str]:
+    raws = [
+        {
+            "timestamp": "2026-04-10T09:00:00.000Z",
+            "session_id": "s",
+            "method": "tools/list",
+            "direction": "response",
+            "body": {
+                "tools": [
+                    {
+                        "name": "t",
+                        "description": "d",
+                        "inputSchema": {"properties": {"x": {"default": f"schema-{CANARY}"}}},
+                    }
+                ]
+            },
+        },
+        {
+            "timestamp": "2026-04-10T09:00:01.000Z",
+            "session_id": "s",
+            "method": "tools/call",
+            "direction": "request",
+            "params": {"name": "t", "arguments": {"x": f"args-{CANARY}"}},
+        },
+        {
+            "timestamp": "2026-04-10T09:00:02.000Z",
+            "session_id": "s",
+            "method": "tools/call",
+            "direction": "response",
+            "body": {"content": [{"type": "text", "text": f"output-{CANARY}"}]},
+        },
+        _sampling(
+            {
+                "systemPrompt": f"prompt-{CANARY}",
+                "messages": [
+                    {"role": "user", "content": {"type": "text", "text": f"msg-{CANARY}"}}
+                ],
+            }
+        ),
+    ]
+    return [json.dumps(r) for r in raws]
+
+
+class TestNativeRedaction:
+    def test_native_default_carries_no_raw_content(self, monkeypatch):
+        monkeypatch.delenv(PRESERVE_CONTENT_ENV, raising=False)
+        events = list(ingest(_canary_session(), output_format="native"))
+        assert len(events) == 4
+        for event in events:
+            assert "params" not in event
+            assert "body" not in event
+            assert "unmapped" not in event
+        assert CANARY not in json.dumps(events)
+
+    def test_native_default_keeps_tool_name_and_fingerprints(self):
+        listed, call, _, _ = ingest(_canary_session(), output_format="native")
+        assert listed["tool"]["name"] == "t"
+        assert listed["tool"]["fingerprint"].startswith("sha256:")
+        assert listed["tool"]["input_schema_sha256"].startswith("sha256:")
+        assert call["tool"] == {"name": "t"}
+
+    def test_native_matches_ocsf_content_fields_with_and_without_flag(self):
+        for preserve in (False, True):
+            ocsf = list(ingest(_canary_session(), preserve_mcp_content=preserve))
+            native = list(
+                ingest(_canary_session(), output_format="native", preserve_mcp_content=preserve)
+            )
+            for o, n in zip(ocsf, native, strict=True):
+                assert n.get("tool") == o["mcp"].get("tool")
+                assert n.get("unmapped") == o.get("unmapped")
+
+    def test_flag_keeps_capped_content_but_never_call_arguments(self):
+        for fmt in OUTPUT_FORMATS:
+            events = list(ingest(_canary_session(), output_format=fmt, preserve_mcp_content=True))
+            blob = json.dumps(events)
+            assert f"schema-{CANARY}" in blob
+            assert f"output-{CANARY}" in blob
+            assert f"prompt-{CANARY}" in blob
+            assert f"msg-{CANARY}" in blob
+            assert f"args-{CANARY}" not in blob
+            for event in events:
+                assert "params" not in event
+                assert "body" not in event
+
+    def test_flag_preserves_tools_call_response_body(self):
+        _, _, response, _ = ingest(_canary_session(), preserve_mcp_content=True)
+        assert response["unmapped"] == {
+            "mcp": {
+                "response": {"body": {"content": [{"type": "text", "text": f"output-{CANARY}"}]}}
+            }
+        }
+
+    def test_oversized_response_body_omitted_and_flagged(self, monkeypatch):
+        monkeypatch.setenv(MAX_CHARS_ENV, "16")
+        _, _, response, _ = ingest(_canary_session(), preserve_mcp_content=True)
+        assert response["unmapped"] == {"mcp": {"response": {"body_omitted": "size_cap"}}}

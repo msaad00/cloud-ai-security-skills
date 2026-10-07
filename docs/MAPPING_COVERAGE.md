@@ -94,7 +94,7 @@ shape trade-offs in more narrative detail, while this file answers the issue
 | Raw vendor field | OCSF 1.8 destination | Status | Blocks detector? |
 |---|---|---|---|
 | `timestamp`, `session_id`, `method`, `direction`, tool fingerprints | MCP custom profile over OCSF Application Activity | `✅ mapped` | No |
-| raw `params` / tool body payloads | native-only | `⚠️ partial` | Can block richer tool-result or output-handling detectors |
+| raw `params` / tool body payloads | dropped in both formats; opt-in `--preserve-mcp-content` keeps capped schema, prompt, message, and `tools/call` response output under `unmapped.mcp` (never `tools/call` arguments) | `⚠️ partial` | Tool-response detectors need the opt-in |
 | generic JSON-RPC wrapper fields outside the MCP profile | not normalized | `❌ dropped` | Potentially blocks deeper protocol anomaly detection |
 
 ## ingest-vpc-flow-logs-ocsf

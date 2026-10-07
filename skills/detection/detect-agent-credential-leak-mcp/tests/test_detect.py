@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 THIS = Path(__file__).resolve().parent
 SRC = THIS.parent / "src" / "detect.py"
 SPEC = importlib.util.spec_from_file_location("detect_agent_credential_leak_under_test", SRC)
@@ -207,3 +209,34 @@ class TestDetect:
     def test_golden_fixture_parity(self):
         findings = list(detect(_load(INPUT_FIXTURE)))
         assert findings == _load(EXPECTED_FINDING)
+
+
+def _ingest_module():
+    path = THIS.parents[2] / "ingestion" / "ingest-mcp-proxy-ocsf" / "src" / "ingest.py"
+    spec = importlib.util.spec_from_file_location(
+        "_ingest_mcp_for_detect_agent_credential_leak_mcp", path
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_RAW_RESPONSE = (
+    '{"timestamp": "2026-04-10T09:00:00.000Z", "session_id": "s", "method": "tools/call", '
+    '"direction": "response", "body": {"token": "ghp_abcdefghijklmnopqrstuvwxyz1234567890"}}'
+)
+
+
+@pytest.mark.parametrize("fmt", ["ocsf", "native"])
+def test_fires_on_real_ingest_output_with_preserve_flag(fmt):
+    events = list(
+        _ingest_module().ingest([_RAW_RESPONSE], output_format=fmt, preserve_mcp_content=True)
+    )
+    assert len(list(detect(events))) == 1
+
+
+@pytest.mark.parametrize("fmt", ["ocsf", "native"])
+def test_silent_on_real_ingest_output_by_default(fmt):
+    events = list(_ingest_module().ingest([_RAW_RESPONSE], output_format=fmt))
+    assert list(detect(events)) == []
