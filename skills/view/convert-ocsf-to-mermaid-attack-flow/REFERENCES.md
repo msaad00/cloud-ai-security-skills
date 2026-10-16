@@ -3,6 +3,7 @@
 ## Standards and formats
 
 - **Mermaid flowchart syntax** — https://mermaid.js.org/syntax/flowchart.html
+- **Mermaid frontmatter configuration** — https://mermaid.js.org/config/configuration.html
 - **OCSF schema** — https://schema.ocsf.io/1.8.0/
 - **MITRE ATT&CK** — https://attack.mitre.org/
 

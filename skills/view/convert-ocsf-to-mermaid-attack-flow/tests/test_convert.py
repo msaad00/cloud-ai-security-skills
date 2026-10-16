@@ -264,8 +264,8 @@ class TestRender:
 
     def test_edge_label_format(self):
         out = render([_finding(detector="detect-privilege-escalation-k8s")])
-        # Edge label should be 'TECHNIQUE · short-detector-name'
-        assert '"T1611 · privilege-escalation-k8s · det-test-1"' in out
+        # Technique, detector and provenance each get a readable line.
+        assert '"T1611<br>privilege-escalation-k8s<br>UID: det-test-1"' in out
 
     def test_no_double_quotes_in_node_labels(self):
         # Mermaid node label syntax uses double quotes — internal " must be escaped/replaced
@@ -327,7 +327,7 @@ class TestMain:
         source.write_text(json.dumps(_finding()) + "\n")
         assert main([str(source), "--output", str(destination), "--fenced"]) == 0
         output = destination.read_text()
-        assert output.startswith("```mermaid\nflowchart LR")
+        assert output.startswith("```mermaid\n---\nconfig:")
         assert output.endswith("```\n")
         assert "T1611" in output
 
@@ -366,10 +366,10 @@ class TestFindingBoundaries:
     def test_missing_scope_is_not_permission_to_correlate(self):
         output = render([_finding(uid="one"), _finding(uid="two")])
         assert output.count('["system:serviceaccount:') == 2
-        assert 'subgraph F0["Finding 1"]' in output
-        assert ' · one" -->' in output
-        assert 'subgraph F1["Finding 2"]' in output
-        assert ' · two" -->' in output
+        assert 'subgraph F0["Finding 1 · High"]' in output
+        assert 'UID: one" -->' in output
+        assert 'subgraph F1["Finding 2 · High"]' in output
+        assert 'UID: two" -->' in output
 
     def test_duplicate_uids_still_preserve_distinct_occurrences(self):
         finding = _finding(uid="same")
@@ -417,3 +417,54 @@ class TestFindingBoundaries:
         assert "#34;" in output
         assert "#60;" in output
         assert "#35;quot;" in output
+
+
+class TestReadableContext:
+    @pytest.mark.parametrize(
+        "scope", ["account.uid", "cloud.account.uid", "cluster.uid", "cluster.name", "tenant.uid"]
+    )
+    def test_recorded_context_is_visible_without_merging(self, scope):
+        first = _finding(uid="one")
+        second = _finding(uid="two")
+        first["observables"].append({"name": scope, "value": "production"})
+        second["observables"].append({"name": scope, "value": "sandbox"})
+        output = render([first, second])
+        assert f"{scope}: production" in output
+        assert f"{scope}: sandbox" in output
+        assert output.count("-->") == 2
+
+    def test_conflicting_context_is_not_silently_overwritten(self):
+        finding = _finding()
+        finding["observables"].extend(
+            [
+                {"name": "cluster.uid", "value": "one"},
+                {"name": "cluster.uid", "value": "two"},
+            ]
+        )
+        output = render([finding])
+        assert "cluster.uid: one" in output and "cluster.uid: two" in output
+
+    def test_context_cannot_inject_structure(self):
+        finding = _finding()
+        finding["observables"].append({"name": "cluster.uid", "value": '"<br/>\n```\nX[bad]'})
+        output = render([finding])
+        assert "<br/>" not in output and "```" not in output
+        assert "#34;#60;br/#62;" in output
+        assert output.count("subgraph") == 1
+
+    @pytest.mark.parametrize(
+        "severity,label",
+        [
+            (0, "Unknown"),
+            (1, "Informational"),
+            (2, "Low"),
+            (3, "Medium"),
+            (4, "High"),
+            (5, "Critical"),
+            (6, "Fatal"),
+            (99, "Unknown"),
+        ],
+    )
+    def test_severity_does_not_depend_on_colour(self, severity, label):
+        output = render([_finding(severity_id=severity)])
+        assert f"Finding 1 · {label}" in output
