@@ -66,7 +66,7 @@
 <text x="748" y="533" font-size="14" font-weight="400" fill="#bac9dc">--apply rejected</text>
 <text x="748" y="552" font-size="14" font-weight="400" fill="#bac9dc">at this boundary</text>
 <rect x="32" y="588" width="896" height="110" rx="12" fill="#121e30" stroke="#35465e"/>
-<text x="48" y="615" font-size="18" font-weight="700" fill="#edf4fc">Shared entrypoints, formats chosen by layer</text>
+<text x="48" y="615" font-size="18" font-weight="700" fill="#edf4fc">134 skills · stdin / CLI inputs · layer-specific outputs</text>
 <text x="48" y="642" font-size="16" font-weight="400" fill="#bac9dc">Ingest / detect → OCSF   ·   view → SARIF / Mermaid   ·   other layers → native / bridge</text>
 <text x="48" y="671" font-size="16" font-weight="400" fill="#73e2c4">Operators connect sinks, lake replay, scheduling, and evidence retention.</text>
 </g>
