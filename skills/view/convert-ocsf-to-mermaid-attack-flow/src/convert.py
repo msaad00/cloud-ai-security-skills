@@ -198,10 +198,7 @@ def render(findings: Iterable[dict[str, Any]]) -> str:
         if f.get("class_uid") == DETECTION_FINDING_CLASS_UID:
             materialised.append(f)
         else:
-            print(
-                f"[{SKILL_NAME}] skipping event with class_uid={f.get('class_uid')} — only Detection Finding (2004) supported",
-                file=sys.stderr,
-            )
+            raise ValueError("only Detection Finding (class_uid=2004) is supported")
 
     if not materialised:
         return _HEADER + '    empty["No findings"]:::low\n'
@@ -282,12 +279,10 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as e:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
-            continue
-        if isinstance(obj, dict):
-            yield obj
-        else:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
+            raise ValueError(f"line {lineno}: invalid JSON") from e
+        if not isinstance(obj, dict):
+            raise ValueError(f"line {lineno}: expected a JSON object")
+        yield obj
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -303,22 +298,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
-    out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
-
+    # Render completely before opening the destination: a bad record must not
+    # publish a partial diagram or truncate a previously useful artifact.
     try:
-        body = render(load_jsonl(in_stream))
-        if args.fenced:
-            out_stream.write("```mermaid\n")
-            out_stream.write(body)
-            out_stream.write("```\n")
-        else:
-            out_stream.write(body)
-    finally:
         if args.input:
-            in_stream.close()
-        if args.output:
-            out_stream.close()
+            with open(args.input, "r", encoding="utf-8") as in_stream:
+                body = render(load_jsonl(in_stream))
+        else:
+            body = render(load_jsonl(sys.stdin))
+    except ValueError as exc:
+        print(f"[{SKILL_NAME}] invalid input: {exc}", file=sys.stderr)
+        return 2
+
+    if args.fenced:
+        body = f"```mermaid\n{body}```\n"
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as out_stream:
+            out_stream.write(body)
+    else:
+        sys.stdout.write(body)
 
     return 0
 

@@ -7,6 +7,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from convert import (  # type: ignore[import-not-found]
@@ -223,10 +225,9 @@ class TestRender:
         assert "flowchart LR" in out
         assert "No findings" in out
 
-    def test_skips_non_detection_finding(self, capsys):
-        out = render([{"class_uid": 6003, "metadata": {}, "finding_info": {}}])
-        assert "No findings" in out
-        assert "skipping event with class_uid=6003" in capsys.readouterr().err
+    def test_rejects_non_detection_finding(self):
+        with pytest.raises(ValueError, match="class_uid=2004"):
+            render([{"class_uid": 6003, "metadata": {}, "finding_info": {}}])
 
     def test_single_finding(self):
         out = render([_finding()])
@@ -297,10 +298,9 @@ class TestRender:
 
 
 class TestLoadJsonl:
-    def test_skips_malformed(self, capsys):
-        out = list(load_jsonl(['{"bad": ', '{"class_uid": 2004}']))
-        assert out == [{"class_uid": 2004}]
-        assert "skipping line 1" in capsys.readouterr().err
+    def test_rejects_malformed(self):
+        with pytest.raises(ValueError, match="line 1: invalid JSON"):
+            list(load_jsonl(['{"bad": ', '{"class_uid": 2004}']))
 
 
 # ── Golden fixture parity ────────────────────────────────────────────

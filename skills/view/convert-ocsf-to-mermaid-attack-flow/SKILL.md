@@ -41,7 +41,13 @@ A single Mermaid `flowchart LR` block. One node per actor, one node per target, 
 - Yellow — Medium (3)
 - Grey — Low (2), Informational (1), or Unknown (0)
 
-The diagram is enclosed in triple backticks with a `mermaid` language tag so it renders inline on GitHub.
+Output is plain Mermaid by default. Pass `--fenced` to enclose it in triple
+backticks with a `mermaid` language tag for inline rendering on GitHub.
+
+Malformed JSON, non-object records, and non-finding classes fail the entire
+conversion with a nonzero exit status. No empty or partial diagram is emitted,
+and an existing `--output` file is preserved on input failure. Blank input alone
+produces a valid “No findings” diagram; it does not establish assessment coverage.
 
 ## Field mapping
 
