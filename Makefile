@@ -37,15 +37,19 @@ typecheck:
 	env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=$(TYPECHECK_ENV) uv sync --frozen --quiet
 	env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=$(TYPECHECK_ENV) bash scripts/run_mypy.sh
 
+demo: SHELL := /bin/bash
 demo:
-	@set -e; \
+	@set -euo pipefail; \
 	out="$${TMPDIR:-/tmp}/cloud-security-demo.sarif"; \
+	tmp=$$(mktemp "$$out.XXXXXX"); \
+	trap 'rm -f "$$tmp"' EXIT; \
 	echo "Running 3-step ingest -> detect -> view pipeline on a captured CloudTrail fixture..."; \
 	$(RUN) python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
 	        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
 	  | $(RUN) python skills/detection/detect-aws-access-key-creation/src/detect.py \
 	  | $(RUN) python skills/view/convert-ocsf-to-sarif/src/convert.py \
-	  > "$$out"; \
+	  > "$$tmp"; \
+	mv "$$tmp" "$$out"; \
 	echo ""; \
 	echo "Findings written to $$out"; \
 	$(RUN) python -c "import json, sys; rs = json.load(open(sys.argv[1]))['runs'][0]['results']; print(f'{len(rs)} finding(s) emitted'); [print(f\"  - {r['ruleId']}: {r['message']['text']}\") for r in rs]" "$$out"
