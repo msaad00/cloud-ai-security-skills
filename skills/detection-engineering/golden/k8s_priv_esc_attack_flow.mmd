@@ -4,11 +4,23 @@ flowchart LR
     classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fef08a
     classDef low      fill:#1e293b,stroke:#64748b,color:#cbd5e1
 
-    A122b20810e["system:serviceaccount:default:builder"]:::critical
-    T20b074c51c["secret · default/db-password"]:::high
-    T9071eb688c["clusterrolebinding · attacker-cluster-admin"]:::critical
-    Tfbd3557c97["pod · default/web-xyz"]:::critical
+    subgraph F0["Finding 1"]
+        direction LR
+        A0["system:serviceaccount:default:builder"]:::high
+        T0["secret · default/db-password"]:::high
+        A0 -- "T1552.007 · privilege-escalation-k8s · det-k8s-r1-secret-enum-8af26d6d-c7203b19" --> T0
+    end
 
-    A122b20810e -- "T1552.007 · privilege-escalation-k8s" --> T20b074c51c
-    A122b20810e -- "T1611 · privilege-escalation-k8s" --> Tfbd3557c97
-    A122b20810e -- "T1098 · privilege-escalation-k8s" --> T9071eb688c
+    subgraph F1["Finding 2"]
+        direction LR
+        A1["system:serviceaccount:default:builder"]:::critical
+        T1["pod · default/web-xyz"]:::critical
+        A1 -- "T1611 · privilege-escalation-k8s · det-k8s-r2-pod-exec-8af26d6d-59d9c001" --> T1
+    end
+
+    subgraph F2["Finding 3"]
+        direction LR
+        A2["system:serviceaccount:default:builder"]:::critical
+        T2["clusterrolebinding · attacker-cluster-admin"]:::critical
+        A2 -- "T1098 · privilege-escalation-k8s · det-k8s-r3-rbac-self-grant-8af26d6d-773c3208" --> T2
+    end
