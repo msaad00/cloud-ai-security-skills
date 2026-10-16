@@ -50,13 +50,14 @@ This file is the design contract. It explains how the repo is supposed to work a
 
 These are the non-negotiables. Everything in §3–§8 exists to serve them.
 
-1. **Most skills are pure functions.** Input JSONL → output JSONL. No side effects. No cloud API calls. No disk writes outside stdout. No hidden state. Source, sink, and remediation skills are the explicit edge exceptions.
-2. **Side effects live at the edges.** Exactly four categories may have side effects: **L0 sources** (read raw), **L5 remediate** (write cloud APIs), **L7 sinks** (write storage), **runners** (drive loops). Everything else is pure.
-3. **The schema contract is the shared dependency.** Skills never import from each other. If two skills need the same logic, they each own a copy. Copy-paste beats coupling at this scale — the contract is the API, not the Python. For shared pipelines the contract may be OCSF; for stateful inventory and evidence it may be canonical or bridge mode.
-4. **Determinism.** Same input always produces the same output. Every finding UID is a content hash; no random UUIDs. Replayable ⇒ testable ⇒ idempotent sink merges.
-5. **Read-only by default.** A skill may only perform writes if it is prefixed `remediate-*` or `sink-*` and its `SKILL.md` carries an explicit "Do NOT use" clause describing the blast radius.
-6. **Least-privilege infra.** Every skill that talks to a cloud API ships the *minimum* IAM policy in `infra/iam_policies/`. Wildcard actions are a CI failure.
-7. **MCP-exposable by default.** Every skill must be wrappable as an MCP tool with zero code changes: stdin+args in, stdout out, non-zero exit on error, stderr for warnings. Skills that can't satisfy this don't ship.
+1. **Keep transformations local.** Ingest, detect, and view transform supplied evidence. Discovery, evaluation, and source adapters may read provider APIs; read-only does not mean offline. The skill contract defines accepted inputs and side effects.
+2. **Make side effects explicit.** Remediation, sinks, and runners own their documented writes. Provider reads, local exports, and persistent state must also be declared by the relevant skill or runtime.
+3. **Share contracts and bounded utilities.** Skills compose through documented formats instead of importing another skill's entrypoint. Common validation, logging, identity, timestamps, and verification helpers live in `skills/_shared/`; use them to keep semantics consistent.
+4. **Replay stable evidence.** Detection identity and semantics should be stable for the same evidence. Execution timestamps, correlation IDs, and live provider observations can vary; fixture tests normalize only documented volatile fields.
+5. **Read-only by default.** Determine write capability from the skill contract and runtime policy, including `side_effects`, `approval_model`, and dry-run behavior. Names alone are insufficient: the `iam-departures-*` workers also perform controlled writes.
+6. **Least-privilege access.** Use each skill's documented permissions and provider-native infrastructure. The safe-skill validator checks policy wildcards and assume-role boundaries within its supported scope; it does not prove effective permissions in a deployed account.
+7. **Bounded MCP exposure.** The registry discovers contracts and supported repo-owned entrypoints. MCP adds argument and output-format restrictions; check `mcp-server/README.md` for supported shapes rather than assuming all CLI flags are exposed.
+
 8. **Replay-safe persistence.** Database sinks should be idempotent or transactionally safe; object-store sinks should use immutable new-object writes. Re-runs must converge operationally instead of surprising operators.
 9. **Dry-run everywhere writes happen.** `--dry-run` is mandatory for every `remediate-*` and `sink-*` skill. It prints the SQL / API calls it *would* make without making them.
 10. **Machine-readable write summaries.** Every sink and remediation path must emit a deterministic machine-readable result summary to `stdout`. Some workflows may also feed those results back into an auditable event pipeline, but that is not yet universal across all write surfaces.
@@ -359,27 +360,43 @@ See [`../skills/detection-engineering/OCSF_CONTRACT.md`](../skills/detection-eng
 
 ## 7. Guardrails (10 rules, expanded)
 
-Each rule, the reason, and the concrete enforcement mechanism.
+These are the shipped checks and their limits. Design requirements above are
+not evidence that every workflow has been exercised against a live provider.
 
-1. **Pure functions.** *Enforcement:* CI runs `bandit` with `B310` (urllib) and `B605` (subprocess) enabled on everything under `skills/` except `remediate-*`, `sink-*`, and `runners/`. Any network or subprocess call outside those categories fails the build.
+| Concern | Evidence in the repository | Boundary |
+|---|---|---|
+| Read-only behavior | [`validate_safe_skill_bar.py`](../scripts/validate_safe_skill_bar.py) checks prohibited subprocess and cloud-write patterns | Static checks do not establish effective cloud permissions |
+| Skill contract | [`validate_skill_contract.py`](../scripts/validate_skill_contract.py) and [`validate_skill_runtime.py`](../scripts/validate_skill_runtime.py) | Frontmatter and entrypoint checks complement runtime tests |
+| Shared code and integrity | [`skills/_shared/`](../skills/_shared/) and [`validate_skill_integrity.py`](../scripts/validate_skill_integrity.py) | Shared utilities are supported; integrity checks do not enforce a stdlib-only architecture |
+| Replay and wire shape | [`golden/`](../skills/detection-engineering/golden/), [`tests/conformance/`](../tests/conformance/), and per-skill tests | Golden coverage is scoped; volatile execution metadata is not byte-identical |
+| Least privilege | Safe-skill policy checks plus [`validate_remediation_infra.py`](../scripts/validate_remediation_infra.py) | Provider deployment and access still require separate validation |
+| MCP routing | Registry validation and [`mcp-server/tests/`](../mcp-server/tests/) | Discovery is not proof of every skill executing against a provider |
+| Persistence | Each [`output` skill](../skills/output/) defines write and replay semantics | No universal MERGE key or automatic audit-ingest stream |
+| Dry-run and approval | Safe-skill checks, remediation tests, and [`HITL_POLICY.md`](HITL_POLICY.md) | Exact approvers, incident windows, and protected targets are skill-specific |
+| Verification | [`remediation_verifier.py`](../skills/_shared/remediation_verifier.py) and per-skill verifier tests | Scheduling and live reachability are operator responsibilities |
+| Static analysis | Ruff, mypy, Bandit, and validators in [`ci.yml`](../.github/workflows/ci.yml) | Passing checks is separate from reviewer approval and deployment evidence |
 
-2. **Side effects live at the edges.** *Enforcement:* `CODEOWNERS` requires a security reviewer on any PR that touches `remediate-*/`, `sink-*/`, or `runners/`. Pure-skill PRs don't need this.
+### Runtime boundaries
 
-3. **No cross-skill imports.** *Enforcement:* CI lint rule — any `from ..` or `from ...` import inside `skills/*/*/src/` fails. A skill may import only from its own `src/` or from the Python stdlib.
+Shared entrypoints do not imply a shared enforcement wrapper.
 
-4. **Determinism.** *Enforcement:* every skill ships golden fixtures and a `test_deep_eq_against_frozen_golden` test. Re-running the skill against the raw input must produce byte-identical output to the frozen OCSF JSONL.
+| Surface | Execution path | Controls and limits |
+|---|---|---|
+| CLI / CI | Direct skill entrypoint | Skill-level validation and guards; the caller owns credentials, timeout, and persistence |
+| Event runners | Provider queue → configured skill subprocesses | Reference runner routing, retries, and deduplication; see each runner's contract |
+| MCP stdio / SSE | Shared MCP dispatch → registry → skill | Argument policy, safe-write gate, approval metadata, environment filtering, resource limits, timeout, and output cap; chained audit requires configuration |
+| Webhook | Authenticated request → allowlisted atomic ingester → optional sinks | Separate router and subprocess path, bounded request body, timeout, and request audit; not MCP dispatch |
+| Python library | `SkillsClient` → registry command → subprocess | Allowlist, safe-write gate, approval metadata, filtered environment, resource limits, timeout, optional sandbox, and audit callback/stderr; not MCP's output cap or chained audit sink |
 
-5. **Read-only by default.** *Enforcement:* `SKILL.md` frontmatter has a required `capability` field. Valid values: `read-only`, `write-remediation`, `write-sink`, `write-runner`. CI rejects a skill with no `capability` field.
+MCP and `SkillsClient` reject write-capable `--apply` calls even when approval
+metadata is provided. Use the documented skill CLI or provider workflow for
+approved remediation. Approval metadata is not permission to bypass that gate.
 
-6. **Least-privilege IAM.** *Enforcement:* every `remediate-*` and `sink-*` skill ships `infra/iam_policies/*.json`. CI runs `iam-policy-lint` to reject wildcard `Action: "*"` or wildcard `Resource: "*"` unless the policy carries an explicit `# WILDCARD_OK: reason` comment.
-
-7. **MCP-exposable.** *Enforcement:* the `mcp-server/` test suite auto-discovers every skill and calls it via the MCP protocol with its golden input. Any skill that doesn't round-trip through MCP fails the build.
-
-8. **Idempotent sinks.** *Enforcement:* `SINK_CONTRACT.md` defines the required MERGE key (`finding_info.uid` for finding classes, source event ID for ingested classes). A sink's test suite must run the golden fixture twice and assert the target row count is unchanged on the second run.
-
-9. **Dry-run everywhere writes happen.** *Enforcement:* every `remediate-*` and `sink-*` skill must accept `--dry-run` and its test suite must verify zero writes occur when the flag is set.
-
-10. **Audit the auditor.** *Enforcement:* every sink write emits an OCSF 6002 Application Activity event to a separate `sink_audit` stream. Grafana / Cortex has a dashboard pack that surfaces "who wrote what when".
+Source: [`server.py`](../mcp-server/src/server.py),
+[`library.py`](../skills/_shared/library.py),
+[`webhook server`](../runners/webhook-receiver/src/server.py), and
+[`runners/`](../runners/). Persistent-compatible skills still require an
+operator-owned scheduler, queue, credentials, and evidence stores.
 
 ## 8. Agent integration — the MCP layer
 

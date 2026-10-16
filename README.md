@@ -9,14 +9,21 @@
   <a href="docs/COVERAGE_SNAPSHOT.md"><img alt="Coverage gated" src="https://img.shields.io/badge/coverage-CI_gated-0f766e"></a>
 </p>
 
-<p align="center"><strong>134 deterministic security skills for cloud &amp; AI infrastructure.</strong> Turn raw cloud, identity, Kubernetes, and MCP logs into standard findings, then fix what matters behind a human approval gate — with an audit trail and a re-check that proves the fix held.</p>
+<p align="center"><strong>134 deterministic security skills for cloud &amp; AI infrastructure.</strong> Turn raw cloud, identity, Kubernetes, and MCP logs into standard findings, review the evidence, and run supported remediation behind a human approval gate.</p>
 
 ## What this is
 
-- **Deterministic skills, not prompts.** Every skill is a small Python bundle (`SKILL.md` + `src/` + `tests/` + `REFERENCES.md`) that reads stdin and writes JSONL. Same input, same finding. Models can orchestrate; they never invent the facts.
+- **Deterministic skills, not prompts.** Each skill has an explicit contract, Python source, tests, and official references. Ingest and detect exchange JSONL; views produce SARIF or Mermaid, and discovery and evaluation use their documented formats. Detection rules produce findings from input evidence; models can orchestrate the workflow.
 - **A real contract on the wire.** Ingest and detect speak [OCSF 1.8](skills/detection-engineering/OCSF_CONTRACT.md); detections are Detection Finding `2004` with MITRE ATT&CK / ATLAS mappings, frozen by golden fixtures so a refactor that changes the shape fails CI.
-- **Writes are gated, audited, and re-verified.** Remediation is dry-run by default, needs a named approver and incident ID before `--apply`, audits before and after every write, and re-checks live state. Policy: [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md).
-- **One codebase, every surface.** The same skill runs from a shell pipe, CI, an MCP client, a webhook/queue runner, or as a Python library. Wrappers add orchestration, never a second implementation.
+- **Writes are gated, audited, and re-verified.** Remediation defaults to dry-run. Each skill defines its approval, scope, audit stores, and verification path. A successful action is distinct from a later verification result; scheduling and evidence retention need operator configuration. Policy: [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md).
+- **One codebase, every surface.** CLI, CI, MCP, the Python library, and reference runners reuse the shipped entrypoints. Their routing, credentials, audit, and execution limits differ; choose a surface for the workflow you need.
+
+| Start with | Use it for |
+|---|---|
+| [Fixture demo](#quickstart) | See one finding locally, without cloud credentials |
+| [Skill catalog](docs/SKILL_INDEX.md) | Check supported inputs, outputs, and provider coverage |
+| [Agent setup](docs/AGENT_QUICKSTART.md) | Expose bounded local tools through MCP |
+| [Remediation policy](docs/HITL_POLICY.md) | Plan a supported response and its approval requirements |
 
 ## How the loop closes
 
@@ -31,7 +38,7 @@ No cloud credentials needed — the demo replays a captured CloudTrail fixture.
 ```bash
 git clone https://github.com/msaad00/cloud-ai-security-skills.git
 cd cloud-ai-security-skills
-uv sync                      # install uv first: https://docs.astral.sh/uv/
+uv sync --frozen             # install uv first: https://docs.astral.sh/uv/
 uv run make demo             # ingest -> detect -> SARIF, then prints the findings
 ```
 
@@ -48,6 +55,8 @@ Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `
 The same pipeline, spelled out — each stage is a standalone skill joined by a Unix pipe:
 
 ```bash
+# Run this pipeline in Bash; propagate errors from every stage.
+set -o pipefail
 uv run python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
   | uv run python skills/detection/detect-aws-access-key-creation/src/detect.py \
@@ -82,7 +91,18 @@ Drop the last stage to see the raw OCSF Detection Finding. More paths: [`docs/QU
 
 ## Architecture
 
-![Runtime architecture — CLI, CI and event runners call skills directly; MCP, webhook and library calls pass a shared guardrail wrapper; output goes to SIEM, code scanning, approved cloud writes, and a replayable lake.](docs/images/runtime-architecture.svg)
+![Runtime architecture — CLI, CI and event runners call entrypoints; MCP, webhook and library use distinct execution paths; output goes to SIEM, code scanning, approved cloud writes, and a replayable lake.](docs/images/runtime-architecture.svg)
+
+The skill contract is shared; runtime protections are surface-specific. MCP
+rejects write-capable `--apply` calls at its boundary, even with approval metadata.
+The Python library also keeps writes in safe mode. The webhook accepts only
+allowlisted atomic ingesters and can forward results to configured sinks.
+Approved remediation uses the skill's documented CLI or provider workflow.
+See the [runtime boundary table](docs/ARCHITECTURE.md#runtime-boundaries).
+
+`persistent` means a skill can run inside a long-lived workflow. It does not
+install a scheduler: the repo ships reference runners, and operators configure
+queues, credentials, storage, monitoring, and re-verification.
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/diagrams/`](docs/diagrams/)
 
@@ -118,7 +138,9 @@ Closed-loop lake packs for operator-owned warehouses:
 - **ClickHouse** — [`docs/CLICKHOUSE_DATA_LAKE.md`](docs/CLICKHOUSE_DATA_LAKE.md) · [`packs/clickhouse/`](packs/clickhouse/)
 - **Snowflake** — [`docs/SNOWFLAKE_DATA_LAKE.md`](docs/SNOWFLAKE_DATA_LAKE.md) · [`packs/snowflake/`](packs/snowflake/)
 
-Write with `sink-*-jsonl`, replay with `source-*-query`, audit rows land back through the same sink.
+Write with `sink-*-jsonl` and replay with `source-*-query`. Route audit records
+through a configured sink when composing a closed loop; persistence is not
+automatically enabled by invoking a detector.
 
 ## Trust · compliance · more
 
