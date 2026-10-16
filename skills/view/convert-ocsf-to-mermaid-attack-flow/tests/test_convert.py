@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -14,6 +17,7 @@ from convert import (  # type: ignore[import-not-found]
     extract_attack,
     extract_target,
     load_jsonl,
+    main,
     render,
     safe_id,
     severity_class,
@@ -223,10 +227,9 @@ class TestRender:
         assert "flowchart LR" in out
         assert "No findings" in out
 
-    def test_skips_non_detection_finding(self, capsys):
-        out = render([{"class_uid": 6003, "metadata": {}, "finding_info": {}}])
-        assert "No findings" in out
-        assert "skipping event with class_uid=6003" in capsys.readouterr().err
+    def test_rejects_non_detection_finding(self):
+        with pytest.raises(ValueError, match="class_uid=2004"):
+            render([{"class_uid": 6003, "metadata": {}, "finding_info": {}}])
 
     def test_single_finding(self):
         out = render([_finding()])
@@ -297,10 +300,9 @@ class TestRender:
 
 
 class TestLoadJsonl:
-    def test_skips_malformed(self, capsys):
-        out = list(load_jsonl(['{"bad": ', '{"class_uid": 2004}']))
-        assert out == [{"class_uid": 2004}]
-        assert "skipping line 1" in capsys.readouterr().err
+    def test_rejects_malformed(self):
+        with pytest.raises(ValueError, match="line 1: invalid JSON"):
+            list(load_jsonl(['{"bad": ', '{"class_uid": 2004}']))
 
 
 # ── Golden fixture parity ────────────────────────────────────────────
@@ -336,3 +338,31 @@ class TestGoldenFixture:
         out = render(findings)
         actor_line = next(line for line in out.splitlines() if "system:serviceaccount" in line)
         assert ":::critical" in actor_line
+
+
+class TestMain:
+    def test_file_conversion_with_fences(self, tmp_path):
+        source = tmp_path / "findings.jsonl"
+        destination = tmp_path / "flow.md"
+        source.write_text(json.dumps(_finding()) + "\n")
+        assert main([str(source), "--output", str(destination), "--fenced"]) == 0
+        output = destination.read_text()
+        assert output.startswith("```mermaid\nflowchart LR")
+        assert output.endswith("```\n")
+        assert "T1611" in output
+
+    @pytest.mark.parametrize("payload", ["{broken", "[]", '{"class_uid": 6003}'])
+    def test_invalid_stdin_does_not_replace_output(self, tmp_path, monkeypatch, capsys, payload):
+        destination = tmp_path / "flow.mmd"
+        destination.write_text("previous diagram")
+        monkeypatch.setattr(sys, "stdin", io.StringIO(payload))
+        assert main(["--output", str(destination)]) == 2
+        assert destination.read_text() == "previous diagram"
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "invalid input" in captured.err
+
+    def test_blank_stdin_is_valid(self, monkeypatch, capsys):
+        monkeypatch.setattr(sys, "stdin", io.StringIO("\n"))
+        assert main([]) == 0
+        assert "No findings" in capsys.readouterr().out

@@ -10,13 +10,13 @@ agent. One page. Copy-paste.
 ```bash
 git clone https://github.com/msaad00/cloud-ai-security-skills.git
 cd cloud-ai-security-skills
-uv sync                      # install uv first: https://docs.astral.sh/uv/
+uv sync --frozen             # install uv first: https://docs.astral.sh/uv/
 uv run make demo
 ```
 
 `make demo` runs the three-stage pipeline (`ingest-cloudtrail-ocsf →
 detect-aws-access-key-creation → convert-ocsf-to-sarif`) against a captured
-CloudTrail fixture, writes `/tmp/cloud-security-demo.sarif`, and prints the
+CloudTrail fixture, writes `$TMPDIR/cloud-security-demo.sarif` (`/tmp` when `TMPDIR` is unset), and prints the
 findings. Structured JSON logs go to stderr; the tail of the output is:
 
 ```text
@@ -30,6 +30,8 @@ Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `
 The same pipeline spelled out, one skill per stage joined by Unix pipes:
 
 ```bash
+# Run in Bash and propagate failures from every pipeline stage.
+set -o pipefail
 uv run python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
   | uv run python skills/detection/detect-aws-access-key-creation/src/detect.py \
