@@ -246,8 +246,9 @@ class TestK8sPipelineWithConvertLayer:
             for line in mermaid.splitlines()
             if "system:serviceaccount" in line and "]:::" in line and "-->" not in line
         ]
-        assert len(actor_lines) == 1
-        assert ":::critical" in actor_lines[0]
+        assert len(actor_lines) == 3
+        assert ":::high" in actor_lines[0]
+        assert all(":::critical" in line for line in actor_lines[1:])
 
     def test_full_pipe_to_mermaid_matches_frozen_golden(self):
         produced = self.mermaid.render(self._findings())

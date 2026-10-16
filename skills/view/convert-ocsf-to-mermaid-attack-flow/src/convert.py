@@ -1,7 +1,7 @@
 """Convert OCSF 1.8 Detection Findings (class 2004) to a Mermaid attack flow.
 
 Reads OCSF Detection Finding JSONL on stdin, emits a single Mermaid
-flowchart LR block on stdout (wrapped in fenced code so it renders inline
+flowchart LR block on stdout (optionally wrapped in fenced code to render inline
 on any Markdown surface that supports Mermaid — GitHub, GitLab, most
 wikis).
 
@@ -11,9 +11,7 @@ Contract: see ../OCSF_CONTRACT.md
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import re
 import sys
 from typing import Any, Iterable
 
@@ -38,26 +36,16 @@ def severity_class(severity_id: int) -> str:
     return _SEVERITY_CLASS.get(severity_id, "low")
 
 
-def _max_severity(a: int, b: int) -> int:
-    return a if a >= b else b
-
-
-# ---------------------------------------------------------------------------
-# Mermaid ID safety
-# ---------------------------------------------------------------------------
-
-# Mermaid node IDs must be alphanumeric (plus underscore). We hash anything
-# that contains other chars and prepend a letter so the ID never starts with
-# a digit (Mermaid silently breaks on numeric-leading IDs).
-_SAFE_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
-
-
-def safe_id(prefix: str, raw: str) -> str:
-    """Produce a Mermaid-safe stable node ID for an arbitrary string."""
-    if _SAFE_ID.match(raw) and len(raw) <= 32:
-        return prefix + raw
-    digest = hashlib.sha1(raw.encode(), usedforsecurity=False).hexdigest()[:10]
-    return f"{prefix}{digest}"
+def mermaid_label(value: str) -> str:
+    """Encode literal labels without accepting Mermaid, HTML, or Markdown syntax."""
+    return "".join(
+        " "
+        if ord(char) < 32 or ord(char) == 127
+        else f"#{ord(char)};"
+        if char in '"&<>`#|\\'
+        else char
+        for char in value
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -79,31 +67,25 @@ def _observables_by_name(observables: list[dict[str, Any]]) -> dict[str, str]:
 def extract_actor(finding: dict[str, Any]) -> str:
     """Pull the actor identifier from a finding's observables.
 
-    Looks for (in order): actor.name, session.uid, then falls back to the
-    finding_info.uid prefix if no actor is named.
+    Looks for actor.name, then session.uid. Missing identity remains unknown.
     """
     obs = _observables_by_name(finding.get("observables") or [])
     for key in ("actor.name", "session.uid"):
         if key in obs:
             return obs[key]
-    # Fall back to a slice of the finding uid
-    uid = (finding.get("finding_info") or {}).get("uid") or "unknown-actor"
-    return f"actor:{uid[:16]}"
+    return "Unknown actor"
 
 
 def extract_target(finding: dict[str, Any]) -> tuple[str, str]:
     """Pull a target identifier and a human label from a finding's observables.
 
-    Returns (raw_id, display_label). Looks for any *.name observable that
-    isn't actor.name, otherwise builds a label from finding_info.types[0]
-    plus the finding uid suffix.
+    Returns (raw_id, display_label). Context identifiers are not targets;
+    missing target identity is rendered explicitly as unknown.
     """
     obs_list = finding.get("observables") or []
     obs_by_name = _observables_by_name(obs_list)
 
     # Special-case the well-known target shapes the existing detect skills emit
-    finding_info = finding.get("finding_info") or {}
-
     # K8s priv-esc rules
     if "secret.name" in obs_by_name:
         ns = obs_by_name.get("namespace", "")
@@ -137,19 +119,30 @@ def extract_target(finding: dict[str, Any]) -> tuple[str, str]:
             f"mcp tool · {obs_by_name['tool.name']}",
         )
 
-    # Fallback: first non-actor *.name observable
-    for obs in obs_list:
-        name = obs.get("name", "")
-        if name == "actor.name":
+    # Prefer explicit targets; account, session, and cluster describe scope,
+    # not the entity acted upon. Never manufacture a target from a rule type.
+    target_items = sorted(obs_by_name.items(), key=lambda item: not item[0].startswith("target."))
+    for name, value in target_items:
+        if name.startswith(
+            (
+                "actor.",
+                "session.",
+                "account.",
+                "cloud.",
+                "cluster.",
+                "tenant.",
+                "metadata.",
+                "namespace.",
+                "region.",
+                "provider.",
+                "api.",
+                "src_endpoint.",
+            )
+        ):
             continue
-        if name.endswith(".name") or name.endswith(".uid"):
-            value = str(obs.get("value", ""))
+        if name.endswith((".name", ".uid")):
             return (f"{name}/{value}", f"{name.split('.')[0]} · {value}")
-
-    # Last resort: use the finding type
-    types = finding_info.get("types") or []
-    label = types[0] if types else "target"
-    return (f"target/{label}", label)
+    return ("unknown-target", "Unknown target")
 
 
 def extract_attack(finding: dict[str, Any]) -> tuple[str, str]:
@@ -203,67 +196,33 @@ def render(findings: Iterable[dict[str, Any]]) -> str:
     if not materialised:
         return _HEADER + '    empty["No findings"]:::low\n'
 
-    # Build node tables (id → display label, id → max severity)
-    node_label: dict[str, str] = {}
-    node_severity: dict[str, int] = {}
-    actor_id_for: dict[str, str] = {}  # raw → mermaid id
-    target_id_for: dict[str, str] = {}
-
-    edges: list[tuple[str, str, str, str]] = []  # (actor_id, target_id, edge_label, finding_uid)
-
-    for f in materialised:
-        actor_raw = extract_actor(f)
-        target_raw, target_label = extract_target(f)
-        technique_uid, _technique_name = extract_attack(f)
-        detector = extract_detector_short(f)
-        severity = int(f.get("severity_id", 0))
-        finding_uid = ((f.get("finding_info") or {}).get("uid")) or ""
-
-        if actor_raw not in actor_id_for:
-            actor_id_for[actor_raw] = safe_id("A", actor_raw)
-        actor_id = actor_id_for[actor_raw]
-
-        if target_raw not in target_id_for:
-            target_id_for[target_raw] = safe_id("T", target_raw)
-        target_id = target_id_for[target_raw]
-
-        node_label[actor_id] = actor_raw
-        node_label[target_id] = target_label
-        node_severity[actor_id] = _max_severity(node_severity.get(actor_id, 0), severity)
-        node_severity[target_id] = _max_severity(node_severity.get(target_id, 0), severity)
-
-        rule_short = ""
-        if detector:
-            # Strip cloud / surface suffixes for a compact edge label
-            rule_short = detector
-        edge_label = f"{technique_uid}"
-        if rule_short:
-            edge_label = f"{technique_uid} · {rule_short}"
-        edges.append((actor_id, target_id, edge_label, finding_uid))
-
-    # Render — deterministic order: actors first (by id), then targets (by id), then edges
+    # Finding-local occurrence IDs deliberately do not infer identity from
+    # display names, incomplete scope, or a repeated finding UID. Each input
+    # finding keeps its own evidence and severity, even when labels match.
     lines: list[str] = [_HEADER]
+    for index, finding in enumerate(materialised):
+        actor_label = mermaid_label(extract_actor(finding))
+        _, target = extract_target(finding)
+        target_label = mermaid_label(target)
+        technique_uid, _ = extract_attack(finding)
+        detector = extract_detector_short(finding)
+        cls = severity_class(int(finding.get("severity_id", 0)))
+        uid = (finding.get("finding_info") or {}).get("uid") or f"Finding {index + 1} (UID unknown)"
+        evidence = f"{technique_uid} · {detector}" if detector else technique_uid
+        edge_label = mermaid_label(f"{evidence} · {uid}")
+        lines.extend(
+            [
+                f'    subgraph F{index}["Finding {index + 1}"]',
+                "        direction LR",
+                f'        A{index}["{actor_label}"]:::{cls}',
+                f'        T{index}["{target_label}"]:::{cls}',
+                f'        A{index} -- "{edge_label}" --> T{index}',
+                "    end",
+                "",
+            ]
+        )
 
-    actor_ids_sorted = sorted({eid for eid in actor_id_for.values()})
-    target_ids_sorted = sorted({tid for tid in target_id_for.values()})
-
-    for nid in actor_ids_sorted:
-        cls = severity_class(node_severity.get(nid, 0))
-        # Mermaid: NodeId["display label"]:::class
-        label = node_label[nid].replace('"', "'")
-        lines.append(f'    {nid}["{label}"]:::{cls}')
-
-    for nid in target_ids_sorted:
-        cls = severity_class(node_severity.get(nid, 0))
-        label = node_label[nid].replace('"', "'")
-        lines.append(f'    {nid}["{label}"]:::{cls}')
-
-    lines.append("")  # blank line between nodes and edges
-    for actor_id, target_id, edge_label, _uid in edges:
-        safe_label = edge_label.replace('"', "'")
-        lines.append(f'    {actor_id} -- "{safe_label}" --> {target_id}')
-
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip() + "\n"
 
 
 # ---------------------------------------------------------------------------

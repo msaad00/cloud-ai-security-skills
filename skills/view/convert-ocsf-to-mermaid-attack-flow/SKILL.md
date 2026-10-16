@@ -5,9 +5,9 @@ description: >-
   syntax suitable for inline rendering in PR comments, README files, and
   Markdown wikis. Produces a left-to-right attack flow showing each finding
   as actor → action → target chains, with MITRE ATT&CK technique IDs as
-  edge labels and severity-coloured nodes. Multiple findings collapse into
-  a single diagram so a reviewer sees the full attack chain in one
-  picture. Use when the user mentions Mermaid, attack flow diagram, PR
+  edge labels and severity-coloured nodes. Each finding retains a separate
+  group with its UID on the edge; matching names do not establish a shared
+  identity or attack chain. Use when the user mentions Mermaid, attack flow diagram, PR
   comment visualisation, README diagram for a detection result, or wants
   to embed a finding summary in Markdown without uploading SARIF. Do NOT
   use as a SARIF replacement (different audience: humans reading PRs vs
@@ -34,9 +34,13 @@ Cross-vendor view-layer skill: takes OCSF 1.8 Detection Findings on stdin, emits
 
 ## Output shape
 
-A single Mermaid `flowchart LR` block. One node per actor, one node per target, one edge per finding. Edge labels carry the MITRE technique uid (e.g. `T1611`). Nodes are coloured by maximum severity observed for that node:
+A single Mermaid `flowchart LR` block with one numbered group per input
+finding. Each group has its own actor and target occurrences and one edge
+carrying the MITRE technique UID (e.g. `T1611`), detector, and complete
+`finding_info.uid` (or an explicit unknown-UID label). Keeping long identifiers
+on edges leaves the group headings readable. Node colours reflect that finding alone:
 
-- Red — any finding involving this node was severity Critical (5) or Fatal (6)
+- Red — Critical (5) or Fatal (6)
 - Orange — High (4)
 - Yellow — Medium (3)
 - Grey — Low (2), Informational (1), or Unknown (0)
@@ -56,32 +60,34 @@ produces a valid “No findings” diagram; it does not establish assessment cov
 | `observables[]` where `name == "actor.name"` | actor node (left side of the chain) |
 | `observables[]` where `name` matches `*.name` (target / pod / bucket / secret / tool) | target node (right side) |
 | `finding_info.attacks[0].technique.uid` | edge label |
-| `finding_info.title` | edge tooltip (shown on hover in some renderers) |
-| `severity_id` | node colour (max severity wins for shared nodes) |
-| `metadata.product.feature.name` | edge prefix (so the reviewer knows which detector fired) |
+| `finding_info.uid` | visible edge provenance; duplicate or missing UIDs never merge occurrences |
+| `severity_id` | node colour within that finding only |
+| `metadata.product.feature.name` | detector name after the technique on the edge |
 
-## Example output (from the K8s priv-esc golden fixture)
+## Example output
 
-\`\`\`mermaid
-flowchart LR
-    classDef critical fill:#3f1d1d,stroke:#f87171,color:#fecaca
-    classDef high     fill:#3a2a0e,stroke:#fb923c,color:#fed7aa
-    classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fef08a
-    classDef low      fill:#1e293b,stroke:#64748b,color:#cbd5e1
+The [generated K8s example](../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd)
+contains three finding groups. The repeated service-account name appears once
+in each group: the secret-read finding stays High while the other two remain
+Critical. Names alone do not establish a shared principal across clusters.
 
-    A0["system:serviceaccount:default:builder"]:::critical
-    T0["secret · default/db-password"]:::high
-    T1["pod · default/web-xyz"]:::critical
-    T2["clusterrolebinding · attacker-cluster-admin"]:::critical
+## Identity and evidence boundaries
 
-    A0 -- "T1552.007 · secret-enum" --> T0
-    A0 -- "T1611 · pod-exec" --> T1
-    A0 -- "T1098 · rbac-self-grant" --> T2
-\`\`\`
+This view does not correlate findings. Actor and target occurrences remain
+separate even when their names, scopes, or finding UIDs match. This avoids
+joining different accounts, tenants, clusters, or incomplete observations into
+an inferred attack chain. A repeated input record still produces a separate
+group and edge. Output is deterministic for the same ordered input.
 
-## Multi-actor handling
+Account, session, tenant, and cluster context must not substitute for a missing
+target. Explicit `target.*` identifiers take precedence over generic name/UID
+fallbacks. Missing actors and targets are labelled **Unknown**. A supplied
+session UID remains the actor fallback when no actor name is present.
 
-When findings involve multiple distinct actors, each actor gets its own node. Cross-actor correlations stay separate — the Mermaid diagram is a *visualisation* of findings, not a derived correlation. If you want correlation, run a higher-level detect skill first.
+Labels use Mermaid entity encoding for syntax characters; control whitespace
+is flattened. Input text cannot insert Markdown fences or additional Mermaid
+statements. Finding titles are not rendered as tooltips. For full evidence,
+inspect the original finding using the edge's visible UID.
 
 ## Usage
 
@@ -98,4 +104,4 @@ python src/convert.py < findings.ocsf.jsonl
 
 ## Tests
 
-Golden fixture parity against [`../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl) → [`../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd`](../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd). Plus unit tests for severity → class mapping, multi-actor handling, edge deduplication, MITRE label formatting, and node ID safety (Mermaid IDs cannot contain spaces or special chars).
+Golden fixture parity against [`../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl`](../../detection-engineering/golden/k8s_priv_esc_findings.ocsf.jsonl) → [`../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd`](../../detection-engineering/golden/k8s_priv_esc_attack_flow.mmd). Plus unit tests for severity → class mapping, finding-local identity and severity, unknown targets, literal label encoding, and MITRE label formatting. Node IDs are renderer-owned occurrence indices, never untrusted labels.

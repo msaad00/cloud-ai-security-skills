@@ -18,8 +18,8 @@ from convert import (  # type: ignore[import-not-found]
     extract_target,
     load_jsonl,
     main,
+    mermaid_label,
     render,
-    safe_id,
     severity_class,
 )
 
@@ -100,40 +100,18 @@ class TestSeverityClass:
         assert severity_class(99) == "low"
 
 
-# ── safe_id (Mermaid ID safety) ──────────────────────────────────────
+# ── Literal labels ────────────────────────────────────────────────────
 
 
-class TestSafeId:
-    def test_simple_alphanumeric_passes_through(self):
-        assert safe_id("A", "alice") == "Aalice"
+class TestMermaidLabel:
+    def test_ordinary_text_is_preserved(self):
+        assert (
+            mermaid_label("system:serviceaccount:default:builder")
+            == "system:serviceaccount:default:builder"
+        )
 
-    def test_special_chars_hashed(self):
-        # Mermaid IDs cannot contain colons or slashes
-        out = safe_id("A", "system:serviceaccount:default:builder")
-        assert out.startswith("A")
-        assert ":" not in out
-        assert "/" not in out
-
-    def test_deterministic(self):
-        a = safe_id("T", "secret/default/db-password")
-        b = safe_id("T", "secret/default/db-password")
-        assert a == b
-
-    def test_distinct_inputs_distinct_ids(self):
-        a = safe_id("T", "secret/default/db-password")
-        b = safe_id("T", "secret/default/api-key")
-        assert a != b
-
-    def test_long_input_hashed(self):
-        long_str = "a" * 100
-        out = safe_id("A", long_str)
-        # Hashed IDs should be short and stable
-        assert len(out) < 20
-
-    def test_id_never_starts_with_digit(self):
-        # Mermaid silently breaks on numeric-leading IDs
-        out = safe_id("T", "123-numeric-start")
-        assert out[0].isalpha()
+    def test_controls_are_not_structural_newlines(self):
+        assert mermaid_label("a\n\r\tb\x00") == "a   b "
 
 
 # ── extract_actor / extract_target / extract_attack ──────────────────
@@ -148,10 +126,10 @@ class TestExtractors:
         f = _finding(observables=[{"name": "session.uid", "type": "Other", "value": "sess-123"}])
         assert extract_actor(f) == "sess-123"
 
-    def test_extract_actor_falls_back_to_uid_prefix(self):
-        # Pass observables with no actor.name or session.uid → fall through to uid prefix
+    def test_extract_actor_is_unknown_without_identity(self):
+        # Scope alone does not identify an actor.
         f = _finding(observables=[{"name": "namespace", "type": "Other", "value": "default"}])
-        assert extract_actor(f).startswith("actor:det-test")
+        assert extract_actor(f) == "Unknown actor"
 
     def test_extract_target_secret(self):
         f = _finding(
@@ -246,15 +224,16 @@ class TestRender:
         out = render([_finding(severity_id=1)])
         assert ":::low" in out
 
-    def test_node_max_severity_wins(self):
-        # Same actor in two findings, one critical one medium → actor node should be critical
+    def test_finding_severity_does_not_spread_to_same_named_actor(self):
+        # Matching names do not establish a shared identity.
         f1 = _finding(uid="a", severity_id=3, technique_uid="T1098")
         f2 = _finding(uid="b", severity_id=5, technique_uid="T1611")
         out = render([f1, f2])
         # Find the actor line
         actor_lines = [line for line in out.splitlines() if "system:serviceaccount" in line]
-        assert len(actor_lines) == 1
-        assert ":::critical" in actor_lines[0]
+        assert len(actor_lines) == 2
+        assert ":::medium" in actor_lines[0]
+        assert ":::critical" in actor_lines[1]
 
     def test_three_findings_three_edges(self):
         out = render(
@@ -286,14 +265,14 @@ class TestRender:
     def test_edge_label_format(self):
         out = render([_finding(detector="detect-privilege-escalation-k8s")])
         # Edge label should be 'TECHNIQUE · short-detector-name'
-        assert '"T1611 · privilege-escalation-k8s"' in out
+        assert '"T1611 · privilege-escalation-k8s · det-test-1"' in out
 
     def test_no_double_quotes_in_node_labels(self):
         # Mermaid node label syntax uses double quotes — internal " must be escaped/replaced
         f = _finding(actor='alice"injected')
         out = render([f])
-        # Single quote replacement keeps Mermaid happy
-        assert "alice'injected" in out
+        # Preserve the quote as literal text through Mermaid entity encoding.
+        assert "alice#34;injected" in out
 
 
 # ── load_jsonl robustness ────────────────────────────────────────────
@@ -317,14 +296,14 @@ class TestGoldenFixture:
             "Mermaid golden drift — re-generate via:\n  python src/convert.py ../golden/k8s_priv_esc_findings.ocsf.jsonl > ../golden/k8s_priv_esc_attack_flow.mmd"
         )
 
-    def test_one_actor_three_targets(self):
+    def test_three_finding_occurrences_keep_three_actor_nodes(self):
         findings = _load_jsonl(INPUT_FIXTURE)
         out = render(findings)
         # Filter to NODE definition lines only (have `]:::class`), skip edges (`-->`)
         node_lines = [line for line in out.splitlines() if "]:::" in line and "-->" not in line]
         actor_node_lines = [line for line in node_lines if line.strip().startswith("A")]
         target_node_lines = [line for line in node_lines if line.strip().startswith("T")]
-        assert len(actor_node_lines) == 1, f"expected 1 actor node, got {actor_node_lines}"
+        assert len(actor_node_lines) == 3, f"expected 3 actor nodes, got {actor_node_lines}"
         assert len(target_node_lines) == 3, f"expected 3 target nodes, got {target_node_lines}"
 
     def test_three_mitre_techniques_in_edges(self):
@@ -333,11 +312,12 @@ class TestGoldenFixture:
         for technique in ("T1552.007", "T1611", "T1098"):
             assert technique in out
 
-    def test_actor_is_critical(self):
+    def test_actor_severities_follow_individual_findings(self):
         findings = _load_jsonl(INPUT_FIXTURE)
         out = render(findings)
-        actor_line = next(line for line in out.splitlines() if "system:serviceaccount" in line)
-        assert ":::critical" in actor_line
+        actor_lines = [line for line in out.splitlines() if "system:serviceaccount" in line]
+        assert ":::high" in actor_lines[0]
+        assert all(":::critical" in line for line in actor_lines[1:])
 
 
 class TestMain:
@@ -366,3 +346,74 @@ class TestMain:
         monkeypatch.setattr(sys, "stdin", io.StringIO("\n"))
         assert main([]) == 0
         assert "No findings" in capsys.readouterr().out
+
+
+class TestFindingBoundaries:
+    @pytest.mark.parametrize("scope", ["account.uid", "cluster.uid", "tenant.uid"])
+    def test_same_names_in_different_scopes_stay_separate(self, scope):
+        findings = []
+        for uid, boundary, severity in [("one", "production", 5), ("two", "sandbox", 2)]:
+            finding = _finding(uid=uid, severity_id=severity)
+            finding["observables"].append({"name": scope, "value": boundary})
+            findings.append(finding)
+        output = render(findings)
+        actors = [line for line in output.splitlines() if '["system:serviceaccount:' in line]
+        targets = [line for line in output.splitlines() if '["pod ·' in line]
+        assert len(actors) == len(targets) == 2
+        assert sum(":::critical" in line for line in actors) == 1
+        assert sum(":::low" in line for line in actors) == 1
+
+    def test_missing_scope_is_not_permission_to_correlate(self):
+        output = render([_finding(uid="one"), _finding(uid="two")])
+        assert output.count('["system:serviceaccount:') == 2
+        assert 'subgraph F0["Finding 1"]' in output
+        assert ' · one" -->' in output
+        assert 'subgraph F1["Finding 2"]' in output
+        assert ' · two" -->' in output
+
+    def test_duplicate_uids_still_preserve_distinct_occurrences(self):
+        finding = _finding(uid="same")
+        output = render([finding, finding])
+        assert output.count('["system:serviceaccount:') == 2
+        assert output.count("-->") == 2
+
+    def test_missing_actor_is_explicit(self):
+        assert (
+            extract_actor(_finding(observables=[{"name": "pod.name", "value": "web"}]))
+            == "Unknown actor"
+        )
+
+    def test_context_identifiers_are_not_targets(self):
+        finding = _finding(
+            observables=[
+                {"name": "session.uid", "value": "session-1"},
+                {"name": "account.uid", "value": "account-1"},
+                {"name": "cluster.name", "value": "cluster-1"},
+                {"name": "namespace.uid", "value": "namespace-1"},
+                {"name": "region.name", "value": "region-1"},
+                {"name": "provider.name", "value": "provider-1"},
+                {"name": "api.service.name", "value": "service-1"},
+            ]
+        )
+        assert extract_target(finding)[1] == "Unknown target"
+
+    def test_explicit_target_wins_over_context_order(self):
+        finding = _finding(
+            observables=[
+                {"name": "session.uid", "value": "session-1"},
+                {"name": "account.uid", "value": "account-1"},
+                {"name": "target.name", "value": "bob"},
+            ]
+        )
+        assert extract_target(finding)[1] == "target · bob"
+
+    def test_labels_cannot_add_mermaid_or_markdown_structure(self):
+        payload = 'alice"\n```\nflowchart TB\nX[<br/>] #quot; &'
+        finding = _finding(uid=payload, actor=payload, detector=payload)
+        output = render([finding])
+        assert "```" not in output
+        assert "<br/>" not in output
+        assert "\nflowchart TB" not in output
+        assert "#34;" in output
+        assert "#60;" in output
+        assert "#35;quot;" in output
