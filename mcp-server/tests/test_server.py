@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SERVER_PATH = REPO_ROOT / "mcp-server" / "src" / "server.py"
 GOLDEN_DIR = REPO_ROOT / "skills" / "detection-engineering" / "golden"
@@ -48,6 +50,40 @@ def _initialize(proc: subprocess.Popen[bytes]) -> None:
 
 
 class TestMcpServer:
+    @pytest.mark.parametrize(
+        "skill,fixture",
+        [
+            ("ingest-cloudtrail-ocsf", "cloudtrail_raw_sample.jsonl"),
+            ("detect-aws-access-key-creation", "cloudtrail_sample.ocsf.jsonl"),
+        ],
+    )
+    def test_cloudtrail_batch_failure_is_visible_without_partial_data(self, skill, fixture):
+        proc = _start_server()
+        try:
+            _initialize(proc)
+            _send_message(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": skill,
+                        "arguments": {"input": (GOLDEN_DIR / fixture).read_text() + '\n{"broken":'},
+                    },
+                },
+            )
+            result = _read_message(proc)["result"]
+            assert result["isError"] is True
+            assert result["structuredContent"]["exit_code"] == 1
+            error = json.loads(result["structuredContent"]["stdout"])
+            assert error["event"] == "skill_error"
+            assert error["error_class"] == "contract"
+            assert "class_uid" not in error
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
+
     def test_tools_list_exposes_supported_skills(self):
         proc = _start_server()
         try:

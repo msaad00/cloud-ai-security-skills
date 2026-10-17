@@ -2,7 +2,7 @@
 
 When no triggering event carries a usable time the detector skips the finding
 and writes one structured `finding_time_missing` warning (OCSF_CONTRACT.md,
-"Event time"). Substituting the wall clock made finding uids and output
+"Event time"). The access-key detector additionally rejects the batch. Substituting the wall clock made finding uids and output
 differ between replays of the same input.
 """
 
@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from skills._shared.errors import ContractError
 from tests.integration.pipe_harness import (
     DETECTION_DIR,
     _ingest_stream,
@@ -92,6 +93,15 @@ def _detect(pipe, events: list[dict]) -> str:
         f"_ft_detect_{pipe.name}", DETECTION_DIR / pipe.detect_skill / "src" / "detect.py"
     )
     with _patched_env(pipe.detect_env):
+        if pipe.detect_skill == "detect-aws-access-key-creation" and any(
+            e.get("api", {}).get("operation") == "CreateAccessKey"
+            and e.get("status_id") == 1
+            and "time" not in e
+            for e in events
+        ):
+            with pytest.raises(ContractError, match="event time"):
+                list(detect.detect(copy.deepcopy(events)))
+            return ""
         findings = list(detect.detect(copy.deepcopy(events)))
     return "\n".join(json.dumps(f, sort_keys=True) for f in findings)
 

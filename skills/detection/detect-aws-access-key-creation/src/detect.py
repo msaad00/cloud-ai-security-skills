@@ -110,11 +110,11 @@ def _finding_uid(event_uid: str, target_user: str, actor_name: str, time_ms: int
     return f"aakc-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:16]}"
 
 
-def _build_native_finding(*, event: dict[str, Any], target_user: str) -> dict[str, Any] | None:
+def _build_native_finding(*, event: dict[str, Any], target_user: str) -> dict[str, Any]:
     time_ms = finding_time_ms(event.get("time"))
     if time_ms is None:
         emit_finding_time_missing(SKILL_NAME)
-        return None
+        raise ContractError("missing or invalid triggering event time")
     event_uid = str((event.get("metadata") or {}).get("uid") or "")
     actor_name = _actor(event)
     finding_uid = _finding_uid(event_uid, target_user, actor_name, time_ms)
@@ -212,33 +212,45 @@ def detect(
             hint=f"choose one of: {', '.join(sorted(OUTPUT_FORMATS))}",
         )
 
-    for event in events:
-        producer = _producer(event)
-        if producer not in ACCEPTED_PRODUCERS:
-            emit_stderr_event(
-                SKILL_NAME,
-                level="warning",
-                event="wrong_source",
-                message=f"skipping event from non-cloudtrail producer `{producer}`",
-            )
-            continue
-        if _api_operation(event) != ACCESS_KEY_CREATE_OPERATION:
-            continue
-        if not _is_success(event):
-            continue
-        target_user = _target_user(event)
-        if not target_user:
-            emit_stderr_event(
-                SKILL_NAME,
-                level="warning",
-                event="missing_target_user",
-                message="skipping CreateAccessKey event with no target IAM username",
-            )
-            continue
-        native = _build_native_finding(event=event, target_user=target_user)
-        if native is None:
-            continue
-        yield native if output_format == "native" else _to_ocsf(native)
+    for record_no, event in enumerate(events, start=1):
+        if not isinstance(event, dict):
+            raise ContractError(f"record {record_no}: expected a JSON object")
+        if event.get("event") == "skill_error":
+            raise ContractError(f"record {record_no}: upstream skill failed")
+        try:
+            producer = _producer(event)
+            if not producer:
+                raise ContractError(f"record {record_no}: missing source producer")
+            if producer not in ACCEPTED_PRODUCERS:
+                emit_stderr_event(
+                    SKILL_NAME,
+                    level="warning",
+                    event="wrong_source",
+                    message="skipping event from non-cloudtrail producer",
+                )
+                continue
+            if event.get("class_uid") != 6003:
+                raise ContractError(f"record {record_no}: expected API Activity class 6003")
+            operation = (event.get("api") or {}).get("operation")
+            if not isinstance(operation, str) or not operation.strip():
+                raise ContractError(f"record {record_no}: missing or invalid api.operation")
+            if operation != ACCESS_KEY_CREATE_OPERATION:
+                continue
+            if type(event.get("status_id")) is not int or event["status_id"] not in {1, 2}:
+                raise ContractError(
+                    f"record {record_no}: CreateAccessKey status must be success or failure"
+                )
+            if not _is_success(event):
+                continue
+            target_user = _target_user(event)
+            if not target_user:
+                raise ContractError(
+                    f"record {record_no}: CreateAccessKey has no target IAM username"
+                )
+            native = _build_native_finding(event=event, target_user=target_user)
+            yield native if output_format == "native" else _to_ocsf(native)
+        except (AttributeError, TypeError, ValueError, KeyError):
+            raise ContractError(f"record {record_no}: invalid API Activity shape") from None
 
 
 def _iter_jsonl(path: str | None) -> Iterator[dict[str, Any]]:
@@ -250,23 +262,11 @@ def _iter_jsonl(path: str | None) -> Iterator[dict[str, Any]]:
                 continue
             try:
                 obj = json.loads(line)
-            except json.JSONDecodeError as exc:
-                emit_stderr_event(
-                    SKILL_NAME,
-                    level="warning",
-                    event="invalid_json",
-                    message=f"skipping line {line_number}: invalid JSON ({exc.msg})",
-                )
-                continue
-            if isinstance(obj, dict):
-                yield obj
-            else:
-                emit_stderr_event(
-                    SKILL_NAME,
-                    level="warning",
-                    event="wrong_shape",
-                    message=f"skipping line {line_number}: expected JSON object",
-                )
+            except json.JSONDecodeError:
+                raise ContractError(f"line {line_number}: invalid JSON") from None
+            if not isinstance(obj, dict):
+                raise ContractError(f"line {line_number}: expected a JSON object")
+            yield obj
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -287,7 +287,8 @@ def main(argv: list[str] | None = None) -> int:
             f"{SKILL_NAME} starting",
             extra={"input_event_count": len(events), "output_format": args.output_format},
         )
-        for finding in detect(events, output_format=args.output_format):
+        findings = list(detect(events, output_format=args.output_format))
+        for finding in findings:
             print(json.dumps(finding, separators=(",", ":"), sort_keys=False))
             findings_emitted += 1
         _log.info(
@@ -296,11 +297,11 @@ def main(argv: list[str] | None = None) -> int:
         )
     except SkillError as exc:
         return emit_error(SKILL_NAME, exc)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return emit_error(
             SKILL_NAME,
             ContractError(
-                f"input is not JSONL: {exc}",
+                "input must be UTF-8 JSONL",
                 hint="ensure each input line is a valid JSON object emitted by ingest-cloudtrail-ocsf",
             ),
         )

@@ -44,6 +44,22 @@ By default it writes OCSF 1.8 **API Activity** (`class_uid: 6003`, `category_uid
 
 When `--output-format native` is selected, it emits the same event in the repo's native enriched shape with stable `event_uid`, normalized provider/account/operation/status fields, and preserved actor/session/source context, but without the OCSF envelope fields.
 
+## Failure behavior
+
+Blank input and empty arrays are valid empty batches. Invalid JSON, non-object
+records, malformed `Records` wrappers, missing event names, unusable primary
+timestamps, upstream `skill_error` envelopes, and conversion shape errors
+reject the batch. The CLI exits 1 with a payload-free `skill_error` envelope
+on stdout and stderr; MCP reports `isError: true`. Previously these cases could
+be skipped while the command returned success.
+
+The CLI stages output until all input converts successfully, spilling above
+1 MiB to a temporary file. On input rejection it emits no event rows and leaves
+an existing `--output` file untouched. Use `--output` for that preservation;
+shell `>` redirection truncates its destination before the skill runs. The
+Python iterator raises `ContractError`; callers must exhaust it successfully
+before publishing any yielded rows. Process finite batches in persistent runners.
+
 ## Field mapping
 
 The native output field list, the `eventName` → `activity_id` prefix table, the `errorCode` → `status_id` rules, and the explicit "not mapped (yet)" scope live in [`references/field-map.md`](references/field-map.md). Keeping the detail there keeps this file under the progressive-disclosure target ([#247](https://github.com/msaad00/cloud-ai-security-skills/issues/247)) while detectors and reviewers still get the exact mapping one click away.
@@ -51,6 +67,8 @@ The native output field list, the `eventName` → `activity_id` prefix table, th
 ## Usage
 
 ```bash
+set -o pipefail
+
 # Single file
 python src/ingest.py cloudtrail.json > cloudtrail.ocsf.jsonl
 

@@ -41,7 +41,7 @@ metadata:
 
 # detect-aws-access-key-creation
 
-Streaming detector for new AWS IAM user access keys created through CloudTrail.
+Detector for new AWS IAM user access keys created through CloudTrail.
 This is the first honest shipped AWS IAM-user persistence slice after the
 role-session-centric depth in `detect-lateral-movement`.
 
@@ -65,6 +65,24 @@ A finding fires on every successful CloudTrail event from `ingest-cloudtrail-ocs
 2. `status_id == 1`
 3. request parameters resolve a target IAM username
 
+## Filtering and failures
+
+Unrelated API operations, failed `CreateAccessKey` calls, and events from an
+explicitly different producer are nonmatches. Empty input is also valid.
+These cases exit successfully without findings.
+
+Malformed JSON, non-object rows, upstream `skill_error` envelopes, missing
+producer identity, and invalid CloudTrail API Activity shapes reject the batch.
+A successful `CreateAccessKey` record without a target username or usable event
+time also rejects the batch: this detector cannot fully evaluate it. This does
+not mean the underlying AWS call was invalid.
+
+The CLI validates the complete batch before emitting findings. A rejected batch
+exits 1 and emits only a payload-free `skill_error` envelope on stdout, with a
+matching error on stderr; MCP reports `isError: true`. Python callers receive
+`ContractError` and must finish iteration before publishing results. CLI batches
+are buffered in memory; persistent callers should supply finite batches.
+
 ## OCSF output
 
 OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
@@ -80,6 +98,8 @@ actor/account context in a flatter shape.
 ## Run
 
 ```bash
+set -o pipefail
+
 # CloudTrail -> ingest -> detect (default OCSF output)
 python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py raw.jsonl \
   | python skills/detection/detect-aws-access-key-creation/src/detect.py \

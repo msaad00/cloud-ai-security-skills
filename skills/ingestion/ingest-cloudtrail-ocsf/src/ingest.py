@@ -13,7 +13,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import sys
+import tempfile
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -21,9 +24,9 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from skills._shared.errors import ContractError, SkillError, emit_error  # noqa: E402
 from skills._shared.identity import VENDOR_NAME  # noqa: E402
 from skills._shared.json_input import split_json_document  # noqa: E402
-from skills._shared.runtime_telemetry import emit_stderr_event  # noqa: E402
 from skills._shared.timestamps import (  # noqa: E402
     TimestampUnparseable,
     emit_timestamp_unparseable,
@@ -365,65 +368,54 @@ def convert_event_native(raw: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _unwrap_records(obj: Any, location: str) -> Iterable[dict[str, Any]]:
+    if isinstance(obj, dict) and "Records" in obj:
+        records = obj["Records"]
+        if not isinstance(records, list):
+            raise ContractError(f"{location}: Records must be an array")
+        for index, record in enumerate(records, start=1):
+            if not isinstance(record, dict):
+                raise ContractError(f"{location}: Records item {index} must be an object")
+            yield record
+    elif isinstance(obj, dict):
+        yield obj
+    else:
+        raise ContractError(f"{location}: expected a JSON object or Records wrapper")
+
+
 def iter_raw_events(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
-    """Yield raw CloudTrail event dicts from a JSONL or Records-wrapped stream.
-
-    Auto-detects the format:
-      - whole-document parse first: handles `{"Records": [...]}` (CloudTrail
-        digest format), a single event dict, or a top-level array of events.
-      - falls back to line-by-line NDJSON if the whole-document parse fails.
-      - blank lines and parse failures are skipped (warning to stderr).
-    """
+    """Read JSON documents or NDJSON; reject malformed records without dropping them."""
     whole, lines = split_json_document(stream)
-
-    if isinstance(whole, dict) and "Records" in whole:
-        for r in whole.get("Records") or []:
-            if isinstance(r, dict):
-                yield r
-        return
     if isinstance(whole, dict):
-        yield whole
+        yield from _unwrap_records(whole, "document")
         return
     if isinstance(whole, list):
-        for r in whole:
-            if isinstance(r, dict):
-                yield r
+        for index, record in enumerate(whole, start=1):
+            if not isinstance(record, dict):
+                raise ContractError(f"document: item {index} must be an object")
+            yield record
         return
 
-    # Fall back to line-by-line NDJSON; each entry is parsed independently.
     for lineno, raw_line in enumerate(lines, start=1):
         line = raw_line.strip()
         if not line:
             continue
         try:
             obj = json.loads(line)
-        except json.JSONDecodeError as e:
-            emit_stderr_event(
-                SKILL_NAME,
-                level="warning",
-                event="json_parse_failed",
-                message=f"skipping line {lineno}: json parse failed: {e}",
-                line=lineno,
-            )
-            continue
-        if isinstance(obj, dict) and "Records" in obj:
-            for r in obj.get("Records") or []:
-                if isinstance(r, dict):
-                    yield r
-        elif isinstance(obj, dict):
-            yield obj
-        else:
-            emit_stderr_event(
-                SKILL_NAME,
-                level="warning",
-                event="invalid_json_shape",
-                message=f"skipping line {lineno}: not a JSON object or Records wrapper",
-                line=lineno,
-            )
+        except json.JSONDecodeError:
+            raise ContractError(f"line {lineno}: invalid JSON") from None
+        yield from _unwrap_records(obj, f"line {lineno}")
 
 
 def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[str, Any]]:
+    """Convert records; callers must exhaust the iterator and handle ContractError."""
+    if output_format not in {"ocsf", "native"}:
+        raise ContractError("unsupported output format; choose ocsf or native")
     for record_no, raw in enumerate(iter_raw_events(stream), start=1):
+        if raw.get("event") == "skill_error":
+            raise ContractError(f"record {record_no}: upstream skill failed")
+        if not isinstance(raw.get("eventName"), str) or not raw["eventName"].strip():
+            raise ContractError(f"record {record_no}: eventName must be a nonempty string")
         try:
             canonical = _build_canonical_event(raw)
             if output_format == "native":
@@ -432,15 +424,9 @@ def ingest(stream: Iterable[str], output_format: str = "ocsf") -> Iterable[dict[
                 yield _render_ocsf_event(canonical)
         except TimestampUnparseable:
             emit_timestamp_unparseable(SKILL_NAME, record=record_no)
-            continue
-        except Exception as e:  # defence-in-depth — never crash the pipeline
-            emit_stderr_event(
-                SKILL_NAME,
-                level="warning",
-                event="convert_error",
-                message=f"skipping event: convert error: {e}",
-            )
-            continue
+            raise ContractError(f"record {record_no}: missing or invalid event time") from None
+        except (AttributeError, TypeError, ValueError, KeyError):
+            raise ContractError(f"record {record_no}: invalid CloudTrail event shape") from None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -457,17 +443,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
-    out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
-
     try:
-        for event in ingest(in_stream, output_format=args.output_format):
-            out_stream.write(json.dumps(event, separators=(",", ":")) + "\n")
-    finally:
-        if args.input:
-            in_stream.close()
-        if args.output:
-            out_stream.close()
+        # Stage on disk above 1 MiB so late input failures cannot publish partial
+        # output. Close the input before opening the destination (also safe in place).
+        with tempfile.SpooledTemporaryFile(
+            mode="w+", encoding="utf-8", max_size=1024 * 1024
+        ) as staged:
+            source = open(args.input, encoding="utf-8") if args.input else nullcontext(sys.stdin)
+            with source as in_stream:
+                for event in ingest(in_stream, output_format=args.output_format):
+                    staged.write(json.dumps(event, separators=(",", ":")) + "\n")
+            staged.seek(0)
+            destination = (
+                open(args.output, "w", encoding="utf-8") if args.output else nullcontext(sys.stdout)
+            )
+            with destination as out_stream:
+                shutil.copyfileobj(staged, out_stream)
+    except SkillError as exc:
+        return emit_error(SKILL_NAME, exc)
+    except UnicodeDecodeError:
+        return emit_error(SKILL_NAME, ContractError("input must be UTF-8 JSON"))
 
     return 0
 
