@@ -23,8 +23,7 @@
                   "mitre/attack/credential-access/TA0006",
                   "mitre/attack/technique/T1552",
                   "mitre/attack/sub-technique/T1552.007"
-                ],
-                "precision": "high"
+                ]
               }
             },
             {
@@ -40,8 +39,7 @@
                 "tags": [
                   "mitre/attack/privilege-escalation/TA0004",
                   "mitre/attack/technique/T1611"
-                ],
-                "precision": "high"
+                ]
               }
             },
             {
@@ -57,8 +55,7 @@
                 "tags": [
                   "mitre/attack/persistence/TA0003",
                   "mitre/attack/technique/T1098"
-                ],
-                "precision": "high"
+                ]
               }
             }
           ],
@@ -87,7 +84,6 @@
               ]
             }
           ],
-          "guid": "det-k8s-r1-secret-enum-8af26d6d-c7203b19",
           "partialFingerprints": {
             "primaryLocationLineHash": "det-k8s-r1-secret-enum-8af26d6d-c7203b19"
           },
@@ -101,6 +97,7 @@
               "mitre/attack/technique/T1552",
               "mitre/attack/sub-technique/T1552.007"
             ],
+            "finding_uid": "det-k8s-r1-secret-enum-8af26d6d-c7203b19",
             "observables": [
               {
                 "name": "actor.name",
@@ -151,7 +148,6 @@
               ]
             }
           ],
-          "guid": "det-k8s-r2-pod-exec-8af26d6d-59d9c001",
           "partialFingerprints": {
             "primaryLocationLineHash": "det-k8s-r2-pod-exec-8af26d6d-59d9c001"
           },
@@ -164,6 +160,7 @@
               "mitre/attack/privilege-escalation/TA0004",
               "mitre/attack/technique/T1611"
             ],
+            "finding_uid": "det-k8s-r2-pod-exec-8af26d6d-59d9c001",
             "observables": [
               {
                 "name": "actor.name",
@@ -214,7 +211,6 @@
               ]
             }
           ],
-          "guid": "det-k8s-r3-rbac-self-grant-8af26d6d-773c3208",
           "partialFingerprints": {
             "primaryLocationLineHash": "det-k8s-r3-rbac-self-grant-8af26d6d-773c3208"
           },
@@ -227,6 +223,7 @@
               "mitre/attack/persistence/TA0003",
               "mitre/attack/technique/T1098"
             ],
+            "finding_uid": "det-k8s-r3-rbac-self-grant-8af26d6d-773c3208",
             "observables": [
               {
                 "name": "actor.name",

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Iterable
@@ -30,6 +31,16 @@ SARIF_SCHEMA = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sari
 
 # OCSF Detection Finding (2004) class_uid we recognise
 DETECTION_FINDING_CLASS_UID = 2004
+
+# OASIS SARIF 2.1.0: definitions.result.properties.guid.pattern.
+# OCSF finding UIDs are opaque strings and need not satisfy this restriction.
+_SARIF_GUID = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"
+)
+
+
+class InputError(ValueError):
+    """A controlled, payload-free diagnostic for invalid converter input."""
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +92,7 @@ def _tactic_name(attack: dict[str, Any]) -> str:
 
 
 def _mitre_tags(attack: dict[str, Any]) -> list[str]:
-    """Build the MITRE tag list for SARIF result.tags / rule.tags."""
+    """Build the MITRE tag list for SARIF result/rule properties.tags."""
     tags: list[str] = []
     tactic_uid = _tactic_uid(attack)
     if tactic_uid:
@@ -128,7 +139,6 @@ def _rule_for_attack(attack: dict[str, Any]) -> dict[str, Any]:
 
     rule["properties"] = {
         "tags": _mitre_tags(attack),
-        "precision": "high",
     }
     return rule
 
@@ -143,11 +153,10 @@ def _build_message(finding: dict[str, Any]) -> str:
 
 
 def _build_locations(finding: dict[str, Any]) -> list[dict[str, Any]]:
-    """SARIF 2.1.0 requires locations[] to make a result clickable in code
-    scanning. Detection findings don't always have a file:line — they live in
-    cloud / runtime telemetry. We synthesise a logical location keyed by
-    metadata.product.feature.name + finding uid so the SARIF UI groups
-    related findings sensibly.
+    """Retain runtime context as a logical location without inventing a file.
+
+    Consumer support for logical locations varies; valid SARIF alone does not
+    guarantee a clickable repository annotation in GitHub code scanning.
     """
     finding_info = finding.get("finding_info") or {}
     feature = ((finding.get("metadata") or {}).get("product") or {}).get("feature") or {}
@@ -179,9 +188,13 @@ def _build_result(finding: dict[str, Any]) -> dict[str, Any]:
     }
 
     uid = finding_info.get("uid")
+    if uid is not None and not isinstance(uid, str):
+        raise InputError("finding_info.uid must be a string")
     if uid:
-        result["guid"] = uid
-        # SARIF partialFingerprints make code-scanning dedupe stable across runs
+        if _SARIF_GUID.fullmatch(uid):
+            result["guid"] = uid
+        # Retain the existing UID-based fingerprint for consumer compatibility.
+        # It is not proof that two inputs represent the same scoped occurrence.
         result["partialFingerprints"] = {"primaryLocationLineHash": uid}
 
     properties: dict[str, Any] = {
@@ -193,6 +206,9 @@ def _build_result(finding: dict[str, Any]) -> dict[str, Any]:
         "ocsf_severity_id": severity_id,
         "tags": _mitre_tags(attack),
     }
+
+    if uid:
+        properties["finding_uid"] = uid
 
     observables = finding.get("observables")
     if observables:
@@ -243,17 +259,15 @@ def convert(findings: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """Convert an iterable of OCSF Detection Findings to a single SARIF document."""
     materialised = list(findings)
 
-    # Filter to Detection Findings (2004) — emit a warning for anything else.
+    # Invalid records must fail the whole conversion, not become a clean or
+    # partial report with a successful exit status.
     detection_findings: list[dict[str, Any]] = []
     for f in materialised:
-        cls = f.get("class_uid")
-        if cls == DETECTION_FINDING_CLASS_UID:
-            detection_findings.append(f)
-        else:
-            print(
-                f"[{SKILL_NAME}] skipping event with class_uid={cls} — convert-ocsf-to-sarif only handles Detection Finding (2004)",
-                file=sys.stderr,
-            )
+        if not isinstance(f, dict):
+            raise InputError("expected a JSON object")
+        if f.get("class_uid") != DETECTION_FINDING_CLASS_UID:
+            raise InputError("only Detection Finding (class_uid=2004) is supported")
+        detection_findings.append(f)
 
     # Build deduplicated rules keyed by technique uid
     rules: dict[str, dict[str, Any]] = {}
@@ -295,12 +309,10 @@ def load_jsonl(stream: Iterable[str]) -> Iterable[dict[str, Any]]:
         try:
             obj = json.loads(line)
         except json.JSONDecodeError as e:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: json parse failed: {e}", file=sys.stderr)
-            continue
-        if isinstance(obj, dict):
-            yield obj
-        else:
-            print(f"[{SKILL_NAME}] skipping line {lineno}: not a JSON object", file=sys.stderr)
+            raise InputError(f"line {lineno}: invalid JSON") from e
+        if not isinstance(obj, dict):
+            raise InputError(f"line {lineno}: expected a JSON object")
+        yield obj
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -311,18 +323,28 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", "-o", help="SARIF output file. Defaults to stdout.")
     args = parser.parse_args(argv)
 
-    in_stream = sys.stdin if not args.input else open(args.input, "r", encoding="utf-8")
-    out_stream = sys.stdout if not args.output else open(args.output, "w", encoding="utf-8")
-
+    # Consume and serialize before opening the destination, including when
+    # input and output refer to the same path. Failed input preserves old output.
     try:
-        sarif = convert(load_jsonl(in_stream))
-        json.dump(sarif, out_stream, indent=2, sort_keys=False)
-        out_stream.write("\n")
-    finally:
         if args.input:
-            in_stream.close()
-        if args.output:
-            out_stream.close()
+            with open(args.input, "r", encoding="utf-8") as in_stream:
+                sarif = convert(load_jsonl(in_stream))
+        else:
+            sarif = convert(load_jsonl(sys.stdin))
+        body = json.dumps(sarif, indent=2, sort_keys=False) + "\n"
+    except InputError as exc:
+        print(f"[{SKILL_NAME}] invalid input: {exc}", file=sys.stderr)
+        return 2
+    except (ValueError, TypeError, AttributeError):
+        # Malformed nested fields must not leak source values via a traceback.
+        print(f"[{SKILL_NAME}] invalid input: invalid finding fields", file=sys.stderr)
+        return 2
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as out_stream:
+            out_stream.write(body)
+    else:
+        sys.stdout.write(body)
 
     return 0
 

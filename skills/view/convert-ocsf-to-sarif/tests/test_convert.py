@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -130,25 +134,19 @@ class TestDocShape:
             == "cloud-ai-security-skills-detection-engineering"
         )
 
-    def test_skips_non_detection_finding(self, capsys):
-        doc = convert(
-            [
-                _detection_finding(),
-                {
-                    "class_uid": 6003,
-                    "metadata": {},
-                    "finding_info": {},
-                },  # API Activity, not a finding
-            ]
-        )
-        assert len(doc["runs"][0]["results"]) == 1
-        assert "skipping event with class_uid=6003" in capsys.readouterr().err
+    def test_rejects_non_detection_finding(self):
+        with pytest.raises(ValueError, match="class_uid=2004"):
+            convert([_detection_finding(), {"class_uid": 6003}])
 
 
 # ── Rule deduplication ───────────────────────────────────────────────
 
 
 class TestRuleDedup:
+    def test_converter_does_not_invent_detector_precision(self):
+        rule = convert([_detection_finding()])["runs"][0]["tool"]["driver"]["rules"][0]
+        assert "precision" not in rule["properties"]
+
     def test_two_findings_same_technique_one_rule(self):
         doc = convert(
             [
@@ -247,23 +245,117 @@ class TestFingerprints:
         assert "partialFingerprints" in result
         assert "primaryLocationLineHash" in result["partialFingerprints"]
 
-    def test_guid_matches_uid(self):
-        doc = convert([_detection_finding(uid="det-abc-123")])
-        assert doc["runs"][0]["results"][0]["guid"] == "det-abc-123"
+    @pytest.mark.parametrize(
+        "uid",
+        [
+            "det-abc-123",
+            "a" * 32,
+            "{12345678-1234-4234-8234-123456789abc}",
+            "12345678-1234-7234-8234-123456789abc",
+        ],
+    )
+    def test_opaque_uid_is_preserved_without_invalid_guid(self, uid):
+        result = convert([_detection_finding(uid=uid)])["runs"][0]["results"][0]
+        assert "guid" not in result
+        assert result["properties"]["finding_uid"] == uid
+
+    def test_canonical_guid_is_preserved(self):
+        uid = "12345678-1234-4234-8234-123456789abc"
+        result = convert([_detection_finding(uid=uid)])["runs"][0]["results"][0]
+        assert result["guid"] == uid
+        assert result["properties"]["finding_uid"] == uid
+
+    def test_generated_results_satisfy_sarif_guid_pattern(self):
+        # OASIS SARIF 2.1.0 schema, definitions.result.properties.guid.pattern.
+        pattern = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"
+        for result in convert(_load_jsonl(INPUT_FIXTURE))["runs"][0]["results"]:
+            assert "guid" not in result or re.fullmatch(pattern, result["guid"])
+
+    def test_repeated_uid_does_not_drop_occurrences(self):
+        finding = _detection_finding(uid="same")
+        results = convert([finding, finding])["runs"][0]["results"]
+        assert len(results) == 2
+        assert all(result["properties"]["finding_uid"] == "same" for result in results)
 
 
 # ── load_jsonl robustness ────────────────────────────────────────────
 
 
 class TestLoadJsonl:
-    def test_skips_malformed(self, capsys):
-        out = list(load_jsonl(['{"bad": ', '{"class_uid": 2004}']))
-        assert out == [{"class_uid": 2004}]
-        assert "skipping line 1" in capsys.readouterr().err
+    @pytest.mark.parametrize("payload", ['{"bad": ', "[1,2,3]", '"text"', "null", "42"])
+    def test_rejects_invalid_records(self, payload):
+        with pytest.raises(ValueError, match="line 2"):
+            list(load_jsonl(['{"class_uid": 2004}', payload]))
 
-    def test_skips_non_object(self, capsys):
-        out = list(load_jsonl(["[1,2,3]", '{"class_uid": 2004}']))
-        assert out == [{"class_uid": 2004}]
+
+class TestCliFailure:
+    @pytest.mark.parametrize("payload", ['{"bad": ', "[]", "null", '{"class_uid":6003}'])
+    @pytest.mark.parametrize("valid_prefix", [False, True])
+    def test_invalid_input_does_not_publish_or_replace_report(
+        self, tmp_path, payload, valid_prefix
+    ):
+        source = (json.dumps(_detection_finding()) + "\n" if valid_prefix else "") + payload
+        entrypoint = THIS.parent / "src" / "convert.py"
+        destination = tmp_path / "existing.sarif"
+        destination.write_text("previous report")
+        for args in [[], ["--output", str(destination)]]:
+            result = subprocess.run(
+                [sys.executable, str(entrypoint), *args],
+                input=source,
+                text=True,
+                capture_output=True,
+            )
+            assert result.returncode != 0
+            assert result.stdout == ""
+            assert "invalid input" in result.stderr
+            assert destination.read_text() == "previous report"
+
+    @pytest.mark.parametrize(
+        "field,value",
+        [
+            ("severity_id", "PRIVATE_TEST_VALUE"),
+            ("finding_info", ["PRIVATE_TEST_VALUE"]),
+            ("metadata", ["PRIVATE_TEST_VALUE"]),
+        ],
+    )
+    def test_malformed_fields_fail_without_disclosing_payload(self, tmp_path, field, value):
+        finding = _detection_finding()
+        finding[field] = value
+        destination = tmp_path / "existing.sarif"
+        destination.write_text("previous report")
+        result = subprocess.run(
+            [sys.executable, str(THIS.parent / "src" / "convert.py"), "-o", str(destination)],
+            input=json.dumps(finding),
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 2
+        assert result.stdout == ""
+        assert "invalid input" in result.stderr
+        assert "PRIVATE_TEST_VALUE" not in result.stderr
+        assert "Traceback" not in result.stderr
+        assert destination.read_text() == "previous report"
+
+    def test_input_and_output_can_be_same_file(self, tmp_path):
+        path = tmp_path / "report.jsonl"
+        path.write_text(json.dumps(_detection_finding()) + "\n")
+        result = subprocess.run(
+            [sys.executable, str(THIS.parent / "src" / "convert.py"), str(path), "-o", str(path)],
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 0
+        assert len(json.loads(path.read_text())["runs"][0]["results"]) == 1
+
+    def test_blank_input_is_valid_empty_report(self):
+        result = subprocess.run(
+            [sys.executable, str(THIS.parent / "src" / "convert.py")],
+            input="\n",
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 0
+        assert json.loads(result.stdout)["runs"][0]["results"] == []
 
 
 # ── Golden fixture parity ────────────────────────────────────────────
@@ -291,7 +383,7 @@ class TestGoldenFixture:
         for r in doc["runs"][0]["results"]:
             assert r["level"] == "error"
 
-    def test_sarif_validates_schema_url(self):
+    def test_sarif_declares_schema_and_version(self):
         findings = _load_jsonl(INPUT_FIXTURE)
         doc = convert(findings)
         assert doc["$schema"].endswith("sarif-schema-2.1.0.json")
