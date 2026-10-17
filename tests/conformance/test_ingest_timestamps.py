@@ -2,6 +2,7 @@
 
 A record whose source timestamp is missing or unparseable is skipped with a
 structured `timestamp_unparseable` warning (OCSF_CONTRACT.md, "Event time").
+CloudTrail additionally rejects the batch with a contract error.
 Substituting the wall clock made finding uids and windowed detections differ
 between replays of the same input.
 """
@@ -16,6 +17,8 @@ import sys
 from pathlib import Path
 
 import pytest
+
+from skills._shared.errors import ContractError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_DIR = REPO_ROOT / "skills" / "detection-engineering" / "golden"
@@ -84,9 +87,17 @@ def _pipe(ingest_skill: str, detect_skill: str, raw: str) -> tuple[str, str]:
         input=raw,
         capture_output=True,
         text=True,
-        check=True,
+        check=False,
         env=env,
     )
+    if ingest_skill == "ingest-cloudtrail-ocsf":
+        assert ingested.returncode == 1
+        error = json.loads(ingested.stdout)
+        assert error["event"] == "skill_error"
+        assert error["error_class"] == "contract"
+        assert "event time" in error["message"]
+        return "", ingested.stderr
+    assert ingested.returncode == 0, ingested.stderr
     detected = subprocess.run(
         [sys.executable, str(REPO_ROOT / "skills/detection" / detect_skill / "src/detect.py")],
         input=ingested.stdout,
@@ -357,7 +368,11 @@ def test_unparseable_timestamp_skips_record_with_structured_warning(
     assert _run_ingest(skill, text), "fixture must convert cleanly before garbling"
     capsys.readouterr()
 
-    assert _run_ingest(skill, garble(text)) == []
+    if skill == "ingest-cloudtrail-ocsf":
+        with pytest.raises(ContractError, match="event time"):
+            _run_ingest(skill, garble(text))
+    else:
+        assert _run_ingest(skill, garble(text)) == []
     events = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
     skipped = [e for e in events if e["event"] == "timestamp_unparseable"]
     assert skipped, events

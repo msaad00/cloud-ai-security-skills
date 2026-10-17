@@ -121,15 +121,19 @@ nanoseconds (unit inferred from magnitude). The parsing rules:
   so ordering against the following second is preserved.
 - Only ASCII digits are accepted.
 
-When a record's primary event time is missing or unparseable, the ingester
-**skips the record** and writes one structured stderr warning, the same way
-it skips unparseable JSON:
+When a record's primary event time is missing or unparseable, ingesters
+omit the record and write one structured stderr warning:
 
 - `event`: `timestamp_unparseable`, `level`: `warning`
 - `record`: 1-based position of the raw record in the input stream; line-
   oriented ingesters (MCP proxy, AWS VPC Flow Logs) use the input line number
   and also set `line`
 - never the raw value or payload
+
+`ingest-cloudtrail-ocsf` additionally raises `ContractError` and rejects the
+batch. Its CLI emits a `skill_error` envelope and exits 1 without publishing
+partial event output; MCP reports `isError: true`. Other ingesters retain their
+existing skip-and-warn behavior. See the per-skill contract for input failures.
 
 Substituting "now" is forbidden: it makes `metadata.uid` / `finding_info.uid`
 differ between replays of the same input and fakes event times inside
@@ -147,9 +151,14 @@ writes one structured stderr warning:
 - `event`: `finding_time_missing`, `level`: `warning`
 - never the raw event or payload
 
+`detect-aws-access-key-creation` additionally raises `ContractError` when a
+matching record lacks a usable time. Its CLI rejects the batch with exit 1 and
+an error envelope instead of publishing partial findings. Other detectors
+retain skip-and-warn behavior.
+
 `tests/conformance/test_detect_finding_time.py` fails if any detector reads
 the wall clock, and replays every golden pipe with time-less events to prove
-the output stays byte-identical across runs.
+successful output stays byte-identical and strict failures remain failures across runs.
 
 ## OCSF class usage
 

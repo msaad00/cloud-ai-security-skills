@@ -101,10 +101,9 @@ def test_skips_wrong_producer(capsys):
     assert "non-cloudtrail producer" in capsys.readouterr().err
 
 
-def test_skips_missing_target_user(capsys):
-    findings = list(detect([_ct_event(target_user="")]))
-    assert findings == []
-    assert "no target IAM username" in capsys.readouterr().err
+def test_rejects_missing_target_user():
+    with pytest.raises(ContractError, match="no target IAM username"):
+        list(detect([_ct_event(target_user="")]))
 
 
 def test_accepts_resource_type_user():

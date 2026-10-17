@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import json
 import os
-import random
-import string
 import sys
 from pathlib import Path
+
+import pytest
+
+from skills._shared.errors import ContractError
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -107,11 +109,12 @@ class TestParseTs:
     def test_garbage_is_none(self):
         assert parse_ts_ms("not-a-date") is None
 
-    def test_event_without_time_is_skipped_not_stamped_now(self, capsys, monkeypatch):
+    def test_event_without_time_is_rejected_not_stamped_now(self, capsys, monkeypatch):
         monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
         raw = json.loads(RAW_FIXTURE.read_text().splitlines()[0])
         raw["eventTime"] = "not-a-date"
-        assert list(ingest([json.dumps(raw)])) == []
+        with pytest.raises(ContractError, match="event time"):
+            list(ingest([json.dumps(raw)]))
         payload = json.loads(capsys.readouterr().err.strip())
         assert payload["event"] == "timestamp_unparseable"
         assert payload["record"] == 1
@@ -311,34 +314,10 @@ class TestIterRawEvents:
         out = list(iter_raw_events(["", "  ", "\n"]))
         assert out == []
 
-    def test_skips_malformed_without_crash(self, capsys):
-        # NDJSON with one bad line followed by one good line
-        out = list(iter_raw_events(['{"not": "json"', '{"eventName": "Good"}']))
-        assert len(out) == 1
-        assert out[0]["eventName"] == "Good"
-        assert "skipping line" in capsys.readouterr().err
-
-    def test_skips_malformed_with_json_stderr(self, capsys, monkeypatch):
-        monkeypatch.setenv("SKILL_LOG_FORMAT", "json")
-        out = list(iter_raw_events(['{"not": "json"', '{"eventName": "Good"}']))
-        assert len(out) == 1
-        payload = json.loads(capsys.readouterr().err.strip())
-        assert payload["skill"] == SKILL_NAME
-        assert payload["level"] == "warning"
-        assert payload["event"] == "json_parse_failed"
-        assert payload["line"] == 1
-
-    def test_mixed_random_garbage_keeps_valid_events(self, capsys):
-        rng = random.Random(7)
-        alphabet = string.ascii_letters + string.digits + "[]{}:,"
-        malformed = ["".join(rng.choice(alphabet) for _ in range(25)) for _ in range(20)]
-        lines = malformed + [json.dumps({"eventName": "StillGood"})]
-
-        out = list(iter_raw_events(lines))
-
-        assert out == [{"eventName": "StillGood"}]
-        stderr = capsys.readouterr().err
-        assert "skipping line" in stderr
+    def test_rejects_malformed_without_exposing_payload(self):
+        with pytest.raises(ContractError, match="line 1: invalid JSON") as exc:
+            list(iter_raw_events(['{"private": "value"', '{"eventName": "Good"}']))
+        assert "private" not in str(exc.value)
 
 
 # ── Golden fixture parity ──────────────────────────────────────────────
