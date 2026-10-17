@@ -134,7 +134,7 @@ not do, and what it talks to.
 | Detect | [`detect-agent-credential-leak-mcp`](../skills/detection/detect-agent-credential-leak-mcp/) | OWASP MCP — leaked secrets in `tools/call` results |
 | Detect | [`detect-mcp-adversarial-input-corpus`](../skills/detection/detect-mcp-adversarial-input-corpus/) | ATLAS AML.T0043 — frozen adversarial-input fingerprint catalog |
 | Detect | [`detect-mcp-model-artifact-tampering`](../skills/detection/detect-mcp-model-artifact-tampering/) | ATLAS AML.T0010 / OWASP LLM03 — MCP model-artifact tampering |
-| Detect | [`detect-mcp-model-token-flood`](../skills/detection/detect-mcp-model-token-flood/) | OWASP LLM04 / LLM10 — model prompt-token flooding |
+| Detect | [`detect-mcp-model-token-flood`](../skills/detection/detect-mcp-model-token-flood/) | OWASP LLM10:2025 — model prompt-token budget crossings |
 | Detect | [`detect-mcp-plugin-supply-chain`](../skills/detection/detect-mcp-plugin-supply-chain/) | OWASP LLM05 — inputSchema reaches outside the allowlist |
 | Detect | [`detect-mcp-shadow-tool-injection`](../skills/detection/detect-mcp-shadow-tool-injection/) | T1195.001 — tool diverges from the server-registered baseline |
 | Detect | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift/) | T1195.001 — tool-poisoning / rug-pull |

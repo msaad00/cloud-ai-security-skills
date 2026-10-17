@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 from detect import (  # type: ignore[import-not-found]
-    ATLAS_TECHNIQUE_UID,
     DEFAULT_BYTES_THRESHOLD,
     DEFAULT_LINES_THRESHOLD,
     DEFAULT_REPEATED_BREACH_THRESHOLD,
@@ -131,13 +130,13 @@ class TestDetect:
             events.append(_ev("s", "b", DEFAULT_BYTES_THRESHOLD + 1, time_ms=i * 1000))
         assert list(detect(events)) == []
 
-    def test_atlas_attack_populated(self):
+    def test_threshold_alone_has_no_atlas_mapping(self):
         events = [
             _ev("s", "t", DEFAULT_BYTES_THRESHOLD + 1, time_ms=i * 1000)
             for i in range(DEFAULT_REPEATED_BREACH_THRESHOLD)
         ]
         finding = list(detect(events))[0]
-        assert finding["finding_info"]["attacks"][0]["technique"]["uid"] == ATLAS_TECHNIQUE_UID
+        assert finding["finding_info"]["attacks"] == []
 
     def test_wrong_vendor_name_still_processed(self):
         # Detector trusts events that carry the class_uid + unmapped fields.

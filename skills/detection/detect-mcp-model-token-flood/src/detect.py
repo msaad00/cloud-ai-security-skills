@@ -5,7 +5,7 @@ Reads OCSF 1.8 Application Activity (class 6002) events emitted by
 `(actor.user.uid, model_name)`, sums `unmapped.mcp.prompt_tokens`, and emits a
 Detection Finding when the per-window total crosses
 `MCP_PROMPT_TOKEN_BUDGET` inside `MCP_PROMPT_TOKEN_WINDOW_MIN` minutes.
-Maps to OWASP LLM04 / LLM10.
+Reports resource pressure related to OWASP LLM10:2025 Unbounded Consumption.
 """
 
 from __future__ import annotations
@@ -42,14 +42,6 @@ SEVERITY_HIGH = 4
 
 DEFAULT_BUDGET = 200_000
 DEFAULT_WINDOW_MIN = 5
-
-# ATLAS Cost Harvesting is the closest fit when the flood is cost-motivated;
-# the primary mapping is the OWASP LLM Top 10 entries.
-ATLAS_VERSION = "current"
-ATLAS_TACTIC_UID = "AML.TA0007"
-ATLAS_TACTIC_NAME = "ML Attack Staging"
-ATLAS_TECHNIQUE_UID = "AML.T0034"
-ATLAS_TECHNIQUE_NAME = "Cost Harvesting"
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -155,10 +147,9 @@ def _build_native_finding(
     desc = (
         f"User '{user_uid}' submitted {total_tokens} prompt tokens against model "
         f"'{model_name}' over the past {window_minutes} minute(s), exceeding the "
-        f"MCP_PROMPT_TOKEN_BUDGET ({threshold}). This is the OWASP LLM04 / LLM10 "
-        f"prompt-token flood pattern — agents or adversaries amplifying cost or "
-        f"saturating the model endpoint with cumulative volume that no single "
-        f"per-call RLIMIT would block."
+        f"MCP_PROMPT_TOKEN_BUDGET ({threshold}). This flags resource pressure related "
+        f"to OWASP LLM10:2025 Unbounded Consumption. The threshold crossing does not "
+        f"establish malicious intent, actual charges, or service unavailability."
     )
     finding_time = finding_time_ms(last_time)
     if finding_time is None:
@@ -190,15 +181,7 @@ def _build_native_finding(
         "threshold_tokens": threshold,
         "window_minutes": window_minutes,
         "event_count": len(window_events),
-        "mitre_attacks": [
-            {
-                "version": ATLAS_VERSION,
-                "tactic_uid": ATLAS_TACTIC_UID,
-                "tactic_name": ATLAS_TACTIC_NAME,
-                "technique_uid": ATLAS_TECHNIQUE_UID,
-                "technique_name": ATLAS_TECHNIQUE_NAME,
-            }
-        ],
+        "mitre_attacks": [],
         "observables": [
             {"name": "user.uid", "type": "Other", "value": user_uid},
             {"name": "model.name", "type": "Other", "value": model_name},
@@ -211,7 +194,6 @@ def _build_native_finding(
 
 
 def _render_ocsf_finding(native: dict[str, Any]) -> dict[str, Any]:
-    attack = native["mitre_attacks"][0]
     return {
         "activity_id": FINDING_ACTIVITY_CREATE,
         "category_uid": FINDING_CATEGORY_UID,
@@ -239,13 +221,7 @@ def _render_ocsf_finding(native: dict[str, Any]) -> dict[str, Any]:
             "types": native["finding_types"],
             "first_seen_time": native["first_seen_time_ms"],
             "last_seen_time": native["last_seen_time_ms"],
-            "attacks": [
-                {
-                    "version": attack["version"],
-                    "tactic": {"uid": attack["tactic_uid"], "name": attack["tactic_name"]},
-                    "technique": {"uid": attack["technique_uid"], "name": attack["technique_name"]},
-                }
-            ],
+            "attacks": [],
         },
         "observables": native["observables"],
         "evidence": {

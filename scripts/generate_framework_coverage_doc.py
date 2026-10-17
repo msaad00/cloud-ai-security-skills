@@ -158,7 +158,7 @@ def _render(data: dict[str, Any]) -> str:
     )
     lines.append("")
 
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def _skill_relpath(path: str) -> str:

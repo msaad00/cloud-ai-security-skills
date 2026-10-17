@@ -12,7 +12,7 @@ This file is **generated from [`framework-coverage.json`](framework-coverage.jso
 |---|---|---|---|
 | OCSF | 1.8.0 | **113** | — |
 | MITRE ATT&CK | v14 | **86** | 100% mapped coverage |
-| MITRE ATLAS | current | **21** | 100% mapped coverage |
+| MITRE ATLAS | current | **20** | 100% mapped coverage |
 | CIS AWS Foundations | v3.0 | **6** | — |
 | CIS GCP Foundations | v3.0 | **5** | — |
 | CIS Azure Foundations | v2.1 | **6** | — |
@@ -260,7 +260,7 @@ Shipped skills mapped: **86**
 - Asset classes in scope: ai-endpoints, models, datasets, vector-stores, gpu-fleets, evidence
 - Coverage target: 100% mapped coverage
 
-Shipped skills mapped: **21**
+Shipped skills mapped: **20**
 
 | Skill | Layer | Providers | Asset classes |
 |---|---|---|---|
@@ -273,7 +273,6 @@ Shipped skills mapped: **21**
 | [`detect-mcp-plugin-supply-chain`](../skills/detection/detect-mcp-plugin-supply-chain) | detection | mcp | tools, supply-chain |
 | [`detect-mcp-shadow-tool-injection`](../skills/detection/detect-mcp-shadow-tool-injection) | detection | mcp | tools, tool-metadata, supply-chain |
 | [`detect-mcp-tool-drift`](../skills/detection/detect-mcp-tool-drift) | detection | mcp, multi | agent-tools, supply-chain, tool-metadata |
-| [`detect-mcp-unbounded-tool-output`](../skills/detection/detect-mcp-unbounded-tool-output) | detection | mcp | tools, rate-limits |
 | [`detect-prompt-injection-mcp-proxy`](../skills/detection/detect-prompt-injection-mcp-proxy) | detection | mcp, multi | agent-tools, tool-metadata, guardrails |
 | [`detect-system-prompt-extraction`](../skills/detection/detect-system-prompt-extraction) | detection | mcp | agent-tools, tool-results, prompts, instructions |
 | [`detect-tool-output-exfiltration-instructions`](../skills/detection/detect-tool-output-exfiltration-instructions) | detection | mcp | agent-tools, tool-results, instructions, artifacts |
@@ -582,4 +581,3 @@ _Every shipped skill in the registry references at least one framework._
 2. Run `python scripts/generate_framework_coverage_doc.py` to regenerate this file.
 3. Commit both `framework-coverage.json` and `FRAMEWORK_COVERAGE.md` in the same change.
 4. CI runs the script in check mode and fails if the generated doc differs from the checked-in version.
-

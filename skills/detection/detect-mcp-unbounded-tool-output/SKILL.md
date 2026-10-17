@@ -2,7 +2,7 @@
 name: detect-mcp-unbounded-tool-output
 description: >-
   Detect MCP tools whose response payloads systematically exceed operator-set
-  output ceilings — the OWASP LLM10 Unbounded Resource Consumption pattern
+  output ceilings — the OWASP LLM10:2025 Unbounded Consumption pattern
   applied to the tool-output side of the loop. Reads OCSF 1.8 Application
   Activity (class 6002) records produced by ingest-mcp-proxy-ocsf and tracks
   per-(session_uid, tool_name) cumulative breaches where
@@ -15,7 +15,7 @@ description: >-
   or OWASP LLM10. Do NOT use on raw MCP proxy logs — feed them through
   ingest-mcp-proxy-ocsf first. Do NOT use as a per-call rate limiter; this
   is a cumulative pattern detector that complements wrapper RLIMITs.
-purpose: Detect MCP tools repeatedly pushing past output ceilings (OWASP LLM10 Unbounded Consumption).
+purpose: Detect MCP tools repeatedly pushing past output ceilings (OWASP LLM10:2025 Unbounded Consumption).
 capability: detect
 persistence: none
 telemetry: stderr_jsonl
@@ -40,7 +40,7 @@ operator's per-call ceiling across a single session is a footgun — either a
 mis-configured tool or an adversary intentionally bleeding the operator
 through cost or context bloat.
 
-This maps to OWASP LLM Top 10 **LLM10 Unbounded Resource Consumption**.
+This maps to OWASP LLM Top 10 **LLM10:2025 Unbounded Consumption**.
 
 ## Detection logic
 
@@ -79,10 +79,24 @@ the repo-owned native projection.
 OCSF output populates:
 
 - `finding_info.types[] = ["mcp-unbounded-tool-output", "llm-unbounded-consumption"]`
-- `finding_info.attacks[]` — MITRE ATLAS `AML.T0034` Cost Harvesting (the
-  cost-amplification mapping for the LLM10 class).
+- `finding_info.attacks = []` — no adversary-technique attribution from
+  resource thresholds alone.
 - deterministic `finding_info.uid`.
 - `observables[]` — session uid, tool name, breach count, threshold values.
+
+## Evidence limits
+
+Threshold crossings preserve observed counts and operator limits. They do not
+establish malicious intent, billing impact, or service unavailability. Native
+`mitre_attacks` and OCSF `finding_info.attacks` are empty; an empty mapping list
+does not mean there is no finding. Finding IDs, severity, thresholds, and
+observed evidence remain stable.
+
+MITRE ATLAS Cost Harvesting (`AML.T0034`) is related investigation context,
+not an emitted mapping: the rule does not determine whether consumption was
+deliberately driven to cause financial harm. The OWASP reference is pinned to
+LLM10:2025; LLM04 from the earlier edition is not a second current mapping.
+See [REFERENCES.md](REFERENCES.md) for the source definitions.
 
 ## Usage
 
