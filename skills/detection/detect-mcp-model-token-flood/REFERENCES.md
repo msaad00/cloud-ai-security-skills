@@ -1,12 +1,16 @@
 # References — detect-mcp-model-token-flood
 
-## Standards implemented
+## Resource-risk context
 
-- **OWASP LLM Top 10** — LLM04 Model Denial of Service · LLM10 Unbounded
-  Consumption — https://genai.owasp.org/
-- **MITRE ATLAS** — AML.T0034 Cost Harvesting (where applicable)
+- **OWASP LLM10:2025 — Unbounded Consumption**:
+  https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/
+  Input/output limits and resource monitoring motivate these threshold signals.
+  A crossing alone does not demonstrate every vulnerability or attack in LLM10.
+- **MITRE ATLAS AML.T0034 — Cost Harvesting**:
   https://atlas.mitre.org/techniques/AML.T0034
-- **OWASP MCP Top 10** — Resource-exhaustion class — https://genai.owasp.org/
+  The definition involves deliberate pressure intended to increase service costs.
+  These counters do not establish that intent or billing outcome, so the detector
+  does not emit this technique. Reviewed 2026-10-17.
 
 ## Input format
 

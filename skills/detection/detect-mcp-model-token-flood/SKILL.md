@@ -7,13 +7,13 @@ description: >-
   unmapped.mcp.model_name, accumulates prompt tokens per
   (actor.user.uid, model_name) within a sliding window, and fires one
   Detection Finding when an individual user exceeds the budget on the same
-  model. Maps to OWASP LLM04 Model Denial of Service and OWASP LLM10
+  model. Reports resource pressure related to OWASP LLM10:2025
   Unbounded Consumption. Use when the user mentions model DoS, prompt-token
   exhaustion, MCP model quotas, or LLM cost-bombing. Do NOT use on raw MCP
   proxy logs — feed them through ingest-mcp-proxy-ocsf first. Do NOT use as a
   rate limiter; thresholds here are detection-side and complement, not
   replace, the wrapper rate-limit RLIMITs.
-purpose: Detect prompt-token flooding against a model endpoint over MCP (OWASP LLM04 · LLM10).
+purpose: Detect prompt-token flooding against a model endpoint over MCP (OWASP LLM10:2025 Unbounded Consumption).
 capability: detect
 persistence: none
 telemetry: stderr_jsonl
@@ -35,12 +35,12 @@ An agent or adversary aimed at a model endpoint over MCP can drive a denial-
 of-service or cost-amplification attack by submitting an unbounded stream of
 prompt tokens against the same model identity. The wrapper's per-call RLIMIT
 caps a single request but does **not** cap cumulative consumption across
-calls inside a short window — a 200k-token flood from one user against the
-same model often shows up as 4 × 50k requests, all well under the per-call
+calls inside a short window — a 250k-token flood from one user against the
+same model can appear as 5 × 50k requests, all well under the per-call
 ceiling, all from the same actor, all within minutes.
 
-This maps to OWASP LLM Top 10 **LLM04 Model Denial of Service** and **LLM10
-Unbounded Consumption**.
+This provides a resource-pressure signal related to OWASP LLM Top 10
+**LLM10:2025 Unbounded Consumption**.
 
 ## Detection logic
 
@@ -62,8 +62,8 @@ fire if total > MCP_PROMPT_TOKEN_BUDGET
 - Different user, same model → counted separately.
 - Same user, different model → counted separately.
 
-Use when the user mentions model DoS, prompt-token flooding, OWASP LLM04, or
-OWASP LLM10. Do NOT use as a request-level rate limiter — that belongs to the
+Use when the user mentions model DoS, prompt-token flooding, or OWASP
+LLM10:2025. Do NOT use as a request-level rate limiter — that belongs to the
 MCP proxy's RLIMIT contract.
 
 ## Output contract
@@ -74,10 +74,24 @@ One OCSF 1.8 Detection Finding (class 2004) per flooding window. With
 OCSF output populates:
 
 - `finding_info.types[] = ["mcp-model-token-flood", "llm-model-dos"]`
-- `finding_info.attacks[]` — MITRE ATLAS `AML.T0034` Cost Harvesting where
-  applicable; the LLM Top 10 mapping is the primary one.
+- `finding_info.attacks = []` — no adversary-technique attribution from
+  resource thresholds alone.
 - deterministic `finding_info.uid`.
 - `observables[]` — user uid, model name, total tokens, window start/end.
+
+## Evidence limits
+
+Threshold crossings preserve observed counts and operator limits. They do not
+establish malicious intent, billing impact, or service unavailability. Native
+`mitre_attacks` and OCSF `finding_info.attacks` are empty; an empty mapping list
+does not mean there is no finding. Finding IDs, severity, thresholds, and
+observed evidence remain stable.
+
+MITRE ATLAS Cost Harvesting (`AML.T0034`) is related investigation context,
+not an emitted mapping: the rule does not determine whether consumption was
+deliberately driven to cause financial harm. The OWASP reference is pinned to
+LLM10:2025; LLM04 from the earlier edition is not a second current mapping.
+See [REFERENCES.md](REFERENCES.md) for the source definitions.
 
 ## Usage
 

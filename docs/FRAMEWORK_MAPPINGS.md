@@ -141,6 +141,11 @@ ATLAS is present today, but coverage is narrower than ATT&CK.
 | `discover-control-evidence` | evidence package that preserves ATLAS / AI RMF context from discovery artifacts |
 | `discover-cloud-control-evidence` | cross-cloud evidence package with explicit NIST AI RMF evidence mode, ATT&CK / ATLAS / AI RMF inventory context, and per-provider logging / segmentation / encryption / key-management depth |
 
+The MCP token-flood and unbounded-tool-output detectors retain resource-pressure
+findings related to OWASP LLM10:2025, with empty ATLAS mapping arrays. Token totals
+and output-size breaches alone do not establish Cost Harvesting intent or impact;
+see their per-skill references and evidence limits.
+
 Current provider depth in discovery:
 - AWS Bedrock / SageMaker
 - Google Vertex AI

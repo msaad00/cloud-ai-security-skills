@@ -1276,7 +1276,6 @@
       ],
       "frameworks": [
         "ocsf-1.8",
-        "mitre-atlas",
         "owasp-llm-top-10",
         "owasp-mcp-top-10"
       ],

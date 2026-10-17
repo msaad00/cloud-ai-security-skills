@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 from detect import (  # type: ignore[import-not-found]
-    ATLAS_TECHNIQUE_UID,
     DEFAULT_BUDGET,
     DEFAULT_WINDOW_MIN,
     FINDING_CATEGORY_UID,
@@ -95,11 +94,11 @@ class TestDetect:
         ]
         assert len(list(detect(events, token_budget=200_000))) == 1
 
-    def test_mitre_atlas_populated(self):
+    def test_threshold_alone_has_no_atlas_mapping(self):
         events = [_ev("u", "m", 80_000, i * 60_000) for i in range(3)]
         finding = list(detect(events))[0]
         attacks = finding["finding_info"]["attacks"]
-        assert attacks[0]["technique"]["uid"] == ATLAS_TECHNIQUE_UID
+        assert attacks == []
 
     def test_separate_users_accounted_separately(self):
         events = [

@@ -399,7 +399,7 @@ def render(skills: list[dict]) -> str:
         "Detect / remediate slices could be added cheaply."
     )
     lines.append("")
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:

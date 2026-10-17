@@ -45,7 +45,7 @@ Skills can carry multiple framework tags (e.g. a CIS check tagged with NIST CSF 
 | OWASP Top 10 | 27 | 20.1% |
 | SOC 2 TSC | 22 | 16.4% |
 | NIST CSF 2.0 | 22 | 16.4% |
-| MITRE ATLAS | 21 | 15.7% |
+| MITRE ATLAS | 20 | 14.9% |
 | OWASP LLM Top 10 | 19 | 14.2% |
 | OWASP MCP Top 10 | 11 | 8.2% |
 | NIST AI RMF | 8 | 6.0% |
@@ -81,7 +81,7 @@ Skills can carry multiple framework tags (e.g. a CIS check tagged with NIST CSF 
 | CIS GCP v3 | 30 | 60 | 50% |
 | CIS AWS v3 | 27 | 58 | 47% |
 | CIS Azure v2.1 | 22 | 60 | 37% |
-| OWASP LLM Top 10 | 8 | 10 | 80% |
+| OWASP LLM Top 10 | 7 | 10 | 70% |
 | OWASP MCP Top 10 | 7 | 10 | 70% |
 | CIS Controls v8 | 0 | 18 | 0% |
 | CIS Docker | 0 | 17 | 0% |
@@ -95,8 +95,8 @@ Per-track breadth toward the published target. The 'Today' column uses **per-con
 | Track | Tag | Issue | Target | Today |
 |---|---|---|---:|---:|
 | MITRE ATT&CK breadth | `mitre-attack-v14` | #253 | 50% | 64% |
-| MITRE ATLAS | `mitre-atlas` | #255 | 40% | 16% |
-| OWASP LLM Top 10 | `owasp-llm-top-10` | #255 | 40% | 80% |
+| MITRE ATLAS | `mitre-atlas` | #255 | 40% | 15% |
+| OWASP LLM Top 10 | `owasp-llm-top-10` | #255 | 40% | 70% |
 | OWASP MCP Top 10 | `owasp-mcp-top-10` | #255 | 50% | 70% |
 | OWASP Top 10 (web) | `owasp-top-10` | TBD | 30% | 0% |
 | NIST AI RMF | `nist-ai-rmf` | TBD | 30% | 61% |
@@ -108,4 +108,3 @@ Per-track breadth toward the published target. The 'Today' column uses **per-con
 - **NIST AI RMF + CycloneDX ML-BOM** — only 4 + 2 skills. AI inventory and posture is a credible next theme.
 - **Per-vendor depth** — Snowflake / Databricks / ClickHouse are 3–4 skills each. Detect-side coverage on those is thin.
 - **PCI / ISO** — 3–4 skills each, mostly evidence-side. Detect / remediate slices could be added cheaply.
-

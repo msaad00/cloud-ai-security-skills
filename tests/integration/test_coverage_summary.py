@@ -178,3 +178,37 @@ def test_synthetic_skills_render_known_buckets(tmp_path, monkeypatch):
     assert "GCP | 1 | 50.0%" in rendered
     assert "Kubernetes" not in rendered  # not in the input
     assert "**Total shipped skills:** 2" in rendered
+
+
+def test_resource_thresholds_claim_only_current_unbounded_consumption():
+    for skill in ("detect-mcp-model-token-flood", "detect-mcp-unbounded-tool-output"):
+        controls = COV._controls_in_skill(f"skills/detection/{skill}")
+        assert controls["owasp-llm-top-10"] == {"LLM10"}
+
+
+def test_corrected_depth_baseline_still_rejects_lost_coverage(monkeypatch, capsys):
+    spec = importlib.util.spec_from_file_location(
+        "framework_depth_under_test", REPO_ROOT / "scripts/validate_framework_depth.py"
+    )
+    assert spec and spec.loader
+    depth = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(depth)
+    monkeypatch.setattr(depth, "_load_coverage_summary", lambda: COV)
+    assert depth.main() == 0
+    controls = COV._bucket_controls_by_framework(COV._load())
+    controls["owasp-llm-top-10"].remove("LLM10")
+    monkeypatch.setattr(COV, "_bucket_controls_by_framework", lambda _: controls)
+    assert depth.main() == 1
+    assert "6 controls covered, minimum 7" in capsys.readouterr().err
+
+
+def test_generated_coverage_docs_survive_eof_formatting():
+    spec = importlib.util.spec_from_file_location(
+        "framework_doc_under_test", REPO_ROOT / "scripts/generate_framework_coverage_doc.py"
+    )
+    assert spec and spec.loader
+    framework_doc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(framework_doc)
+    registry = json.loads((REPO_ROOT / "docs/framework-coverage.json").read_text())
+    for rendered in (COV.render(COV._load()), framework_doc._render(registry)):
+        assert rendered == rendered.rstrip("\n") + "\n"

@@ -21,7 +21,10 @@ COVERAGE_SUMMARY = REPO_ROOT / "scripts" / "coverage_summary.py"
 # Minimum unique controls that must remain covered. Raise these when depth
 # expands deliberately — never lower without an issue + snapshot regen.
 MIN_DEPTH: dict[str, int] = {
-    "owasp-llm-top-10": 8,
+    # #255 requires seven items. Legacy LLM04 Model DoS was incorrectly counted
+    # alongside LLM10:2025; token-volume thresholds do not detect 2025 poisoning.
+    # Rebaseline with the regenerated snapshot when removing that duplicate claim.
+    "owasp-llm-top-10": 7,
     "owasp-mcp-top-10": 7,
     "nist-ai-rmf": 44,
 }

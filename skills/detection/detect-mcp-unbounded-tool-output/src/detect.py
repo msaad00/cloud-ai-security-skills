@@ -5,8 +5,7 @@ Reads OCSF 1.8 Application Activity (class 6002) events emitted by
 `unmapped.mcp.response_size_bytes` or `unmapped.mcp.response_line_count`,
 records a breach against the per-(session, tool) counter. When the counter
 reaches `MCP_TOOL_OUTPUT_REPEATED_BREACH_THRESHOLD`, emits one Detection
-Finding tagged OWASP LLM10 (Unbounded Resource Consumption) and ATLAS
-AML.T0034 (Cost Harvesting).
+Finding for resource pressure related to OWASP LLM10:2025 Unbounded Consumption.
 """
 
 from __future__ import annotations
@@ -45,12 +44,6 @@ SEVERITY_MEDIUM = 3
 DEFAULT_BYTES_THRESHOLD = 10 * 1024 * 1024  # 10 MiB
 DEFAULT_LINES_THRESHOLD = 50_000
 DEFAULT_REPEATED_BREACH_THRESHOLD = 5
-
-ATLAS_VERSION = "current"
-ATLAS_TACTIC_UID = "AML.TA0007"
-ATLAS_TACTIC_NAME = "ML Attack Staging"
-ATLAS_TECHNIQUE_UID = "AML.T0034"
-ATLAS_TECHNIQUE_NAME = "Cost Harvesting"
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -174,9 +167,10 @@ def _build_native_finding(
         f"MCP tool '{tool_name}' in session '{session_uid}' produced {breach_count} "
         f"oversized responses (threshold: {bytes_thr} bytes OR {lines_thr} lines per "
         f"call). The cumulative pattern crossed the operator's repeat threshold "
-        f"({repeat_thr}). Tighten the per-tool RLIMIT or quarantine the tool — this "
-        f"is the OWASP LLM10 Unbounded Resource Consumption / ATLAS AML.T0034 Cost "
-        f"Harvesting pattern on the tool-output side of the loop."
+        f"({repeat_thr}). This flags resource pressure related to OWASP LLM10:2025 "
+        f"Unbounded Consumption. The threshold crossing does not establish malicious "
+        f"intent, actual charges, or service unavailability. Review tool output limits "
+        f"and legitimate workload requirements."
     )
     finding_time = finding_time_ms(last_time_ms)
     if finding_time is None:
@@ -210,15 +204,7 @@ def _build_native_finding(
         "repeated_breach_threshold": repeat_thr,
         "max_response_bytes": max_bytes,
         "max_response_lines": max_lines,
-        "mitre_attacks": [
-            {
-                "version": ATLAS_VERSION,
-                "tactic_uid": ATLAS_TACTIC_UID,
-                "tactic_name": ATLAS_TACTIC_NAME,
-                "technique_uid": ATLAS_TECHNIQUE_UID,
-                "technique_name": ATLAS_TECHNIQUE_NAME,
-            }
-        ],
+        "mitre_attacks": [],
         "observables": [
             {"name": "session.uid", "type": "Other", "value": session_uid},
             {"name": "tool.name", "type": "Other", "value": tool_name},
@@ -231,7 +217,6 @@ def _build_native_finding(
 
 
 def _render_ocsf_finding(native: dict[str, Any]) -> dict[str, Any]:
-    attack = native["mitre_attacks"][0]
     return {
         "activity_id": FINDING_ACTIVITY_CREATE,
         "category_uid": FINDING_CATEGORY_UID,
@@ -259,13 +244,7 @@ def _render_ocsf_finding(native: dict[str, Any]) -> dict[str, Any]:
             "types": native["finding_types"],
             "first_seen_time": native["first_seen_time_ms"],
             "last_seen_time": native["last_seen_time_ms"],
-            "attacks": [
-                {
-                    "version": attack["version"],
-                    "tactic": {"uid": attack["tactic_uid"], "name": attack["tactic_name"]},
-                    "technique": {"uid": attack["technique_uid"], "name": attack["technique_name"]},
-                }
-            ],
+            "attacks": [],
         },
         "observables": native["observables"],
         "evidence": {

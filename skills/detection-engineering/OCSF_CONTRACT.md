@@ -248,6 +248,12 @@ All detection skills in this category produce **Detection Finding** (class `2004
 }
 ```
 
+`finding_info.attacks` is optional in [OCSF 1.8](https://github.com/ocsf/ocsf-schema/blob/v1.8.0/objects/finding_info.json).
+The MCP token-flood and unbounded-tool-output detectors emit an empty array:
+resource threshold crossings alone do not establish an adversary technique.
+Consumers must retain those findings and their evidence without inventing a
+MITRE mapping.
+
 Every `attacks[]` entry uses nested OCSF objects: `technique: {uid, name}`
 (required), `tactic: {uid, name}`, and `sub_technique: {uid, name}` when a
 sub-technique applies. Flat keys such as `technique_uid` or `tactic_uid` are
