@@ -4,6 +4,7 @@
 
 - **SARIF 2.1.0 schema** — https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sarif-schema-2.1.0.json
 - **SARIF 2.1.0 specification** — https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
+- **GitHub SARIF support and consumer limits** — https://docs.github.com/en/code-security/reference/code-scanning/sarif-files/sarif-support
 - **OCSF schema** — https://schema.ocsf.io/1.8.0/
 - **MITRE ATT&CK** — https://attack.mitre.org/
 
