@@ -90,13 +90,31 @@ Approval behavior:
 
 Timeout behavior:
 
-Each tool call runs the skill in a subprocess with a hard timeout.
+Each tool call runs the skill in a subprocess with a configured timeout.
 
 - Default: `60` seconds (from `DEFAULT_TIMEOUT_SECONDS` in `src/server.py`).
 - Per-skill override: a skill's `SKILL.md` frontmatter may declare `mcp_timeout_seconds: <N>` (range `1`–`900`) when the skill's realistic runtime exceeds the default. No shipped skill sets this today; the field is opt-in and defaults to the global value.
 - Operator override: setting the `CLOUD_SECURITY_MCP_TIMEOUT_SECONDS` environment variable wins over both, so on-call can widen or tighten the window without editing any `SKILL.md`.
 
 Resolution order, highest wins: env override > per-skill value > default.
+
+On POSIX (Linux/macOS), the default one-shot runner applies one deadline to
+stdin writes, stdout/stderr reads, and process exit after subprocess creation.
+A descendant holding a pipe open cannot extend that deadline. The runner starts
+a new process group and kills remaining members on completion, timeout, output
+overflow, or error. Process creation and OS-level reaping are outside the I/O
+deadline; deliberately detached descendants require stronger OS containment.
+
+Both one-shot platform paths cap stdout and stderr independently at
+`CLOUD_SECURITY_MCP_WORKER_MAX_BYTES` raw bytes (default 10 MiB, minimum 1 KiB).
+Overflow discards captured output and returns a tool error. Undecodable output
+returns `ERROR_TOOL_CRASHED` (`-32004`), rather than a successful partial result.
+
+The POSIX deadline and descendant-cleanup guarantees do not apply to the Windows
+threaded fallback or the opt-in worker pool. The Windows fallback times out the
+direct child, but inherited pipes can delay cleanup. Client cancellation
+notifications do not currently interrupt an in-flight call; timeout enforcement
+is independent of client cancellation.
 
 Skill allowlist:
 
