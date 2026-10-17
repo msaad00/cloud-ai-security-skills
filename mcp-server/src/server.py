@@ -9,6 +9,7 @@ import threading
 import time
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, BinaryIO, cast
 from uuid import uuid4
@@ -18,6 +19,7 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 import arg_policy  # noqa: E402
+import one_shot  # noqa: E402
 import sandbox  # noqa: E402
 import worker_pool  # noqa: E402
 from audit_sink import AuditSink, sink_from_env  # noqa: E402
@@ -454,8 +456,18 @@ def _run_one_shot(
     to stdout or stderr is killed and the call fails, rather than the wrapper
     buffering unbounded output (and echoing it twice in the response)."""
     max_bytes = worker_pool._max_bytes()
+    if os.name == "posix":
+        return one_shot.run_posix(
+            command,
+            stdin_text=stdin_text,
+            cwd=cwd,
+            env=env,
+            timeout=timeout,
+            preexec_fn=preexec_fn,
+            max_bytes=max_bytes,
+        )
     overflow = threading.Event()
-    captured: dict[str, list[str]] = {"stdout": [], "stderr": []}
+    captured: dict[str, list[bytes]] = {"stdout": [], "stderr": []}
 
     with subprocess.Popen(
         command,
@@ -470,8 +482,8 @@ def _run_one_shot(
 
         def _drain(name: str, stream: Any) -> None:
             size = 0
-            while chunk := stream.read(65536):
-                size += len(chunk.encode("utf-8"))
+            while chunk := stream.buffer.read1(min(65536, max_bytes - size + 1)):
+                size += len(chunk)
                 if size > max_bytes:
                     overflow.set()
                     proc.kill()
@@ -503,15 +515,17 @@ def _run_one_shot(
                 thread.join()
 
     if overflow.is_set():
-        return subprocess.CompletedProcess(
-            command,
-            1,
-            "",
-            "skill output exceeded CLOUD_SECURITY_MCP_WORKER_MAX_BYTES "
-            f"({max_bytes} bytes); process killed",
-        )
+        return one_shot.overflow_result(command, max_bytes)
+    assert proc.stdout is not None and proc.stderr is not None
     return subprocess.CompletedProcess(
-        command, returncode, "".join(captured["stdout"]), "".join(captured["stderr"])
+        command,
+        returncode,
+        one_shot.decode_output(
+            b"".join(captured["stdout"]), cast(TextIOWrapper, proc.stdout).encoding
+        ),
+        one_shot.decode_output(
+            b"".join(captured["stderr"]), cast(TextIOWrapper, proc.stderr).encoding
+        ),
     )
 
 
