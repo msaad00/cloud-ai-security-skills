@@ -1,26 +1,44 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    fontSize: 20px
+    primaryTextColor: '#0f172a'
+    lineColor: '#64748b'
+    edgeLabelBackground: '#f8fafc'
+    clusterBkg: '#f8fafc'
+    clusterBorder: '#94a3b8'
+  flowchart:
+    htmlLabels: true
+    wrappingWidth: 280
+    subGraphTitleMargin:
+      top: 12
+      bottom: 28
+---
 flowchart LR
-    classDef critical fill:#3f1d1d,stroke:#f87171,color:#fecaca
-    classDef high     fill:#3a2a0e,stroke:#fb923c,color:#fed7aa
-    classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fef08a
-    classDef low      fill:#1e293b,stroke:#64748b,color:#cbd5e1
+    classDef critical fill:#3f1d1d,stroke:#f87171,color:#fff1f2
+    classDef high     fill:#3a2a0e,stroke:#fb923c,color:#fff7ed
+    classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fefce8
+    classDef low      fill:#1e293b,stroke:#64748b,color:#f1f5f9
 
-    subgraph F0["Finding 1"]
+    subgraph F0["Finding 1 · High"]
         direction LR
         A0["system:serviceaccount:default:builder"]:::high
         T0["secret · default/db-password"]:::high
-        A0 -- "T1552.007 · privilege-escalation-k8s · det-k8s-r1-secret-enum-8af26d6d-c7203b19" --> T0
+        A0 -- "T1552.007<br>privilege-escalation-k8s<br>UID: det-k8s-r1-secret-enum-8af26d6d-c7203b19" --> T0
     end
 
-    subgraph F1["Finding 2"]
+    subgraph F1["Finding 2 · Critical"]
         direction LR
         A1["system:serviceaccount:default:builder"]:::critical
         T1["pod · default/web-xyz"]:::critical
-        A1 -- "T1611 · privilege-escalation-k8s · det-k8s-r2-pod-exec-8af26d6d-59d9c001" --> T1
+        A1 -- "T1611<br>privilege-escalation-k8s<br>UID: det-k8s-r2-pod-exec-8af26d6d-59d9c001" --> T1
     end
 
-    subgraph F2["Finding 3"]
+    subgraph F2["Finding 3 · Critical"]
         direction LR
         A2["system:serviceaccount:default:builder"]:::critical
         T2["clusterrolebinding · attacker-cluster-admin"]:::critical
-        A2 -- "T1098 · privilege-escalation-k8s · det-k8s-r3-rbac-self-grant-8af26d6d-773c3208" --> T2
+        A2 -- "T1098<br>privilege-escalation-k8s<br>UID: det-k8s-r3-rbac-self-grant-8af26d6d-773c3208" --> T2
     end

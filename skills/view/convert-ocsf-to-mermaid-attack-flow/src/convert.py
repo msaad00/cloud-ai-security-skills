@@ -172,18 +172,63 @@ def extract_detector_short(finding: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-_HEADER = """flowchart LR
-    classDef critical fill:#3f1d1d,stroke:#f87171,color:#fecaca
-    classDef high     fill:#3a2a0e,stroke:#fb923c,color:#fed7aa
-    classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fef08a
-    classDef low      fill:#1e293b,stroke:#64748b,color:#cbd5e1
+_HEADER = """---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, sans-serif
+    fontSize: 20px
+    primaryTextColor: '#0f172a'
+    lineColor: '#64748b'
+    edgeLabelBackground: '#f8fafc'
+    clusterBkg: '#f8fafc'
+    clusterBorder: '#94a3b8'
+  flowchart:
+    htmlLabels: true
+    wrappingWidth: 280
+    subGraphTitleMargin:
+      top: 12
+      bottom: {title_margin}
+---
+flowchart LR
+    classDef critical fill:#3f1d1d,stroke:#f87171,color:#fff1f2
+    classDef high     fill:#3a2a0e,stroke:#fb923c,color:#fff7ed
+    classDef medium   fill:#3a3a0e,stroke:#fbbf24,color:#fefce8
+    classDef low      fill:#1e293b,stroke:#64748b,color:#f1f5f9
 """
+
+
+def finding_heading(finding: dict[str, Any], index: int) -> list[str]:
+    """Return visible heading lines; recorded context is never used as identity."""
+    severity = {
+        0: "Unknown",
+        1: "Informational",
+        2: "Low",
+        3: "Medium",
+        4: "High",
+        5: "Critical",
+        6: "Fatal",
+    }.get(int(finding.get("severity_id", 0)), "Unknown")
+    heading = f"Finding {index + 1} · {severity}"
+    # Show recorded boundary context without inferring or merging identities.
+    context = []
+    for obs in finding.get("observables") or []:
+        name, value = obs.get("name", ""), obs.get("value")
+        if (
+            name
+            in {"account.uid", "cloud.account.uid", "tenant.uid", "cluster.uid", "cluster.name"}
+            and value
+        ):
+            context.append(f"{name}: {value}")
+    # Bound each context line while keeping every character in the source value.
+    # Fixed renderer-owned breaks also let us reserve enough title space.
+    return [heading, *(part[i : i + 48] for part in context for i in range(0, len(part), 48))]
 
 
 def render(findings: Iterable[dict[str, Any]]) -> str:
     """Convert an iterable of OCSF Detection Findings to a Mermaid flowchart string.
 
-    The string is a complete `flowchart LR` block. Wrap it in
+    The string is a complete `flowchart LR` block with presentation frontmatter. Wrap it in
     triple-backtick `mermaid` fences if you're embedding into Markdown.
     """
     materialised: list[dict[str, Any]] = []
@@ -194,12 +239,14 @@ def render(findings: Iterable[dict[str, Any]]) -> str:
             raise ValueError("only Detection Finding (class_uid=2004) is supported")
 
     if not materialised:
-        return _HEADER + '    empty["No findings"]:::low\n'
+        return _HEADER.format(title_margin=28) + '    empty["No findings"]:::low\n'
 
     # Finding-local occurrence IDs deliberately do not infer identity from
     # display names, incomplete scope, or a repeated finding UID. Each input
     # finding keeps its own evidence and severity, even when labels match.
-    lines: list[str] = [_HEADER]
+    headings = [finding_heading(finding, index) for index, finding in enumerate(materialised)]
+    title_margin = 28 + 32 * (max(map(len, headings)) - 1)
+    lines: list[str] = [_HEADER.format(title_margin=title_margin)]
     for index, finding in enumerate(materialised):
         actor_label = mermaid_label(extract_actor(finding))
         _, target = extract_target(finding)
@@ -208,11 +255,14 @@ def render(findings: Iterable[dict[str, Any]]) -> str:
         detector = extract_detector_short(finding)
         cls = severity_class(int(finding.get("severity_id", 0)))
         uid = (finding.get("finding_info") or {}).get("uid") or f"Finding {index + 1} (UID unknown)"
-        evidence = f"{technique_uid} · {detector}" if detector else technique_uid
-        edge_label = mermaid_label(f"{evidence} · {uid}")
+        # Line breaks are renderer-owned; every input fragment is encoded first.
+        edge_label = "<br>".join(
+            mermaid_label(part) for part in (technique_uid, detector, f"UID: {uid}") if part
+        )
+        group_label = "<br>".join(mermaid_label(part) for part in headings[index])
         lines.extend(
             [
-                f'    subgraph F{index}["Finding {index + 1}"]',
+                f'    subgraph F{index}["{group_label}"]',
                 "        direction LR",
                 f'        A{index}["{actor_label}"]:::{cls}',
                 f'        T{index}["{target_label}"]:::{cls}',

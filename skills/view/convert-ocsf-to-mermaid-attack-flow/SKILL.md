@@ -34,11 +34,18 @@ Cross-vendor view-layer skill: takes OCSF 1.8 Detection Findings on stdin, emits
 
 ## Output shape
 
-A single Mermaid `flowchart LR` block with one numbered group per input
-finding. Each group has its own actor and target occurrences and one edge
+A single Mermaid `flowchart LR` block with presentation frontmatter and one
+numbered group per input finding. Mermaid 10.5 or newer is required for the
+frontmatter configuration. The diagram requests HTML labels for consistent
+multiline sizing and uses 20px text, high-contrast cards, and
+space above each flow for its heading. Each group has its own actor and target occurrences and one edge
 carrying the MITRE technique UID (e.g. `T1611`), detector, and complete
 `finding_info.uid` (or an explicit unknown-UID label). Keeping long identifiers
-on edges leaves the group headings readable. Node colours reflect that finding alone:
+on separate edge-label lines leaves the group headings readable. Headings
+include a written severity and any recorded `account.uid`, `cloud.account.uid`,
+`tenant.uid`, `cluster.uid`, or `cluster.name` observables. Conflicting context
+values are all shown; these labels do not prove identity or join findings.
+Node colours reflect that finding alone:
 
 - Red — Critical (5) or Fatal (6)
 - Orange — High (4)
@@ -85,7 +92,7 @@ fallbacks. Missing actors and targets are labelled **Unknown**. A supplied
 session UID remains the actor fallback when no actor name is present.
 
 Labels use Mermaid entity encoding for syntax characters; control whitespace
-is flattened. Input text cannot insert Markdown fences or additional Mermaid
+is flattened. Only the renderer inserts line breaks between evidence fields. Input text cannot insert Markdown fences or additional Mermaid
 statements. Finding titles are not rendered as tooltips. For full evidence,
 inspect the original finding using the edge's visible UID.
 
@@ -101,6 +108,10 @@ python skills/ingestion/ingest-k8s-audit-ocsf/src/ingest.py audit.log \
 # Or paste the output directly into a PR comment / GitHub issue
 python src/convert.py < findings.ocsf.jsonl
 ```
+
+For image exports, fit the canvas to the SVG bounds rather than capturing a
+fixed browser viewport. Keep the SVG available for zooming when long identifiers
+make the diagram wider than the reading surface.
 
 ## Tests
 
