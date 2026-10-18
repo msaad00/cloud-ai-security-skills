@@ -54,6 +54,7 @@ SUBTECHNIQUE_NAME = "Additional Cloud Credentials"
 ACCEPTED_PRODUCERS = frozenset({"ingest-cloudtrail-ocsf"})
 ACCESS_KEY_CREATE_OPERATION = "CreateAccessKey"
 OUTPUT_FORMATS = frozenset({"ocsf", "native"})
+MAX_SOURCE_UID_LENGTH = 1024
 
 
 def _producer(event: dict[str, Any]) -> str:
@@ -115,10 +116,17 @@ def _build_native_finding(*, event: dict[str, Any], target_user: str) -> dict[st
     if time_ms is None:
         emit_finding_time_missing(SKILL_NAME)
         raise ContractError("missing or invalid triggering event time")
-    event_uid = str((event.get("metadata") or {}).get("uid") or "")
+    source_uid = (event.get("metadata") or {}).get("uid")
+    if source_uid is not None and (
+        not isinstance(source_uid, str)
+        or len(source_uid) > MAX_SOURCE_UID_LENGTH
+        or (source_uid and not source_uid.isprintable())
+    ):
+        raise ContractError("invalid source event UID")
+    event_uid = source_uid or ""
     actor_name = _actor(event)
     finding_uid = _finding_uid(event_uid, target_user, actor_name, time_ms)
-    return {
+    native: dict[str, Any] = {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,
         "record_type": "detection_finding",
@@ -134,6 +142,15 @@ def _build_native_finding(*, event: dict[str, Any], target_user: str) -> dict[st
         "first_seen_time_ms": time_ms,
         "last_seen_time_ms": time_ms,
     }
+    if event_uid.strip():
+        # Project only lookup fields; never copy raw payloads or session credentials.
+        native["source_event"] = {
+            "uid": event_uid,
+            "producer": "ingest-cloudtrail-ocsf",
+            "account_uid": _account(event),
+            "region": _region(event),
+        }
+    return native
 
 
 def _to_ocsf(native: dict[str, Any]) -> dict[str, Any]:
@@ -156,7 +173,7 @@ def _to_ocsf(native: dict[str, Any]) -> dict[str, Any]:
     ]
     if native["src_ip"]:
         observables.append({"name": "src.ip", "type": "IP Address", "value": native["src_ip"]})
-    return {
+    finding: dict[str, Any] = {
         "activity_id": FINDING_ACTIVITY_CREATE,
         "category_uid": FINDING_CATEGORY_UID,
         "category_name": FINDING_CATEGORY_NAME,
@@ -199,6 +216,9 @@ def _to_ocsf(native: dict[str, Any]) -> dict[str, Any]:
             "target_user_name": native["target_user_name"],
         },
     }
+    if "source_event" in native:
+        finding["evidence"]["source_event"] = native["source_event"]
+    return finding
 
 
 def detect(

@@ -126,3 +126,50 @@ def test_finding_uid_is_deterministic():
     second = list(detect([event]))[0]["finding_info"]["uid"]
     assert first == second
     assert first.startswith("aakc-")
+
+
+@pytest.mark.parametrize("output_format", ["ocsf", "native"])
+def test_preserves_scoped_source_reference_without_payload(output_format):
+    event = _ct_event()
+    event["unmapped"] = {"cloudtrail": {"request_parameters": {"secret": "do-not-copy"}}}
+    event["actor"]["session"] = {"uid": "do-not-copy-session"}
+    finding = list(detect([event], output_format=output_format))[0]
+    container = finding["evidence"] if output_format == "ocsf" else finding
+    assert container["source_event"] == {
+        "uid": "evt-1",
+        "producer": "ingest-cloudtrail-ocsf",
+        "account_uid": "111122223333",
+        "region": "us-east-1",
+    }
+    assert "do-not-copy" not in str(finding)
+    assert event["metadata"]["uid"] == "evt-1"
+
+
+@pytest.mark.parametrize("uid", [None, "", "   "])
+@pytest.mark.parametrize("output_format", ["ocsf", "native"])
+def test_missing_source_uid_does_not_invent_reference(uid, output_format):
+    event = _ct_event()
+    event["metadata"]["uid"] = uid
+    finding = list(detect([event], output_format=output_format))[0]
+    container = finding["evidence"] if output_format == "ocsf" else finding
+    assert "source_event" not in container
+
+
+@pytest.mark.parametrize(
+    "uid", [{"secret": "do-not-copy"}, ["do-not-copy"], 42, True, "x" * 1025, "a\nb"]
+)
+def test_invalid_source_uid_fails_without_disclosing_value(uid):
+    event = _ct_event()
+    event["metadata"]["uid"] = uid
+    with pytest.raises(ContractError, match="invalid source event UID") as exc:
+        list(detect([event]))
+    assert "do-not-copy" not in str(exc.value)
+
+
+def test_source_reference_preserves_full_uid_and_recipient_account():
+    event = _ct_event(account_uid="444455556666")
+    event["actor"]["user"]["account"] = {"uid": "111122223333"}
+    event["metadata"]["uid"] = "e" * 1024
+    reference = list(detect([event]))[0]["evidence"]["source_event"]
+    assert reference["uid"] == "e" * 1024
+    assert reference["account_uid"] == "444455556666"

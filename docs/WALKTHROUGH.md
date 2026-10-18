@@ -86,11 +86,19 @@ In SARIF, inspect `runs[0].results[0]`: `message.text` explains the match,
 `properties.observables` carries actor/target/account/source-IP context, and
 `properties.detected_at_ms` preserves the finding's source event time.
 
-**Keep the original events.** This detector's finding evidence contains the
-operation, target username, and event count; it does not carry the original
-CloudTrail `eventID` or the created key ID. Its finding UID is not a lossless
-source-record reference. The walkthrough's source-record link comes from
-inspecting the input alongside the output.
+**Trace the finding to its input.** Inspect
+`runs[0].results[0].properties.evidence.source_event` in SARIF, or
+`evidence.source_event` in the OCSF finding. It preserves the normalized input's
+`metadata.uid`, producer, recipient account, and region. For this fixture the
+UID is the original CloudTrail `eventID`; use it to locate the input event.
+The finding UID is a separate identifier.
+
+**Keep the original events.** If raw input lacks `eventID`, the ingester generates
+a deterministic fallback UID. That value references normalized input, not a
+CloudTrail-assigned ID; it is not a guarantee of uniqueness or authenticity.
+Missing normalized UIDs omit the reference. The finding still does not contain
+the created key ID or raw request/response bodies, and it cannot verify whether
+all relevant events were collected.
 
 ## Interpret the result
 
