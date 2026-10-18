@@ -13,14 +13,17 @@ Two scoring modes are supported, declared per corpus entry:
   detector's findings via ``finding_event_uid_path`` (default
   ``evidence.raw_event_uids``) and treats every label key as the
   universe. Any uid the detector references that is in the labelled
-  universe but labelled false is counted as a false positive.
+  universe but labelled false is counted as a false positive. Unlabelled
+  predictions are excluded from metrics and reported separately.
 
 * ``finding_uid`` — labels map *finding* ``metadata.uid`` -> bool. The
   scorer compares the set of emitted finding uids against the labels.
 
 The corpus contract is intentionally narrow so the scorer stays honest:
 it does not score finding *content*, only whether the right set of
-events / findings was produced.
+events / findings was produced. Labels must be actual booleans; every
+emitted finding must carry a usable ID for its scoring mode. Invalid
+output fails the detector score instead of silently dropping findings.
 """
 
 from __future__ import annotations
@@ -84,37 +87,49 @@ class CorpusEntry:
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, Any]) -> "CorpusEntry":
-        labels_raw = raw.get("labels") or {}
-        if not isinstance(labels_raw, Mapping):
-            raise ValueError(
-                f"corpus entry for {raw.get('detector_name')!r}: "
-                "'labels' must be a mapping of uid -> bool"
-            )
-        labels = {str(k): bool(v) for k, v in labels_raw.items()}
-        mode = str(raw.get("mode", "event_uid"))
+        if not isinstance(raw, Mapping):
+            raise ValueError("each corpus entry must be a mapping")
+        labels_raw = raw.get("labels")
+        if not isinstance(labels_raw, Mapping) or not labels_raw:
+            raise ValueError("'labels' must be a nonempty mapping of uid -> bool")
+        if any(
+            not isinstance(uid, str) or not uid.strip() or type(expected) is not bool
+            for uid, expected in labels_raw.items()
+        ):
+            raise ValueError("'labels' requires nonempty string UIDs and boolean values")
+        mode = raw.get("mode", "event_uid")
         if mode not in SUPPORTED_MODES:
-            raise ValueError(
-                f"corpus entry for {raw.get('detector_name')!r}: "
-                f"unsupported mode {mode!r} (expected one of {SUPPORTED_MODES})"
-            )
-        extra_args_raw = raw.get("extra_args") or []
-        if not isinstance(extra_args_raw, list):
+            raise ValueError(f"unsupported mode {mode!r} (expected one of {SUPPORTED_MODES})")
+
+        def string_field(name: str, default: str | None = None) -> str:
+            value = raw.get(name, default)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"'{name}' must be a nonempty string")
+            return value
+
+        detector_name = string_field("detector_name")
+        input_fixture = string_field("input_fixture")
+        uid_path = string_field("finding_event_uid_path", "evidence.raw_event_uids")
+        if any(not segment.strip() for segment in uid_path.split(".")):
+            raise ValueError("'finding_event_uid_path' must have nonempty dotted segments")
+        expected_fixture = raw.get("expected_findings_fixture")
+        if expected_fixture is not None:
+            expected_fixture = string_field("expected_findings_fixture")
+        synthetic = raw.get("synthetic", True)
+        if type(synthetic) is not bool:
+            raise ValueError("'synthetic' must be a boolean")
+        extra_args = raw.get("extra_args", [])
+        if not isinstance(extra_args, list) or any(not isinstance(a, str) for a in extra_args):
             raise ValueError("'extra_args' must be a list of strings")
         return cls(
-            detector_name=str(raw["detector_name"]),
-            input_fixture=str(raw["input_fixture"]),
-            labels=labels,
+            detector_name=detector_name,
+            input_fixture=input_fixture,
+            labels=dict(labels_raw),
             mode=mode,
-            expected_findings_fixture=(
-                str(raw["expected_findings_fixture"])
-                if raw.get("expected_findings_fixture")
-                else None
-            ),
-            finding_event_uid_path=str(
-                raw.get("finding_event_uid_path", "evidence.raw_event_uids")
-            ),
-            synthetic=bool(raw.get("synthetic", True)),
-            extra_args=[str(a) for a in extra_args_raw],
+            expected_findings_fixture=expected_fixture,
+            finding_event_uid_path=uid_path,
+            synthetic=synthetic,
+            extra_args=extra_args,
         )
 
 
@@ -130,6 +145,7 @@ class DetectorScore:
     f1: float
     note: str | None = None
     error: str | None = None
+    unlabelled_predictions: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -141,6 +157,7 @@ class DetectorScore:
             "precision": round(self.precision, 4),
             "recall": round(self.recall, 4),
             "f1": round(self.f1, 4),
+            "unlabelled_predictions": self.unlabelled_predictions,
         }
         if self.note:
             out["note"] = self.note
@@ -152,9 +169,14 @@ class DetectorScore:
 def load_corpus(path: Path) -> list[CorpusEntry]:
     if not path.exists():
         raise FileNotFoundError(f"corpus file not found: {path}")
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
-    entries_raw = data.get("entries") or []
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{path}: invalid YAML") from exc
+    if not isinstance(data, Mapping):
+        raise ValueError(f"{path}: corpus must be a mapping with an 'entries' list")
+    entries_raw = data.get("entries")
     if not isinstance(entries_raw, list):
         raise ValueError(f"{path}: top-level 'entries' must be a list")
     return [CorpusEntry.from_dict(entry) for entry in entries_raw]
@@ -193,12 +215,17 @@ def run_detector(entry: CorpusEntry) -> list[dict[str, Any]]:
         if not line:
             continue
         try:
-            findings.append(json.loads(line))
+            finding = json.loads(line)
         except json.JSONDecodeError as exc:
             raise RuntimeError(
                 f"detector {entry.detector_name} produced non-JSON output "
                 f"on line {line_no}: {exc.msg}"
             ) from exc
+        if not isinstance(finding, dict):
+            raise RuntimeError(
+                f"detector {entry.detector_name} must emit a JSON object on line {line_no}"
+            )
+        findings.append(finding)
     return findings
 
 
@@ -220,27 +247,26 @@ def extract_event_uids(findings: Iterable[Mapping[str, Any]], path: str) -> set[
     """Pull the union of event uids referenced by ``path`` across findings."""
 
     out: set[str] = set()
-    for finding in findings:
+    for index, finding in enumerate(findings, start=1):
         value = _walk_path(finding, path)
-        if value is None:
-            continue
-        if isinstance(value, str):
-            out.add(value)
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, str):
-                    out.add(item)
+        values = [value] if isinstance(value, str) else value
+        if (
+            not isinstance(values, list)
+            or not values
+            or any(not isinstance(uid, str) or not uid.strip() for uid in values)
+        ):
+            raise ValueError(f"finding {index}: '{path}' must contain nonempty string UIDs")
+        out.update(values)
     return out
 
 
 def extract_finding_uids(findings: Iterable[Mapping[str, Any]]) -> set[str]:
     out: set[str] = set()
-    for finding in findings:
-        meta = finding.get("metadata") if isinstance(finding, Mapping) else None
-        if isinstance(meta, Mapping):
-            uid = meta.get("uid")
-            if isinstance(uid, str):
-                out.add(uid)
+    for index, finding in enumerate(findings, start=1):
+        uid = _walk_path(finding, "metadata.uid")
+        if not isinstance(uid, str) or not uid.strip():
+            raise ValueError(f"finding {index}: 'metadata.uid' must be a nonempty string")
+        out.add(uid)
     return out
 
 
@@ -249,7 +275,11 @@ def score_entry(entry: CorpusEntry) -> DetectorScore:
     truth_universe = set(entry.labels.keys())
     try:
         findings = run_detector(entry)
-    except (FileNotFoundError, RuntimeError) as exc:
+        if entry.mode == "event_uid":
+            predicted = extract_event_uids(findings, entry.finding_event_uid_path)
+        else:
+            predicted = extract_finding_uids(findings)
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
         return DetectorScore(
             detector_name=entry.detector_name,
             mode=entry.mode,
@@ -261,11 +291,6 @@ def score_entry(entry: CorpusEntry) -> DetectorScore:
             f1=0.0,
             error=str(exc),
         )
-
-    if entry.mode == "event_uid":
-        predicted = extract_event_uids(findings, entry.finding_event_uid_path)
-    else:  # finding_uid
-        predicted = extract_finding_uids(findings)
 
     if entry.mode == "event_uid":
         # Only score within the labelled universe — events that are not
@@ -294,6 +319,7 @@ def score_entry(entry: CorpusEntry) -> DetectorScore:
         recall=recall,
         f1=f1,
         note=note,
+        unlabelled_predictions=len(predicted - truth_universe) if entry.mode == "event_uid" else 0,
     )
 
 
@@ -307,6 +333,7 @@ def aggregate(scores: list[DetectorScore]) -> dict[str, Any]:
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
     return {
         "detectors_scored": len(runnable),
+        "unlabelled_predictions": sum(s.unlabelled_predictions for s in runnable),
         "detectors_errored": sum(1 for s in scores if s.error is not None),
         "tp": tp,
         "fp": fp,
@@ -370,15 +397,15 @@ def filter_entries(
 
 def render_markdown(scores: list[DetectorScore], totals: dict[str, Any]) -> str:
     lines = [
-        "| Detector | Mode | TP | FP | FN | Precision | Recall | F1 | Note |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| Detector | Mode | TP | FP | FN | Precision | Recall | F1 | Unlabelled (excluded) | Note |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for s in scores:
         note = s.note or ""
         if s.error:
             note = f"error: {s.error[:80]}"
         lines.append(
-            "| {name} | {mode} | {tp} | {fp} | {fn} | {p:.3f} | {r:.3f} | {f:.3f} | {note} |".format(
+            "| {name} | {mode} | {tp} | {fp} | {fn} | {p:.3f} | {r:.3f} | {f:.3f} | {unlabelled} | {note} |".format(
                 name=s.detector_name,
                 mode=s.mode,
                 tp=s.tp,
@@ -388,10 +415,11 @@ def render_markdown(scores: list[DetectorScore], totals: dict[str, Any]) -> str:
                 r=s.recall,
                 f=s.f1,
                 note=note,
+                unlabelled=s.unlabelled_predictions,
             )
         )
     lines.append(
-        "| **aggregate** | — | **{tp}** | **{fp}** | **{fn}** | **{p:.3f}** | **{r:.3f}** | **{f:.3f}** | {n} detectors |".format(
+        "| **aggregate** | — | **{tp}** | **{fp}** | **{fn}** | **{p:.3f}** | **{r:.3f}** | **{f:.3f}** | **{unlabelled}** | {n} scored; {errors} errored |".format(
             tp=totals["tp"],
             fp=totals["fp"],
             fn=totals["fn"],
@@ -399,6 +427,8 @@ def render_markdown(scores: list[DetectorScore], totals: dict[str, Any]) -> str:
             r=totals["recall"],
             f=totals["f1"],
             n=totals["detectors_scored"],
+            unlabelled=totals["unlabelled_predictions"],
+            errors=totals["detectors_errored"],
         )
     )
     return "\n".join(lines)
