@@ -5,7 +5,7 @@ agent. One page. Copy-paste.
 
 ---
 
-## 1 · See a finding in 30 seconds (no cloud creds)
+## 1 · Run the fixture demo (no cloud creds)
 
 ```bash
 git clone https://github.com/msaad00/cloud-ai-security-skills.git
@@ -15,7 +15,7 @@ uv run make demo
 ```
 
 `make demo` runs the three-stage pipeline (`ingest-cloudtrail-ocsf →
-detect-aws-access-key-creation → convert-ocsf-to-sarif`) against a captured
+detect-aws-access-key-creation → convert-ocsf-to-sarif`) against a synthetic
 CloudTrail fixture, writes `$TMPDIR/cloud-security-demo.sarif` (`/tmp` when `TMPDIR` is unset), and prints the
 findings. Structured JSON logs go to stderr; the tail of the output is:
 
@@ -26,6 +26,10 @@ Findings written to $TMPDIR/cloud-security-demo.sarif
 
 Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `bob` in account `123456789012` (us-east-1). Source IP: 203.0.113.42. This creates additional AWS credential material for a valid cloud account.
 ```
+
+**Interpret the result:** [the CloudTrail walkthrough](WALKTHROUGH.md) explains
+the source evidence, legitimate activity that also matches, and investigation
+steps. A finding establishes a rule match, not malicious intent.
 
 The same pipeline spelled out, one skill per stage joined by Unix pipes:
 

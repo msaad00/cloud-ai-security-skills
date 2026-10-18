@@ -21,7 +21,7 @@
 
   <g font-family="Inter, Segoe UI, ui-sans-serif, Arial, sans-serif">
     <text x="60" y="76" font-size="44" font-weight="800" fill="#f8fafc">Cloud AI Security Skills</text>
-    <text x="60" y="116" fill="#94a3b8" font-size="18" font-weight="500">Ingest, detect, evaluate, remediate. OCSF on the wire. HITL-gated writes. MCP-ready.</text>
+    <text x="60" y="116" fill="#94a3b8" font-size="18" font-weight="500">Turn cloud audit logs into findings your team can review and reproduce.</text>
 
     <g transform="translate(60,140)">
       <g>

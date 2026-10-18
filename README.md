@@ -9,31 +9,11 @@
   <a href="docs/COVERAGE_SNAPSHOT.md"><img alt="Coverage gated" src="https://img.shields.io/badge/coverage-CI_gated-0f766e"></a>
 </p>
 
-<p align="center"><strong>134 deterministic security skills for cloud &amp; AI infrastructure.</strong> Turn raw cloud, identity, Kubernetes, and MCP logs into standard findings, review the evidence, and run supported remediation behind a human approval gate.</p>
-
-## What this is
-
-- **Deterministic skills, not prompts.** Each skill has an explicit contract, Python source, tests, and official references. Ingest and detect exchange JSONL; views produce SARIF or Mermaid, and discovery and evaluation use their documented formats. Detection rules produce findings from input evidence; models can orchestrate the workflow.
-- **A real contract on the wire.** Ingest and detect speak [OCSF 1.8](skills/detection-engineering/OCSF_CONTRACT.md); detections are Detection Finding `2004` with MITRE ATT&CK / ATLAS mappings, frozen by golden fixtures so a refactor that changes the shape fails CI.
-- **Writes are gated, audited, and re-verified.** Remediation defaults to dry-run. Each skill defines its approval, scope, audit stores, and verification path. A successful action is distinct from a later verification result; scheduling and evidence retention need operator configuration. Policy: [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md).
-- **One codebase, every surface.** CLI, CI, MCP, the Python library, and reference runners reuse the shipped entrypoints. Their routing, credentials, audit, and execution limits differ; choose a surface for the workflow you need.
-
-| Start with | Use it for |
-|---|---|
-| [Fixture demo](#quickstart) | See one finding locally, without cloud credentials |
-| [Skill catalog](docs/SKILL_INDEX.md) | Check supported inputs, outputs, and provider coverage |
-| [Agent setup](docs/AGENT_QUICKSTART.md) | Expose bounded local tools through MCP |
-| [Remediation policy](docs/HITL_POLICY.md) | Plan a supported response and its approval requirements |
-
-## How the loop closes
-
-![Closed-loop flow — raw logs to OCSF ingest, deterministic detection, SARIF/Mermaid view, HITL gate, remediation, dual audit, and re-verification feeding back into the pipeline.](docs/images/closed-loop-flow.svg)
-
-Details: [`docs/REMEDIATION_VERIFICATION.md`](docs/REMEDIATION_VERIFICATION.md) (VERIFIED / DRIFT / UNREACHABLE) · [`docs/MCP_AUDIT_CONTRACT.md`](docs/MCP_AUDIT_CONTRACT.md) (HMAC-chained MCP audit log) · [`docs/DATA_FLOW.md`](docs/DATA_FLOW.md).
+<p align="center"><strong>Turn cloud audit logs into explainable security findings your team can review and reproduce.</strong> 134 deterministic security skills for cloud &amp; AI infrastructure, with local CLI pipelines, MCP tools, and supported remediation behind human approval gates.</p>
 
 ## Quickstart
 
-No cloud credentials needed — the demo replays a captured CloudTrail fixture.
+No cloud credentials needed — the demo replays a synthetic CloudTrail fixture.
 
 ```bash
 git clone https://github.com/msaad00/cloud-ai-security-skills.git
@@ -42,15 +22,17 @@ uv sync --frozen             # install uv first: https://docs.astral.sh/uv/
 uv run make demo             # ingest -> detect -> SARIF, then prints the findings
 ```
 
-Expected stdout tail (structured JSON logs go to stderr; `<rule id>` is the SARIF rule):
+**Expected result:** four input events produce one finding, `AWS IAM access key created`,
+with SARIF rule `T1098`. The report is written to
+`$TMPDIR/cloud-security-demo.sarif` (`/tmp` when `TMPDIR` is unset).
 
-```text
-Findings written to $TMPDIR/cloud-security-demo.sarif
-1 finding(s) emitted
-  - <rule id>: AWS IAM access key created
+![Annotated synthetic example: alice's role session creates an access key for bob. The rule matches successful key creation; authorization and later key use are unknown.](docs/images/access-key-walkthrough.svg)
 
-Actor `AROAEXAMPLEID:alice` successfully called `CreateAccessKey` for IAM user `bob` in account `123456789012` (us-east-1). Source IP: 203.0.113.42. This creates additional AWS credential material for a valid cloud account.
-```
+This is an annotated example of the emitted finding, not an application screen.
+A legitimate key rotation also matches this rule; the finding alone does not
+establish compromise. **[Follow the investigation](docs/WALKTHROUGH.md)** to
+inspect the input, reproduce the result, check nonmatches, and decide what to
+investigate next.
 
 The same pipeline, spelled out — each stage is a standalone skill joined by a Unix pipe:
 
@@ -68,11 +50,25 @@ Drop the last stage to see the raw OCSF Detection Finding. More paths: [`docs/QU
 
 | Need | Read |
 |---|---|
+| Understand the demo | [`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md) |
 | Pick a skill | [`docs/SKILL_INDEX.md`](docs/SKILL_INDEX.md) |
 | Wire an agent (MCP) | [`docs/AGENT_QUICKSTART.md`](docs/AGENT_QUICKSTART.md) |
 | Ship a SOC workflow | [`docs/HARNESS.md`](docs/HARNESS.md) |
 | Map to frameworks | [`docs/FRAMEWORK_COVERAGE.md`](docs/FRAMEWORK_COVERAGE.md) |
 | Browse every doc | [`docs/README.md`](docs/README.md) |
+
+## What this is
+
+- **Deterministic skills, not prompts.** Each skill has an explicit contract, Python source, tests, and official references. Ingest and detect exchange JSONL; views produce SARIF or Mermaid, and discovery and evaluation use their documented formats. Detection rules produce findings from input evidence; models can orchestrate the workflow.
+- **A real contract on the wire.** Ingest and detect speak [OCSF 1.8](skills/detection-engineering/OCSF_CONTRACT.md); detections are Detection Finding `2004` with MITRE ATT&CK / ATLAS mappings, frozen by golden fixtures so a refactor that changes the shape fails CI.
+- **Writes are gated, audited, and re-verified.** Remediation defaults to dry-run. Each skill defines its approval, scope, audit stores, and verification path. A successful action is distinct from a later verification result; scheduling and evidence retention need operator configuration. Policy: [`docs/HITL_POLICY.md`](docs/HITL_POLICY.md).
+- **One codebase, every surface.** CLI, CI, MCP, the Python library, and reference runners reuse the shipped entrypoints. Their routing, credentials, audit, and execution limits differ; choose a surface for the workflow you need.
+
+## How the loop closes
+
+![Closed-loop flow — raw logs to OCSF ingest, deterministic detection, SARIF/Mermaid view, HITL gate, remediation, dual audit, and re-verification feeding back into the pipeline.](docs/images/closed-loop-flow.svg)
+
+Details: [`docs/REMEDIATION_VERIFICATION.md`](docs/REMEDIATION_VERIFICATION.md) (VERIFIED / DRIFT / UNREACHABLE) · [`docs/MCP_AUDIT_CONTRACT.md`](docs/MCP_AUDIT_CONTRACT.md) (HMAC-chained MCP audit log) · [`docs/DATA_FLOW.md`](docs/DATA_FLOW.md).
 
 ## Skills at a glance
 
@@ -105,6 +101,8 @@ install a scheduler: the repo ships reference runners, and operators configure
 queues, credentials, storage, monitoring, and re-verification.
 
 Deeper reads: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/SKILL_CONTRACT.md`](docs/SKILL_CONTRACT.md) · [`docs/diagrams/`](docs/diagrams/)
+
+Deployment case study: [GCP event delivery and replay suppression](docs/GCP_RUNNER_CASE_STUDY.md).
 
 Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) · [`SECURITY_BAR.md`](SECURITY_BAR.md). Tests and CI gates: [`docs/CI_WORKFLOW.md`](docs/CI_WORKFLOW.md) · [`docs/TESTING.md`](docs/TESTING.md).
 

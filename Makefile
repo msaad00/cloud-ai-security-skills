@@ -16,7 +16,7 @@ help:
 	@echo "  make typecheck   — mypy via scripts/run_mypy.sh in a dev-group-only env (same as CI's type-check job)"
 	@echo "  make validate    — run every shared validator under scripts/ (includes docs-check)"
 	@echo "  make test        — pytest over the same paths CI runs (skills, integration, conformance, mcp-server, agent examples)"
-	@echo "  make demo        — run the captured-fixture ingest→detect→view pipeline (no cloud creds)"
+	@echo "  make demo        — run the synthetic-fixture ingest→detect→view pipeline (no cloud creds)"
 	@echo "  make docs-regen  — regenerate every auto-generated doc (run after editing framework-coverage.json or adding a skill)"
 	@echo "  make docs-check  — exit 1 if any auto-generated doc is stale (mirrors the CI gate)"
 	@echo "  make ruff        — ruff check only"
@@ -43,7 +43,7 @@ demo:
 	out="$${TMPDIR:-/tmp}/cloud-security-demo.sarif"; \
 	tmp=$$(mktemp "$$out.XXXXXX"); \
 	trap 'rm -f "$$tmp"' EXIT; \
-	echo "Running 3-step ingest -> detect -> view pipeline on a captured CloudTrail fixture..."; \
+	echo "Running 3-step ingest -> detect -> view pipeline on a synthetic CloudTrail fixture..."; \
 	$(RUN) python skills/ingestion/ingest-cloudtrail-ocsf/src/ingest.py \
 	        skills/detection-engineering/golden/cloudtrail_raw_sample.jsonl \
 	  | $(RUN) python skills/detection/detect-aws-access-key-creation/src/detect.py \

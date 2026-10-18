@@ -10,6 +10,7 @@ behavior lives in each skill's `SKILL.md`; this index is the repo-wide map.
 
 | Doc | What it covers |
 |---|---|
+| [WALKTHROUGH.md](WALKTHROUGH.md) | Investigate an access-key finding from source event to next steps |
 | [QUICKSTART.md](QUICKSTART.md) | Run a pipeline locally in a few commands |
 | [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) | Wire the skills into an MCP agent |
 | [INSTALL.md](INSTALL.md) | Install and dependency groups |
@@ -22,6 +23,7 @@ behavior lives in each skill's `SKILL.md`; this index is the repo-wide map.
 | Doc | What it covers |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full layered architecture (the load-bearing design contract) |
+| [GCP_RUNNER_CASE_STUDY.md](GCP_RUNNER_CASE_STUDY.md) | Deployment failures, fixes, and replay verification |
 | [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) | Why the big calls were made |
 | [DATA_FLOW.md](DATA_FLOW.md) | How data moves through the layers |
 | [STATE_AND_TIMELINE_MODEL.md](STATE_AND_TIMELINE_MODEL.md) | State and timeline semantics |

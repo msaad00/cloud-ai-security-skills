@@ -14,10 +14,11 @@ Current repo surface on `main`:
 
 - shipped skills across ingestion, discovery, detection, evaluation, view, and
   remediation
-- `3` read-only source adapters:
+- `4` read-only source adapters:
   - `source-snowflake-query`
   - `source-databricks-query`
   - `source-s3-select`
+  - `source-clickhouse-query`
 - `3` write-capable sinks:
   - `sink-snowflake-jsonl`
   - `sink-clickhouse-jsonl`
@@ -99,7 +100,7 @@ Why:
 
 ### 3. OCSF by default for streams, native-first for operational artifacts
 
-The repo operates across four schema modes:
+The repo operates across five schema modes:
 
 - `raw`
 - `native`
