@@ -4,6 +4,8 @@
   https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateAccessKey.html
 - AWS CloudTrail user identity reference:
   https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-user-identity.html
+- AWS CloudTrail record contents — `eventID` and `recipientAccountId`:
+  https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-record-contents.html
 - MITRE ATT&CK T1098.001 — Additional Cloud Credentials:
   https://attack.mitre.org/techniques/T1098/001/
 - Upstream ingester:

@@ -235,22 +235,26 @@ def _build_canonical_event(raw: dict[str, Any]) -> dict[str, Any]:
     error_code = raw.get("errorCode")
     status_id = STATUS_FAILURE if error_code else STATUS_SUCCESS
 
-    event_uid = (
-        str(raw.get("eventID") or "").strip()
-        or hashlib.sha256(
-            json.dumps(
-                {
-                    "eventSource": raw.get("eventSource", ""),
-                    "eventName": event_name,
-                    "eventTime": raw.get("eventTime", ""),
-                    "recipientAccountId": raw.get("recipientAccountId", ""),
-                    "requestID": raw.get("requestID", ""),
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode("utf-8")
-        ).hexdigest()
-    )
+    source_uid = raw.get("eventID")
+    if source_uid is not None and (
+        not isinstance(source_uid, str)
+        or len(source_uid) > 1024
+        or (source_uid and not source_uid.isprintable())
+    ):
+        raise ContractError("invalid CloudTrail event ID")
+    event_uid = (source_uid or "").strip() or hashlib.sha256(
+        json.dumps(
+            {
+                "eventSource": raw.get("eventSource", ""),
+                "eventName": event_name,
+                "eventTime": raw.get("eventTime", ""),
+                "recipientAccountId": raw.get("recipientAccountId", ""),
+                "requestID": raw.get("requestID", ""),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
 
     canonical: dict[str, Any] = {
         "schema_mode": "canonical",
