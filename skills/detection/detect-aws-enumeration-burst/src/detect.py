@@ -140,10 +140,6 @@ def _call_label(service: str, operation: str) -> str:
     return f"{service}:{operation}"
 
 
-def _principal_key(event: dict[str, Any]) -> str:
-    return _session_uid(event) or _actor_name(event)
-
-
 def _finding_uid(
     *,
     account_uid: str,

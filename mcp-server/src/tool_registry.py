@@ -1,32 +1,21 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-
-import yaml
 
 CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.insert(0, str(CURRENT_DIR))
+for path in (CURRENT_DIR, CURRENT_DIR.parents[1]):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 
 from arg_policy import is_path_schema_property  # noqa: E402
 
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
-
-ENTRYPOINT_CANDIDATES = (
-    "src/ingest.py",
-    "src/detect.py",
-    "src/convert.py",
-    "src/checks.py",
-    "src/discover.py",
-    "src/handler.py",
-    "src/sink.py",
-)
-
+from skills._shared.skill_metadata import extract_frontmatter as _extract_frontmatter  # noqa: E402
+from skills._shared.skill_metadata import parse_frontmatter as _parse_frontmatter  # noqa: E402
+from skills._shared.skill_metadata import parse_modes as _parse_modes  # noqa: E402
+from skills._shared.skill_metadata import resolve_entrypoint as _resolve_entrypoint  # noqa: E402
 
 MIN_TIMEOUT_SECONDS = 1
 MAX_TIMEOUT_SECONDS = 900
@@ -75,46 +64,6 @@ def iter_skill_dirs(root: Path | None = None) -> list[Path]:
     return sorted(path.parent for path in base.glob("*/*/SKILL.md"))
 
 
-def _extract_frontmatter(skill_md: Path) -> str:
-    text = skill_md.read_text()
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        raise ValueError(f"{skill_md} missing YAML frontmatter")
-    return match.group(1)
-
-
-def _flatten_value(value: Any) -> str:
-    """Render a YAML scalar/list/dict back into the string shape the rest of the
-    registry consumes. Lists are joined with commas (matches `_parse_modes`),
-    folded multi-line scalars collapse into a single space-separated string.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, list):
-        return ", ".join(_flatten_value(item) for item in value if item not in (None, ""))
-    if isinstance(value, dict):
-        return ", ".join(f"{k}={_flatten_value(v)}" for k, v in value.items())
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return " ".join(str(value).split())
-
-
-def _parse_frontmatter(frontmatter: str) -> dict[str, str]:
-    """Parse SKILL.md frontmatter using PyYAML.
-
-    Historically this was a hand-rolled splitter that failed on quoted values
-    containing colons and on standard YAML constructs. `yaml.safe_load` handles
-    the full subset we use; `_flatten_value` collapses scalars/lists into the
-    string shape the rest of the registry already expects.
-    """
-    raw = yaml.safe_load(frontmatter)
-    if raw is None:
-        return {}
-    if not isinstance(raw, dict):
-        raise ValueError(f"SKILL.md frontmatter must parse to a mapping, got {type(raw).__name__}")
-    return {str(key): _flatten_value(value) for key, value in raw.items()}
-
-
 # Agent-bom trust-axis "capability" values are layer verbs (ingest,
 # detect, ...). They are unrelated to the read/write axis the MCP tool
 # registry historically used, so when the SKILL.md value is a verb we
@@ -137,20 +86,6 @@ def _derive_capability(skill_dir: Path, metadata: dict[str, str]) -> str:
     if skill_dir.name.startswith("runner-"):
         return "write-runner"
     return "read-only"
-
-
-def _parse_modes(raw_value: str | None) -> tuple[str, ...]:
-    if not raw_value:
-        return ()
-    return tuple(part.strip() for part in raw_value.split(",") if part.strip())
-
-
-def _resolve_entrypoint(skill_dir: Path) -> Path | None:
-    for candidate in ENTRYPOINT_CANDIDATES:
-        path = skill_dir / candidate
-        if path.exists():
-            return path
-    return None
 
 
 def discover_skills(root: Path | None = None) -> list[SkillSpec]:
@@ -191,8 +126,8 @@ def _parse_bool(raw: str | None) -> bool:
 
 
 # Hard-coded list of evaluation-layer skills wired to the worker
-# harness today. Kept in sync with `worker_pool.SUPPORTED_SKILL_NAMES`
-# and the `__main__` blocks in each skill's `checks.py`.
+# harness today. Keep in sync with the `__main__` blocks in each
+# skill's `checks.py`.
 WORKER_MODE_SKILL_NAMES: frozenset[str] = frozenset(
     {
         "cspm-aws-cis-benchmark",

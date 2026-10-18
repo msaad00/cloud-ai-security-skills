@@ -31,25 +31,29 @@ def _run(args: list[str], cwd: Path = REPO_ROOT) -> subprocess.CompletedProcess[
     )
 
 
+@pytest.fixture
+def matrix_repo(tmp_path: Path) -> Path:
+    """Copy the generator and its runtime dependencies for isolated checks."""
+    root = tmp_path / "repo"
+    for rel in (
+        "scripts/generate_security_bar_matrix.py",
+        "scripts/skill_validation_common.py",
+        "skills/_shared/skill_metadata.py",
+    ):
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((REPO_ROOT / rel).read_text())
+    return root
+
+
 class TestCheckMode:
     def test_check_passes_when_matrix_is_in_sync(self):
         result = _run(["--check"])
         assert result.returncode == 0, f"--check failed: stderr=\n{result.stderr}"
         assert "in sync" in result.stdout
 
-    def test_check_fails_on_drift(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-        # Copy the repo structure the script needs into a tmp dir, then mutate
-        # SECURITY_BAR.md to create drift, and run `--check` against the clone.
-        tmp_repo = tmp_path / "repo"
-        tmp_repo.mkdir()
-        (tmp_repo / "scripts").mkdir()
-        (tmp_repo / "skills").mkdir()
-        # Copy the script + its dependency
-        for rel in (
-            "scripts/generate_security_bar_matrix.py",
-            "scripts/skill_validation_common.py",
-        ):
-            (tmp_repo / rel).write_text((REPO_ROOT / rel).read_text())
+    def test_check_fails_on_drift(self, matrix_repo: Path):
+        tmp_repo = matrix_repo
         # Minimal fake skill so discover_skill_contracts has something to enumerate.
         fake_skill_dir = tmp_repo / "skills" / "detection" / "detect-fake"
         fake_skill_dir.mkdir(parents=True)
@@ -89,16 +93,8 @@ class TestCheckMode:
         assert result.returncode == 1
         assert "out of sync" in result.stderr
 
-    def test_missing_markers_raises(self, tmp_path: Path):
-        tmp_repo = tmp_path / "repo"
-        tmp_repo.mkdir()
-        (tmp_repo / "scripts").mkdir()
-        (tmp_repo / "skills").mkdir()
-        for rel in (
-            "scripts/generate_security_bar_matrix.py",
-            "scripts/skill_validation_common.py",
-        ):
-            (tmp_repo / rel).write_text((REPO_ROOT / rel).read_text())
+    def test_missing_markers_raises(self, matrix_repo: Path):
+        tmp_repo = matrix_repo
         # SECURITY_BAR.md without the markers
         (tmp_repo / "SECURITY_BAR.md").write_text("# Security Bar\n\nno markers here\n")
         result = _run([], cwd=tmp_repo)

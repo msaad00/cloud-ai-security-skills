@@ -1,8 +1,7 @@
 """SSE / streamable-HTTP transport for the MCP wrapper.
 
-This is slice 1 of issue #415 — the transport listener + bearer auth +
-audit-chain integration. The cloud-runner wiring (Helm/Docker) and key
-rotation arrive in slice 2.
+The transport listener uses rotating bearer keys and shares the audit
+chain with stdio dispatch.
 
 The transport speaks the same JSON-RPC contract as `server.py` (stdio).
 Both surfaces call into `dispatch.handle_request`; the only difference
@@ -83,15 +82,6 @@ DEFAULT_PORT = 8765
 
 # Localhost forms that do not count as "public" for the bind guard.
 _LOCAL_BINDS = frozenset({"127.0.0.1", "localhost", "::1"})
-
-
-def _bearer_keys(env: dict[str, str] | None = None) -> set[str]:
-    """Parse `MCP_SSE_BEARER_KEYS` into a set. Empty / unset -> empty set."""
-    src = os.environ if env is None else env
-    raw = (src.get(KEYS_ENV) or "").strip()
-    if not raw:
-        return set()
-    return {part.strip() for part in raw.split(",") if part.strip()}
 
 
 def _bind_is_public(bind: str) -> bool:

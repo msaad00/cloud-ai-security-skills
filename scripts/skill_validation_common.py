@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from skills._shared.skill_metadata import extract_frontmatter as extract_frontmatter  # noqa: E402
+from skills._shared.skill_metadata import parse_frontmatter as parse_frontmatter  # noqa: E402
+from skills._shared.skill_metadata import parse_modes as parse_modes  # noqa: E402
+from skills._shared.skill_metadata import resolve_entrypoint as resolve_entrypoint  # noqa: E402
+
 SKILLS_ROOT = ROOT / "skills"
 CANONICAL_SKILL_CATEGORIES = {
     "ingestion",
@@ -18,7 +27,6 @@ CANONICAL_SKILL_CATEGORIES = {
 }
 
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 URL_RE = re.compile(r"https://[^\s)>\"]+")
 
 APPROVAL_MODE_VALUES = {"none", "dry_run_required", "human_required"}
@@ -63,15 +71,6 @@ FRONTMATTER_KEY_ORDER = (
     "metadata",
 )
 
-ENTRYPOINT_CANDIDATES = (
-    "src/ingest.py",
-    "src/detect.py",
-    "src/convert.py",
-    "src/checks.py",
-    "src/discover.py",
-    "src/handler.py",
-    "src/sink.py",
-)
 
 OFFICIAL_REFERENCE_HOSTS = {
     "attack.mitre.org",
@@ -205,60 +204,6 @@ def iter_skill_like_dirs() -> list[Path]:
     return skill_dirs
 
 
-def extract_frontmatter(skill_md: Path) -> str:
-    text = skill_md.read_text()
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        raise ValueError(f"{skill_md} missing YAML frontmatter")
-    return match.group(1)
-
-
-def parse_frontmatter(frontmatter: str) -> dict[str, str]:
-    data: dict[str, str] = {}
-    lines = frontmatter.splitlines()
-    idx = 0
-
-    while idx < len(lines):
-        line = lines[idx]
-        if not line.strip() or line.startswith(" "):
-            idx += 1
-            continue
-        if ":" not in line:
-            idx += 1
-            continue
-
-        key, raw_value = line.split(":", 1)
-        key = key.strip()
-        value = raw_value.strip()
-
-        if not value or value in {">-", "|", ">"}:
-            idx += 1
-            block: list[str] = []
-            while idx < len(lines):
-                child = lines[idx]
-                if child.startswith("  "):
-                    block.append(child.strip())
-                    idx += 1
-                    continue
-                if not child.strip():
-                    idx += 1
-                    continue
-                break
-            data[key] = " ".join(part for part in block if part)
-            continue
-
-        data[key] = value.strip("\"'")
-        idx += 1
-
-    return data
-
-
-def parse_modes(raw_value: str | None) -> tuple[str, ...]:
-    if not raw_value:
-        return ()
-    return tuple(part.strip() for part in raw_value.split(",") if part.strip())
-
-
 def extract_frontmatter_keys(frontmatter: str) -> tuple[str, ...]:
     keys: list[str] = []
     for line in frontmatter.splitlines():
@@ -269,14 +214,6 @@ def extract_frontmatter_keys(frontmatter: str) -> tuple[str, ...]:
         key, _ = line.split(":", 1)
         keys.append(key.strip())
     return tuple(keys)
-
-
-def resolve_entrypoint(skill_dir: Path) -> Path | None:
-    for candidate in ENTRYPOINT_CANDIDATES:
-        path = skill_dir / candidate
-        if path.exists():
-            return path
-    return None
 
 
 def discover_skill_contracts() -> list[SkillContract]:
