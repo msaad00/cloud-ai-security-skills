@@ -3,7 +3,7 @@ top-level entrypoints so the MCP registry sees them.
 
 History: between the 04-28 audit and 05-09 audit the registry returned
 73/76 supported skills because `iam-departures-{aws,azure-entra,gcp}` had
-no entrypoint matching `tool_registry.ENTRYPOINT_CANDIDATES`. The
+no entrypoint matching `skills._shared.skill_metadata.ENTRYPOINT_CANDIDATES`. The
 README's "76 shipped skills" was inaccurate against the MCP surface.
 
 This test fails closed if any iam-departures skill regresses to that

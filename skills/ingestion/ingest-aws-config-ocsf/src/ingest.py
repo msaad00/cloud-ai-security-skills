@@ -141,19 +141,6 @@ def _activity_name(activity_id: int) -> str:
     }.get(activity_id, "Other")
 
 
-def _metadata(event_uid: str, labels: list[str]) -> dict[str, Any]:
-    return {
-        "version": OCSF_VERSION,
-        "uid": event_uid,
-        "product": {
-            "name": "cloud-ai-security-skills",
-            "vendor_name": VENDOR_NAME,
-            "feature": {"name": SKILL_NAME},
-        },
-        "labels": labels,
-    }
-
-
 def _resource(item: dict[str, Any]) -> dict[str, str]:
     resource = {
         "uid": str(item.get("resourceId") or ""),

@@ -201,10 +201,6 @@ def _normalize_token(value: str) -> str:
     return " ".join((value or "").upper().replace("_", " ").split())
 
 
-def _compact_token(value: str) -> str:
-    return _normalize_token(value).replace(" ", "")
-
-
 def _is_azure_entra_pivot(service: str, operation: str) -> bool:
     service_norm = _normalize_token(service)
     operation_norm = _normalize_token(operation)

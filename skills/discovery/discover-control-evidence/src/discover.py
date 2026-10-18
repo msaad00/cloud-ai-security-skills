@@ -110,16 +110,6 @@ def _time_to_epoch_ms(value: str | None) -> int:
         return 0
 
 
-def _asset_key(asset: dict[str, Any]) -> str:
-    provider = _string(asset.get("provider")) or "unknown"
-    service = _string(asset.get("service")) or "unknown"
-    kind = _string(asset.get("kind")) or "unknown"
-    identifier = _string(asset.get("id")) or _string(asset.get("name"))
-    if not identifier:
-        raise ValueError("normalized asset is missing both `id` and `name`")
-    return f"{provider}:{service}:{kind}:{identifier}"
-
-
 def _normalize_bom(document: dict[str, Any]) -> dict[str, Any]:
     components = document.get("components")
     services = document.get("services")
