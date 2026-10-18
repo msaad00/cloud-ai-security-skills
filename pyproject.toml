@@ -59,7 +59,7 @@ iam_departures = [
   "databricks-sql-connector>=4.4.0,<5",
   "google-api-python-client>=2.198.0,<3",
   { include-group = "http-client" },
-  "snowflake-connector-python>=4.6.0,<5",
+  "snowflake-connector-python>=4.6.0,<6",
 ]
 webhook = [
   "fastapi>=0.141.1,<1",
