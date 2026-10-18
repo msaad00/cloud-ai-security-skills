@@ -145,6 +145,7 @@ automatically enabled by invoking a detector.
 | Topic | Doc |
 |---|---|
 | Trust posture | [`SECURITY.md`](SECURITY.md) · [`SECURITY_BAR.md`](SECURITY_BAR.md) |
+| Fixture provenance | [Synthetic scenarios](skills/detection-engineering/golden/README.md) · [Captured-traffic evidence status](skills/detection-engineering/captured/README.md) |
 | MCP audit contract | [`docs/MCP_AUDIT_CONTRACT.md`](docs/MCP_AUDIT_CONTRACT.md) |
 | Framework mappings | [`docs/FRAMEWORK_MAPPINGS.md`](docs/FRAMEWORK_MAPPINGS.md) |
 | Security grades | [`docs/SECURITY_GRADES.md`](docs/SECURITY_GRADES.md) |

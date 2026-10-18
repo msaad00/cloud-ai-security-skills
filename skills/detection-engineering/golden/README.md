@@ -1,6 +1,6 @@
 # Golden fixtures — provenance and limits
 
-These 58 files are the repo's snapshot test fixtures. They are imported by the
+These files are the repo's snapshot test fixtures. They are imported by the
 ingest, detect, view, and pack tests under each layer. This README states
 explicitly what they are and — more importantly — what they are not, so nobody
 mistakes a passing snapshot for a passing precision/recall claim.
@@ -45,29 +45,29 @@ a claim of that shape, it must cite a *different* source — a captured-fixture
 corpus, a customer telemetry sample, or a public dataset — and not this
 directory.
 
-## Roadmap toward real fixtures
+## Constructed AWS scenarios
 
-The sibling [`../captured/`](../captured/README.md) directory now exists and
-holds the first batch of public, license-clean attack-traffic samples. It
-has the **opposite** provenance contract from this directory:
+Two fixtures were moved here from `captured/` because their events were
+constructed from command/API descriptions and placeholder fields:
 
-- `golden/`   — synthetic, hand-crafted; verifies wire contract + determinism.
-- `captured/` — real public traces under permissive licences; verifies that
-  detectors fire on actual attack-pattern traffic.
+| Synthetic fixture | Behavior exercised |
+|---|---|
+| [`synthetic_aws_create_access_key.ocsf.jsonl`](synthetic_aws_create_access_key.ocsf.jsonl) | Successful IAM `CreateAccessKey` |
+| [`synthetic_aws_create_login_profile.ocsf.jsonl`](synthetic_aws_create_login_profile.ocsf.jsonl) | Successful IAM `CreateLoginProfile` |
 
-Still planned but not yet shipped:
+The access-key scenario was inspired by the
+[Atomic Red Team command documentation](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1098.001/T1098.001.md).
+The login-profile scenario is a locally constructed API example; its former
+T1136.003 command citation does not establish the origin of an observed event.
+Neither file is a captured execution. Their `art-*` event IDs are historical
+fixture identifiers; timestamps, usernames, accounts, sessions, and source IPs
+are synthetic. No capture window is claimed.
 
-- Filling out `captured/` for the remaining detectors. Tracked in
-  [issue #420](https://github.com/msaad00/cloud-ai-security-skills/issues/420);
-  the directory's `README.md` Roadmap section keeps the live gap list.
-- Per-detector precision/recall scoring on the captured corpus, posted as a
-  PR comment. Tracked in
-  [issue #419](https://github.com/msaad00/cloud-ai-security-skills/issues/419).
-
-Until those land, every claim about real-world detector quality should
-explicitly say "synthetic fixtures only" — and so should you. If a claim
-needs to cite captured traffic, point at `captured/` and not this
-directory.
+The integration tests run both scenarios against their named detectors and
+check failed-operation nonmatches. These cases verify rule behavior only.
+The sibling [`captured/`](../captured/README.md) currently has **zero** verified
+recorded-traffic fixtures. Its admission gate remains enabled for future
+imports, but an empty corpus supplies no real-traffic accuracy evidence.
 
 ## Adding a fixture
 
