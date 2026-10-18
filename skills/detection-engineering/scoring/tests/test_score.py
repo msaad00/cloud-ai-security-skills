@@ -238,8 +238,6 @@ def test_extract_event_uids_walks_dotted_path() -> None:
     findings = [
         {"evidence": {"raw_event_uids": ["a", "b"]}},
         {"evidence": {"raw_event_uids": ["b", "c"]}},
-        {"evidence": {}},  # missing path is fine
-        {},
     ]
     out = SCORE.extract_event_uids(findings, "evidence.raw_event_uids")
     assert out == {"a", "b", "c"}
@@ -352,3 +350,165 @@ def test_repository_corpus_loads_and_validates() -> None:
         assert (REPO_ROOT / entry.input_fixture).exists(), (
             f"{entry.detector_name}: input_fixture {entry.input_fixture} not found"
         )
+
+
+@pytest.mark.parametrize("label", ["false", "true", 0, 1, None, [], {}])
+def test_labels_require_actual_booleans(label: Any) -> None:
+    with pytest.raises(ValueError, match="labels"):
+        _entry(labels={"a": label})
+
+
+@pytest.mark.parametrize("labels", [{}, None, [], {1: True}, {"": True}, {" ": False}])
+def test_labels_require_nonempty_uid_mapping(labels: Any) -> None:
+    with pytest.raises(ValueError, match="labels"):
+        _entry(labels=labels)
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"synthetic": "false"},
+        {"synthetic": 0},
+        {"synthetic": None},
+        {"detector_name": None},
+        {"input_fixture": 123},
+        {"extra_args": [False]},
+        {"extra_args": None},
+        {"finding_event_uid_path": "evidence..uid"},
+        {"expected_findings_fixture": False},
+    ],
+)
+def test_corpus_fields_are_not_coerced(override: dict[str, Any]) -> None:
+    with pytest.raises(ValueError):
+        _entry(**override)
+
+
+@pytest.mark.parametrize(
+    "source",
+    ["", "[]", "null", "{}", "entries: null", "entries: false", "entries: [null]", "entries: ["],
+)
+def test_main_rejects_malformed_corpus_without_traceback(
+    source: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    corpus = tmp_path / "corpus.yaml"
+    corpus.write_text(source)
+    assert SCORE.main(["--corpus", str(corpus)]) == 2
+    captured = capsys.readouterr()
+    assert not captured.out
+    assert "failed to load corpus" in captured.err
+
+
+@pytest.mark.parametrize(
+    "mode,bad_finding",
+    [
+        ("event_uid", {}),
+        ("event_uid", {"evidence": {"raw_event_uids": []}}),
+        ("event_uid", {"evidence": {"raw_event_uids": ["c", 1]}}),
+        ("event_uid", {"evidence": {"raw_event_uids": " "}}),
+        ("event_uid", {"evidence": {"raw_event_uids": 4}}),
+        ("finding_uid", {}),
+        ("finding_uid", {"metadata": {"uid": None}}),
+        ("finding_uid", {"metadata": {"uid": ""}}),
+        ("finding_uid", {"metadata": {"uid": ["a"]}}),
+    ],
+)
+def test_unscorable_finding_invalidates_whole_detector_result(
+    mode: str, bad_finding: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    good = {"evidence": {"raw_event_uids": ["a", "b"]}, "metadata": {"uid": "a"}}
+    monkeypatch.setattr(SCORE, "run_detector", lambda entry: [good, bad_finding])
+    result = SCORE.score_entry(_entry(mode=mode))
+    assert result.error is not None
+    assert result.tp == 0
+    assert SCORE.aggregate([result])["detectors_errored"] == 1
+
+
+@pytest.mark.parametrize("output", ["null", "[]", "42", '"text"'])
+def test_subprocess_output_must_be_json_objects(
+    output: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    script = tmp_path / "detect.py"
+    script.touch()
+    monkeypatch.setattr(SCORE, "detector_script_path", lambda name: script)
+    monkeypatch.setattr(
+        SCORE.subprocess,
+        "run",
+        lambda *a, **kw: SimpleNamespace(returncode=0, stdout=output, stderr=""),
+    )
+    with pytest.raises(RuntimeError, match="object"):
+        SCORE.run_detector(_entry(input_fixture=str(script)))
+
+
+def test_excluded_predictions_are_visible_in_json_and_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        SCORE,
+        "run_detector",
+        lambda entry: [{"evidence": {"raw_event_uids": ["a", "b", "z", "z"]}}],
+    )
+    result = SCORE.score_entry(_entry())
+    assert result.to_dict()["unlabelled_predictions"] == 1
+    assert result.f1 == 1.0
+    totals = SCORE.aggregate([result])
+    assert totals["unlabelled_predictions"] == 1
+    markdown = SCORE.render_markdown([result], totals)
+    assert "Unlabelled" in markdown
+    assert "excluded" in markdown
+
+
+def test_empty_detector_output_remains_valid(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(SCORE, "run_detector", lambda entry: [])
+    result = SCORE.score_entry(_entry())
+    assert result.error is None
+    assert (result.tp, result.fp, result.fn) == (0, 0, 2)
+
+
+@pytest.mark.parametrize("mode", ["event_uid", "finding_uid"])
+def test_main_fails_when_valid_prediction_is_followed_by_unscorable_output(
+    mode: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    corpus = tmp_path / "corpus.yaml"
+    corpus.write_text(
+        "entries:\n  - detector_name: detect-foo\n    input_fixture: x.jsonl\n"
+        f"    mode: {mode}\n    labels: {{a: true}}\n"
+    )
+    monkeypatch.setattr(
+        SCORE,
+        "run_detector",
+        lambda entry: [
+            {"metadata": {"uid": "a"}, "evidence": {"raw_event_uids": ["a"]}},
+            {"error": "unscorable output"},
+        ],
+    )
+    assert SCORE.main(["--corpus", str(corpus)]) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["aggregate"]["detectors_scored"] == 0
+    assert payload["aggregate"]["detectors_errored"] == 1
+    assert payload["per_detector"][0]["error"]
+
+
+def test_explicit_false_provenance_and_negative_labels_stay_false() -> None:
+    entry = _entry(synthetic=False, labels={"negative": False})
+    assert entry.synthetic is False
+    assert entry.labels == {"negative": False}
+
+
+def test_markdown_reports_aggregate_exclusions_for_detector_errors() -> None:
+    result = SCORE.DetectorScore(
+        detector_name="broken",
+        mode="event_uid",
+        tp=0,
+        fp=0,
+        fn=1,
+        precision=0.0,
+        recall=0.0,
+        f1=0.0,
+        error="missing scoring ID",
+    )
+    assert "0 scored; 1 errored" in SCORE.render_markdown([result], SCORE.aggregate([result]))

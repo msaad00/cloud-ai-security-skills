@@ -140,6 +140,14 @@ successful key creation, a failed attempt, an unrelated operation, and a wrong
 producer. These are **synthetic rule-matching cases**. Even perfect scores here
 do not measure whether alerts are malicious on real traffic.
 
+The scorer rejects malformed labels and findings without usable scoring IDs.
+In `event_uid` mode, predictions outside the labelled set appear under
+`Unlabelled (excluded)`; they do not count toward precision or recall. In
+`finding_uid` mode, unexpected finding IDs count as false positives. The
+aggregate includes only successfully scored entries and shows an error count;
+any detector error makes the command exit nonzero. These checks validate ID
+matching, not finding content or the accuracy of the labels themselves.
+
 Empty input is valid and can produce an empty report. Malformed or unsupported
 input can fail the batch. Neither an empty report nor a passing fixture proves
 that an account is secure. See the [skill contract](../skills/detection/detect-aws-access-key-creation/SKILL.md)
