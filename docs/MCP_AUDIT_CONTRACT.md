@@ -286,7 +286,7 @@ spec meaning.
 | `-32001` | `ERROR_TOOL_TIMEOUT` | skill subprocess exceeded the resolved timeout |
 | `-32002` | `ERROR_TOOL_NOT_ALLOWED` | reserved for future explicit allowlist denials |
 | `-32003` | `ERROR_APPROVAL_REQUIRED` | reserved for future approval-context errors |
-| `-32004` | `ERROR_TOOL_CRASHED` | any non-timeout failure raised while dispatching a tool call (failed subprocess/worker spawn, worker-pool shutdown race, or any other unexpected exception) — a catch-all so one bad call always returns a clean JSON-RPC error instead of crashing the transport loop |
+| `-32004` | `ERROR_TOOL_CRASHED` | any non-timeout failure raised while dispatching a tool call (failed subprocess/worker spawn, undecodable one-shot output, worker-pool shutdown race, or any other unexpected exception) — a catch-all so one bad call always returns a clean JSON-RPC error instead of crashing the transport loop |
 
 Constants live in `mcp-server/src/server.py`. Update this table whenever a new
 code is reserved or a placeholder is wired in.
