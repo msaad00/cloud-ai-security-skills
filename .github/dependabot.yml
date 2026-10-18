@@ -4,6 +4,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # "uv" (not "pip") so Dependabot updates uv.lock together with
   # pyproject.toml — the pip ecosystem edits only pyproject.toml, which
@@ -12,3 +17,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      python-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
