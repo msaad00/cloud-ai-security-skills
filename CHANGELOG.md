@@ -568,7 +568,10 @@ transport with a rotation contract, and the audit-honesty trio lands.
 
 - **Per-detector precision/recall scorer** (#460, closes #419) and
   **captured-fixture corpus with provenance gate** (#459, closes #420) —
-  quantitative detector scoring replaces the "looked good on a fixture" proxy.
+  introduced labelled synthetic scoring and a provenance manifest. The two
+  scenarios initially labelled captured were subsequently reclassified as
+  synthetic; see the current [fixture provenance contract](skills/detection-engineering/captured/README.md).
+  These artifacts do not establish accuracy on recorded traffic.
 - **CSPM evaluation depth +542 tests** (#461, closes #405), **banner overflow
   + skill-index doc** (#454), **mypy upper bound bumped to <3** (#457).
 

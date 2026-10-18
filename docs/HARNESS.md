@@ -22,7 +22,7 @@ surfaces. None of them forks the skill model:
 | Surface | Where | Use when |
 |---|---|---|
 | **CLI / pipes** | `python skills/<x>/<y>/src/<entry>.py` | quick local triage; CI scripts; ops one-liners |
-| **CI** | `.github/workflows/ci.yml` lanes | gate a PR against a captured fixture |
+| **CI** | `.github/workflows/ci.yml` lanes | gate a PR against synthetic regression fixtures |
 | **MCP** | [`mcp-server/src/server.py`](../mcp-server/src/server.py) | any agentic client (Claude Code/Desktop, Cursor, Codex, Cortex, Windsurf, Zed) — stdio JSON-RPC |
 | **Webhook** | [`runners/webhook-receiver/`](../runners/webhook-receiver/) | route a vendor callback / API gateway POST through ingest → sink |
 | **Library SDK** | [`skills/_shared/library.py`](../skills/_shared/library.py) | external Python apps that want to call skills as functions |

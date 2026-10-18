@@ -1,100 +1,57 @@
-# Captured fixtures — provenance contract
+# Captured fixtures — admission contract
 
-This directory is the sibling of [`../golden/`](../golden/README.md). The two
-have **opposite contracts**.
+**Current status: zero captured-traffic fixtures.** The two command-derived
+scenarios previously stored here are synthetic and now live under
+[`golden/`](../golden/README.md#constructed-aws-scenarios). Their timestamps,
+identities, accounts, and IP addresses were constructed; no execution record or
+recorded telemetry artifact was supplied. A public attack command is not an
+observed event, and its documentation does not establish a capture window.
 
-| Directory   | Provenance         | Used to verify                                 |
-|-------------|--------------------|------------------------------------------------|
-| `golden/`   | Synthetic, hand-crafted | Wire contract, determinism, schema validity   |
-| `captured/` | Real public traces, license-clean | The above **plus** that detectors fire on actual attack-pattern traffic, not just on shapes we drew ourselves |
+The empty [`MANIFEST.yaml`](MANIFEST.yaml) records this evidence gap explicitly.
+Passing CI with an empty manifest does not demonstrate detector performance on
+recorded traffic. Existing scoring results use synthetic fixtures.
 
-## Provenance contract
+## Admitting recorded telemetry
 
-Every file in this directory MUST satisfy all five of the following:
+Before adding a fixture, a reviewer must inspect an identifiable upstream
+telemetry artifact, its redistribution terms, the observed time range, and the
+normalization procedure. Record the original source, retained fields, and any
+redactions; do not invent missing values. A command recipe or technique page
+alone is insufficient. Lab captures should be described as lab captures and
+must include the actual execution and recording evidence.
 
-1. **Known origin.** A URL, paper, or `CITATION` that anyone can open today.
-2. **Permissive license.** One of: `Apache-2.0`, `MIT`, `BSD-2-Clause`,
-   `BSD-3-Clause`, `CC0-1.0`, `CC-BY-4.0`. Copyleft, proprietary, and
-   "unknown" are rejected by the validator.
-3. **Recorded capture window.** The UTC timestamp range the traffic was
-   originally observed (or the upstream project recorded it).
-4. **Named consuming detector.** The fixture exists because exactly one
-   shipped detector reads it. The validator rejects orphan files.
-5. **`synthetic_seeded: false`.** A fixture flagged synthetic belongs under
-   `golden/`, not here. The validator rejects `true`.
+Each entry requires:
 
-The contract is enforced by [`scripts/validate_captured_provenance.py`](../../../scripts/validate_captured_provenance.py),
-wired into CI under the `skill-contract` job.
+| Field | Contract |
+|---|---|
+| `path` | Unique local `.ocsf.jsonl` filename; no directories or symlinks |
+| `origin` | HTTP(S) URL to the reviewed recorded-telemetry artifact; prefer an immutable revision |
+| `license` | Declared SPDX identifier from the validator's permissive allowlist |
+| `capture_window_utc` | Observed UTC `start/end` timestamps, ordered earliest to latest |
+| `attack_pattern` | Nonempty technique identifier supported by the source and review |
+| `consuming_detector` | Existing `detect-*` skill name |
+| `synthetic_seeded` | Explicit boolean `false`; constructed data belongs in `golden/` |
+| `sha256` | Lowercase SHA-256 digest of the local normalized fixture bytes |
 
-## Synthetic files belong under `golden/`
+The allowed license identifiers are `Apache-2.0`, `MIT`, `BSD-2-Clause`,
+`BSD-3-Clause`, `CC0-1.0`, and `CC-BY-4.0`. Checking an identifier is not a
+substitute for reviewing the source's actual terms.
 
-If you produce a fixture by hand-crafting JSON to exercise a detector, the
-file goes under [`../golden/`](../golden/), not here. The two-directory split
-exists so that downstream documents and PR descriptions can cite the right
-provenance honestly:
+Add a detector test that exercises the imported artifact and documents the
+expected match and nonmatch behavior. Detector existence alone does not prove
+that a fixture is exercised. Keep immutable upstream evidence and the
+normalization instructions reviewable alongside the fixture.
 
-> "Tested against captured public traces (`captured/`) and synthetic golden
-> fixtures (`golden/`)."
+## What CI checks
 
-If a captured fixture later turns out to be synthesised, move it back under
-`golden/` — do not weaken the contract here.
+Run `uv run python scripts/validate_captured_provenance.py`.
+The offline gate validates manifest shape, required values, unique paths,
+local files, declared time ranges, detector existence, and fixture hashes.
+A changed file requires a reviewed hash update. Unlisted files, malformed
+manifests, missing declarations, nested directories, and symlinks fail.
+Only an explicit `fixtures: []` with no fixture files is accepted as empty.
 
-## Manifest
-
-[`MANIFEST.yaml`](./MANIFEST.yaml) is the source of truth. One entry per
-fixture file with: `path`, `origin`, `license`, `capture_window_utc`,
-`attack_pattern`, `consuming_detector`, `synthetic_seeded`.
-
-Adding a new fixture = appending a manifest entry + dropping the file. CI
-will refuse the PR if either side is missing.
-
-## Roadmap
-
-The first import (this PR) seeds the directory with two Atomic Red Team
-atomics that map cleanly onto already-shipped AWS persistence detectors.
-The next imports — gated on locating a permissive-licensed source for each —
-are tracked here so we don't drift back to silent-synthesis:
-
-- **AWS-Sample CloudTrail (open-data attack traces).** No permissive-licensed
-  AWS-published CloudTrail attack corpus has been located yet. flaws.cloud
-  (Scott Piper, CC-BY-4.0) is a candidate but its CloudTrail extract is not
-  hosted in this repo today; the import is deferred until the licence pin
-  and the host can be cited inline. Tracked: gap recorded here, no fixture
-  shipped.
-- **Anthropic public MCP-attack examples.** No CC-BY-published Anthropic MCP
-  red-team trace has been located. Until one is published, MCP detector
-  fixtures stay under `golden/` (clearly synthetic), and the
-  `detect-mcp-tool-drift` / `detect-prompt-injection-mcp-proxy` row stays
-  empty in this directory. Do not invent.
-- **Mordor / Open Threat Research Forge** (MIT) and **MITRE CALDERA**
-  (Apache-2.0) — both publish recorded attacker telemetry that can be
-  reformatted to OCSF 1.8. These are the next two candidates and will be
-  added in follow-up PRs as each is verified against a specific shipped
-  detector.
-
-When a row above is converted into a real fixture, delete it from this
-list — the manifest is the new source of truth.
-
-## Adding a fixture
-
-1. Confirm the upstream source's licence is in the allowed set above. If it
-   isn't, **stop**: document the gap in the Roadmap section and skip the
-   import.
-2. Reformat the trace into the OCSF 1.8 wire shape the consuming detector
-   expects. Reformatting is structure-only — do not invent values.
-3. Drop the file in this directory. Filename: lower-snake, prefixed with the
-   upstream project name (e.g. `atomic_red_team_T1098_001_*`).
-4. Add a `MANIFEST.yaml` entry with all six required keys.
-5. Run `python scripts/validate_captured_provenance.py` locally. It must
-   exit 0 before the PR is opened.
-6. Wire the fixture into the consuming detector's test (in a follow-up PR if
-   needed) so the file is exercised in CI, not just present.
-
-## What this directory does NOT yet prove
-
-Even with two captured fixtures shipped, this directory does **not** yet
-support claims of the form "X% precision / Y% recall on real attacker
-traffic at scale". Two atomics is a beachhead, not a corpus. Per-detector
-precision/recall scoring on a corpus an order of magnitude larger is
-tracked separately under
-[issue #419](https://github.com/msaad00/cloud-ai-security-skills/issues/419).
+The gate does not fetch upstream URLs, authenticate provenance, verify license
+terms, prove that a command ran, or measure real-world precision or recall.
+A matching hash proves that the local bytes match their declared digest.
+Human source review remains required for every admission.
