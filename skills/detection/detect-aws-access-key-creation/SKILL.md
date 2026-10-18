@@ -95,6 +95,28 @@ OCSF 1.8 Detection Finding (class 2004), severity HIGH (`severity_id=4`), with:
 The native projection (`--output-format native`) keeps the target IAM user and
 actor/account context in a flatter shape.
 
+### Source reference
+
+When the input has a usable `metadata.uid`, `evidence.source_event` contains
+its exact `uid`, `producer` (`ingest-cloudtrail-ocsf`), recipient `account_uid`,
+and `region`. Native output carries the same object as `source_event`.
+The SARIF converter preserves it as `result.properties.evidence.source_event`.
+Use this reference with the finding time to locate the normalized input event;
+retain the original log separately. No request body, response body, or actor
+session credentials are copied into this reference.
+
+The ingester uses CloudTrail `eventID` when available and a deterministic fallback
+otherwise. A fallback UID identifies normalized input; it is not a CloudTrail
+event ID or proof of global uniqueness. Neither kind proves source authenticity,
+collection completeness, or malicious intent. Account and region may be empty
+when absent upstream; they are not inferred from the actor's account.
+
+Missing, null, empty, or space-only input UIDs omit the reference without suppressing a
+finding. A supplied UID must be a printable string of at most 1,024 characters;
+other values reject a matching record with a payload-free contract error and
+the CLI rejects the complete batch. Valid IDs are never truncated. Finding UIDs,
+matching rules, severity, and nonmatch behavior are unchanged.
+
 ## Run
 
 ```bash

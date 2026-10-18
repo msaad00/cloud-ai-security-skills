@@ -60,6 +60,13 @@ shell `>` redirection truncates its destination before the skill runs. The
 Python iterator raises `ContractError`; callers must exhaust it successfully
 before publishing any yielded rows. Process finite batches in persistent runners.
 
+When supplied, `eventID` must be a printable string of at most 1,024 characters.
+Malformed values reject the batch without logging the value; containers are
+never stringified into IDs. Missing, null, empty, or space-only IDs retain the
+existing deterministic fallback. That fallback is a normalized-event reference,
+not a CloudTrail-assigned ID or a guarantee of uniqueness. The access-key
+detector preserves the normalized UID and its account/region context in findings.
+
 ## Field mapping
 
 The native output field list, the `eventName` → `activity_id` prefix table, the `errorCode` → `status_id` rules, and the explicit "not mapped (yet)" scope live in [`references/field-map.md`](references/field-map.md). Keeping the detail there keeps this file under the progressive-disclosure target ([#247](https://github.com/msaad00/cloud-ai-security-skills/issues/247)) while detectors and reviewers still get the exact mapping one click away.

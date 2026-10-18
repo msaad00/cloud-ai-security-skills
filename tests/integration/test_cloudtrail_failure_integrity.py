@@ -139,3 +139,48 @@ def test_invalid_utf8_is_a_payload_free_contract_error(script):
     assert result.returncode == 1
     assert json.loads(result.stdout)["error_class"] == "contract"
     assert b"Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("omit_event_id", [False, True])
+def test_source_reference_survives_ingest_detect_and_sarif(omit_event_id):
+    raw = json.loads(RAW)
+    if omit_event_id:
+        raw.pop("eventID", None)
+    raw["requestParameters"]["password"] = SECRET
+    raw["responseElements"] = {"accessKey": {"secretAccessKey": SECRET}}
+    ingested = run(INGEST, json.dumps(raw))
+    assert ingested.returncode == 0, ingested.stderr
+    event = json.loads(ingested.stdout)
+    detected = run(DETECT, ingested.stdout)
+    assert detected.returncode == 0, detected.stderr
+    finding = json.loads(detected.stdout)
+    exported = run(EXPORT, detected.stdout)
+    assert exported.returncode == 0, exported.stderr
+    result = json.loads(exported.stdout)["runs"][0]["results"][0]
+    reference = result["properties"]["evidence"]["source_event"]
+    assert reference == {
+        "uid": event["metadata"]["uid"],
+        "producer": "ingest-cloudtrail-ocsf",
+        "account_uid": raw["recipientAccountId"],
+        "region": raw["awsRegion"],
+    }
+    if not omit_event_id:
+        assert reference["uid"] == raw["eventID"]
+    assert reference == finding["evidence"]["source_event"]
+    assert SECRET not in detected.stdout + detected.stderr + exported.stdout + exported.stderr
+    assert run(DETECT, ingested.stdout).stdout == detected.stdout
+
+
+@pytest.mark.parametrize("output_format", ["ocsf", "native"])
+def test_invalid_source_uid_rejects_batch_without_partial_findings(output_format):
+    event = json.loads(EVENT)
+    event["metadata"]["uid"] = {"secret": SECRET}
+    assert_rejected(run(DETECT, EVENT + "\n" + json.dumps(event), "--output-format", output_format))
+
+
+@pytest.mark.parametrize("uid", [{"secret": SECRET}, [SECRET], 42, True, "x" * 1025, "a\nb"])
+@pytest.mark.parametrize("output_format", ["ocsf", "native"])
+def test_ingest_rejects_malformed_source_id_without_stringifying_payload(uid, output_format):
+    raw = json.loads(RAW)
+    raw["eventID"] = uid
+    assert_rejected(run(INGEST, RAW + "\n" + json.dumps(raw), "--output-format", output_format))
