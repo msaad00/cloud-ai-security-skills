@@ -392,6 +392,16 @@ MCP and `SkillsClient` reject write-capable `--apply` calls even when approval
 metadata is provided. Use the documented skill CLI or provider workflow for
 approved remediation. Approval metadata is not permission to bypass that gate.
 
+For `SkillsClient`, `CLOUD_SECURITY_MCP_ALLOWED_SKILLS` sets the operator's
+comma-separated skill restriction; constructor `allowed_skills` can only narrow
+it. Both `list_skills()` and `invoke()` recheck their intersection. An unset or
+blank environment value leaves the constructor restriction in charge. A
+nonblank value containing no known skills exposes nothing. An empty constructor
+tuple means no additional restriction. This library API has no MCP
+`_caller_context` parameter; applications must select their own per-workflow
+constructor restriction. Denied calls raise `SkillNotAllowed` before launching
+a subprocess.
+
 Source: [`server.py`](../mcp-server/src/server.py),
 [`library.py`](../skills/_shared/library.py),
 [`webhook server`](../runners/webhook-receiver/src/server.py), and
