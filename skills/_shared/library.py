@@ -1,9 +1,7 @@
 """Python SDK shim — call shipped skills as library functions.
 
-Today every skill runs as a subprocess (CLI / CI / MCP / runner). For
-external applications that already live in a Python process, spawning
-a fresh interpreter per call is overkill — the SDK shim wraps the same
-shipped tool registry behind a clean callable surface:
+The SDK shim wraps the shipped tool registry and subprocess execution
+behind a Python callable surface:
 
     from skills._shared.library import SkillsClient
 
@@ -18,20 +16,17 @@ shipped tool registry behind a clean callable surface:
         stdin=result.stdout,
     )
 
-The client honours the same trust controls the MCP wrapper enforces:
+The client provides these controls:
 
-  - operator allowlist (`allowed_skills` arg or `CLOUD_SECURITY_MCP_ALLOWED_SKILLS`)
-  - caller allowlist intersection
-  - read-only / dry-run / HITL gates (writes refused unless --dry-run
-    or --apply with `_approval_context`)
-  - SAFE_CHILD_ENV_VARS scrub on every subprocess
-  - audit envelope on every call (same shape as MCP)
+  - operator environment allowlist intersected with constructor `allowed_skills`
+  - safe-write gates (`--apply` is refused even with approval metadata)
+  - approval metadata requirements for gated dry-run calls
+  - filtered child environment on every subprocess
+  - library audit envelope for completed subprocess calls
   - RLIMIT_AS / FSIZE / CPU caps via the existing resource_limits module
 
-The shim does not bypass the subprocess boundary — that boundary is
-where every guardrail lives. It just hides the JSON-RPC framing so a
-calling Python program does not have to assemble Content-Length
-headers.
+This client does not dispatch through MCP or accept MCP caller context.
+It does not inherit MCP's output cap or chained audit sink.
 """
 
 from __future__ import annotations
@@ -115,8 +110,8 @@ class SkillCallRefused(Exception):
 class SkillsClient:
     """Library entrypoint to the same tool registry the MCP wrapper uses.
 
-    `allowed_skills` is the *operator-level* allowlist. External callers
-    pass the smallest set their workflow needs. The constructor refuses
+    `allowed_skills` narrows the operator's environment allowlist. External
+    callers pass the smallest set their workflow needs. The constructor refuses
     skill names that aren't on disk, so a typo fails at construction
     instead of on the first invocation.
     """
@@ -135,11 +130,21 @@ class SkillsClient:
                 f"unknown skill(s): {sorted(unknown)}. Pass only names that ship in `skills/`."
             )
 
+    def _effective_allowed_skills(self) -> set[str]:
+        """Resolve restrictions on every lookup so a live client respects changes."""
+        allowed = set(self._tool_map)
+        if self.allowed_skills:
+            allowed.intersection_update(self.allowed_skills)
+        raw = os.environ.get("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", "").strip()
+        if raw:
+            # Match MCP semantics: blank means unset; a nonblank declaration
+            # with no known names denies everything, never expands to all tools.
+            allowed.intersection_update(name.strip() for name in raw.split(",") if name.strip())
+        return allowed
+
     def list_skills(self) -> list[str]:
-        """Return the effective tool surface — operator allowlist applied."""
-        if not self.allowed_skills:
-            return sorted(self._tool_map.keys())
-        return sorted(self.allowed_skills)
+        """Return the intersection of operator and client restrictions."""
+        return sorted(self._effective_allowed_skills())
 
     def invoke(
         self,
@@ -153,9 +158,9 @@ class SkillsClient:
 
         Refuses unknown skills, write-capable skills without `--dry-run`,
         and write-capable skills missing required `approval_context`.
-        Same guardrails the MCP wrapper enforces; same audit shape.
+        Operator and constructor allowlists are enforced before execution.
         """
-        if self.allowed_skills and skill_name not in self.allowed_skills:
+        if skill_name not in self._effective_allowed_skills():
             raise SkillNotAllowed(f"skill `{skill_name}` is not in the configured allowlist")
         skill = self._tool_map.get(skill_name)
         if skill is None:

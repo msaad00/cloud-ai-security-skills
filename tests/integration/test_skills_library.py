@@ -227,3 +227,50 @@ def test_child_env_excludes_wrapper_secrets(monkeypatch):
     assert "CLOUD_SECURITY_AUDIT_HMAC_KEY" not in env
     assert "CLOUD_SECURITY_MCP_AUDIT_LOG" not in env
     assert env["CLOUD_SECURITY_HTTP_MAX_ATTEMPTS"] == "3"
+
+
+@pytest.mark.parametrize("restriction", ["detect-okta-mfa-fatigue", "unknown-skill", ", ,"])
+def test_operator_allowlist_blocks_invocation_before_subprocess(monkeypatch, restriction):
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", restriction)
+    client = LIB.SkillsClient(allowed_skills=("ingest-cloudtrail-ocsf",))
+
+    def unexpected_execution(*args, **kwargs):
+        pytest.fail("denied skill reached subprocess execution")
+
+    monkeypatch.setattr(LIB.subprocess, "run", unexpected_execution)
+    assert client.list_skills() == []
+    with pytest.raises(LIB.SkillNotAllowed):
+        client.invoke("ingest-cloudtrail-ocsf", stdin=b"")
+
+
+def test_operator_and_client_allowlists_intersect(monkeypatch):
+    monkeypatch.setenv(
+        "CLOUD_SECURITY_MCP_ALLOWED_SKILLS",
+        " ingest-cloudtrail-ocsf, detect-okta-mfa-fatigue, ingest-cloudtrail-ocsf ",
+    )
+    client = LIB.SkillsClient(allowed_skills=("ingest-cloudtrail-ocsf", "convert-ocsf-to-sarif"))
+    assert client.list_skills() == ["ingest-cloudtrail-ocsf"]
+
+
+def test_operator_allowlist_applies_without_constructor_restriction(monkeypatch):
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", "ingest-cloudtrail-ocsf")
+    client = LIB.SkillsClient()
+    assert client.list_skills() == ["ingest-cloudtrail-ocsf"]
+    assert client.invoke("ingest-cloudtrail-ocsf", stdin=b"").ok
+
+
+def test_operator_restriction_is_rechecked_on_existing_clients(monkeypatch):
+    monkeypatch.delenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", raising=False)
+    client = LIB.SkillsClient(allowed_skills=("ingest-cloudtrail-ocsf",))
+    assert client.list_skills() == ["ingest-cloudtrail-ocsf"]
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", "detect-okta-mfa-fatigue")
+    assert client.list_skills() == []
+    with pytest.raises(LIB.SkillNotAllowed):
+        client.invoke("ingest-cloudtrail-ocsf", stdin=b"")
+
+
+@pytest.mark.parametrize("restriction", ["", "   "])
+def test_blank_operator_restriction_preserves_constructor_allowlist(monkeypatch, restriction):
+    monkeypatch.setenv("CLOUD_SECURITY_MCP_ALLOWED_SKILLS", restriction)
+    client = LIB.SkillsClient(allowed_skills=("ingest-cloudtrail-ocsf",))
+    assert client.list_skills() == ["ingest-cloudtrail-ocsf"]
