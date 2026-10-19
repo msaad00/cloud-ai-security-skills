@@ -106,9 +106,34 @@ def _src_ip(event: dict[str, Any]) -> str:
     return str(endpoint.get("ip") or "")
 
 
-def _finding_uid(event_uid: str, target_user: str, actor_name: str, time_ms: int) -> str:
-    material = f"{SKILL_NAME}|{event_uid}|{target_user}|{actor_name}|{time_ms}"
-    return f"aakc-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:16]}"
+def _finding_uid(
+    event_uid: str,
+    target_user: str,
+    actor_name: str,
+    time_ms: int,
+    *,
+    account_uid: str,
+    region: str,
+) -> str:
+    # Version and encode field boundaries; delimiters in opaque IDs must not
+    # alias adjacent fields. Scope is the recipient account, never the actor's.
+    material = json.dumps(
+        [
+            SKILL_NAME,
+            2,
+            "AWS",
+            "ingest-cloudtrail-ocsf",
+            account_uid,
+            region,
+            event_uid,
+            target_user,
+            actor_name,
+            time_ms,
+        ],
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
+    return f"aakc-v2-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:32]}"
 
 
 def _build_native_finding(*, event: dict[str, Any], target_user: str) -> dict[str, Any]:
@@ -125,7 +150,14 @@ def _build_native_finding(*, event: dict[str, Any], target_user: str) -> dict[st
         raise ContractError("invalid source event UID")
     event_uid = source_uid or ""
     actor_name = _actor(event)
-    finding_uid = _finding_uid(event_uid, target_user, actor_name, time_ms)
+    finding_uid = _finding_uid(
+        event_uid,
+        target_user,
+        actor_name,
+        time_ms,
+        account_uid=_account(event),
+        region=_region(event),
+    )
     native: dict[str, Any] = {
         "schema_mode": "native",
         "canonical_schema_version": CANONICAL_VERSION,

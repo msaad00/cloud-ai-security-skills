@@ -11,6 +11,15 @@ The format is loosely based on Keep a Changelog.
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- Access-key findings now use versioned `aakc-v2-<32 hex>` IDs that include
+  recipient account and region with unambiguous field encoding. Previous IDs
+  could collide across scopes. Update UID-based deduplication, suppressions,
+  and joins before replay; see the detector's
+  [migration contract](skills/detection/detect-aws-access-key-creation/SKILL.md#finding-identity-and-migration).
+  Rule matching and source-event references are unchanged.
+
 ## [0.14.0] — 2026-10-07 — Replay-safe webhooks, source-only finding time
 
 Pre-1.0 MINOR release **with breaking changes** for webhook senders and MCP
