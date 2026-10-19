@@ -173,3 +173,38 @@ def test_source_reference_preserves_full_uid_and_recipient_account():
     reference = list(detect([event]))[0]["evidence"]["source_event"]
     assert reference["uid"] == "e" * 1024
     assert reference["account_uid"] == "444455556666"
+
+
+@pytest.mark.parametrize("output_format", ["ocsf", "native"])
+@pytest.mark.parametrize("source_uid", ["evt-1", "", None])
+@pytest.mark.parametrize("scope", [{"account_uid": "444455556666"}, {"region": "eu-west-1"}])
+def test_finding_identity_distinguishes_recipient_scope(output_format, source_uid, scope):
+    original = _ct_event()
+    other = _ct_event(**scope)
+    for event in (original, other):
+        event["metadata"]["uid"] = source_uid
+    findings = list(detect([original, other], output_format=output_format))
+    ids = [
+        f["finding_uid"] if output_format == "native" else f["metadata"]["uid"] for f in findings
+    ]
+    assert len(set(ids)) == 2
+    assert all(uid.startswith("aakc-v2-") for uid in ids)
+
+
+def test_finding_identity_uses_unambiguous_field_encoding():
+    first = _ct_event(target_user="bob|carol", actor="alice")
+    second = _ct_event(target_user="carol", actor="alice")
+    first["metadata"]["uid"] = "evt"
+    second["metadata"]["uid"] = "evt|bob"
+    # Opaque strings must not move a separator from one identity field to another.
+    findings = list(detect([first, second]))
+    assert findings[0]["metadata"]["uid"] != findings[1]["metadata"]["uid"]
+
+
+def test_scoped_identity_is_stable_across_formats_and_replays():
+    event = _ct_event()
+    native = list(detect([event], output_format="native"))[0]
+    ocsf = list(detect([event]))[0]
+    replay = list(detect([event]))[0]
+    assert native["finding_uid"] == ocsf["metadata"]["uid"] == ocsf["finding_info"]["uid"]
+    assert replay == ocsf

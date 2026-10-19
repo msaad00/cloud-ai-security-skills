@@ -184,3 +184,28 @@ def test_ingest_rejects_malformed_source_id_without_stringifying_payload(uid, ou
     raw = json.loads(RAW)
     raw["eventID"] = uid
     assert_rejected(run(INGEST, RAW + "\n" + json.dumps(raw), "--output-format", output_format))
+
+
+def test_cross_account_findings_keep_distinct_ids_through_sarif_export():
+    first = json.loads(RAW)
+    second = {**first, "recipientAccountId": "444455556666"}
+    ingested = run(INGEST, json.dumps(first) + "\n" + json.dumps(second))
+    assert ingested.returncode == 0, ingested.stderr
+    detected = run(DETECT, ingested.stdout)
+    assert detected.returncode == 0, detected.stderr
+    findings = [json.loads(line) for line in detected.stdout.splitlines()]
+    ids = {finding["metadata"]["uid"] for finding in findings}
+    assert len(ids) == 2
+    exported = run(EXPORT, detected.stdout)
+    assert exported.returncode == 0, exported.stderr
+    results = json.loads(exported.stdout)["runs"][0]["results"]
+    assert {result["properties"]["finding_uid"] for result in results} == ids
+    assert (
+        len({result["partialFingerprints"]["primaryLocationLineHash"] for result in results}) == 2
+    )
+    assert {
+        result["properties"]["evidence"]["source_event"]["account_uid"] for result in results
+    } == {
+        first["recipientAccountId"],
+        second["recipientAccountId"],
+    }

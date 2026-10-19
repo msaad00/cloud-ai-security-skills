@@ -56,7 +56,12 @@ entries:
   - detector_name: detect-aws-access-key-creation
     input_fixture: skills/detection-engineering/scoring/fixtures/aws_access_key_creation_labelled_input.ocsf.jsonl
     expected_findings_fixture: null
-    mode: finding_uid
+    # Label source events so finding-ID migrations do not redefine ground truth.
+    mode: event_uid
+    finding_event_uid_path: evidence.source_event.uid
     synthetic: true
     labels:
-      aakc-74a2fcc73b502638: true
+      aws-corpus-aakc-1: true
+      aws-corpus-aakc-failed: false
+      aws-corpus-create-user: false
+      aws-corpus-wrong-producer: false

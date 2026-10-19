@@ -114,8 +114,26 @@ when absent upstream; they are not inferred from the actor's account.
 Missing, null, empty, or space-only input UIDs omit the reference without suppressing a
 finding. A supplied UID must be a printable string of at most 1,024 characters;
 other values reject a matching record with a payload-free contract error and
-the CLI rejects the complete batch. Valid IDs are never truncated. Finding UIDs,
-matching rules, severity, and nonmatch behavior are unchanged.
+the CLI rejects the complete batch. Source event UIDs are never truncated.
+
+### Finding identity and migration
+
+Finding UIDs now use `aakc-v2-` followed by 32 hexadecimal characters. They hash
+an unambiguous JSON array containing the detector/version, AWS producer,
+recipient account, region, source event UID, target username, actor name, and
+event time. Otherwise identical events in different known accounts or regions
+therefore receive different IDs. Replaying identical input retains its ID in
+native, OCSF, and SARIF output. Matching rules, severity, and source references
+are unchanged.
+
+**Breaking identity change:** existing `aakc-<16 hex>` IDs are not preserved.
+Consumers that deduplicate, suppress, or join by finding UID must handle the
+new namespace before replaying old inputs. Reprocess retained input for an
+explicit old-to-new mapping; do not join on the old UID alone, because distinct
+scopes could share it. No automatic migration or legacy alias is emitted.
+Missing account, region, or event IDs remain missing; scoped hashing cannot
+recover absent evidence or distinguish identical incomplete inputs. An ID is
+not proof of source authenticity or global uniqueness.
 
 ## Run
 
