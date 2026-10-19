@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="144" viewBox="0 0 480 144" role="img" aria-labelledby="title desc">
+  <title id="title">alice → CreateAccessKey → bob</title>
+  <desc id="desc">Synthetic example: role session alice successfully calls CreateAccessKey for IAM user bob. A rule match does not establish malicious intent.</desc>
+  <rect x=".5" y=".5" width="479" height="143" rx="10" fill="#0d1420" stroke="#293548"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif">
+    <g fill="#121e2e" stroke="#304158">
+      <rect x="16" y="20" width="108" height="76" rx="6"/>
+      <rect x="148" y="20" width="184" height="76" rx="6"/>
+      <rect x="356" y="20" width="108" height="76" rx="6"/>
+    </g>
+    <g fill="#9aaec4" font-size="13" text-anchor="middle">
+      <text x="70" y="44">Role session</text>
+      <text x="240" y="44">Successful API call</text>
+      <text x="410" y="44">IAM user</text>
+    </g>
+    <g fill="#edf3fa" font-size="22" font-weight="500" text-anchor="middle">
+      <text x="70" y="76">alice</text>
+      <text x="410" y="76">bob</text>
+    </g>
+    <text x="240" y="75" text-anchor="middle" fill="#83c9ee" font-size="19" font-weight="500">CreateAccessKey</text>
+    <path d="M128 58h14m-4-4 4 4-4 4M336 58h14m-4-4 4 4-4 4" fill="none" stroke="#64748b" stroke-width="1.4"/>
+    <text x="240" y="124" text-anchor="middle" fill="#c0cddd" font-size="14">Synthetic example · rule match only</text>
+  </g>
+</svg>
