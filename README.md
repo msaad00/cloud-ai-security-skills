@@ -26,7 +26,10 @@ uv run make demo             # ingest -> detect -> SARIF, then prints the findin
 with SARIF rule `T1098`. The report is written to
 `$TMPDIR/cloud-security-demo.sarif` (`/tmp` when `TMPDIR` is unset).
 
-![Annotated synthetic example: alice's role session creates an access key for bob. The rule matches successful key creation; authorization and later key use are unknown.](docs/images/access-key-walkthrough.svg)
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/images/access-key-walkthrough-mobile.svg">
+  <img src="docs/images/access-key-walkthrough.svg" width="960" alt="Synthetic example: role session alice successfully calls CreateAccessKey for IAM user bob. A rule match does not establish malicious intent.">
+</picture>
 
 This is an annotated example of the emitted finding, not an application screen.
 A legitimate key rotation also matches this rule; the finding alone does not

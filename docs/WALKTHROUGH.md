@@ -21,7 +21,10 @@ Expected: `1 finding(s) emitted`, titled `AWS IAM access key created`, with
 SARIF rule `T1098`. The report is saved to `$TMPDIR/cloud-security-demo.sarif`
 (`/tmp` when `TMPDIR` is unset). Structured diagnostic logs go to stderr.
 
-![Annotated synthetic access-key finding with actor, target, rule match, and investigation limits.](images/access-key-walkthrough.svg)
+<picture>
+  <source media="(max-width: 600px)" srcset="images/access-key-walkthrough-mobile.svg">
+  <img src="images/access-key-walkthrough.svg" width="960" alt="Synthetic example: role session alice successfully calls CreateAccessKey for IAM user bob. A rule match does not establish malicious intent.">
+</picture>
 
 The image annotates the fixture result; it is not an application screen or an
 additional report format. The emitted report is SARIF JSON.
